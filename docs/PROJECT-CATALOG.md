@@ -7,6 +7,13 @@
 
 # haldir — Project Catalog
 
+> **2026 review:** This catalog preserves the original idea set. Its ordering and
+> several implementation assumptions predate NCP 0.7.1 and the current
+> Engram/Crebain integration state. See the
+> [2026 project audit](HALDIR-PROJECT-AUDIT-2026.md) for the evidence-checked,
+> fifteen-lens ranking, detailed implementation plans, and conditional PhD
+> recommendation.
+
 **The security & guardian layer of the `sepahead` defense ecosystem — for military/tactical UAVs and embodied agents.**
 
 `haldir` is named for Lothlórien's *marchwarden*, the sentry who lets nothing cross the border unchallenged. That is its role in the ecosystem. It rides the **NCP** control bus as its own mTLS-anchored `guardian` subject and treats every other node — crebain's fusion, manwe's detectors, melkor's scenes, the operator's commands — as an equal attack surface to be **authenticated, cross-checked, and held accountable**. It gives armed autonomy the three properties that command-and-control in a contested EW/RF/GNSS fight actually requires:
