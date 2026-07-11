@@ -2,9 +2,16 @@
 
 # Haldir project audit 2026
 
+> **Follow-up decision:** Physical neuromorphic hardware is not currently
+> available and is no longer a project dependency. See the
+> [discussion and decision record](HALDIR-DISCUSSION-DECISIONS-2026.md) for the
+> revised software-only backend plan, platform analysis, and independent-repo
+> architecture. That later decision record supersedes hardware-dependent wording
+> and legacy architecture/contract names in this audit.
+
 ## Decision
 
-**Choose one non-PID Haldir program: _Haldir — attested mission-level runtime assurance for portable neural controllers_.**
+**Choose one non-PID Haldir program: _Haldir — backend-aware mission authorization and semantic admission for portable SNN controllers_.**
 
 The product spine is **Haldir Gate**, an inline authorization boundary between an authenticated controller intent and the one command stream consumed by Crebain. The research spine is **Watchword-Neuro**, which defines what neural controller was actually admitted, how that identity changes across backends, and when two executions remain authorization-equivalent despite different spike timing or quantization.
 
@@ -30,7 +37,7 @@ The audit also makes several claims that the present repositories do not support
 - Crebain still has direct ROS/MAVROS command paths outside NCP. Exclusive write authority over one NCP key is not yet complete mediation of the plant.
 - A Zenoh subscriber receives a key and payload, not the publisher's mTLS common name. Gate cannot infer controller identity from a sample without an exact identity-to-key ACL mapping, an authenticated intent envelope, or trustworthy publisher metadata.
 - Current Engram controller references do not completely encode topology, weights, codec, scheduling, quantization, compiler mapping, or backend configuration. Phase-one Gate therefore cannot honestly be called artifact-bound until that representation exists.
-- A denied intent does not instantly stop the previous command. The previous frame remains effective according to its remaining NCP TTL/`ActionBuffer` horizon semantics and downstream failsafe unless Gate explicitly publishes a new reversion frame with well-defined sequence semantics.
+- A denied intent does not instantly stop the previous command. The previous frame remains effective according to its remaining NCP TTL/`ActionBuffer` horizon semantics and downstream failsafe. For explicit reversion, Gate first atomically closes the lease in durable local state, then separately attempts `last_accepted_downstream_seq + 1`; publish failure leaves authority closed and falls back to expiry. A lower sequence can re-anchor only after the downstream stream expires and a fresh lease epoch is issued.
 - Current Engram/NEST examples use NCP-shaped objects and a local kinematic plant; they are not a live Engram-to-Zenoh-to-Gate-to-Crebain loop.
 - Intel archived the Lava repositories in May 2026. A new roadmap should use a neutral representation such as NIR and select a maintained, accessible second backend after a compatibility spike, rather than assuming Lava is the next step.
 
@@ -63,7 +70,7 @@ Haldir Gate --> decision receipt / bounded evidence spool
 Crebain CommandPlant --> deterministic plant or Gazebo
 ```
 
-PX4-SITL, HIL, and physical neuromorphic hardware are later evidence gates, not MVP assumptions.
+PX4-SITL and HIL are optional later evidence gates. Physical neuromorphic hardware is not currently available and is future collaborator/access-dependent validation, not an MVP or thesis assumption.
 
 ## First-principles problem statement
 
@@ -95,7 +102,7 @@ These are design goals until demonstrated. They must not be described as achieve
 
 1. **Complete scoped mediation.** Every actuator-affecting path inside the declared experiment boundary passes through one final authority. Direct ROS/MAVROS paths are disabled, removed, or independently constrained and tested.
 2. **Authenticated intent binding.** An accepted intent binds a verified principal, exact controller-specific key, signature key, mission/lease epoch, vehicle/session, controller bundle digest, and exact inner command bytes.
-3. **One downstream owner.** Gate is the sole publisher of the final NCP command stream. The MVP admits one sequence-producing controller per lease and enforces its progression; any later multiplexing makes Gate re-sequence explicitly. Controller handoff creates a new epoch rather than merging independent sequences accidentally.
+3. **One downstream owner.** Gate is the sole publisher of the final NCP command stream. The MVP admits one sequence-producing controller per lease and enforces its progression through `JSON_SAFE_INTEGER_MAX - 1`, reserving the maximum for Gate. A Gate-authored reversion is the sole exception: Gate atomically commits the local lease to `TERMINATING/CLOSED`, then separately attempts `last_accepted_downstream_seq + 1`; failure leaves the lease closed and falls back to expiry. A lower sequence can re-anchor only after downstream expiry under a fresh epoch. Any later multiplexing makes Gate re-sequence every downstream frame explicitly.
 4. **Mission and physical checks compose.** Gate enforces mission authorization. NCP supplies typed wire/command primitives, while the declared deployment must place a configured reject-only physical monitor in trusted Gate or Crebain code for units, physical bounds, freshness, and state-dependent constraints. Current transport publication does not automatically invoke `SafetyGovernor`, and neither layer substitutes for a vehicle-specific safe plant/reversion design. If a monitor rewrites or clamps, receipts bind the transformed output rather than claim byte preservation.
 5. **Denial has a bound.** The project measures the worst-case time from denial, crash, overload, or partition to a vehicle- and phase-appropriate reversion state. It does not equate zero velocity with safety for every vehicle.
 6. **Policy inputs are trustworthy enough for their claim.** State freshness, source, uncertainty, snapshot consistency, restart epoch, and time basis are explicit. Unknown or diagnostic-error states cannot silently become ALLOW.
@@ -169,7 +176,7 @@ If the weights emphasize near-term product hardening, Gate, Vilya, and the secur
 
 Watchword-Neuro defines and verifies the security-relevant identity of the controller that Gate is authorizing. A binary or archive hash answers whether bytes changed. It does not answer whether two compiled neural deployments have the same semantics, whether a backend changed timing or quantization, or whether the encoded graph is complete enough to reproduce the authorized behavior.
 
-The core artifact is a bounded, declarative `ControllerBundleV1` composed of:
+The audit's conceptual `ControllerBundleV1` is the aggregate of an Engram-owned `ControllerBundleManifestV1` plus every immutable artifact referenced by that manifest. Haldir separately owns `ControllerAdmissionProfileV1`, which declares the bounded subset and acceptance rules. The bundle is composed of:
 
 - source and compiled neuron/synapse module digests;
 - logical graph, populations, connection topology/rules, and parameters;
@@ -202,7 +209,7 @@ It also has stronger prior-art distance than Gate, but not a blank slate. NIR al
 
 ##### 1. Define the minimum complete NEST bundle
 
-Start with one nontrivial, fixed-weight spiking controller. Refactor Engram so the controller is instantiated entirely from `ControllerBundleV1`; prohibit arbitrary PyNEST code execution in the admitted profile. The bundle parser has bounded size/cardinality, canonical serialization, explicit defaults, schema versioning, and deterministic validation.
+Start with one nontrivial, fixed-weight spiking controller. Refactor Engram so the controller is instantiated entirely from `ControllerBundleManifestV1` and its content-addressed referenced artifacts; prohibit arbitrary PyNEST code execution in the admitted profile. The manifest parser has bounded size/cardinality, canonical serialization, explicit defaults, schema versioning, and deterministic validation.
 
 This requires a new bounded graph/projection builder or a substantial extension of `NestBackend`: its current `open()` creates target populations plus stimulus generators/recorders, but not general population-to-population projections, synapse models, weights, or delays. It also resets/cleans the global NEST kernel, so the MVP deliberately uses one session per process. Later fleet or multi-controller work needs one explicitly combined network or process isolation; it must not imply parallel independent NEST sessions already work.
 
@@ -225,7 +232,7 @@ Do not make one monolithic digest carry all meaning. Use explicit digests for lo
 
 ##### 3. Integrate admission with Gate
 
-An offline approver validates the bundle and signs an `AdmissionStatementV1` naming the authorized mission class, vehicle class, backend profile, behavior-corpus result, validity window, and policy constraints. Gate admits a controller only when the signed intent's bundle/profile digests match a current admission and the transport/signing identity is authorized to use it.
+An offline approver validates the bundle against `ControllerAdmissionProfileV1` and signs an `AdmissionRecordV1` naming both digests, the authorized mission class, vehicle class, backend profile, behavior-corpus result, validity window, and policy constraints. Gate admits a controller only when the signed intent's bundle/profile digests match that current admission and the transport/signing identity is authorized to use it. `AdmissionStatementV1` was the earlier draft name for this record and is not a second protocol type.
 
 For a software backend, self-reported runtime metadata is an input claim, not remote attestation. Stronger evidence later follows a RATS-style model: an attester produces signed measurements, a verifier appraises them against reference values, and Gate consumes a short-lived attestation result. TPM/DICE or platform-specific roots are later work.
 
@@ -312,8 +319,8 @@ controller certificate + signing key
              +--> signed DecisionReceiptV1
              |
              | ALLOW: publish one final NCP session command
-             | DENY: execute the declared phase-specific reversion contract
-             |       (bounded expiry or an explicit Gate-authored reversion)
+             | DENY: bounded expiry, or atomically close local lease state,
+             |       then attempt Gate reversion at downstream seq + 1
              v
      Crebain CommandPlant / actuator adapter
 ```
@@ -373,9 +380,9 @@ The verifier must prove delivery and non-delivery using distinct certificates. A
 - exact inner NCP `CommandFrame` bytes;
 - signature over the domain and all preceding fields.
 
-Replay state is keyed by controller, vehicle/session, and lease epoch. It accepts legitimate gaps, rejects duplicates and stale epochs, bounds sequence jumps according to policy, and expires old state. NCP's own sequence is not a complete application replay protocol because a stream can re-anchor after expiry and because mission/controller epochs have different semantics.
+Replay state is keyed by controller, vehicle/session, and lease epoch. It accepts legitimate gaps, rejects duplicates and stale epochs, bounds sequence jumps according to policy, and expires old state. A Gate process restart or host reboot invalidates every active lease and requires the lease authority to issue a fresh higher epoch; a durable watermark is restored only to reject old authority, never to reconstruct a prior monotonic deadline. NCP's own sequence is not a complete application replay protocol because a stream can re-anchor after expiry and because mission/controller epochs have different semantics.
 
-The MVP admits exactly one controller per vehicle lease. On ALLOW, Gate can preserve the enclosed command bytes exactly, making input/output digest comparison unambiguous. Controller handoff ends the lease and starts a new epoch after the previous command has expired or a defined reversion has completed. If later versions multiplex controllers, Gate should terminate the intent protocol and issue a new canonical downstream `CommandFrame`; receipts must then bind both exact input and output bytes and describe the transformation. They must not keep claiming byte identity.
+The MVP admits exactly one controller per vehicle lease. On ordinary ALLOW, Gate can preserve the enclosed command bytes exactly, making input/output digest comparison unambiguous. Controller commands stop at `JSON_SAFE_INTEGER_MAX - 1`, reserving `JSON_SAFE_INTEGER_MAX` for reversion. Gate first commits durable local state to `TERMINATING/CLOSED`, stores the watermark and proposed `last_accepted_downstream_seq + 1` frame, and blocks the old epoch; it then separately attempts and records publication. Crash, publish failure, or delivery failure never reopens the lease and instead falls back to bounded expiry. A fresh higher lease epoch may use a lower sequence anchor only after the previous command/reversion TTL, `ActionBuffer` horizon, and watchdog state have expired. If later versions multiplex controllers, Gate should terminate the intent protocol and issue every new canonical downstream `CommandFrame`; receipts must then bind exact input and output bytes and describe the transformation. They must not keep claiming byte identity.
 
 ##### 3. Split deterministic checks from ABAC
 
@@ -1181,7 +1188,7 @@ The corpus and benign budget must be fixed before candidate results are examined
 
 **Question:** Which logical, codec, timing, numerical, compiler, mapping, runtime, and firmware fields are required for a security-relevant SNN deployment identity, and how should approved transformations be classified?
 
-**H2:** In a pre-registered mutation and field-ablation study, every field classified as security-relevant has at least one case where omitting it hides an authorization-relevant behavioral change; the complete `ControllerBundleV1` detects those substitutions and correctly classifies held-out approved reserialization/transformation cases that whole-file hashing rejects or cannot relate.
+**H2:** In a field-ablation study whose candidate fields, security classifications, mutation corpus, and train/held-out split are fixed before candidate evaluation, every field pre-classified as security-relevant has at least one training-corpus case where omitting it hides an authorization-relevant behavioral change; the profile-complete `ControllerBundleManifestV1` plus referenced artifacts then detects held-out substitutions and classifies held-out approved transformations that whole-file hashing rejects or cannot relate.
 
 #### RQ3 — Backend portability
 
@@ -1287,6 +1294,7 @@ Deliver:
 - deterministic bounded monitor plus Cedar adapter;
 - lease/replay/policy state machine and formal model;
 - bounded queues, rate/priority rules, local evidence spool;
+- explicit-reversion tests covering atomic local close-before-publish, `last_seq + 1`, `MAX - 1`/reserved-`MAX`/overflow handling, commit/publish crash recovery, failed-publish expiry fallback, same-epoch rejection, and post-expiry fresh-lease re-anchoring;
 - parser/property/fuzz tests and fixture-driven attack corpus.
 
 **Go only if** principal/key/signature/context binding is unambiguous, state is bounded, and p99.9 cost has credible headroom for 50 Hz.
@@ -1303,13 +1311,13 @@ Deliver:
 
 **Go only if** the path is genuinely live and every delivered final command/equivalent reversion has a modeled origin. Do not label a local NEST-to-kinematic loop or dormant Crebain feature as this milestone.
 
-### Phase 3 — make controller identity complete
+### Phase 3 — make the fixed-weight controller profile complete
 
 Deliver:
 
-- complete fixed-weight `ControllerBundleV1`;
-- reconstruction of the controller entirely from the bundle;
-- signed admission statement and policy integration;
+- profile-complete fixed-weight `ControllerBundleManifestV1` plus referenced artifacts;
+- reconstruction of the controller entirely from that bundle;
+- Haldir `ControllerAdmissionProfileV1`, signed `AdmissionRecordV1`, and policy integration;
 - field-by-field substitution battery and benign transformation cases;
 - controller more representative than independent rate populations.
 
@@ -1327,7 +1335,7 @@ Deliver:
 
 **Go only if** the relation predicts useful behavior on held-out cases. If it does not, publish the boundary/failure result and remove backend-independent authorization claims.
 
-### Phase 5 — conditional physical neuromorphic evidence
+### Phase 5 — optional future physical evidence if access appears
 
 Deliver only after access is real:
 
@@ -1348,7 +1356,7 @@ Proceed with the Haldir Gate + Watchword-Neuro program when the focused spike de
 
 1. every actuator path in the declared boundary is enumerated and closed or constrained;
 2. the router and application layer bind an intent to the correct workload, signing key, mission/lease, and controller bundle;
-3. single-stream sequence, handoff, denial, expiry, restart, and reversion semantics are unambiguous;
+3. single-stream sequence, ceiling, handoff, denial, expiry, restart, and reversion semantics are unambiguous, including an atomic local close-before-publish transition, failure fallback, and post-expiry re-anchoring after a Gate-authored reversion;
 4. the live Engram → secure Zenoh → Gate → Crebain path exists;
 5. authorization stays within the pre-registered 20–50 Hz tail-latency/resource budget;
 6. attack and failure campaigns beat the relevant baselines without an unacceptable benign false-denial/mission penalty;

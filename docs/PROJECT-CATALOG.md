@@ -12,7 +12,9 @@
 > Engram/Crebain integration state. See the
 > [2026 project audit](HALDIR-PROJECT-AUDIT-2026.md) for the evidence-checked,
 > fifteen-lens ranking, detailed implementation plans, and conditional PhD
-> recommendation.
+> recommendation. The later
+> [discussion and decision record](HALDIR-DISCUSSION-DECISIONS-2026.md) captures
+> the no-hardware constraint, revised backend plan, and repository boundaries.
 
 **The security & guardian layer of the `sepahead` defense ecosystem — for military/tactical UAVs and embodied agents.**
 
@@ -510,5 +512,4 @@ The Roll is an **authenticated after-action FDR** — for attribution, ROE/legal
 ### Effort, stack, and dependencies
 
 **Stack:** Rust (scenario runner + Roll), Gazebo/ROS, Zenoh, `blake3` + `ed25519-dalek` (both new dependencies — neither ships in NCP or crebain today), Tauri 2 + React 19. **Effort:** ambitious — roughly a quarter for a credible MVP, more for full scenario coverage and the signed-anchor verifier. **Composes with:** crebain (transport commands, fusion gate, `DetectionOverlay`/`SensorFusionPanel`), NCP (`zenoh-access-control.json5` observer role, `SafetyGovernor`, `CommandWatchdog`), Fëanor’s Mark (hardens the seams this range attacks), and the sibling blue-team detector guardians it validates live.
-
 
