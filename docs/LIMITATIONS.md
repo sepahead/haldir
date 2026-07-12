@@ -57,8 +57,38 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   `haldir-state`.
 - **`missing_docs` hardening.** Deferred; the workspace does not yet
   `deny(missing_docs)`. Crate- and item-level docs are written voluntarily.
+- **Durable anti-rollback / restart rollback protection.** The anti-rollback store
+  is **in-memory in P0**. It rejects a term/epoch that does not strictly advance its
+  high-water and detects structural corruption of its serialized form, but the Gate
+  does not persist, load, MAC, or fsync it, and does not derive/compare
+  `gate_boot_id` against the monotonic boot counter. Therefore the **cross-restart**
+  rollback protection of B11/B12 (a lease minted by a prior incarnation being
+  replayed after a restart with a repeated boot id) is **NOT established**. Wiring
+  durable persistence (atomic temp→fsync→rename, separate-key MAC for semantic
+  rewind detection, boot-id-repeat latch) is future work.
 - **Production status.** Not production ready, certified, airworthy, or safe for
   deployment. No independent security review has been performed.
+
+## Independent review record
+
+The delivered P0 core was reviewed by an independent five-lens adversarial pass.
+It confirmed the canonical-CBOR/COSE, policy fixed-point, and adapter-conversion
+cores sound, and surfaced findings that were then fixed and regression-tested:
+
+- **BUG-2 (fixed):** a monotonic-clock regression while ACTIVE now latches a fault
+  and denies (`VehicleActor::mono_ok`) instead of extending a live lease deadline.
+- **BUG-3 (fixed):** the reference plant no longer mutates output-authority/replay
+  state before its reject checks, so a rejected command cannot wedge the live stream.
+- **BUG-4 (fixed):** the intent's self-declared `controller_id`/signing-key id are
+  now equality-checked against the admitted controller and the verified signer.
+- **BUG-5 (fixed):** freshness age now rounds up (fail-closed), closing a sub-ms
+  fail-open at the staleness cap.
+- **B1 (clarified + wired):** the authorization-revision counter is now bumped by
+  fault-latch and by the `revoke_active_lease` invalidation entry point; the
+  mid-pipeline TOCTOU re-check remains structurally present but is inert under the
+  current single-threaded in-process actor (it is scaffolding for a future
+  concurrent actor). It is not claimed to defeat a real mid-pipeline race here.
+- **BUG-1 (carved out):** the durable anti-rollback / restart-rollback gap above.
 
 ## Mapping to the completion checklist
 

@@ -127,7 +127,9 @@ pub fn accept_lease(
     if !challenges.consume(&lease.challenge_nonce, now) {
         return Err(LeaseAcceptError::ChallengeInvalid);
     }
-    // 7. Durably advance the accepted-term high-water BEFORE exposing active (H12).
+    // 7. Advance the accepted-term high-water BEFORE exposing the lease active
+    //    (H12, in-process ordering; durable persistence is out of P0 — see the
+    //    anti_rollback module docs and docs/LIMITATIONS.md).
     anti_rollback
         .accept_term(&scope, lease.lease_term.get())
         .map_err(|_| LeaseAcceptError::TermRollback)?;

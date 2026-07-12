@@ -237,6 +237,17 @@ mod tests {
     }
 
     #[test]
+    fn freshness_age_rounds_up_no_sub_ms_fail_open() {
+        // Regression for BUG-5: a source 200.5 ms old must be STALE against a 200 ms
+        // cap (age rounds up, fail-closed), not treated as fresh.
+        let mut st = state(1_000_000_000, 0, [0, 0, 0], [10, 10, 10]);
+        let over = MonoInstant::from_nanos(1_000_000_000 - (200 * 1_000_000 + 500_000));
+        st.primary_source.receive_mono = over;
+        st.captured_mono = over;
+        assert!(decide_vel(&vel(100, 0, 0, 100), &st).has_reason(R::DenySourceStale));
+    }
+
+    #[test]
     fn geofence_denies_motion_toward_boundary() {
         // near +X boundary, commanding +X velocity for a long horizon -> leaves region
         let st = state(1_000_000_000, 10, [99_000, 0, 0], [10, 10, 10]);

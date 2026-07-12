@@ -130,6 +130,7 @@ pub struct VehicleActor {
     process: GateProcessMachine,
     next_decision: u64,
     local_cap_ms: u32,
+    last_seen_mono: Option<MonoInstant>,
 }
 
 struct ReceiptDraft {
@@ -222,7 +223,34 @@ impl VehicleActor {
             process,
             next_decision: 0,
             local_cap_ms: cfg.local_cap_ms,
+            last_seen_mono: None,
         }
+    }
+
+    /// Detect a monotonic-clock regression (spec T5/B13, punch-list BUG-2). A
+    /// backward `now` while ACTIVE latches a fault and denies rather than extending
+    /// a live lease's deadline; on success the last-seen instant is advanced.
+    fn mono_ok(&mut self, now: MonoInstant) -> bool {
+        if let Some(last) = self.last_seen_mono
+            && now < last
+        {
+            self.fault.latch("MONOTONIC_REGRESSION");
+            self.revision.bump();
+            return false;
+        }
+        self.last_seen_mono = Some(now);
+        true
+    }
+
+    /// Revoke the active mission lease (an authorization invalidation): clears the
+    /// lease, retires the controller replay epoch, and bumps the authorization
+    /// revision. After this, decisions DENY with `DENY_LEASE_ABSENT` until a fresh
+    /// lease is accepted.
+    pub fn revoke_active_lease(&mut self) {
+        self.lease = None;
+        let _ = self.replay.retire_active();
+        self.revision.bump();
+        let _ = self.process.transition(GateProcessStateV1::SessionBound);
     }
 
     /// The current process state.
@@ -251,6 +279,9 @@ impl VehicleActor {
     /// Returns a [`GateError`] if signature, admission, or acceptance fails.
     pub fn accept_lease_env(&mut self, env: &[u8], now: MonoInstant) -> Result<(), GateError> {
         if self.fault.is_latched() {
+            return Err(GateError::Faulted);
+        }
+        if !self.mono_ok(now) {
             return Err(GateError::Faulted);
         }
         let ctx = ExpectedContext {
@@ -360,8 +391,11 @@ impl VehicleActor {
             state_snapshot_digest: None,
         };
 
-        // Stage 0 — fault / active / ingress admission
+        // Stage 0 — fault / monotonic clock / active / ingress admission
         if self.fault.is_latched() {
+            return self.deny(&draft, R::ErrorInternalFault, now);
+        }
+        if !self.mono_ok(now) {
             return self.deny(&draft, R::ErrorInternalFault, now);
         }
         if !self.process.is_active() {
@@ -432,6 +466,14 @@ impl VehicleActor {
             || intent.backend_profile_digest != lease.controller.backend_profile_digest
         {
             return self.deny(&draft, R::DenyAdmissionMismatch, now);
+        }
+        // Bind the intent's self-declared controller identity to the admitted
+        // controller and the verified signer (punch-list BUG-4): these are
+        // equality-checked consistency claims, not trusted evidence content.
+        if intent.controller_id != lease.controller.controller_id
+            || intent.controller_signing_key_id != signer_kid
+        {
+            return self.deny(&draft, R::DenyScopeMismatch, now);
         }
         if lease.remaining_ms(now) == 0 {
             return self.deny(&draft, R::DenyLeaseExpired, now);
@@ -511,6 +553,7 @@ impl VehicleActor {
             Ok(f) => f,
             Err(_) => {
                 self.fault.latch("NCP_BUILD_FAILED");
+                self.revision.bump();
                 return self.deny(&draft, R::ErrorInternalFault, now);
             }
         };
@@ -520,6 +563,7 @@ impl VehicleActor {
             .is_err()
         {
             self.fault.latch("NCP_VALIDATE_FAILED");
+            self.revision.bump();
             return self.deny(&draft, R::ErrorInternalFault, now);
         }
 

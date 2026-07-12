@@ -165,6 +165,13 @@ impl ReferencePlant {
             Some(cmd.output_seq.get()),
         );
 
+        // --- reject checks: NO durable state is mutated until EVERY check passes,
+        // so a rejected command can never retire the live epoch, reset last_seq, or
+        // otherwise refresh output authority (spec S6 / punch-list BUG-3). ---
+        if cmd.validity_ms == 0 {
+            self.push(K::Rejected(RejectReason::ZeroValidity), None, None);
+            return Err(RejectReason::ZeroValidity);
+        }
         if let Some(cur) = &self.session
             && *cur != cmd.session
         {
@@ -175,44 +182,35 @@ impl ReferencePlant {
             self.push(K::Rejected(RejectReason::RetiredEpoch), None, None);
             return Err(RejectReason::RetiredEpoch);
         }
-        match &self.epoch {
-            None => {
-                self.epoch = Some(cmd.output_epoch);
-                self.last_seq = 0;
-            }
-            Some(e) if *e != cmd.output_epoch => {
-                self.retired.push(*e);
-                self.epoch = Some(cmd.output_epoch);
-                self.last_seq = 0;
-            }
-            Some(_) => {}
-        }
-        if cmd.output_seq.get() <= self.last_seq {
+        // A new (non-retired) epoch starts a fresh stream at baseline 0; an existing
+        // epoch uses the current high-water. Computed WITHOUT mutating anything.
+        let is_new_epoch = self.epoch.as_ref().is_none_or(|e| *e != cmd.output_epoch);
+        let baseline = if is_new_epoch { 0 } else { self.last_seq };
+        if cmd.output_seq.get() <= baseline {
             self.push(K::Rejected(RejectReason::DuplicateOrStale), None, None);
             return Err(RejectReason::DuplicateOrStale);
         }
-        if cmd.validity_ms == 0 {
-            self.push(K::Rejected(RejectReason::ZeroValidity), None, None);
-            return Err(RejectReason::ZeroValidity);
+
+        // --- accepted path: only now commit durable state ---
+        let decision_bytes = *cmd.decision_id.as_bytes();
+        let seq = cmd.output_seq.get();
+        let epoch = cmd.output_epoch;
+        let velocity = cmd.action.velocity();
+        if let Some(e) = self.epoch
+            && e != epoch
+        {
+            self.retired.push(e);
         }
-
-        self.push(
-            K::Validated,
-            Some(*cmd.decision_id.as_bytes()),
-            Some(cmd.output_seq.get()),
-        );
-        self.push(
-            K::Accepted,
-            Some(*cmd.decision_id.as_bytes()),
-            Some(cmd.output_seq.get()),
-        );
-
+        self.epoch = Some(epoch);
         if self.session.is_none() {
             self.session = Some(cmd.session.clone());
         }
-        self.last_seq = cmd.output_seq.get();
+        self.last_seq = seq;
+
+        self.push(K::Validated, Some(decision_bytes), Some(seq));
+        self.push(K::Accepted, Some(decision_bytes), Some(seq));
+
         let ticks = u64::from(cmd.validity_ms.div_ceil(self.cfg.tick_ms.max(1)));
-        let velocity = cmd.action.velocity();
         self.current = Some(Active {
             cmd,
             expiry_tick: self.tick.saturating_add(ticks),
@@ -422,6 +420,20 @@ mod tests {
             p.ingest(cmd(1, 1, 1, PlantAction::Velocity([1000, 0, 0]), 5000)),
             Err(RejectReason::DuplicateOrStale)
         );
+    }
+
+    #[test]
+    fn rejected_command_does_not_wedge_the_stream() {
+        // Regression for BUG-3: a rejected command (new epoch + zero validity) must
+        // NOT retire the live epoch or reset the sequence high-water.
+        let mut p = ReferencePlant::new(PlantConfig::default());
+        p.ingest(cmd(1, 1, 5, PlantAction::Hold, 200)).unwrap();
+        assert_eq!(
+            p.ingest(cmd(1, 2, 1, PlantAction::Hold, 0)),
+            Err(RejectReason::ZeroValidity)
+        );
+        // epoch 1 is still live: a legitimate next command is accepted.
+        assert!(p.ingest(cmd(1, 1, 6, PlantAction::Hold, 200)).is_ok());
     }
 
     #[test]

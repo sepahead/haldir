@@ -11,10 +11,13 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 
 ## 1. BLOCKING — miss any and the security claim is false
 
-- `[x]` **B1** 10-way authorization AND commits at one point; a monotonic
-  `authorization_revision` is bumped by every invalidation and re-checked immediately
-  before output-sequence allocation (TOCTOU). *Verify:* revision property test +
-  `authority_revoked_mid_pipeline` yields zero output.
+- `[~]` **B1** 10-way authorization AND commits at one point; `authorization_revision`
+  is bumped by invalidations (fault-latch, `revoke_active_lease`) and re-checked
+  before output-sequence allocation. **Honest scope:** under the single-threaded
+  in-process actor the re-check is structurally present but inert (nothing can race
+  the decision); it is scaffolding for a future concurrent actor and is NOT claimed
+  to defeat a real mid-pipeline race here. *Verify:* `revoke_active_lease_then_intent_denies`,
+  `clock_regression_latches_and_denies` (both in `haldir-gate`).
 - `[x]` **B2** S6 no-liveness-effect: duplicate/stale/malformed/wrong-session/unauthorized
   input never refreshes lease, watchdog, horizon, source freshness, output authority,
   counters, or any burst/hold/slew timer. Highest-value mediation test.
@@ -43,12 +46,14 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   panic/saturate/wrap); prospective integration rounds reach UP.
 - `[x]` **B10** Prospective geofence integrates over an upper bound of the published horizon
   (requested validity or hard cap), computed before the Stage-11 min.
-- `[x]` **B11** Restart mints a fresh unrepeatable `gate_boot_id`; no active lease/session/
-  publication/output-epoch/replay restored; durable monotonic boot counter; latch on
-  non-advance or boot_id repeat.
-- `[x]` **B12** Anti-rollback store persists only highest terms/epochs + retired identities;
-  atomic temp→fsync→rename→fsync-dir, MAC'd under a separate storage key;
-  missing/rewound/corrupt → FAULT_LATCHED, never zero-init.
+- `[~]` **B11** Restart lease invalidation via a fresh boot id and empty in-memory state
+  is modeled and unit-tested (`restart_invalidates_lease_via_new_boot_id`). **Not wired
+  in P0:** durable persistence of the boot counter and a boot-id-repeat latch, so
+  cross-restart protection is not established (see `docs/LIMITATIONS.md`).
+- `[~]` **B12** Anti-rollback high-water + strict-advance rejection + structural-corruption
+  detection are implemented and tested (in-memory). **Not wired in P0:** durable
+  temp→fsync→rename, separate-key MAC (semantic-rewind detection), and persist/load;
+  so a `missing/rewound-to-lower-high-water` store is not yet a fault. See LIMITATIONS.
 - `[x]` **B13** Monotonic-clock regression while ACTIVE → FAULT_LATCHED; clock-read failure
   → DENY (never "fresh").
 - `[x]` **B14** Evidence outage never turns DENY into ALLOW (direction test).

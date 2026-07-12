@@ -1,10 +1,18 @@
-//! Durable anti-rollback store (spec §anti-rollback, B11/B12/H12).
+//! Anti-rollback high-water store (spec §anti-rollback, B11/B12/H12).
 //!
-//! Persists only the highest accepted terms/epochs, retired identities, and a
-//! monotonic boot counter — never an active lease. A missing, rewound, or corrupt
-//! store latches a fault and never zero-initialises (which would re-enable replay
-//! of old lease terms or revoked epochs). The accepted-term high-water is advanced
-//! durably BEFORE a lease is exposed as active (H12).
+//! Holds the highest accepted terms and revocation epochs plus a monotonic boot
+//! counter — never an active lease. `accept_term`/`accept_revocation_epoch` reject
+//! any value that does not strictly advance the stored high-water, and the
+//! high-water is advanced BEFORE a lease is exposed active (H12, in-process order).
+//!
+//! **In P0 this store is in-memory.** The `to_bytes`/`from_bytes` format exists for
+//! a future durable backing, and `from_bytes` detects *structural* corruption; but
+//! the P0 Gate does not persist, load, MAC, or fsync the store, and does not yet
+//! derive/compare `gate_boot_id` against the boot counter. Durable persistence
+//! (atomic temp→fsync→rename, a separate-key MAC to detect a semantic rewind to a
+//! lower high-water, and a boot-id-repeat latch) is therefore OUT of P0 scope; see
+//! `docs/LIMITATIONS.md`. Consequently the cross-restart rollback protection B11/B12
+//! describe is **not** established by this deliverable.
 
 use haldir_contracts::cbor::{CborReader, CborWriter, Limits};
 use std::collections::BTreeMap;
@@ -44,8 +52,9 @@ impl AntiRollbackStore {
         Self::default()
     }
 
-    /// Advance the boot counter, returning the new (strictly greater) value.
-    /// A fresh unrepeatable boot value underpins restart lease invalidation (B11).
+    /// Advance the boot counter, returning the new value (saturating at
+    /// `u64::MAX`). A fresh boot value underpins restart lease invalidation (B11);
+    /// note the P0 Gate does not yet persist this counter (see the module docs).
     #[must_use]
     pub fn advance_boot(&mut self) -> u64 {
         self.boot_counter = self.boot_counter.saturating_add(1);

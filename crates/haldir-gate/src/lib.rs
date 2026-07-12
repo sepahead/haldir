@@ -429,4 +429,74 @@ mod e2e {
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
         assert!(out.plant_command.is_none());
     }
+
+    #[test]
+    fn spoofed_controller_id_denies() {
+        // BUG-4: the intent's self-declared controller_id must equal the admitted
+        // controller, even for an otherwise-valid signed intent.
+        let mut f = setup();
+        let rec = admission_record();
+        let mut intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 400));
+        intent.controller_id = ControllerId::new("someone-else").unwrap();
+        let env = sign_intent(&f.ctrl_sk, &intent);
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none());
+    }
+
+    #[test]
+    fn clock_regression_latches_and_denies() {
+        // BUG-2: a backward `now` latches a fault and denies rather than extending
+        // a live lease's deadline.
+        let mut f = setup();
+        let rec = admission_record();
+        let env1 = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        assert_eq!(
+            f.actor.decide_intent(&env1, INTENT_KEY, f.now).outcome,
+            DecisionOutcomeV1::Allow
+        );
+        let earlier = MonoInstant::from_nanos(500_000_000);
+        let env2 = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 2, velocity(2, 400)),
+        );
+        let out = f.actor.decide_intent(&env2, INTENT_KEY, earlier);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none());
+        // the fault is latched: a subsequent well-formed intent still denies
+        let env3 = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 3, velocity(3, 400)),
+        );
+        assert_eq!(
+            f.actor.decide_intent(&env3, INTENT_KEY, f.now).outcome,
+            DecisionOutcomeV1::Deny
+        );
+    }
+
+    #[test]
+    fn revoke_active_lease_then_intent_denies() {
+        // B1 invalidation: revoking the lease bumps the revision and denies later intents.
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        assert_eq!(
+            f.actor.decide_intent(&env, INTENT_KEY, f.now).outcome,
+            DecisionOutcomeV1::Allow
+        );
+        f.actor.revoke_active_lease();
+        let env2 = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 2, velocity(2, 400)),
+        );
+        let out = f.actor.decide_intent(&env2, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none());
+    }
 }

@@ -151,7 +151,11 @@ fn ms_to_ns(ms: u32) -> u64 {
 }
 
 fn age_ms(now: MonoInstant, earlier: MonoInstant) -> Option<u64> {
-    now.checked_duration_since(earlier).map(|d| d.as_millis())
+    // Round the elapsed age UP so the staleness guard is conservative (fail-closed):
+    // a source 50.9 ms old must not pass a 50 ms cap (punch-list BUG-5). `None` on a
+    // monotonic regression (`now < earlier`) — the caller treats that as stale.
+    now.checked_duration_since(earlier)
+        .map(|d| d.as_nanos().div_ceil(1_000_000))
 }
 
 fn within_speed(v: [i32; 3], max_speed: i64) -> bool {

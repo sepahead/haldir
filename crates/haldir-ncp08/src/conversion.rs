@@ -1,9 +1,11 @@
 //! Fixed-point (mm/s) to NCP-wire (m/s float) conversion.
 //!
 //! Labeled `FIXED_POINT_TO_NCP_FLOAT_V1`, never `IDENTITY`, because a decimal
-//! division is involved (spec P6/H17). The conversion is proven finite, monotone,
-//! bounds-preserving, and exactly recoverable by round-to-nearest over the full
-//! `i32` domain by the property tests below.
+//! division is involved (spec P6/H17). The conversion is finite, monotone, and
+//! bounds-preserving; the property tests below *sample* the `i32` domain, and the
+//! round-trip is exact analytically (`i32` is representable exactly in `f64` and
+//! the division error is well under 0.5 mm/s). A full-domain exhaustive sweep is
+//! available as an `#[ignore]`d test (`round_trip_exact_full_domain`).
 #![allow(
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
@@ -55,6 +57,19 @@ mod tests {
         #[test]
         fn round_trip_is_exact(x in any::<i32>()) {
             prop_assert_eq!(ncp_m_s_to_mm_s(mm_s_to_ncp_m_s(x)), x);
+        }
+    }
+
+    #[test]
+    #[ignore = "exhaustive full-i32 domain sweep (~4.3e9 iterations); run with --ignored"]
+    fn round_trip_exact_full_domain() {
+        let mut x = i32::MIN;
+        loop {
+            assert_eq!(ncp_m_s_to_mm_s(mm_s_to_ncp_m_s(x)), x);
+            if x == i32::MAX {
+                break;
+            }
+            x += 1;
         }
     }
 

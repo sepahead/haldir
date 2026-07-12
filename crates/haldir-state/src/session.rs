@@ -1,6 +1,11 @@
-//! NCP session binding (spec S1). Any new generation for the same session id
-//! invalidates all dependent state before side effects; that cascade is driven by
-//! the vehicle actor.
+//! NCP session binding (spec S1). Any new generation for the same session id must
+//! invalidate all dependent state before side effects.
+//!
+//! Note: in the P0 Gate the session is fixed at actor construction and a generation
+//! change is handled by constructing a new actor (a "restart"); this `SessionState`
+//! type provides the binding / generation-change primitive for a future
+//! actor-driven cascade. Wrong-generation intents are still denied on the decision
+//! path (`DENY_SESSION_STALE`), so there is no mediation impact in P0.
 
 use haldir_contracts::session::NcpSessionIdentityV1;
 
