@@ -1,0 +1,22 @@
+[package]
+name = "haldir-state"
+description = "Haldir Gate — haldir-state"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+haldir-contracts.workspace = true
+haldir-core.workspace = true
+haldir-crypto.workspace = true
+getrandom.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+haldir-testkit.workspace = true

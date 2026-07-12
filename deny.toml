@@ -1,0 +1,24 @@
+# cargo-deny policy for Haldir.
+# A dependency change in the command hot path is a security-relevant change,
+# not a routine patch bump (see the NCP adapter rule in the specification).
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+allow = ["Apache-2.0", "MIT", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib"]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcard-dependencies = "deny"
+# Neural runtimes, web UI frameworks, and dynamic-plugin loaders must never
+# enter the Gate command-path dependency graph.
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

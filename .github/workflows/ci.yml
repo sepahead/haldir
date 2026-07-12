@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned toolchain
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal --component rustfmt clippy
+          rustup default 1.96.0
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+      - name: Format check
+        run: cargo fmt --all -- --check
+      - name: Clippy (deny warnings)
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --all-targets --all-features --locked
+      - name: Doc tests
+        run: cargo test --workspace --doc --locked
+      - name: Docs build
+        run: cargo doc --workspace --no-deps --all-features --locked
+      - name: git diff --check
+        run: git diff --check
+      - name: No generated-file drift
+        run: python3 tools/verify-generated.py
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source pins
+        run: python3 tools/verify-pins.py
+      - name: Verify evidence layout
+        run: python3 tools/verify-evidence.py
+      - name: cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2

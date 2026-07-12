@@ -1,0 +1,21 @@
+[package]
+name = "haldir-ctl"
+description = "Haldir Gate — offline inspect/verify tooling"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "haldir-ctl"
+path = "src/main.rs"
+
+[dependencies]
+haldir-contracts.workspace = true
+haldir-crypto.workspace = true
+haldir-evidence.workspace = true

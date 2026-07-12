@@ -1,0 +1,74 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/haldir-contracts",
+    "crates/haldir-crypto",
+    "crates/haldir-core",
+    "crates/haldir-state",
+    "crates/haldir-policy-native",
+    "crates/haldir-admission",
+    "crates/haldir-ncp08",
+    "crates/haldir-reference-plant",
+    "crates/haldir-evidence",
+    "crates/haldir-transport-zenoh",
+    "crates/haldir-gate",
+    "crates/haldir-range",
+    "crates/haldir-testkit",
+    "tools/haldir-ctl",
+]
+
+[workspace.package]
+version = "0.1.0-experimental"
+edition = "2024"
+rust-version = "1.96"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/sepahead/haldir"
+authors = ["Sepahead"]
+# Haldir Gate is an EXPERIMENTAL inline mission-authorization reference monitor.
+# It is NOT production ready, certified, airworthy, or safe for deployment.
+# Current command-authority profile: PRE_AUTHORITY_ACL_ONLY (NCP v0.8.0 increment 1).
+
+[workspace.dependencies]
+# --- internal ---
+haldir-contracts = { path = "crates/haldir-contracts" }
+haldir-crypto = { path = "crates/haldir-crypto" }
+haldir-core = { path = "crates/haldir-core" }
+haldir-state = { path = "crates/haldir-state" }
+haldir-policy-native = { path = "crates/haldir-policy-native" }
+haldir-admission = { path = "crates/haldir-admission" }
+haldir-ncp08 = { path = "crates/haldir-ncp08" }
+haldir-reference-plant = { path = "crates/haldir-reference-plant" }
+haldir-evidence = { path = "crates/haldir-evidence" }
+haldir-transport-zenoh = { path = "crates/haldir-transport-zenoh" }
+haldir-gate = { path = "crates/haldir-gate" }
+haldir-testkit = { path = "crates/haldir-testkit" }
+# --- external (all pinned; all available offline in the reviewed cache) ---
+ed25519-compact = { version = "2.2", default-features = false, features = ["std"] }
+sha2 = { version = "0.10", default-features = false }
+zeroize = { version = "1", default-features = false }
+subtle = { version = "2", default-features = false }
+getrandom = { version = "0.2" }
+proptest = { version = "1" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+# `missing_docs` hardening is deferred to the release-hardening pass; see docs/LIMITATIONS.md.
+
+[workspace.lints.clippy]
+all = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+indexing_slicing = "warn"
+float_cmp = "warn"
+lossy_float_literal = "warn"
+cast_possible_truncation = "warn"
+cast_sign_loss = "warn"
+cast_precision_loss = "warn"
+
+# Retain arithmetic overflow checks in release builds. A silent wrap in a
+# security comparison could turn an out-of-range value into an allowed one.
+[profile.release]
+overflow-checks = true
+# panic = "unwind" is intentional: Gate must flush bounded evidence on a fault
+# rather than abort. Do not switch to abort without an evidence-flush analysis.

@@ -1,0 +1,6 @@
+# Exact reviewed toolchain. Do not write channel = "stable" in release evidence.
+# Reviewed at implementation time: rustc 1.96.0 (edition 2024 capable).
+[toolchain]
+channel = "1.96.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

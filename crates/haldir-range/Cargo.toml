@@ -1,0 +1,28 @@
+[package]
+name = "haldir-range"
+description = "Haldir Gate — haldir-range"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+haldir-contracts.workspace = true
+haldir-crypto.workspace = true
+haldir-core.workspace = true
+haldir-state.workspace = true
+haldir-policy-native.workspace = true
+haldir-admission.workspace = true
+haldir-ncp08.workspace = true
+haldir-reference-plant.workspace = true
+haldir-evidence.workspace = true
+haldir-gate.workspace = true
+haldir-testkit.workspace = true
+
+[dev-dependencies]
+

@@ -1,0 +1,30 @@
+[package]
+name = "haldir-gate"
+description = "Haldir Gate — composed one-vehicle authorization runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "haldir-gate"
+path = "src/main.rs"
+
+[dependencies]
+haldir-contracts.workspace = true
+haldir-crypto.workspace = true
+haldir-core.workspace = true
+haldir-state.workspace = true
+haldir-policy-native.workspace = true
+haldir-admission.workspace = true
+haldir-ncp08.workspace = true
+haldir-reference-plant.workspace = true
+haldir-evidence.workspace = true
+
+[dev-dependencies]
+haldir-testkit.workspace = true

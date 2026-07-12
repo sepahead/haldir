@@ -1,0 +1,19 @@
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# Development PKI and secrets must never be committed outside range/certs-dev fixtures.
+*.pem
+*.key
+*.p12
+*.pfx
+!range/certs-dev/**/*.pub.pem
+
+# Local private evidence (owner-visible) must not enter public history.
+evidence/**/*.private.*
+*.private.jsonl
+*.private.csv
+
+# OS / editor noise
+.DS_Store
+*.swp

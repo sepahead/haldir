@@ -1,0 +1,32 @@
+# Human-reviewable pin source of truth. `tools/verify-pins.py` enforces these.
+# A branch name or short SHA is never an acceptable pin.
+
+[toolchain]
+rust_channel = "1.96.0"
+edition = "2024"
+components = ["rustfmt", "clippy"]
+
+[ncp]
+# Immutable NCP baseline. Haldir builds its own semantic types; the adapter's
+# compatibility record binds these exactly (see docs/NCP-COMPATIBILITY.md).
+tag = "v0.8.0"
+commit = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
+wire_version = "0.8"
+contract_hash = "d1b50a2d8a265276"
+# sha256 of proto/ncp.proto at v0.8.0, measured locally on 2026-07-12.
+proto_sha256 = "6f13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227"
+capability_profile = "PRE_AUTHORITY_ACL_ONLY"
+
+[dependencies]
+# All pinned in Cargo.lock; justification in docs/DEPENDENCY-RATIONALE.md.
+ed25519-compact = "2.2"
+sha2 = "0.10"
+zeroize = "1"
+subtle = "2"
+getrandom = "0.2"
+proptest = "1"
+
+[tools]
+# Present but not exercised in this deliverable (documented in docs/LIMITATIONS.md):
+# TLA+/TLC (model files under formal/ authored; invariants also encoded as Rust model tests).
+tlc = "not-installed-locally"
