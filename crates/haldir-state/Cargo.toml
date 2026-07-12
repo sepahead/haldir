@@ -14,9 +14,7 @@ workspace = true
 [dependencies]
 haldir-contracts.workspace = true
 haldir-core.workspace = true
-haldir-crypto.workspace = true
 getrandom.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-haldir-testkit.workspace = true
