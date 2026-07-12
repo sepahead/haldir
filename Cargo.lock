@@ -150,9 +150,6 @@ name = "haldir-admission"
 version = "0.1.0-experimental"
 dependencies = [
  "haldir-contracts",
- "haldir-crypto",
- "haldir-testkit",
- "sha2",
 ]
 
 [[package]]
