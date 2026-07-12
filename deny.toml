@@ -8,12 +8,15 @@ yanked = "deny"
 
 [licenses]
 version = 2
-allow = ["Apache-2.0", "MIT", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib"]
+allow = ["Apache-2.0", "MIT", "BSD-3-Clause"]
 confidence-threshold = 0.9
 
 [bans]
 multiple-versions = "warn"
-wildcard-dependencies = "deny"
+# External wildcard deps are denied; internal path crates (no published version)
+# are permitted via allow-wildcard-paths.
+wildcards = "deny"
+allow-wildcard-paths = true
 # Neural runtimes, web UI frameworks, and dynamic-plugin loaders must never
 # enter the Gate command-path dependency graph.
 deny = []

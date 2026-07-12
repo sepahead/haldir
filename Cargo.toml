@@ -24,6 +24,8 @@ rust-version = "1.96"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/sepahead/haldir"
 authors = ["Sepahead"]
+# Experimental workspace crates: not published to any registry.
+publish = false
 # Haldir Gate is an EXPERIMENTAL inline mission-authorization reference monitor.
 # It is NOT production ready, certified, airworthy, or safe for deployment.
 # Current command-authority profile: PRE_AUTHORITY_ACL_ONLY (NCP v0.8.0 increment 1).
