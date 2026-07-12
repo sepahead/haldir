@@ -23,7 +23,9 @@ pub mod actor;
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use actor::{DecisionRecord, GateConfig, GateError, VehicleActor};
+pub use actor::{
+    DecisionRecord, GateConfig, GateConfigError, GateError, GateStartupError, VehicleActor,
+};
 
 #[cfg(test)]
 mod e2e {
@@ -260,12 +262,12 @@ mod e2e {
         setup_with_publication(acl_publication())
     }
 
-    fn setup_with_publication(publication: PlantPublicationAuthorityStateV1) -> Fixture {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
-        let now = MonoInstant::from_nanos(1_000_000_000);
-
+    fn gate_config(
+        publication: PlantPublicationAuthorityStateV1,
+        ctrl_sk: &SigningKey,
+        mission_sk: &SigningKey,
+        gate_sk: SigningKey,
+    ) -> (GateConfig, AdmissionRecordV1, DigestV1) {
         let mut trust = TrustStore::new();
         trust
             .insert(KeyRecord {
@@ -320,7 +322,175 @@ mod e2e {
             gate_signer: gate_sk,
             gate_signer_kid: kid(3),
         };
-        let mut actor = VehicleActor::new(cfg);
+        (cfg, rec, admission_digest)
+    }
+
+    fn valid_config(publication: PlantPublicationAuthorityStateV1) -> GateConfig {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
+        gate_config(publication, &ctrl_sk, &mission_sk, gate_sk).0
+    }
+
+    fn gate_only_trust(
+        signing_seed: u8,
+        role: KeyRole,
+        subject: Option<&str>,
+        class: KeyClass,
+    ) -> TrustStore {
+        let mut trust = TrustStore::new();
+        trust
+            .insert(KeyRecord {
+                kid: kid(3),
+                role,
+                verifying_key: SigningKey::from_seed([signing_seed; 32]).verifying_key(),
+                subject: subject.map(str::to_owned),
+                class,
+            })
+            .unwrap();
+        trust
+    }
+
+    fn ncp_publication(
+        session: NcpSessionIdentityV1,
+        output_epoch: GateOutputEpoch,
+    ) -> PlantPublicationAuthorityStateV1 {
+        PlantPublicationAuthorityStateV1::NcpLeaseV1(NcpLeaseEvidenceV1 {
+            gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
+            final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
+            session,
+            authority_term: NonZeroU64::new(1).unwrap(),
+            lease_id: AuthorityLeaseId::new([8; 16]),
+            authorized_output_epoch: output_epoch,
+            expires_mono_ns: Some(u64::MAX),
+        })
+    }
+
+    #[test]
+    fn gate_config_accepts_consistent_assurance_configuration() {
+        let cfg = valid_config(acl_publication());
+
+        assert_eq!(cfg.validate(), Ok(()));
+    }
+
+    #[test]
+    fn vehicle_actor_new_rejects_zero_local_cap() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.local_cap_ms = 0;
+
+        let result = VehicleActor::new(cfg);
+
+        assert!(matches!(
+            result,
+            Err(GateStartupError::Config(GateConfigError::LocalCapZero))
+        ));
+    }
+
+    #[test]
+    fn gate_config_rejects_unknown_gate_signer_kid() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.trust = TrustStore::new();
+
+        assert_eq!(cfg.validate(), Err(GateConfigError::GateSignerKidUnknown));
+    }
+
+    #[test]
+    fn gate_config_rejects_revoked_gate_signer_kid() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.revocations.revoke_key(&kid(3), 1);
+
+        assert_eq!(cfg.validate(), Err(GateConfigError::GateSignerKidRevoked));
+    }
+
+    #[test]
+    fn gate_config_rejects_wrong_gate_signer_role() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.trust = gate_only_trust(
+            3,
+            KeyRole::ControllerIntent,
+            Some("gate-1"),
+            KeyClass::Assurance,
+        );
+
+        assert_eq!(cfg.validate(), Err(GateConfigError::GateSignerRoleMismatch));
+    }
+
+    #[test]
+    fn gate_config_rejects_development_gate_signer() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.trust = gate_only_trust(
+            3,
+            KeyRole::GateApplication,
+            Some("gate-1"),
+            KeyClass::Development,
+        );
+
+        assert_eq!(cfg.validate(), Err(GateConfigError::GateSignerNotAssurance));
+    }
+
+    #[test]
+    fn gate_config_rejects_gate_signer_for_another_subject() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.trust = gate_only_trust(
+            3,
+            KeyRole::GateApplication,
+            Some("gate-2"),
+            KeyClass::Assurance,
+        );
+
+        assert_eq!(
+            cfg.validate(),
+            Err(GateConfigError::GateSignerSubjectMismatch)
+        );
+    }
+
+    #[test]
+    fn gate_config_rejects_gate_signer_public_key_mismatch() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.trust = gate_only_trust(
+            4,
+            KeyRole::GateApplication,
+            Some("gate-1"),
+            KeyClass::Assurance,
+        );
+
+        assert_eq!(
+            cfg.validate(),
+            Err(GateConfigError::GateSignerPublicKeyMismatch)
+        );
+    }
+
+    #[test]
+    fn gate_config_rejects_publication_for_another_session() {
+        let mut other_session = sess();
+        other_session.generation = uuid(9);
+        let publication = ncp_publication(other_session, GateOutputEpoch::new(uuid(5)));
+        let cfg = valid_config(publication);
+
+        assert_eq!(
+            cfg.validate(),
+            Err(GateConfigError::PublicationSessionMismatch)
+        );
+    }
+
+    #[test]
+    fn gate_config_rejects_publication_for_another_output_epoch() {
+        let publication = ncp_publication(sess(), GateOutputEpoch::new(uuid(9)));
+        let cfg = valid_config(publication);
+
+        assert_eq!(
+            cfg.validate(),
+            Err(GateConfigError::PublicationOutputEpochMismatch)
+        );
+    }
+
+    fn setup_with_publication(publication: PlantPublicationAuthorityStateV1) -> Fixture {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let (cfg, rec, admission_digest) = gate_config(publication, &ctrl_sk, &mission_sk, gate_sk);
+        let mut actor = VehicleActor::new(cfg).expect("valid Gate configuration");
         actor.register_challenge(
             ChallengeNonce::new([7; 32]),
             MonoInstant::from_nanos(u64::MAX),

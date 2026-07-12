@@ -50,7 +50,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   (requested validity or hard cap), computed before the Stage-11 min.
 - `[~]` **B11** Restart lease invalidation via a fresh boot id and empty in-memory state
   is modeled and unit-tested (`restart_invalidates_lease_via_new_boot_id`). **Not wired
-  in P0:** durable persistence of the boot counter and a boot-id-repeat latch, so
+  in P0:** the boot counter now fails on checked exhaustion and can be prepared
+  copy-on-write, but durable persistence and a boot-id-repeat latch are absent, so
   cross-restart protection is not established (see `docs/LIMITATIONS.md`).
 - `[~]` **B12** Anti-rollback high-water + strict-advance rejection + structural-corruption
   detection are implemented and tested (in-memory). **Not wired in P0:** durable

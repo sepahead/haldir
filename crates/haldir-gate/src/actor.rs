@@ -25,7 +25,7 @@ use haldir_core::snapshot::ActiveMissionLeaseSnapshot;
 use haldir_core::snapshot::{AdmittedControllerSnapshot, TrustedStateSnapshotV1};
 use haldir_core::time::MonoInstant;
 use haldir_crypto::{
-    CryptoError, ExpectedContext, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
+    CryptoError, ExpectedContext, KeyClass, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
     sign_message, verify_and_decode,
 };
 use haldir_evidence::EvidenceSpool;
@@ -35,8 +35,8 @@ use haldir_ncp08::{
 use haldir_policy_native::{BoundedActionHistory, NativePolicySnapshot, PolicyInput, decide};
 use haldir_reference_plant::{PlantAction, PlantCommand};
 use haldir_state::{
-    AntiRollbackStore, ChallengeTable, ControllerReplayState, GateOutputStreamState,
-    GateProcessMachine, LeaseAcceptContext, RevisionCounter, accept_lease,
+    AntiRollbackError, AntiRollbackStore, ChallengeTable, ControllerReplayState,
+    GateOutputStreamState, GateProcessMachine, LeaseAcceptContext, RevisionCounter, accept_lease,
 };
 
 const MAX_RETIRED: usize = 16;
@@ -53,6 +53,51 @@ pub enum GateError {
     Lease(&'static str),
     /// The gate is fault-latched.
     Faulted,
+}
+
+/// A cross-field configuration validation failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GateConfigError {
+    /// The local lease-duration cap is zero, so no lease can become useful.
+    LocalCapZero,
+    /// The configured Gate signing key id is absent from the trust store.
+    GateSignerKidUnknown,
+    /// The configured Gate signing key id is revoked.
+    GateSignerKidRevoked,
+    /// The trusted record is not authorized for Gate application signatures.
+    GateSignerRoleMismatch,
+    /// The trusted record is not provisioned for the assurance profile.
+    GateSignerNotAssurance,
+    /// The trusted record's subject is not the configured Gate id.
+    GateSignerSubjectMismatch,
+    /// The trusted public key does not belong to the configured private key.
+    GateSignerPublicKeyMismatch,
+    /// A future NCP authority lease names a different NCP session.
+    PublicationSessionMismatch,
+    /// A future NCP authority lease authorizes a different output epoch.
+    PublicationOutputEpochMismatch,
+}
+
+/// A failure to construct a session-bound vehicle actor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GateStartupError {
+    /// Static configuration validation failed.
+    Config(GateConfigError),
+    /// The anti-rollback boot namespace could not advance.
+    AntiRollback(AntiRollbackError),
+    /// The explicit startup state-machine progression was rejected.
+    ProcessTransition {
+        /// State before the attempted transition.
+        from: GateProcessStateV1,
+        /// Requested startup state.
+        to: GateProcessStateV1,
+    },
+}
+
+impl From<GateConfigError> for GateStartupError {
+    fn from(error: GateConfigError) -> Self {
+        Self::Config(error)
+    }
 }
 
 /// The result of processing one intent.
@@ -111,6 +156,51 @@ pub struct GateConfig {
     pub gate_signer: SigningKey,
     /// The Gate application signing key id.
     pub gate_signer_kid: KeyId,
+}
+
+impl GateConfig {
+    /// Validate static invariants that span provisioned configuration fields.
+    ///
+    /// # Errors
+    /// Returns [`GateConfigError`] when the local lease cap is unusable, the
+    /// Gate receipt signer is not bound to its trusted identity and key, or a
+    /// future NCP publication lease is scoped to another session or output epoch.
+    pub fn validate(&self) -> Result<(), GateConfigError> {
+        if self.local_cap_ms == 0 {
+            return Err(GateConfigError::LocalCapZero);
+        }
+
+        let signer_record = self
+            .trust
+            .resolve(&self.gate_signer_kid)
+            .ok_or(GateConfigError::GateSignerKidUnknown)?;
+        if self.revocations.is_key_revoked(&self.gate_signer_kid) {
+            return Err(GateConfigError::GateSignerKidRevoked);
+        }
+        if signer_record.role != KeyRole::GateApplication {
+            return Err(GateConfigError::GateSignerRoleMismatch);
+        }
+        if signer_record.class != KeyClass::Assurance {
+            return Err(GateConfigError::GateSignerNotAssurance);
+        }
+        if signer_record.subject.as_deref() != Some(self.gate_id.as_str()) {
+            return Err(GateConfigError::GateSignerSubjectMismatch);
+        }
+        if signer_record.verifying_key.to_bytes() != self.gate_signer.verifying_key().to_bytes() {
+            return Err(GateConfigError::GateSignerPublicKeyMismatch);
+        }
+
+        if let PlantPublicationAuthorityStateV1::NcpLeaseV1(lease) = &self.publication {
+            if lease.session != self.session {
+                return Err(GateConfigError::PublicationSessionMismatch);
+            }
+            if lease.authorized_output_epoch != self.output_epoch {
+                return Err(GateConfigError::PublicationOutputEpochMismatch);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// The per-vehicle decision actor.
@@ -263,26 +353,31 @@ impl ReceiptDraft {
 }
 
 impl VehicleActor {
-    /// Construct a session-bound actor from configuration.
-    #[must_use]
-    pub fn new(cfg: GateConfig) -> Self {
+    /// Validate configuration and construct a session-bound actor.
+    ///
+    /// # Errors
+    /// Returns [`GateStartupError`] if configuration validation, anti-rollback
+    /// initialization, or an explicit startup state transition fails.
+    pub fn new(cfg: GateConfig) -> Result<Self, GateStartupError> {
+        cfg.validate()?;
+
         let mut anti_rollback = AntiRollbackStore::new_empty();
-        let _ = anti_rollback.advance_boot();
+        anti_rollback
+            .advance_boot()
+            .map_err(GateStartupError::AntiRollback)?;
         let mut process = GateProcessMachine::new();
-        let mut fault = haldir_state::FaultLatch::new();
-        // These startup transitions must succeed; an impossible transition is an
-        // invariant violation, so latch fail-closed rather than ignore it (H-H07).
+        let fault = haldir_state::FaultLatch::new();
         for to in [
             GateProcessStateV1::Recovering,
             GateProcessStateV1::ReadyNoSession,
             GateProcessStateV1::SessionBound,
         ] {
-            if process.transition(to).is_err() {
-                fault.latch("STARTUP_TRANSITION");
-                process.latch_fault();
-            }
+            let from = process.state();
+            process
+                .transition(to)
+                .map_err(|_| GateStartupError::ProcessTransition { from, to })?;
         }
-        Self {
+        Ok(Self {
             gate_id: cfg.gate_id,
             gate_boot_id: cfg.gate_boot_id,
             realm: cfg.realm,
@@ -314,7 +409,7 @@ impl VehicleActor {
             gate_signer_kid: cfg.gate_signer_kid,
             lease_usage: None,
             evidence: EvidenceSpool::new(MAX_EVIDENCE_RECORDS, MAX_EVIDENCE_BYTES),
-        }
+        })
     }
 
     /// The digest-chained decision-receipt evidence spool (read-only). The chain

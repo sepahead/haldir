@@ -61,13 +61,21 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   `deny(missing_docs)`. Crate- and item-level docs are written voluntarily.
 - **Durable anti-rollback / restart rollback protection.** The anti-rollback store
   is **in-memory in P0**. It rejects a term/epoch that does not strictly advance its
-  high-water and detects structural corruption of its serialized form, but the Gate
+  high-water, rejects duplicate/noncanonical serialized maps, treats boot-counter
+  exhaustion as terminal, and exposes copy-on-write candidates so a future durable
+  layer can commit before mutating live authority. However, the Gate
   does not persist, load, MAC, or fsync it, and does not derive/compare
   `gate_boot_id` against the monotonic boot counter. Therefore the **cross-restart**
   rollback protection of B11/B12 (a lease minted by a prior incarnation being
   replayed after a restart with a repeated boot id) is **NOT established**. Wiring
   durable persistence (atomic temp→fsync→rename, separate-key MAC for semantic
   rewind detection, boot-id-repeat latch) is future work.
+- **Configuration validation is not a deployment-package/ACL proof.** Gate actor
+  construction is fallible and verifies its lease cap, receipt signing identity,
+  key binding, and any future NCP lease's session/output epoch (`CL-CONFIG-01`).
+  The current ACL-only evidence type carries no session/output epoch or expected
+  route/principal digest, so configuration validation cannot establish live final-key
+  exclusivity; that remains `CL-LIVE-TRANSPORT-01`.
 - **Production status.** Not production ready, certified, airworthy, or safe for
   deployment. No independent security review has been performed.
 

@@ -209,7 +209,7 @@ mod range {
                 gate_signer: gate_sk,
                 gate_signer_kid: kid(4),
             };
-            let mut actor = VehicleActor::new(cfg);
+            let mut actor = VehicleActor::new(cfg).expect("range fixture has valid Gate config");
             actor.register_challenge(
                 ChallengeNonce::new([7; 32]),
                 MonoInstant::from_nanos(u64::MAX),

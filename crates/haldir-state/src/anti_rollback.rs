@@ -22,6 +22,8 @@ use std::collections::BTreeMap;
 pub enum AntiRollbackError {
     /// A term/epoch/boot value did not strictly advance (a rollback attempt).
     Rollback,
+    /// A checked monotonic namespace reached its terminal value.
+    Exhausted,
     /// The persisted store could not be parsed (corruption).
     Corrupt,
 }
@@ -32,13 +34,14 @@ impl AntiRollbackError {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Rollback => "ANTI_ROLLBACK_REWIND",
+            Self::Exhausted => "ANTI_ROLLBACK_EXHAUSTED",
             Self::Corrupt => "ANTI_ROLLBACK_CORRUPT",
         }
     }
 }
 
 /// Highest-water anti-rollback state.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AntiRollbackStore {
     boot_counter: u64,
     terms: BTreeMap<Vec<u8>, u64>,
@@ -52,13 +55,30 @@ impl AntiRollbackStore {
         Self::default()
     }
 
-    /// Advance the boot counter, returning the new value (saturating at
-    /// `u64::MAX`). A fresh boot value underpins restart lease invalidation (B11);
-    /// note the P0 Gate does not yet persist this counter (see the module docs).
-    #[must_use]
-    pub fn advance_boot(&mut self) -> u64 {
-        self.boot_counter = self.boot_counter.saturating_add(1);
-        self.boot_counter
+    /// Advance the boot counter with checked exhaustion.
+    ///
+    /// # Errors
+    /// Returns [`AntiRollbackError::Exhausted`] instead of reusing `u64::MAX`.
+    pub fn advance_boot(&mut self) -> Result<u64, AntiRollbackError> {
+        let next = self
+            .boot_counter
+            .checked_add(1)
+            .ok_or(AntiRollbackError::Exhausted)?;
+        self.boot_counter = next;
+        Ok(next)
+    }
+
+    /// Prepare an advanced boot state without mutating the live store.
+    ///
+    /// The caller can serialize and durably commit the candidate, then replace
+    /// the live state only after durable commit succeeds.
+    ///
+    /// # Errors
+    /// Returns [`AntiRollbackError::Exhausted`] at the counter limit.
+    pub fn candidate_with_advanced_boot(&self) -> Result<(Self, u64), AntiRollbackError> {
+        let mut candidate = self.clone();
+        let counter = candidate.advance_boot()?;
+        Ok((candidate, counter))
     }
 
     /// The current boot counter.
@@ -87,6 +107,16 @@ impl AntiRollbackStore {
         Ok(())
     }
 
+    /// Prepare a term update without mutating the live store.
+    ///
+    /// # Errors
+    /// Returns [`AntiRollbackError::Rollback`] when the term does not advance.
+    pub fn candidate_with_term(&self, scope: &[u8], term: u64) -> Result<Self, AntiRollbackError> {
+        let mut candidate = self.clone();
+        candidate.accept_term(scope, term)?;
+        Ok(candidate)
+    }
+
     /// The highest accepted revocation epoch for a scope.
     #[must_use]
     pub fn revocation_epoch(&self, scope: &[u8]) -> u64 {
@@ -108,6 +138,20 @@ impl AntiRollbackStore {
         }
         self.revocation_epochs.insert(scope.to_vec(), epoch);
         Ok(())
+    }
+
+    /// Prepare a revocation-epoch update without mutating the live store.
+    ///
+    /// # Errors
+    /// Returns [`AntiRollbackError::Rollback`] when the epoch rewinds.
+    pub fn candidate_with_revocation_epoch(
+        &self,
+        scope: &[u8],
+        epoch: u64,
+    ) -> Result<Self, AntiRollbackError> {
+        let mut candidate = self.clone();
+        candidate.accept_revocation_epoch(scope, epoch)?;
+        Ok(candidate)
     }
 
     /// Serialize to a durable byte representation (canonical, deterministic).
@@ -136,11 +180,15 @@ impl AntiRollbackStore {
         let revocation_epochs = decode_map(&mut r)?;
         r.end_container();
         r.finish().map_err(|_| AntiRollbackError::Corrupt)?;
-        Ok(Self {
+        let store = Self {
             boot_counter,
             terms,
             revocation_epochs,
-        })
+        };
+        if store.to_bytes() != bytes {
+            return Err(AntiRollbackError::Corrupt);
+        }
+        Ok(store)
     }
 }
 
@@ -167,7 +215,9 @@ fn decode_map(r: &mut CborReader<'_>) -> Result<BTreeMap<Vec<u8>, u64>, AntiRoll
             .to_vec();
         let v = r.read_uint().map_err(|_| AntiRollbackError::Corrupt)?;
         r.end_container();
-        m.insert(k, v);
+        if m.insert(k, v).is_some() {
+            return Err(AntiRollbackError::Corrupt);
+        }
     }
     r.end_container();
     Ok(m)
@@ -190,17 +240,17 @@ mod tests {
     #[test]
     fn boot_counter_strictly_increases_across_reload() {
         let mut s = AntiRollbackStore::new_empty();
-        let b1 = s.advance_boot();
+        let b1 = s.advance_boot().unwrap();
         let bytes = s.to_bytes();
         let mut s2 = AntiRollbackStore::from_bytes(&bytes).unwrap();
-        let b2 = s2.advance_boot();
+        let b2 = s2.advance_boot().unwrap();
         assert!(b2 > b1, "boot counter must advance across a reload");
     }
 
     #[test]
     fn roundtrip_preserves_high_waters() {
         let mut s = AntiRollbackStore::new_empty();
-        let _ = s.advance_boot();
+        let _ = s.advance_boot().unwrap();
         s.accept_term(b"lease", 9).unwrap();
         s.accept_revocation_epoch(b"admission", 3).unwrap();
         let bytes = s.to_bytes();
@@ -220,6 +270,59 @@ mod tests {
             AntiRollbackStore::from_bytes(&bytes).err(),
             Some(AntiRollbackError::Corrupt),
             "corruption must be a fault, never a zero-init reset"
+        );
+    }
+
+    #[test]
+    fn boot_counter_exhaustion_is_terminal_not_reused() {
+        let mut w = CborWriter::new();
+        w.array_header(3);
+        w.uint(u64::MAX);
+        w.array_header(0);
+        w.array_header(0);
+        let bytes = w.into_bytes();
+        let mut exhausted = AntiRollbackStore::from_bytes(&bytes).unwrap();
+        assert_eq!(exhausted.advance_boot(), Err(AntiRollbackError::Exhausted));
+        assert_eq!(exhausted.boot_counter(), u64::MAX);
+    }
+
+    #[test]
+    fn candidates_do_not_mutate_live_state_before_commit() {
+        let mut live = AntiRollbackStore::new_empty();
+        live.accept_term(b"lease", 5).unwrap();
+        let before = live.clone();
+
+        let term_candidate = live.candidate_with_term(b"lease", 6).unwrap();
+        assert_eq!(live, before);
+        assert_eq!(term_candidate.highest_term(b"lease"), 6);
+
+        let (boot_candidate, counter) = live.candidate_with_advanced_boot().unwrap();
+        assert_eq!(live, before);
+        assert_eq!(counter, 1);
+        assert_eq!(boot_candidate.boot_counter(), 1);
+
+        assert_eq!(
+            live.candidate_with_term(b"lease", 5),
+            Err(AntiRollbackError::Rollback)
+        );
+        assert_eq!(live, before);
+    }
+
+    #[test]
+    fn noncanonical_or_duplicate_maps_are_corrupt() {
+        let mut w = CborWriter::new();
+        w.array_header(3);
+        w.uint(0);
+        w.array_header(2);
+        for value in [1, 2] {
+            w.array_header(2);
+            w.bytes(b"same");
+            w.uint(value);
+        }
+        w.array_header(0);
+        assert_eq!(
+            AntiRollbackStore::from_bytes(&w.into_bytes()),
+            Err(AntiRollbackError::Corrupt)
         );
     }
 }
