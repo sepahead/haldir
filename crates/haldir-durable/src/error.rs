@@ -25,6 +25,8 @@ pub enum DurableError {
     Exhausted,
     /// The storage backend failed its atomic replacement contract.
     Storage,
+    /// The selected backend is unavailable on this platform.
+    Unsupported,
     /// The external anchor backend was unavailable.
     AnchorUnavailable,
     /// The external anchor compare-and-set observed unexpected state.
@@ -46,6 +48,7 @@ impl DurableError {
             Self::GenerationGap => "DURABLE_GENERATION_GAP",
             Self::Exhausted => "DURABLE_EXHAUSTED",
             Self::Storage => "DURABLE_STORAGE_FAILED",
+            Self::Unsupported => "DURABLE_UNSUPPORTED",
             Self::AnchorUnavailable => "DURABLE_ANCHOR_UNAVAILABLE",
             Self::AnchorConflict => "DURABLE_ANCHOR_CONFLICT",
         }

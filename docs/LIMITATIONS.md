@@ -68,11 +68,20 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   `gate_boot_id` against the monotonic boot counter. Therefore the **cross-restart**
   rollback protection of B11/B12 (a lease minted by a prior incarnation being
   replayed after a restart with a repeated boot id) is **NOT established**. Wiring
-  `haldir-durable` into Gate with an atomic platform backend, external
-  non-rewindable anchor, separately provisioned storage key, and boot-id-repeat
-  latch is future work. The abstract HMAC/envelope/anchor mechanism and durable
-  anti-rollback wrapper are tested (`CL-DURABLE-PRIMITIVE-01`), but they deliberately
-  make no filesystem durability claim.
+  `haldir-durable` into Gate with an external non-rewindable anchor and separately
+  provisioned storage key is future work. The HMAC/envelope/anchor mechanism,
+  Unix atomic-file backend, boot-ID binding/repeat latch, and durable anti-rollback
+  wrapper are unit tested (`CL-DURABLE-PRIMITIVE-01`). However, the current actor
+  still accepts its boot ID in `GateConfig` and selects the in-memory store. No
+  child-process kill matrix has yet established the file backend's old-or-new
+  behavior under actual crashes.
+- **Filesystem/platform durability scope.** `AtomicFileSnapshot` uses a same-directory
+  `create_new` temporary, file `sync_all`, Unix rename, and parent-directory
+  `sync_all`, and assumes a trusted local POSIX filesystem plus exclusive writer.
+  It is unsupported on Windows, cannot eliminate ancestor-path races using only
+  safe path-based standard-library APIs, and does not claim macOS `F_FULLFSYNC`,
+  power-loss, network/FAT/overlay filesystem, or adversarial directory-rewind
+  guarantees. A same-filesystem anchor cannot close `CL-DURABLE-01`.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,
   key binding, and any future NCP lease's session/output epoch (`CL-CONFIG-01`).

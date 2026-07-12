@@ -50,13 +50,15 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   (requested validity or hard cap), computed before the Stage-11 min.
 - `[~]` **B11** Restart lease invalidation via a fresh boot id and empty in-memory state
   is modeled and unit-tested (`restart_invalidates_lease_via_new_boot_id`). **Not wired
-  in P0:** the boot counter now fails on checked exhaustion and can be prepared
-  copy-on-write, but durable persistence and a boot-id-repeat latch are absent, so
+  in P0:** the durable wrapper now derives a Gate-bound ID from checked counter +
+  injected entropy, persists the last ID, and rejects repeats before returning a
+  committed `BootContext`; the current Gate actor does not select that wrapper, so
   cross-restart protection is not established (see `docs/LIMITATIONS.md`).
-- `[~]` **B12** Anti-rollback high-water + strict-advance rejection + structural-corruption
-  detection are implemented and tested (in-memory). **Not wired in P0:** durable
-  temp→fsync→rename, separate-key MAC (semantic-rewind detection), and persist/load;
-  so a `missing/rewound-to-lower-high-water` store is not yet a fault. See LIMITATIONS.
+- `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,
+  separate-key authenticated snapshots, external-anchor reconciliation, and Unix
+  temp→file-sync→rename→directory-sync mechanics are unit tested. **Not wired in
+  P0:** Gate selection, a deployed external non-rewindable anchor, and child-process
+  crash evidence; therefore the live Gate still cannot claim cross-restart protection.
 - `[~]` **B13** Monotonic-clock regression while ACTIVE now coherently latches both
   enforcement and public process state as `FAULT_LATCHED`. P0 receives a supplied
   `MonoInstant`; real clock-read failure handling belongs to the future runtime.

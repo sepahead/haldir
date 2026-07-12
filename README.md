@@ -47,11 +47,12 @@ fixed-point deterministic policy engine, a deterministic reference plant with st
 evidence, the Gate-owned NCP v0.8.0 modeled output adapter plus an opt-in exact
 upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts, and authenticated snapshot/
-external-anchor primitives with commit-before-mutation anti-rollback tests
-(`CL-DURABLE-PRIMITIVE-01`). The spool remains lossy on overflow and no real
-filesystem/anchor backend is selected, so crash durability remains out of P0
-(`CL-DURABLE-01`). The composed Gate runtime
-with its 13-stage decision pipeline, and a deterministic adversarial range + end-to-end
+external-anchor primitives with commit-before-mutation anti-rollback tests,
+Unix atomic-file mechanics, and Gate-bound durable boot-ID mechanisms
+(`CL-DURABLE-PRIMITIVE-01`). The spool remains lossy on overflow and Gate selects
+neither that file backend nor a deployed external anchor, so crash durability remains out of P0
+(`CL-DURABLE-01`). The composed Gate runtime has its 13-stage decision pipeline,
+and a deterministic adversarial range + end-to-end
 acceptance campaign.
 
 Every load-bearing claim above is reconciled against its evidence in

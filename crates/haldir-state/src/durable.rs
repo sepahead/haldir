@@ -1,6 +1,7 @@
 //! Durable anti-rollback state composed over `haldir-durable` primitives.
 
-use crate::{AntiRollbackError, AntiRollbackStore};
+use crate::{AntiRollbackError, AntiRollbackStore, BootContext};
+use haldir_contracts::ids::{GateBootId, GateId};
 use haldir_durable::{
     AuthenticatedSnapshotStore, CommitReceipt, DurableError, GenerationAnchor, RecoveryStatus,
     SnapshotBinding, SnapshotStorage, StorageMacKey,
@@ -86,6 +87,12 @@ impl<S: SnapshotStorage, A: GenerationAnchor> DurableAntiRollbackStore<S, A> {
         self.state.boot_counter()
     }
 
+    /// The most recently committed Gate boot ID, if a bound boot has begun.
+    #[must_use]
+    pub const fn last_gate_boot_id(&self) -> Option<GateBootId> {
+        self.state.last_gate_boot_id()
+    }
+
     /// Highest accepted lease term for `scope`.
     #[must_use]
     pub fn highest_term(&self, scope: &[u8]) -> u64 {
@@ -98,15 +105,23 @@ impl<S: SnapshotStorage, A: GenerationAnchor> DurableAntiRollbackStore<S, A> {
         self.state.revocation_epoch(scope)
     }
 
-    /// Commit an advanced boot counter before updating live state.
+    /// Derive and commit the next Gate boot incarnation before exposing it.
+    ///
+    /// `entropy` must come from the caller's configured cryptographic entropy
+    /// source. This semantic durability layer performs no OS random generation.
     ///
     /// # Errors
-    /// Returns on checked exhaustion or durable commit failure.
-    pub fn advance_boot(&mut self) -> Result<(u64, CommitReceipt), DurableAntiRollbackError> {
-        let (candidate, counter) = self.state.candidate_with_advanced_boot()?;
+    /// Returns on counter exhaustion, a derived boot-ID repeat, or durable commit
+    /// failure. The live state is replaced only after commit succeeds.
+    pub fn begin_boot(
+        &mut self,
+        gate_id: &GateId,
+        entropy: [u8; 32],
+    ) -> Result<(BootContext, CommitReceipt), DurableAntiRollbackError> {
+        let (candidate, context) = self.state.candidate_for_boot(gate_id, entropy)?;
         let receipt = self.snapshots.commit(&candidate.to_bytes())?;
         self.state = candidate;
-        Ok((counter, receipt))
+        Ok((context, receipt))
     }
 
     /// Commit a strictly advancing lease term before updating live state.
@@ -210,6 +225,10 @@ mod tests {
         StorageMacKey::new([7; 32])
     }
 
+    fn gate_id() -> GateId {
+        GateId::new("gate-1").unwrap()
+    }
+
     fn provision(
         storage: MemoryStorage,
         anchor: MemoryAnchor,
@@ -223,8 +242,8 @@ mod tests {
         let anchor = MemoryAnchor::default();
         let mut store = provision(storage.clone(), anchor.clone());
         store.accept_term(b"lease", 4).unwrap();
-        let (boot, _) = store.advance_boot().unwrap();
-        assert_eq!(boot, 1);
+        let (boot, _) = store.begin_boot(&gate_id(), [1; 32]).unwrap();
+        assert_eq!(boot.boot_counter, 1);
         drop(store);
 
         let (mut reopened, recovery) =
@@ -233,6 +252,7 @@ mod tests {
         assert_eq!(recovery, RecoveryStatus::Clean);
         assert_eq!(reopened.highest_term(b"lease"), 4);
         assert_eq!(reopened.boot_counter(), 1);
+        assert_eq!(reopened.last_gate_boot_id(), Some(boot.gate_boot_id));
         assert_eq!(
             reopened.accept_term(b"lease", 4),
             Err(DurableAntiRollbackError::State(AntiRollbackError::Rollback))
@@ -273,5 +293,52 @@ mod tests {
                 .unwrap();
         assert_eq!(status, RecoveryStatus::CompletedPendingAnchor);
         assert_eq!(recovered.highest_term(b"lease"), 5);
+    }
+
+    #[test]
+    fn begin_boot_commit_failure_does_not_mutate_live_state() {
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let mut store = provision(storage.clone(), anchor);
+        storage.fail_replace.set(true);
+
+        assert_eq!(
+            store.begin_boot(&gate_id(), [3; 32]),
+            Err(DurableAntiRollbackError::Durable(DurableError::Storage))
+        );
+        assert_eq!(store.boot_counter(), 0);
+        assert_eq!(store.last_gate_boot_id(), None);
+    }
+
+    #[test]
+    fn begin_boot_reopen_advances_counter_and_retains_last_boot_id() {
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let mut store = provision(storage.clone(), anchor.clone());
+        let (first, _) = store.begin_boot(&gate_id(), [1; 32]).unwrap();
+        drop(store);
+
+        let (mut reopened, recovery) = DurableAntiRollbackStore::open_existing(
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            binding(),
+            4096,
+        )
+        .unwrap();
+        assert_eq!(recovery, RecoveryStatus::Clean);
+        let (second, _) = reopened.begin_boot(&gate_id(), [2; 32]).unwrap();
+        assert!(second.boot_counter > first.boot_counter);
+        assert_ne!(second.gate_boot_id, first.gate_boot_id);
+        drop(reopened);
+
+        let (reopened_again, _) =
+            DurableAntiRollbackStore::open_existing(storage, anchor, key(), binding(), 4096)
+                .unwrap();
+        assert_eq!(reopened_again.boot_counter(), second.boot_counter);
+        assert_eq!(
+            reopened_again.last_gate_boot_id(),
+            Some(second.gate_boot_id)
+        );
     }
 }

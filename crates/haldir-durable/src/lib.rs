@@ -1,9 +1,9 @@
 //! Authenticated durable-state primitives for Haldir.
 //!
 //! This crate provides an HMAC-authenticated snapshot envelope, an atomic-storage
-//! contract, and reconciliation against a monotonic anchor outside the snapshot
-//! failure domain. It intentionally contains no filesystem backend yet and makes
-//! no crash- or power-durability claim by itself.
+//! contract, a Unix process-crash-scoped file backend, and reconciliation
+//! against a monotonic anchor outside the snapshot failure domain. It makes no
+//! power-loss-durability claim by itself.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -17,10 +17,12 @@
 )]
 
 pub mod error;
+mod file;
 mod mac;
 pub mod snapshot;
 
 pub use error::DurableError;
+pub use file::AtomicFileSnapshot;
 pub use mac::StorageMacKey;
 pub use snapshot::{
     Anchor, AuthenticatedSnapshotStore, CommitReceipt, GenerationAnchor, LoadedSnapshot,

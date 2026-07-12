@@ -10,6 +10,16 @@ Status vocabulary: **done** means the declared phase gate is backed by current c
 automated evidence; **partial** means useful mechanisms exist but the phase gate is not
 fully proven; **not started** means no qualifying implementation/evidence is present.
 
+## Tracked completion gates
+
+- [#2 — machine-readable ecosystem source inventory](https://github.com/sepahead/haldir/issues/2)
+- [#3 — durable Gate startup, boot identity, and evidence recovery](https://github.com/sepahead/haldir/issues/3)
+- [#4 — secure Zenoh transport and ACL exclusivity](https://github.com/sepahead/haldir/issues/4)
+- [#5 — Crebain sole-plant-owner integration](https://github.com/sepahead/haldir/issues/5)
+- [#6 — Engram/NEST intent-only integration](https://github.com/sepahead/haldir/issues/6)
+- [#7 — backend admission, live range, and performance evidence](https://github.com/sepahead/haldir/issues/7)
+- [#8 — first signed experimental release](https://github.com/sepahead/haldir/issues/8)
+
 ## Current verdict
 
 The offline P0 reference-monitor core is implemented and its local exit gate passes.
@@ -31,7 +41,7 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 2 — canonical contracts and malformed corpus | Done (P0) | Strict deterministic CBOR, golden vectors, structural limits, and hostile parser tests (`CL-CBOR-01`). |
 | 3 — signatures, roles, trust | Done (P0) | COSE/Ed25519, domain binding, trust conflict handling, role/subject enforcement (`CL-COSE-01`, `CL-TRUST-01`, `CL-IDENTITY-01`). |
 | 4 — controller/backend admission | Partial | Structural digest admission exists; profile reconstruction and behavioral backend equivalence do not (`CL-BACKEND-01`). |
-| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases, revocation, checked/canonical high-water state, and an authenticated snapshot/external-anchor wrapper with commit-before-mutation tests exist (`CL-DURABLE-PRIMITIVE-01`); Gate filesystem recovery and live preemption do not (`CL-DURABLE-01`). |
+| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases/revocation, checked high-water state, authenticated snapshot/external-anchor reconciliation, Unix atomic-file mechanics, and durable boot-ID/high-water ordering tests exist (`CL-DURABLE-PRIMITIVE-01`); Gate selection, deployed external anchor, crash campaign, durable evidence, and live preemption do not (`CL-DURABLE-01`, issue #3). |
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |

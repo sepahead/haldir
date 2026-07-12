@@ -17,6 +17,7 @@ haldir-contracts.workspace = true
 haldir-core.workspace = true
 haldir-durable.workspace = true
 getrandom.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

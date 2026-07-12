@@ -1,21 +1,20 @@
 //! Anti-rollback high-water store (spec §anti-rollback, B11/B12/H12).
 //!
 //! Holds the highest accepted terms and revocation epochs plus a monotonic boot
-//! counter — never an active lease. `accept_term`/`accept_revocation_epoch` reject
-//! any value that does not strictly advance the stored high-water, and the
-//! high-water is advanced BEFORE a lease is exposed active (H12, in-process order).
+//! counter and the last derived Gate boot ID — never an active lease.
+//! `accept_term`/`accept_revocation_epoch` reject values that rewind their stored
+//! high-water. Boot candidates bind the checked next counter to a Gate ID and
+//! caller-supplied entropy, and reject a derived boot-ID repeat.
 //!
-//! **In P0 this store is in-memory.** The `to_bytes`/`from_bytes` format exists for
-//! a future durable backing, and `from_bytes` detects *structural* corruption; but
-//! the P0 Gate does not persist, load, MAC, or fsync the store, and does not yet
-//! derive/compare `gate_boot_id` against the boot counter. Durable persistence
-//! (atomic temp→fsync→rename, a separate-key MAC to detect a semantic rewind to a
-//! lower high-water, and a boot-id-repeat latch) is therefore OUT of P0 scope; see
-//! `docs/LIMITATIONS.md`. Consequently the cross-restart rollback protection B11/B12
-//! describe is **not** established by this deliverable.
+//! This type supplies copy-on-write semantic candidates. [`crate::durable`] owns
+//! the commit-before-exposure ordering and authenticated persistence.
 
 use haldir_contracts::cbor::{CborReader, CborWriter, Limits};
+use haldir_contracts::ids::{GateBootId, GateId};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+
+const BOOT_ID_DOMAIN: &[u8] = b"haldir.state.gate-boot-id.v1\0";
 
 /// An anti-rollback failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,6 +23,8 @@ pub enum AntiRollbackError {
     Rollback,
     /// A checked monotonic namespace reached its terminal value.
     Exhausted,
+    /// A newly derived Gate boot ID matched the previously committed boot ID.
+    BootIdRepeat,
     /// The persisted store could not be parsed (corruption).
     Corrupt,
 }
@@ -35,15 +36,26 @@ impl AntiRollbackError {
         match self {
             Self::Rollback => "ANTI_ROLLBACK_REWIND",
             Self::Exhausted => "ANTI_ROLLBACK_EXHAUSTED",
+            Self::BootIdRepeat => "ANTI_ROLLBACK_BOOT_ID_REPEAT",
             Self::Corrupt => "ANTI_ROLLBACK_CORRUPT",
         }
     }
+}
+
+/// A Gate process incarnation that is safe to expose after durable commit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BootContext {
+    /// The derived identifier for this Gate process incarnation.
+    pub gate_boot_id: GateBootId,
+    /// The checked monotonic counter committed with [`Self::gate_boot_id`].
+    pub boot_counter: u64,
 }
 
 /// Highest-water anti-rollback state.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AntiRollbackStore {
     boot_counter: u64,
+    last_gate_boot_id: Option<GateBootId>,
     terms: BTreeMap<Vec<u8>, u64>,
     revocation_epochs: BTreeMap<Vec<u8>, u64>,
 }
@@ -55,7 +67,10 @@ impl AntiRollbackStore {
         Self::default()
     }
 
-    /// Advance the boot counter with checked exhaustion.
+    /// Advance only the P0 in-memory boot counter with checked exhaustion.
+    ///
+    /// Durable callers must use [`Self::candidate_for_boot`] so the counter is
+    /// cryptographically bound to a Gate ID and caller-supplied entropy.
     ///
     /// # Errors
     /// Returns [`AntiRollbackError::Exhausted`] instead of reusing `u64::MAX`.
@@ -81,10 +96,51 @@ impl AntiRollbackStore {
         Ok((candidate, counter))
     }
 
+    /// Prepare a boot-ID-bound next incarnation without mutating the live store.
+    ///
+    /// `entropy` must be 256 bits obtained by the caller from its configured
+    /// cryptographic entropy source. This semantic layer performs no OS access.
+    ///
+    /// # Errors
+    /// Returns [`AntiRollbackError::Exhausted`] at the counter limit or
+    /// [`AntiRollbackError::BootIdRepeat`] if the derived ID matches the last
+    /// committed Gate boot ID.
+    pub fn candidate_for_boot(
+        &self,
+        gate_id: &GateId,
+        entropy: [u8; 32],
+    ) -> Result<(Self, BootContext), AntiRollbackError> {
+        let counter = self
+            .boot_counter
+            .checked_add(1)
+            .ok_or(AntiRollbackError::Exhausted)?;
+        let gate_boot_id = derive_gate_boot_id(gate_id, counter, &entropy);
+        if self.last_gate_boot_id == Some(gate_boot_id) {
+            return Err(AntiRollbackError::BootIdRepeat);
+        }
+
+        let mut candidate = self.clone();
+        candidate.boot_counter = counter;
+        candidate.last_gate_boot_id = Some(gate_boot_id);
+        Ok((
+            candidate,
+            BootContext {
+                gate_boot_id,
+                boot_counter: counter,
+            },
+        ))
+    }
+
     /// The current boot counter.
     #[must_use]
     pub const fn boot_counter(&self) -> u64 {
         self.boot_counter
+    }
+
+    /// The most recently committed Gate boot ID, if a bound boot has begun.
+    #[must_use]
+    pub const fn last_gate_boot_id(&self) -> Option<GateBootId> {
+        self.last_gate_boot_id
     }
 
     /// The highest accepted term for a scope.
@@ -158,8 +214,12 @@ impl AntiRollbackStore {
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut w = CborWriter::new();
-        w.array_header(3);
+        w.array_header(4);
         w.uint(self.boot_counter);
+        match self.last_gate_boot_id {
+            Some(gate_boot_id) => w.bytes(gate_boot_id.as_bytes()),
+            None => w.bytes(&[]),
+        }
         encode_map(&mut w, &self.terms);
         encode_map(&mut w, &self.revocation_epochs);
         w.into_bytes()
@@ -172,16 +232,23 @@ impl AntiRollbackStore {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, AntiRollbackError> {
         let mut r = CborReader::new(bytes, Limits::LARGE);
         let n = r.read_array_len().map_err(|_| AntiRollbackError::Corrupt)?;
-        if n != 3 {
+        if n != 4 {
             return Err(AntiRollbackError::Corrupt);
         }
         let boot_counter = r.read_uint().map_err(|_| AntiRollbackError::Corrupt)?;
+        let last_gate_boot_id = match r.read_bytes().map_err(|_| AntiRollbackError::Corrupt)? {
+            [] => None,
+            bytes => Some(GateBootId::new(
+                bytes.try_into().map_err(|_| AntiRollbackError::Corrupt)?,
+            )),
+        };
         let terms = decode_map(&mut r)?;
         let revocation_epochs = decode_map(&mut r)?;
         r.end_container();
         r.finish().map_err(|_| AntiRollbackError::Corrupt)?;
         let store = Self {
             boot_counter,
+            last_gate_boot_id,
             terms,
             revocation_epochs,
         };
@@ -190,6 +257,19 @@ impl AntiRollbackStore {
         }
         Ok(store)
     }
+}
+
+fn derive_gate_boot_id(gate_id: &GateId, counter: u64, entropy: &[u8; 32]) -> GateBootId {
+    let mut hasher = Sha256::new();
+    hasher.update(BOOT_ID_DOMAIN);
+    hasher.update(gate_id.as_str().as_bytes());
+    hasher.update(counter.to_be_bytes());
+    hasher.update(entropy);
+    let digest: [u8; 32] = hasher.finalize().into();
+    let mut boot_id = [0; 16];
+    let (boot_id_bytes, _) = digest.split_at(boot_id.len());
+    boot_id.copy_from_slice(boot_id_bytes);
+    GateBootId::new(boot_id)
 }
 
 fn encode_map(w: &mut CborWriter, m: &BTreeMap<Vec<u8>, u64>) {
@@ -227,6 +307,10 @@ fn decode_map(r: &mut CborReader<'_>) -> Result<BTreeMap<Vec<u8>, u64>, AntiRoll
 mod tests {
     use super::*;
 
+    fn gate_id() -> GateId {
+        GateId::new("gate-1").unwrap()
+    }
+
     #[test]
     fn term_must_strictly_advance() {
         let mut s = AntiRollbackStore::new_empty();
@@ -250,7 +334,8 @@ mod tests {
     #[test]
     fn roundtrip_preserves_high_waters() {
         let mut s = AntiRollbackStore::new_empty();
-        let _ = s.advance_boot().unwrap();
+        let (boot_candidate, context) = s.candidate_for_boot(&gate_id(), [7; 32]).unwrap();
+        s = boot_candidate;
         s.accept_term(b"lease", 9).unwrap();
         s.accept_revocation_epoch(b"admission", 3).unwrap();
         let bytes = s.to_bytes();
@@ -258,6 +343,7 @@ mod tests {
         assert_eq!(s2.highest_term(b"lease"), 9);
         assert_eq!(s2.revocation_epoch(b"admission"), 3);
         assert_eq!(s2.boot_counter(), s.boot_counter());
+        assert_eq!(s2.last_gate_boot_id(), Some(context.gate_boot_id));
     }
 
     #[test]
@@ -275,12 +361,11 @@ mod tests {
 
     #[test]
     fn boot_counter_exhaustion_is_terminal_not_reused() {
-        let mut w = CborWriter::new();
-        w.array_header(3);
-        w.uint(u64::MAX);
-        w.array_header(0);
-        w.array_header(0);
-        let bytes = w.into_bytes();
+        let bytes = AntiRollbackStore {
+            boot_counter: u64::MAX,
+            ..AntiRollbackStore::new_empty()
+        }
+        .to_bytes();
         let mut exhausted = AntiRollbackStore::from_bytes(&bytes).unwrap();
         assert_eq!(exhausted.advance_boot(), Err(AntiRollbackError::Exhausted));
         assert_eq!(exhausted.boot_counter(), u64::MAX);
@@ -311,8 +396,9 @@ mod tests {
     #[test]
     fn noncanonical_or_duplicate_maps_are_corrupt() {
         let mut w = CborWriter::new();
-        w.array_header(3);
+        w.array_header(4);
         w.uint(0);
+        w.bytes(&[]);
         w.array_header(2);
         for value in [1, 2] {
             w.array_header(2);
@@ -322,6 +408,71 @@ mod tests {
         w.array_header(0);
         assert_eq!(
             AntiRollbackStore::from_bytes(&w.into_bytes()),
+            Err(AntiRollbackError::Corrupt)
+        );
+    }
+
+    #[test]
+    fn boot_derivation_is_deterministic_and_domain_bound() {
+        let store = AntiRollbackStore::new_empty();
+        let (candidate, context) = store.candidate_for_boot(&gate_id(), [7; 32]).unwrap();
+        let (_, repeated_derivation) = store.candidate_for_boot(&gate_id(), [7; 32]).unwrap();
+
+        assert_eq!(context, repeated_derivation);
+        assert_eq!(context.boot_counter, 1);
+        assert_eq!(
+            context.gate_boot_id,
+            GateBootId::new([
+                0x53, 0x37, 0x21, 0xc0, 0xb3, 0xa3, 0xa7, 0x46, 0x1d, 0xc7, 0xd0, 0xe6, 0x6f, 0xd1,
+                0x96, 0x52,
+            ])
+        );
+        assert_eq!(candidate.last_gate_boot_id(), Some(context.gate_boot_id));
+    }
+
+    #[test]
+    fn derived_boot_id_repeat_is_rejected_without_mutation() {
+        let entropy = [9; 32];
+        let repeated_id = derive_gate_boot_id(&gate_id(), 8, &entropy);
+        let live = AntiRollbackStore {
+            boot_counter: 7,
+            last_gate_boot_id: Some(repeated_id),
+            ..AntiRollbackStore::new_empty()
+        };
+        let before = live.clone();
+
+        assert_eq!(
+            live.candidate_for_boot(&gate_id(), entropy),
+            Err(AntiRollbackError::BootIdRepeat)
+        );
+        assert_eq!(live, before);
+    }
+
+    #[test]
+    fn bound_boot_candidate_rejects_counter_exhaustion_without_mutation() {
+        let live = AntiRollbackStore {
+            boot_counter: u64::MAX,
+            ..AntiRollbackStore::new_empty()
+        };
+        let before = live.clone();
+
+        assert_eq!(
+            live.candidate_for_boot(&gate_id(), [1; 32]),
+            Err(AntiRollbackError::Exhausted)
+        );
+        assert_eq!(live, before);
+    }
+
+    #[test]
+    fn legacy_store_without_last_boot_id_is_rejected() {
+        let mut legacy = CborWriter::new();
+        legacy.array_header(3);
+        legacy.uint(0);
+        legacy.array_header(0);
+        legacy.array_header(0);
+
+        assert_eq!(
+            AntiRollbackStore::from_bytes(&legacy.into_bytes()),
             Err(AntiRollbackError::Corrupt)
         );
     }

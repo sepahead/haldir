@@ -34,7 +34,7 @@ pub mod session;
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use anti_rollback::{AntiRollbackError, AntiRollbackStore};
+pub use anti_rollback::{AntiRollbackError, AntiRollbackStore, BootContext};
 pub use challenge::ChallengeTable;
 pub use clock::{SystemMonotonicClock, TestClock};
 pub use durable::{DurableAntiRollbackError, DurableAntiRollbackStore};
