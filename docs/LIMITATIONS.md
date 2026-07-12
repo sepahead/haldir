@@ -59,22 +59,19 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   encoding, and neither result proves the absent live transport or durable runtime.
 - **`missing_docs` hardening.** Deferred; the workspace does not yet
   `deny(missing_docs)`. Crate- and item-level docs are written voluntarily.
-- **Durable anti-rollback / restart rollback protection.** The anti-rollback store
-  is **in-memory in P0**. It rejects a term/epoch that does not strictly advance its
-  high-water, rejects duplicate/noncanonical serialized maps, treats boot-counter
-  exhaustion as terminal, and exposes copy-on-write candidates so a future durable
-  layer can commit before mutating live authority. However, the Gate
-  does not persist, load, MAC, or fsync it, and does not derive/compare
-  `gate_boot_id` against the monotonic boot counter. Therefore the **cross-restart**
-  rollback protection of B11/B12 (a lease minted by a prior incarnation being
-  replayed after a restart with a repeated boot id) is **NOT established**. Wiring
-  `haldir-durable` into Gate with an external non-rewindable anchor and separately
-  provisioned storage key is future work. The HMAC/envelope/anchor mechanism,
-  Unix atomic-file backend, boot-ID binding/repeat latch, and durable anti-rollback
-  wrapper are unit tested (`CL-DURABLE-PRIMITIVE-01`). However, the current actor
-  still accepts its boot ID in `GateConfig` and selects the in-memory store. No
-  child-process kill matrix has yet established the file backend's old-or-new
-  behavior under actual crashes.
+- **Durable anti-rollback / restart rollback protection.** The default P0 actor
+  constructor still uses an **in-memory** anti-rollback store. A separate recovered
+  constructor now accepts only a non-cloneable booted-store capability produced after
+  `begin_boot` verifies the authenticated Gate binding and durably commits a fresh
+  `BootContext`; the configured boot ID must match that capability. Lease terms commit
+  through the injected store before authority becomes active, and an unavailable commit
+  terminally faults the actor. The HMAC/envelope/anchor mechanism,
+  Unix atomic-file backend, boot-ID binding/repeat latch, durable anti-rollback wrapper,
+  injection checks, and failure ordering are unit tested (`CL-DURABLE-PRIMITIVE-01`).
+  No runnable service provisions the storage key, entropy, file path, or an external
+  non-rewindable anchor, and no child-process kill matrix has established old-or-new
+  behavior under actual crashes. Therefore end-to-end **cross-restart** rollback
+  protection of B11/B12 remains **NOT established**.
 - **Filesystem/platform durability scope.** `AtomicFileSnapshot` uses a same-directory
   `create_new` temporary, file `sync_all`, Unix rename, and parent-directory
   `sync_all`, and assumes a trusted local POSIX filesystem plus exclusive writer.

@@ -37,10 +37,14 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub use anti_rollback::{AntiRollbackError, AntiRollbackStore, BootContext};
 pub use challenge::ChallengeTable;
 pub use clock::{SystemMonotonicClock, TestClock};
-pub use durable::{DurableAntiRollbackError, DurableAntiRollbackStore};
+pub use durable::{
+    BootedDurableAntiRollbackStore, DurableAntiRollbackError, DurableAntiRollbackStore,
+};
 pub use fault::FaultLatch;
 pub use gate_process::{GateProcessMachine, InvalidTransition};
-pub use mission::{LeaseAcceptContext, LeaseAcceptError, accept_lease};
+pub use mission::{
+    LeaseAcceptContext, LeaseAcceptError, LeaseTermStore, LeaseTermStoreError, accept_lease,
+};
 pub use output_stream::{GateOutputStreamState, OutputStreamError};
 pub use replay::{ControllerReplayState, ReplayClass};
 pub use revision::RevisionCounter;
@@ -205,6 +209,36 @@ mod model {
         let err =
             accept_lease(&lease(1, 1, 1, 10), &ctx(1, 1, 1), &mut ch2, &mut ar, now()).unwrap_err();
         assert_eq!(err, LeaseAcceptError::TermRollback);
+    }
+
+    struct UnavailableTermStore;
+
+    impl LeaseTermStore for UnavailableTermStore {
+        fn highest_term(&self, _scope: &[u8]) -> u64 {
+            0
+        }
+
+        fn commit_term(&mut self, _scope: &[u8], _term: u64) -> Result<(), LeaseTermStoreError> {
+            Err(LeaseTermStoreError::Unavailable)
+        }
+    }
+
+    #[test]
+    fn durable_term_failure_keeps_challenge_pending_and_grants_no_lease() {
+        let nonce = ChallengeNonce::new([7; 32]);
+        let mut challenges = table_with_nonce();
+        let mut store = UnavailableTermStore;
+
+        let result = accept_lease(
+            &lease(1, 1, 1, 10),
+            &ctx(1, 1, 1),
+            &mut challenges,
+            &mut store,
+            now(),
+        );
+
+        assert_eq!(result.unwrap_err(), LeaseAcceptError::TermStoreUnavailable);
+        assert!(challenges.is_pending(&nonce, now()));
     }
 
     #[test]

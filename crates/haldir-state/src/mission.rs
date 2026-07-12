@@ -32,6 +32,8 @@ pub enum LeaseAcceptError {
     ChallengeInvalid,
     /// The lease term did not strictly advance the anti-rollback high-water.
     TermRollback,
+    /// The term store could not durably commit an otherwise valid lease.
+    TermStoreUnavailable,
 }
 
 impl LeaseAcceptError {
@@ -44,7 +46,37 @@ impl LeaseAcceptError {
             Self::PolicyMismatch => DecisionReasonCodeV1::DenyPolicyDiagnostic,
             Self::AdmissionMismatch => DecisionReasonCodeV1::DenyAdmissionMismatch,
             Self::ChallengeInvalid | Self::TermRollback => DecisionReasonCodeV1::DenyLeaseAbsent,
+            Self::TermStoreUnavailable => DecisionReasonCodeV1::ErrorInternalFault,
         }
+    }
+}
+
+/// A lease-term high-water commit failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeaseTermStoreError {
+    /// The term did not strictly advance.
+    Rollback,
+    /// The durable store or external anchor was unavailable.
+    Unavailable,
+}
+
+/// Minimal anti-rollback interface required by mission-lease acceptance.
+pub trait LeaseTermStore: Send {
+    /// Highest committed term for `scope`.
+    fn highest_term(&self, scope: &[u8]) -> u64;
+
+    /// Commit a strictly advancing term before authority becomes active.
+    fn commit_term(&mut self, scope: &[u8], term: u64) -> Result<(), LeaseTermStoreError>;
+}
+
+impl LeaseTermStore for AntiRollbackStore {
+    fn highest_term(&self, scope: &[u8]) -> u64 {
+        Self::highest_term(self, scope)
+    }
+
+    fn commit_term(&mut self, scope: &[u8], term: u64) -> Result<(), LeaseTermStoreError> {
+        self.accept_term(scope, term)
+            .map_err(|_| LeaseTermStoreError::Rollback)
     }
 }
 
@@ -84,13 +116,16 @@ fn term_scope(lease: &MissionLeaseV1) -> Vec<u8> {
 ///
 /// # Errors
 /// Returns a [`LeaseAcceptError`] on any scope, admission, challenge, or
-/// anti-rollback failure; on error no challenge is consumed and no term is
-/// committed unless explicitly noted.
+/// anti-rollback failure. A durable commit failure consumes no challenge and does
+/// not update the live term; recovery may conservatively complete a candidate that
+/// reached snapshot storage before its external-anchor update failed. If challenge
+/// consumption unexpectedly fails after a successful commit, the term remains
+/// conservatively spent and no lease becomes active.
 pub fn accept_lease(
     lease: &MissionLeaseV1,
     ctx: &LeaseAcceptContext,
     challenges: &mut ChallengeTable,
-    anti_rollback: &mut AntiRollbackStore,
+    anti_rollback: &mut dyn LeaseTermStore,
     now: MonoInstant,
 ) -> Result<ActiveMissionLeaseSnapshot, LeaseAcceptError> {
     // 1. Gate incarnation binding.
@@ -123,17 +158,26 @@ pub fn accept_lease(
     if lease.lease_term.get() <= anti_rollback.highest_term(&scope) {
         return Err(LeaseAcceptError::TermRollback);
     }
-    // 6. Consume the challenge (only after all non-challenge checks pass).
+    // 6. Verify the challenge without consuming it. The per-vehicle actor lock
+    //    prevents a concurrent consume between this check and step 8.
+    if !challenges.is_pending(&lease.challenge_nonce, now) {
+        return Err(LeaseAcceptError::ChallengeInvalid);
+    }
+    // 7. Commit the accepted-term high-water BEFORE consuming the one-shot
+    //    challenge or exposing the lease. A failure leaves the challenge usable;
+    //    a crash after a successful commit conservatively spends the term.
+    anti_rollback
+        .commit_term(&scope, lease.lease_term.get())
+        .map_err(|error| match error {
+            LeaseTermStoreError::Rollback => LeaseAcceptError::TermRollback,
+            LeaseTermStoreError::Unavailable => LeaseAcceptError::TermStoreUnavailable,
+        })?;
+    // 8. Consume the challenge after durable commit. Unexpected failure is safe:
+    //    the term remains spent but no lease becomes active.
     if !challenges.consume(&lease.challenge_nonce, now) {
         return Err(LeaseAcceptError::ChallengeInvalid);
     }
-    // 7. Advance the accepted-term high-water BEFORE exposing the lease active
-    //    (H12, in-process ordering; durable persistence is out of P0 — see the
-    //    anti_rollback module docs and docs/LIMITATIONS.md).
-    anti_rollback
-        .accept_term(&scope, lease.lease_term.get())
-        .map_err(|_| LeaseAcceptError::TermRollback)?;
-    // 8. Anchor the deadline to local monotonic time.
+    // 9. Anchor the deadline to local monotonic time.
     let cap_ms = u64::from(lease.max_active_duration_ms.get()).min(u64::from(ctx.local_cap_ms));
     let expires_at = now.checked_add_ms(cap_ms).unwrap_or(now);
 

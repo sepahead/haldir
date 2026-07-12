@@ -216,6 +216,7 @@ dependencies = [
  "haldir-contracts",
  "haldir-core",
  "haldir-crypto",
+ "haldir-durable",
  "haldir-evidence",
  "haldir-ncp08",
  "haldir-policy-native",

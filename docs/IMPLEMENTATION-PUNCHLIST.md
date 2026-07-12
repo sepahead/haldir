@@ -49,16 +49,19 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **B10** Prospective geofence integrates over an upper bound of the published horizon
   (requested validity or hard cap), computed before the Stage-11 min.
 - `[~]` **B11** Restart lease invalidation via a fresh boot id and empty in-memory state
-  is modeled and unit-tested (`restart_invalidates_lease_via_new_boot_id`). **Not wired
-  in P0:** the durable wrapper now derives a Gate-bound ID from checked counter +
-  injected entropy, persists the last ID, and rejects repeats before returning a
-  committed `BootContext`; the current Gate actor does not select that wrapper, so
+  is modeled and unit-tested (`restart_invalidates_lease_via_new_boot_id`). The durable
+  wrapper derives a Gate-bound ID from checked counter + injected entropy, persists the
+  last ID, rejects a mismatched authenticated Gate binding, and returns a non-cloneable
+  booted-store capability only after commit; the actor's recovered constructor consumes
+  that capability and requires its boot ID in configuration. **Not wired
+  in P0:** no runnable startup provisions/selects an external anchor, so end-to-end
   cross-restart protection is not established (see `docs/LIMITATIONS.md`).
 - `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,
-  separate-key authenticated snapshots, external-anchor reconciliation, and Unix
-  temp→file-sync→rename→directory-sync mechanics are unit tested. **Not wired in
-  P0:** Gate selection, a deployed external non-rewindable anchor, and child-process
-  crash evidence; therefore the live Gate still cannot claim cross-restart protection.
+  separate-key authenticated snapshots, external-anchor reconciliation, Unix
+  temp→file-sync→rename→directory-sync mechanics, and Gate injection/fault latching
+  are unit tested. **Not wired in P0:** runnable startup selection, a deployed external
+  non-rewindable anchor, and child-process crash evidence; therefore the live Gate still
+  cannot claim cross-restart protection.
 - `[~]` **B13** Monotonic-clock regression while ACTIVE now coherently latches both
   enforcement and public process state as `FAULT_LATCHED`. P0 receives a supplied
   `MonoInstant`; real clock-read failure handling belongs to the future runtime.
@@ -90,9 +93,11 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   `state_snapshot_digest` (per-kind prefix so digest domains cannot collide).
 - `[x]` **H11** Structural limits enforced DURING decode; strict ASCII security IDs; reject
   seq 0 / malformed UUID.
-- `[~]` **H12** Lease acceptance advances the in-memory accepted-term high-water before
-  exposing ACTIVE state. Crash-durable commit and failure-after-persist recovery are
-  not implemented until the durable P1 store (`CL-DURABLE-01`).
+- `[~]` **H12** Lease acceptance commits through an injected term-store interface before
+  consuming the challenge or exposing ACTIVE state; an unavailable durable commit
+  latches `FAULT_LATCHED` and grants no lease. The default P0 constructor remains
+  in-memory, and runnable durable provisioning plus crash recovery are not implemented
+  (`CL-DURABLE-01`).
 - `[x]` **H13** Wall-clock jumps don't move a live lease deadline; far-future `controller_t_ns`
   no effect; `controller_t_ns` never becomes final `t`.
 - `[x]` **H14** Handoff changes only mission authority; Gate keeps its own output epoch/seq.

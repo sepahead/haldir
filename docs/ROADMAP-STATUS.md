@@ -35,18 +35,18 @@ Those stronger properties remain explicitly unproven or out of scope under
 
 | Normative phase | Status | Current evidence or missing gate |
 | --- | --- | --- |
-| -1 — design correction | Partial | The NCP 0.7.1 mechanics carry a supersession notice, but repository-wide tracking issues and the full source-fact inventory are absent. |
+| -1 — design correction | Partial | The NCP 0.7.1 mechanics carry a supersession notice and repository-wide tracking issues now exist, but the full source-fact inventory is absent. |
 | 0 — sources, claims, assurance profile | Partial | P0 pins, profiles, limitations, and claim ledger exist; the organization-wide machine-readable inventory does not. |
 | 1 — workspace and reproducible CI | Partial | Workspace gates are green and third-party/tool pins are now mechanically checked; release provenance and cross-platform remote evidence remain release work. |
 | 2 — canonical contracts and malformed corpus | Done (P0) | Strict deterministic CBOR, golden vectors, structural limits, and hostile parser tests (`CL-CBOR-01`). |
 | 3 — signatures, roles, trust | Done (P0) | COSE/Ed25519, domain binding, trust conflict handling, role/subject enforcement (`CL-COSE-01`, `CL-TRUST-01`, `CL-IDENTITY-01`). |
 | 4 — controller/backend admission | Partial | Structural digest admission exists; profile reconstruction and behavioral backend equivalence do not (`CL-BACKEND-01`). |
-| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases/revocation, checked high-water state, authenticated snapshot/external-anchor reconciliation, Unix atomic-file mechanics, and durable boot-ID/high-water ordering tests exist (`CL-DURABLE-PRIMITIVE-01`); Gate selection, deployed external anchor, crash campaign, durable evidence, and live preemption do not (`CL-DURABLE-01`, issue #3). |
+| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases/revocation, checked high-water state, authenticated snapshot/external-anchor reconciliation, Unix atomic-file mechanics, durable boot-ID/high-water ordering, and a boot/store-bound recovered actor constructor exist (`CL-DURABLE-PRIMITIVE-01`); runnable service provisioning, a deployed external anchor, crash campaign, durable evidence, and live preemption do not (`CL-DURABLE-01`, issue #3). |
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
 | 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, and opt-in exact `ncp-core` JSON/frozen-corpus differential path are tested (`CL-NCP-REAL-01`); the Gate runtime does not select it and no live transport evidence exists (`CL-LIVE-TRANSPORT-01`). |
-| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage in-process actor, fallible cross-field configuration, and signed chained receipts exist (`CL-CONFIG-01`); runnable service/package loading, bounded async queues, and durable journal/recovery do not (`CL-DURABLE-01`). |
+| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage in-process actor, fallible cross-field configuration, boot/store-bound recovery injection, and signed chained receipts exist (`CL-CONFIG-01`, `CL-DURABLE-PRIMITIVE-01`); runnable service/package loading, bounded async queues, and durable journal/recovery orchestration do not (`CL-DURABLE-01`). |
 | 11 — secure Zenoh and ACL proof | Not started | `haldir-transport-zenoh` is a trait seam; no mTLS principal×route campaign exists (`CL-LIVE-TRANSPORT-01`). |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
@@ -80,8 +80,9 @@ Those stronger properties remain explicitly unproven or out of scope under
 
 ## Next completion slice, reviewed from five lenses
 
-1. **Authority:** make Gate configuration fallible and cross-field validated; add durable
-   boot/high-water/evidence recovery before authority can become active.
+1. **Authority:** build runnable startup around the now-fallible Gate configuration and
+   boot/store-bound anti-rollback injection; add a real external anchor and durable
+   evidence recovery before authority can become active.
 2. **Wire/ecosystem:** select the now-tested exact-v0.8 adapter in the runnable
    service, preserving the stable Haldir semantic contracts.
 3. **Time/restart/evidence:** prove crash recovery, boot-id uniqueness, and terminal

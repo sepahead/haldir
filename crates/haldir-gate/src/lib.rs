@@ -46,7 +46,8 @@ mod e2e {
     };
     use haldir_contracts::session::{HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1};
     use haldir_contracts::status::{
-        AclExclusiveEvidenceV1, NcpLeaseEvidenceV1, PlantPublicationAuthorityStateV1,
+        AclExclusiveEvidenceV1, GateProcessStateV1, NcpLeaseEvidenceV1,
+        PlantPublicationAuthorityStateV1,
     };
     use haldir_core::snapshot::{
         KinematicStateFixedV1, StateUncertaintyFixedV1, TrustedStateSnapshotV1,
@@ -57,8 +58,16 @@ mod e2e {
         ExpectedContext, KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
         sign_message, verify_and_decode,
     };
+    use haldir_durable::{
+        Anchor, DurableError, GenerationAnchor, SnapshotBinding, SnapshotStorage, StorageMacKey,
+        StoreId,
+    };
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
     use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
+    use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
+    use std::collections::BTreeMap;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Mutex};
 
     const INTENT_KEY: &str = "veh/uav-1/haldir/intent/survey-v1";
 
@@ -332,6 +341,63 @@ mod e2e {
         gate_config(publication, &ctrl_sk, &mission_sk, gate_sk).0
     }
 
+    #[derive(Clone, Default)]
+    struct GateMemoryStorage {
+        bytes: Arc<Mutex<Option<Vec<u8>>>>,
+        fail_replace: Arc<AtomicBool>,
+    }
+
+    impl SnapshotStorage for GateMemoryStorage {
+        fn load(&self) -> Result<Option<Vec<u8>>, DurableError> {
+            Ok(self.bytes.lock().unwrap().clone())
+        }
+
+        fn replace(&mut self, bytes: &[u8]) -> Result<(), DurableError> {
+            if self.fail_replace.load(Ordering::SeqCst) {
+                return Err(DurableError::Storage);
+            }
+            *self.bytes.lock().unwrap() = Some(bytes.to_vec());
+            Ok(())
+        }
+    }
+
+    #[derive(Clone, Default)]
+    struct GateMemoryAnchor(Arc<Mutex<BTreeMap<StoreId, Anchor>>>);
+
+    impl GenerationAnchor for GateMemoryAnchor {
+        fn read(&self, store_id: StoreId) -> Result<Option<Anchor>, DurableError> {
+            Ok(self.0.lock().unwrap().get(&store_id).copied())
+        }
+
+        fn compare_and_set(
+            &mut self,
+            store_id: StoreId,
+            expected: Option<Anchor>,
+            next: Anchor,
+        ) -> Result<(), DurableError> {
+            if self.0.lock().unwrap().get(&store_id).copied() != expected {
+                return Err(DurableError::AnchorConflict);
+            }
+            self.0.lock().unwrap().insert(store_id, next);
+            Ok(())
+        }
+    }
+
+    fn fresh_booted_store(
+        storage: GateMemoryStorage,
+    ) -> BootedDurableAntiRollbackStore<GateMemoryStorage, GateMemoryAnchor> {
+        let gate_id = GateId::new("gate-1").unwrap();
+        let store = DurableAntiRollbackStore::provision_new(
+            storage,
+            GateMemoryAnchor::default(),
+            StorageMacKey::new([7; 32]),
+            SnapshotBinding::new(StoreId::new([1; 16]), gate_id.as_str().as_bytes()),
+            4096,
+        )
+        .unwrap();
+        store.begin_boot(&gate_id, [3; 32]).unwrap().0
+    }
+
     fn gate_only_trust(
         signing_seed: u8,
         role: KeyRole,
@@ -374,6 +440,13 @@ mod e2e {
     }
 
     #[test]
+    fn vehicle_actor_remains_send_for_threaded_runtimes() {
+        fn assert_send<T: Send>() {}
+
+        assert_send::<VehicleActor>();
+    }
+
+    #[test]
     fn vehicle_actor_new_rejects_zero_local_cap() {
         let mut cfg = valid_config(acl_publication());
         cfg.local_cap_ms = 0;
@@ -384,6 +457,61 @@ mod e2e {
             result,
             Err(GateStartupError::Config(GateConfigError::LocalCapZero))
         ));
+    }
+
+    #[test]
+    fn recovered_actor_requires_exact_committed_boot_context() {
+        let cfg = valid_config(acl_publication());
+        let store = fresh_booted_store(GateMemoryStorage::default());
+        assert_ne!(cfg.gate_boot_id, store.boot_context().gate_boot_id);
+
+        let result = VehicleActor::new_recovered(cfg, store);
+
+        assert!(matches!(result, Err(GateStartupError::BootContextMismatch)));
+    }
+
+    #[test]
+    fn recovered_actor_rejects_booted_store_for_another_gate() {
+        let mut cfg = valid_config(acl_publication());
+        cfg.gate_id = GateId::new("gate-2").unwrap();
+        let store = fresh_booted_store(GateMemoryStorage::default());
+
+        let result = VehicleActor::new_recovered(cfg, store);
+
+        assert!(matches!(result, Err(GateStartupError::StoreGateMismatch)));
+    }
+
+    #[test]
+    fn recovered_actor_faults_when_term_commit_is_unavailable() {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
+        let (mut cfg, rec, admission_digest) =
+            gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        let storage = GateMemoryStorage::default();
+        let store = fresh_booted_store(storage.clone());
+        let gate_boot_id = store.boot_context().gate_boot_id;
+        cfg.gate_boot_id = gate_boot_id;
+        storage.fail_replace.store(true, Ordering::SeqCst);
+        let mut actor = VehicleActor::new_recovered(cfg, store).unwrap();
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        assert!(actor.register_challenge(
+            ChallengeNonce::new([7; 32]),
+            MonoInstant::from_nanos(u64::MAX),
+            now,
+        ));
+        let mut lease = build_lease(admission_digest, &rec);
+        lease.gate_boot_id = gate_boot_id;
+        let lease_env = sign_message(&lease, MissionLeaseV1::KIND, 1, &kid(2), &mission_sk);
+
+        let result = actor.accept_lease_env(&lease_env, now);
+
+        assert_eq!(result, Err(GateError::Faulted));
+        assert_eq!(actor.process_state(), GateProcessStateV1::FaultLatched);
+        assert_eq!(
+            actor.accept_lease_env(&lease_env, now),
+            Err(GateError::Faulted)
+        );
     }
 
     #[test]

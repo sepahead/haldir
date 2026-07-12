@@ -52,6 +52,12 @@ impl SnapshotBinding {
     pub const fn store_id(self) -> StoreId {
         self.store_id
     }
+
+    /// Whether this binding commits the supplied Gate identifier.
+    #[must_use]
+    pub fn matches_gate_id(self, gate_id: &[u8]) -> bool {
+        self == Self::new(self.store_id, gate_id)
+    }
 }
 
 /// Externally anchored snapshot head.
@@ -149,6 +155,12 @@ pub struct AuthenticatedSnapshotStore<S, A> {
 }
 
 impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
+    /// The store/Gate binding authenticated by every snapshot envelope.
+    #[must_use]
+    pub const fn binding(&self) -> SnapshotBinding {
+        self.binding
+    }
+
     /// Explicitly provision a new store. Missing state is never implicitly
     /// treated as a fresh store by [`Self::open_existing`].
     ///

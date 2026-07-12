@@ -49,8 +49,11 @@ upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts, and authenticated snapshot/
 external-anchor primitives with commit-before-mutation anti-rollback tests,
 Unix atomic-file mechanics, and Gate-bound durable boot-ID mechanisms
-(`CL-DURABLE-PRIMITIVE-01`). The spool remains lossy on overflow and Gate selects
-neither that file backend nor a deployed external anchor, so crash durability remains out of P0
+(`CL-DURABLE-PRIMITIVE-01`). The actor can consume the non-cloneable booted-store
+capability returned only after a fresh matching boot commit, and faults if a term
+commit is unavailable.
+No runnable service provisions that path or a deployed external anchor, and the
+spool remains lossy on overflow, so crash durability remains out of P0
 (`CL-DURABLE-01`). The composed Gate runtime has its 13-stage decision pipeline,
 and a deterministic adversarial range + end-to-end
 acceptance campaign.

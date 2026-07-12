@@ -28,6 +28,7 @@ use haldir_crypto::{
     CryptoError, ExpectedContext, KeyClass, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
     sign_message, verify_and_decode,
 };
+use haldir_durable::{GenerationAnchor, SnapshotStorage};
 use haldir_evidence::EvidenceSpool;
 use haldir_ncp08::{
     AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter,
@@ -35,8 +36,9 @@ use haldir_ncp08::{
 use haldir_policy_native::{BoundedActionHistory, NativePolicySnapshot, PolicyInput, decide};
 use haldir_reference_plant::{PlantAction, PlantCommand};
 use haldir_state::{
-    AntiRollbackError, AntiRollbackStore, ChallengeTable, ControllerReplayState,
-    GateOutputStreamState, GateProcessMachine, LeaseAcceptContext, RevisionCounter, accept_lease,
+    AntiRollbackError, AntiRollbackStore, BootedDurableAntiRollbackStore, ChallengeTable,
+    ControllerReplayState, GateOutputStreamState, GateProcessMachine, LeaseAcceptContext,
+    LeaseAcceptError, LeaseTermStore, RevisionCounter, accept_lease,
 };
 
 const MAX_RETIRED: usize = 16;
@@ -85,6 +87,10 @@ pub enum GateStartupError {
     Config(GateConfigError),
     /// The anti-rollback boot namespace could not advance.
     AntiRollback(AntiRollbackError),
+    /// The booted durable store belongs to another Gate.
+    StoreGateMismatch,
+    /// The configured boot ID did not match the freshly committed boot context.
+    BootContextMismatch,
     /// The explicit startup state-machine progression was rejected.
     ProcessTransition {
         /// State before the attempted transition.
@@ -220,7 +226,7 @@ pub struct VehicleActor {
     output_epoch: GateOutputEpoch,
     output_stream: GateOutputStreamState,
     challenges: ChallengeTable,
-    anti_rollback: AntiRollbackStore,
+    anti_rollback: Box<dyn LeaseTermStore>,
     lease: Option<ActiveMissionLeaseSnapshot>,
     replay: ControllerReplayState,
     history: BoundedActionHistory,
@@ -365,6 +371,43 @@ impl VehicleActor {
         anti_rollback
             .advance_boot()
             .map_err(GateStartupError::AntiRollback)?;
+        Self::from_validated_config(cfg, Box::new(anti_rollback))
+    }
+
+    /// Construct an actor from a store whose new boot incarnation was already
+    /// durably committed by startup orchestration.
+    ///
+    /// The configured Gate and boot ID must match the authenticated binding and
+    /// fresh context carried by the non-cloneable store state returned by
+    /// `begin_boot`. This method never creates or advances durable state itself.
+    ///
+    /// # Errors
+    /// Returns [`GateStartupError`] if the store belongs to another Gate,
+    /// configuration validation fails, the boot context differs, or a startup
+    /// transition is rejected.
+    pub fn new_recovered<S, A>(
+        cfg: GateConfig,
+        term_store: BootedDurableAntiRollbackStore<S, A>,
+    ) -> Result<Self, GateStartupError>
+    where
+        S: SnapshotStorage + Send + 'static,
+        A: GenerationAnchor + Send + 'static,
+    {
+        if !term_store.is_bound_to_gate(&cfg.gate_id) {
+            return Err(GateStartupError::StoreGateMismatch);
+        }
+        cfg.validate()?;
+        if cfg.gate_boot_id != term_store.boot_context().gate_boot_id {
+            return Err(GateStartupError::BootContextMismatch);
+        }
+
+        Self::from_validated_config(cfg, Box::new(term_store))
+    }
+
+    fn from_validated_config(
+        cfg: GateConfig,
+        anti_rollback: Box<dyn LeaseTermStore>,
+    ) -> Result<Self, GateStartupError> {
         let mut process = GateProcessMachine::new();
         let fault = haldir_state::FaultLatch::new();
         for to in [
@@ -596,10 +639,17 @@ impl VehicleActor {
             &lease,
             &lctx,
             &mut self.challenges,
-            &mut self.anti_rollback,
+            self.anti_rollback.as_mut(),
             now,
-        )
-        .map_err(|e| GateError::Lease(e.reason_code().code()))?;
+        );
+        let snap = match snap {
+            Ok(snapshot) => snapshot,
+            Err(LeaseAcceptError::TermStoreUnavailable) => {
+                self.latch_fault("LEASE_TERM_STORE_UNAVAILABLE");
+                return Err(GateError::Faulted);
+            }
+            Err(error) => return Err(GateError::Lease(error.reason_code().code())),
+        };
         let usage = LeaseUsage::new(snap.max_total_intents, snap.max_intent_rate_millihz, now);
         self.lease = Some(snap);
         self.lease_usage = Some(usage);
