@@ -70,3 +70,18 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 A single non-YES blocks the corresponding *stronger* assurance claim, exactly as
 the spec requires. The delivered result is the P0 pure reference-monitor core; the
 profile and `docs/LIMITATIONS.md` state precisely what remains unproven.
+
+## Reproducing the P0-R exit gate
+
+Run every offline acceptance check in one command:
+
+```bash
+bash tools/p0r-exit-gate.sh
+```
+
+It runs rustfmt, clippy (`-D warnings`), the workspace tests, the source-pin /
+evidence-layout / forbidden-claim / generated-vector verifiers, and the
+independent COSE/CBOR interop check (re-emit + diff + verify). The TLA+ model
+check runs in CI (`.github/workflows/formal.yml`, `CL-FORMAL-01`), not locally,
+because it needs a JRE. Every claim these gates back is listed in
+[`CLAIM-LEDGER.md`](CLAIM-LEDGER.md).
