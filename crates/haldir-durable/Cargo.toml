@@ -1,6 +1,6 @@
 [package]
-name = "haldir-state"
-description = "Haldir Gate — haldir-state"
+name = "haldir-durable"
+description = "Haldir authenticated durable-state primitives"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,10 +13,6 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-haldir-contracts.workspace = true
-haldir-core.workspace = true
-haldir-durable.workspace = true
-getrandom.workspace = true
-
-[dev-dependencies]
-proptest.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+zeroize.workspace = true

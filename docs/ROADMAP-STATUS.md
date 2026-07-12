@@ -31,7 +31,7 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 2 — canonical contracts and malformed corpus | Done (P0) | Strict deterministic CBOR, golden vectors, structural limits, and hostile parser tests (`CL-CBOR-01`). |
 | 3 — signatures, roles, trust | Done (P0) | COSE/Ed25519, domain binding, trust conflict handling, role/subject enforcement (`CL-COSE-01`, `CL-TRUST-01`, `CL-IDENTITY-01`). |
 | 4 — controller/backend admission | Partial | Structural digest admission exists; profile reconstruction and behavioral backend equivalence do not (`CL-BACKEND-01`). |
-| 5 — challenges, leases, revocation | Partial | One-shot bounded challenges, signed leases, revocation, checked/canonical copy-on-write high-water candidates, and in-process ordering exist; durable recovery and live preemption do not (`CL-DURABLE-01`). |
+| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases, revocation, checked/canonical high-water state, and an authenticated snapshot/external-anchor wrapper with commit-before-mutation tests exist (`CL-DURABLE-PRIMITIVE-01`); Gate filesystem recovery and live preemption do not (`CL-DURABLE-01`). |
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |

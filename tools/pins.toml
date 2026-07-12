@@ -29,6 +29,7 @@ getrandom = "0.2"
 proptest = "1"
 ncp-core = "0.8.0@2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
 serde_json = "1.0"
+hmac = "0.12.1"
 
 [formal]
 # Exact release asset used by the formal workflow. The workflow verifies this

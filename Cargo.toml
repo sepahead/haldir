@@ -10,6 +10,7 @@ members = [
     "crates/haldir-ncp08",
     "crates/haldir-reference-plant",
     "crates/haldir-evidence",
+    "crates/haldir-durable",
     "crates/haldir-transport-zenoh",
     "crates/haldir-gate",
     "crates/haldir-range",
@@ -41,6 +42,7 @@ haldir-admission = { path = "crates/haldir-admission" }
 haldir-ncp08 = { path = "crates/haldir-ncp08" }
 haldir-reference-plant = { path = "crates/haldir-reference-plant" }
 haldir-evidence = { path = "crates/haldir-evidence" }
+haldir-durable = { path = "crates/haldir-durable" }
 haldir-transport-zenoh = { path = "crates/haldir-transport-zenoh" }
 haldir-gate = { path = "crates/haldir-gate" }
 haldir-testkit = { path = "crates/haldir-testkit" }
@@ -55,6 +57,7 @@ proptest = { version = "1" }
 # off-by-default `real-ncp` conformance feature.
 ncp-core = { version = "=0.8.0", git = "https://github.com/sepahead/NCP", rev = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e", default-features = false }
 serde_json = { version = "1.0" }
+hmac = { version = "0.12.1", default-features = false }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -16,6 +16,7 @@ not a routine bump.
 | `proptest` | 1 | Property tests (dev-dependency only). | several crates |
 | `ncp-core` | 0.8.0 at `2f5bd586…` | Normative upstream NCP wire types and validation for the off-by-default exact conformance adapter. The immutable git source is checked against `tools/pins.toml` and `.ncp-consumer`. | `haldir-ncp08` `real-ncp` feature only |
 | `serde_json` | 1.0 (locked) | Serialize and decode the upstream NCP JSON frame in the exact conformance adapter; never used in signed Haldir contracts or policy. | `haldir-ncp08` `real-ncp` feature only |
+| `hmac` | 0.12.1 | RustCrypto HMAC with constant-time `verify_slice`, paired with the existing SHA-256 0.10 stack for separately keyed authenticated durable snapshots. Version 0.13 targets the newer digest/SHA-2 generation, so 0.12.1 avoids duplicating the cryptographic hash stack. | `haldir-durable` |
 
 The transitive `unicode-ident` build dependency uses the OSI-approved
 `Unicode-3.0` data license in addition to MIT/Apache-2.0; `deny.toml` admits that

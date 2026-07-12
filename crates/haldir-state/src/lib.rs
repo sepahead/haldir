@@ -22,6 +22,7 @@
 pub mod anti_rollback;
 pub mod challenge;
 pub mod clock;
+pub mod durable;
 pub mod fault;
 pub mod gate_process;
 pub mod mission;
@@ -36,6 +37,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub use anti_rollback::{AntiRollbackError, AntiRollbackStore};
 pub use challenge::ChallengeTable;
 pub use clock::{SystemMonotonicClock, TestClock};
+pub use durable::{DurableAntiRollbackError, DurableAntiRollbackStore};
 pub use fault::FaultLatch;
 pub use gate_process::{GateProcessMachine, InvalidTransition};
 pub use mission::{LeaseAcceptContext, LeaseAcceptError, accept_lease};

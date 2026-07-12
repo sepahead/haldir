@@ -68,8 +68,11 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   `gate_boot_id` against the monotonic boot counter. Therefore the **cross-restart**
   rollback protection of B11/B12 (a lease minted by a prior incarnation being
   replayed after a restart with a repeated boot id) is **NOT established**. Wiring
-  durable persistence (atomic temp→fsync→rename, separate-key MAC for semantic
-  rewind detection, boot-id-repeat latch) is future work.
+  `haldir-durable` into Gate with an atomic platform backend, external
+  non-rewindable anchor, separately provisioned storage key, and boot-id-repeat
+  latch is future work. The abstract HMAC/envelope/anchor mechanism and durable
+  anti-rollback wrapper are tested (`CL-DURABLE-PRIMITIVE-01`), but they deliberately
+  make no filesystem durability claim.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,
   key binding, and any future NCP lease's session/output epoch (`CL-CONFIG-01`).

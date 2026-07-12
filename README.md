@@ -46,8 +46,11 @@ bounded authority/session/stream/replay state machines with restart semantics, a
 fixed-point deterministic policy engine, a deterministic reference plant with staged
 evidence, the Gate-owned NCP v0.8.0 modeled output adapter plus an opt-in exact
 upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
-spool that holds the Gate-signed decision receipts (lossy on overflow; a durable,
-tamper-evident signed journal is out of P0, see `CL-DURABLE-01`), the composed Gate runtime
+spool that holds the Gate-signed decision receipts, and authenticated snapshot/
+external-anchor primitives with commit-before-mutation anti-rollback tests
+(`CL-DURABLE-PRIMITIVE-01`). The spool remains lossy on overflow and no real
+filesystem/anchor backend is selected, so crash durability remains out of P0
+(`CL-DURABLE-01`). The composed Gate runtime
 with its 13-stage decision pipeline, and a deterministic adversarial range + end-to-end
 acceptance campaign.
 
@@ -62,7 +65,7 @@ phase-by-phase status and current ecosystem blockers are tracked in
 ### What is deliberately **out of scope** and **not claimed** here
 
 See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: live secure-Zenoh mTLS/ACL
-delivery matrix, real `ncp-core` dependency wiring, NEST/Engram controllers, PX4-SITL,
+delivery matrix and selection of the exact NCP path, NEST/Engram controllers, PX4-SITL,
 neuromorphic backends (Norse/Rockpool/XyloSim/SpiNNaker), cross-repository Crebain/Engram
 changes, and physical hardware. These are architected as typed seams but are **not**
 implemented or tested in this deliverable, and no claim is made about them.
