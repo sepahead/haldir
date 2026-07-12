@@ -154,6 +154,7 @@ mod model {
         t.insert(
             ChallengeNonce::new([7; 32]),
             MonoInstant::from_nanos(u64::MAX),
+            now(),
         );
         t
     }

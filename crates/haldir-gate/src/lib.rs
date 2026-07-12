@@ -43,7 +43,9 @@ mod e2e {
         AsciiId, BoundedAscii, BoundedSet, BoundedVec, CanonicalUuidV4String,
     };
     use haldir_contracts::session::{HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1};
-    use haldir_contracts::status::{AclExclusiveEvidenceV1, PlantPublicationAuthorityStateV1};
+    use haldir_contracts::status::{
+        AclExclusiveEvidenceV1, NcpLeaseEvidenceV1, PlantPublicationAuthorityStateV1,
+    };
     use haldir_core::snapshot::{
         KinematicStateFixedV1, StateUncertaintyFixedV1, TrustedStateSnapshotV1,
         VerifiedSourceStateV1,
@@ -243,7 +245,21 @@ mod e2e {
         }
     }
 
+    fn acl_publication() -> PlantPublicationAuthorityStateV1 {
+        PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
+            gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
+            final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
+            certificate_fingerprint: DigestV1::compute(DigestDomain::Payload, b"cert"),
+            acl_policy_digest: DigestV1::compute(DigestDomain::Payload, b"acl"),
+            verified_at_mono_ns: 900,
+        })
+    }
+
     fn setup() -> Fixture {
+        setup_with_publication(acl_publication())
+    }
+
+    fn setup_with_publication(publication: PlantPublicationAuthorityStateV1) -> Fixture {
         let ctrl_sk = SigningKey::from_seed([1; 32]);
         let mission_sk = SigningKey::from_seed([2; 32]);
         let gate_sk = SigningKey::from_seed([3; 32]);
@@ -297,13 +313,7 @@ mod e2e {
             policy: policy(),
             policy_snapshot_digest,
             session: sess(),
-            publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
-                gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
-                final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
-                certificate_fingerprint: DigestV1::compute(DigestDomain::Payload, b"cert"),
-                acl_policy_digest: DigestV1::compute(DigestDomain::Payload, b"acl"),
-                verified_at_mono_ns: 900,
-            }),
+            publication,
             output_epoch: GateOutputEpoch::new(uuid(5)),
             local_cap_ms: 30_000,
             gate_signer: gate_sk,
@@ -313,6 +323,7 @@ mod e2e {
         actor.register_challenge(
             ChallengeNonce::new([7; 32]),
             MonoInstant::from_nanos(u64::MAX),
+            now,
         );
 
         let lease_env = sign_message(
@@ -498,6 +509,10 @@ mod e2e {
                 .as_slice()
                 .contains(&DecisionReasonCodeV1::ErrorInternalFault)
         );
+        assert_eq!(
+            f.actor.process_state(),
+            haldir_contracts::status::GateProcessStateV1::FaultLatched
+        );
         // the fault is latched: a subsequent well-formed intent still errors
         let env3 = sign_intent(
             &f.ctrl_sk,
@@ -575,6 +590,49 @@ mod e2e {
                 .reason_codes
                 .as_slice()
                 .contains(&DecisionReasonCodeV1::ErrorInternalFault)
+        );
+        assert!(out.plant_command.is_none());
+
+        // The reserved terminal receipt is replayed byte-for-byte after
+        // exhaustion. It is one decision, not a stream of new decisions that
+        // reuse an exhausted identifier.
+        let retained = f.actor.evidence().len();
+        let again = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(again.receipt.decision_id, out.receipt.decision_id);
+        assert_eq!(again.signed_receipt, out.signed_receipt);
+        assert_eq!(f.actor.evidence().len(), retained);
+        assert_eq!(
+            f.actor.process_state(),
+            haldir_contracts::status::GateProcessStateV1::FaultLatched
+        );
+    }
+
+    #[test]
+    fn future_ncp_lease_does_not_authorize_acl_only_adapter() {
+        let publication = PlantPublicationAuthorityStateV1::NcpLeaseV1(NcpLeaseEvidenceV1 {
+            gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
+            final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
+            session: sess(),
+            authority_term: NonZeroU64::new(1).unwrap(),
+            lease_id: AuthorityLeaseId::new([8; 16]),
+            authorized_output_epoch: GateOutputEpoch::new(uuid(5)),
+            expires_mono_ns: Some(u64::MAX),
+        });
+        let mut f = setup_with_publication(publication);
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(
+            out.receipt
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::DenyNoPublicationAuthority)
         );
         assert!(out.plant_command.is_none());
     }

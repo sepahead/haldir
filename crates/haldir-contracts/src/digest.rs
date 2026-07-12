@@ -67,6 +67,8 @@ pub enum DigestDomain {
     BackendProfile,
     /// An admission record.
     Admission,
+    /// A Gate decision identifier derived from a full boot id and counter.
+    DecisionId,
 }
 
 impl DigestDomain {
@@ -83,6 +85,7 @@ impl DigestDomain {
             Self::Bundle => b"haldir.digest.bundle.v1",
             Self::BackendProfile => b"haldir.digest.backend_profile.v1",
             Self::Admission => b"haldir.digest.admission.v1",
+            Self::DecisionId => b"haldir.digest.decision_id.v1",
         }
     }
 }

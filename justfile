@@ -22,7 +22,16 @@ test-all:
     cargo test --workspace --all-targets --all-features --locked
 
 docs:
-    cargo doc --workspace --no-deps --all-features --locked
+    RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features --locked
+
+doc-test:
+    cargo test --workspace --doc --locked
+
+build-no-default:
+    cargo build --workspace --no-default-features --locked
+
+lint-default:
+    cargo clippy --workspace --locked -- -D warnings
 
 deny:
     cargo deny check
@@ -48,5 +57,18 @@ verify-evidence:
 verify-pins:
     python3 tools/verify-pins.py
 
-# Same logical gate as pull-request CI.
-ci: fmt-check lint test-all docs deny verify-pins verify-generated
+verify-ci-pins:
+    python3 tools/verify-ci-pins.py
+
+verify-claims:
+    python3 tools/verify-claims.py
+
+interop:
+    tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT; cargo run -q -p haldir-crypto --example emit_interop_vectors >"$tmp"; diff -u tools/interop/vectors.json "$tmp"; python3 tools/interop/verify_cose.py tools/interop/vectors.json
+
+diff-check:
+    git diff --check
+
+# Canonical offline gate. Platform-specific and TLA+ jobs still run in GitHub CI.
+ci:
+    bash tools/p0r-exit-gate.sh

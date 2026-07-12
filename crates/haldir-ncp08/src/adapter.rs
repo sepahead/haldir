@@ -18,6 +18,9 @@ use haldir_contracts::ids::DecisionId;
 use haldir_contracts::receipt::TransformationRelationV1;
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
 
+/// Largest integer that NCP v0.8.0 can carry losslessly through its JSON wire.
+pub const NCP_JSON_SAFE_INTEGER_MAX: u64 = 9_007_199_254_740_991;
+
 /// The fully-approved input the Gate hands the adapter after a decision ALLOW.
 #[derive(Debug, Clone)]
 pub struct GateCommandBuildInputV1 {
@@ -40,7 +43,7 @@ pub struct GateCommandBuildInputV1 {
 }
 
 /// A modeled NCP `v0.8.0` command frame (Gate-owned publisher fields).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NcpCommandFrameV1 {
     /// Session pair.
     pub session: NcpSessionIdentityV1,
@@ -94,19 +97,33 @@ impl NcpCommandFrameV1 {
 
 /// An immutable prepared output: the frame, its exact bytes, digest, and the
 /// declared transformation relation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExactNcpCommandFrame {
-    /// The frame.
-    pub frame: NcpCommandFrameV1,
-    /// Exact serialized bytes.
-    pub bytes: Vec<u8>,
-    /// Digest of the exact bytes.
-    pub digest: DigestV1,
-    /// The declared conversion relation.
-    pub transformation: TransformationRelationV1,
+    frame: NcpCommandFrameV1,
+    bytes: Vec<u8>,
+    digest: DigestV1,
+    transformation: TransformationRelationV1,
 }
 
 impl ExactNcpCommandFrame {
+    /// Borrow the exact serialized bytes.
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    /// Digest of the exact serialized bytes.
+    #[must_use]
+    pub const fn digest(&self) -> DigestV1 {
+        self.digest
+    }
+
+    /// The declared semantic-to-wire transformation.
+    #[must_use]
+    pub const fn transformation(&self) -> TransformationRelationV1 {
+        self.transformation
+    }
+
     /// Whether the frame is a hold.
     #[must_use]
     pub fn is_hold(&self) -> bool {
@@ -121,6 +138,26 @@ impl ExactNcpCommandFrame {
             ncp_m_s_to_mm_s(self.frame.velocity_m_s[1]),
             ncp_m_s_to_mm_s(self.frame.velocity_m_s[2]),
         ]
+    }
+
+    fn is_self_consistent(&self) -> bool {
+        let expected_transformation = if self.frame.is_hold {
+            TransformationRelationV1::Identity
+        } else {
+            TransformationRelationV1::FixedPointToNcpFloatV1
+        };
+        let hold_is_zero = !self.frame.is_hold
+            || self
+                .frame
+                .velocity_m_s
+                .iter()
+                .all(|value| value.to_bits() == 0.0f64.to_bits());
+        let serialized = self.frame.wire_bytes();
+
+        self.transformation == expected_transformation
+            && hold_is_zero
+            && serialized == self.bytes
+            && DigestV1::compute(DigestDomain::OutputFrame, &self.bytes) == self.digest
     }
 }
 
@@ -179,6 +216,12 @@ impl NcpCommandAdapter for AclOnlyAdapter {
         &self,
         input: &GateCommandBuildInputV1,
     ) -> Result<ExactNcpCommandFrame, NcpAdapterError> {
+        if input.stream.seq.get() > NCP_JSON_SAFE_INTEGER_MAX
+            || input.source.stream_seq.get() > NCP_JSON_SAFE_INTEGER_MAX
+        {
+            return Err(NcpAdapterError::ConversionOutOfRange);
+        }
+
         let (is_hold, vel_mm, transformation) = match input.action {
             RequestedActionV1::Hold { .. } => (true, [0i32; 3], TransformationRelationV1::Identity),
             RequestedActionV1::VelocityLocalNed {
@@ -226,9 +269,98 @@ impl NcpCommandAdapter for AclOnlyAdapter {
         expected: &GateCommandBuildInputV1,
     ) -> Result<(), NcpAdapterError> {
         let rebuilt = self.build_command(expected)?;
-        if rebuilt.bytes != frame.bytes || rebuilt.digest != frame.digest {
+        if !frame.is_self_consistent() || &rebuilt != frame {
             return Err(NcpAdapterError::ValidatorMismatch);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::num::{NonZeroU32, NonZeroU64};
+    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
+
+    fn input(action: RequestedActionV1) -> GateCommandBuildInputV1 {
+        GateCommandBuildInputV1 {
+            decision_id: DecisionId::new([1; 16]),
+            session: NcpSessionIdentityV1 {
+                session_id: AsciiId::new("sess-1").unwrap(),
+                generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+            },
+            stream: NcpStreamPositionV1 {
+                epoch: GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([5; 16])),
+                seq: OutputSeq::new(NonZeroU64::new(1).unwrap()),
+            },
+            source: NcpSourceRefV1 {
+                source_key: BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
+                stream_epoch: CanonicalUuidV4String::from_random_bytes([2; 16]),
+                stream_seq: SourceSeq::new(NonZeroU64::new(7).unwrap()),
+            },
+            source_t_ns: 111,
+            gate_t_ns: 222,
+            action,
+            effective_validity_ms: 300,
+        }
+    }
+
+    fn hold_input() -> GateCommandBuildInputV1 {
+        input(RequestedActionV1::Hold {
+            requested_validity_ms: NonZeroU32::new(300).unwrap(),
+        })
+    }
+
+    #[test]
+    fn validator_rejects_internal_frame_tampering() {
+        let adapter = AclOnlyAdapter::new();
+        let input = hold_input();
+        let mut exact = adapter.build_command(&input).unwrap();
+        exact.frame.is_hold = false;
+
+        assert_eq!(
+            adapter.validate_exact_command(&exact, &input),
+            Err(NcpAdapterError::ValidatorMismatch)
+        );
+    }
+
+    #[test]
+    fn validator_rejects_internal_bytes_tampering() {
+        let adapter = AclOnlyAdapter::new();
+        let input = hold_input();
+        let mut exact = adapter.build_command(&input).unwrap();
+        exact.bytes.push(0xff);
+
+        assert_eq!(
+            adapter.validate_exact_command(&exact, &input),
+            Err(NcpAdapterError::ValidatorMismatch)
+        );
+    }
+
+    #[test]
+    fn validator_rejects_internal_digest_tampering() {
+        let adapter = AclOnlyAdapter::new();
+        let input = hold_input();
+        let mut exact = adapter.build_command(&input).unwrap();
+        exact.digest = DigestV1::compute(DigestDomain::OutputFrame, b"tampered");
+
+        assert_eq!(
+            adapter.validate_exact_command(&exact, &input),
+            Err(NcpAdapterError::ValidatorMismatch)
+        );
+    }
+
+    #[test]
+    fn validator_rejects_internal_transformation_tampering() {
+        let adapter = AclOnlyAdapter::new();
+        let input = hold_input();
+        let mut exact = adapter.build_command(&input).unwrap();
+        exact.transformation = TransformationRelationV1::FixedPointToNcpFloatV1;
+
+        assert_eq!(
+            adapter.validate_exact_command(&exact, &input),
+            Err(NcpAdapterError::ValidatorMismatch)
+        );
     }
 }

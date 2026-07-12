@@ -28,8 +28,8 @@ pub mod error;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub use adapter::{
-    AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter,
-    NcpCommandFrameV1,
+    AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NCP_JSON_SAFE_INTEGER_MAX,
+    NcpCommandAdapter, NcpCommandFrameV1,
 };
 pub use compatibility::{NCP_V0_8_0, NcpCompatibilityRecordV1};
 pub use conversion::{mm_s_to_ncp_m_s, ncp_m_s_to_mm_s};
@@ -95,13 +95,13 @@ mod tests {
         );
         let f1 = a.build_command(&inp).unwrap();
         let f2 = a.build_command(&inp).unwrap();
-        assert_eq!(f1.bytes, f2.bytes, "build is deterministic");
-        assert_eq!(f1.digest, f2.digest);
+        assert_eq!(f1.bytes(), f2.bytes(), "build is deterministic");
+        assert_eq!(f1.digest(), f2.digest());
         assert!(a.validate_exact_command(&f1, &inp).is_ok());
         // decoded velocity round-trips the fixed-point exactly (H17)
         assert_eq!(f1.decoded_velocity_mm_s(), [500, -250, 0]);
         assert_eq!(
-            f1.transformation,
+            f1.transformation(),
             haldir_contracts::receipt::TransformationRelationV1::FixedPointToNcpFloatV1
         );
     }
@@ -118,7 +118,7 @@ mod tests {
         let f = a.build_command(&inp).unwrap();
         assert!(f.is_hold());
         assert_eq!(
-            f.transformation,
+            f.transformation(),
             haldir_contracts::receipt::TransformationRelationV1::Identity
         );
     }
@@ -132,25 +132,37 @@ mod tests {
         let f1 = a.build_command(&input(1, hold)).unwrap();
         let f2 = a.build_command(&input(2, hold)).unwrap();
         assert_ne!(
-            f1.bytes, f2.bytes,
+            f1.bytes(),
+            f2.bytes(),
             "a new logical command is a new sequence"
         );
     }
 
     #[test]
-    fn validate_detects_tampered_bytes() {
+    fn json_safe_sequence_boundaries_are_enforced() {
         let a = AclOnlyAdapter::new();
-        let inp = input(
-            1,
-            RequestedActionV1::Hold {
-                requested_validity_ms: NonZeroU32::new(300).unwrap(),
-            },
-        );
-        let mut f = a.build_command(&inp).unwrap();
-        f.bytes.push(0xFF); // tamper
+        let hold = RequestedActionV1::Hold {
+            requested_validity_ms: NonZeroU32::new(300).unwrap(),
+        };
+        let at_limit = input(NCP_JSON_SAFE_INTEGER_MAX, hold);
+        assert!(a.build_command(&at_limit).is_ok());
+
+        let over_limit = input(NCP_JSON_SAFE_INTEGER_MAX + 1, hold);
         assert_eq!(
-            a.validate_exact_command(&f, &inp),
-            Err(NcpAdapterError::ValidatorMismatch)
+            a.build_command(&over_limit).unwrap_err(),
+            NcpAdapterError::ConversionOutOfRange
+        );
+
+        let mut source_at_limit = input(1, hold);
+        source_at_limit.source.stream_seq =
+            SourceSeq::new(NonZeroU64::new(NCP_JSON_SAFE_INTEGER_MAX).unwrap());
+        assert!(a.build_command(&source_at_limit).is_ok());
+
+        source_at_limit.source.stream_seq =
+            SourceSeq::new(NonZeroU64::new(NCP_JSON_SAFE_INTEGER_MAX + 1).unwrap());
+        assert_eq!(
+            a.build_command(&source_at_limit).unwrap_err(),
+            NcpAdapterError::ConversionOutOfRange
         );
     }
 }

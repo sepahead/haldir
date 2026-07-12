@@ -17,3 +17,7 @@ evidence/**/*.private.*
 # OS / editor noise
 .DS_Store
 *.swp
+
+# Python bytecode is interpreter-specific build output, never source evidence.
+__pycache__/
+*.py[cod]

@@ -7,12 +7,14 @@
 
 # haldir — Project Catalog
 
-> **2026 review:** This catalog preserves the original idea set. Its ordering and
+> **NON-NORMATIVE ARCHIVE — do not use this file as current implementation or
+> assurance evidence.** This catalog preserves the original idea set. Its ordering and
 > several implementation assumptions predate NCP 0.7.1 and the current
 > Engram/Crebain integration state. See the
 > [2026 project audit](HALDIR-PROJECT-AUDIT-2026.md) for the evidence-checked,
 > fifteen-lens ranking, detailed implementation plans, and conditional PhD
-> recommendation. The later
+> recommendation. Broad present-tense product claims below describe proposals, not
+> shipped or proven Haldir behavior. The later
 > [discussion and decision record](HALDIR-DISCUSSION-DECISIONS-2026.md) captures
 > the no-hardware constraint, revised backend plan, and repository boundaries.
 
@@ -512,4 +514,3 @@ The Roll is an **authenticated after-action FDR** — for attribution, ROE/legal
 ### Effort, stack, and dependencies
 
 **Stack:** Rust (scenario runner + Roll), Gazebo/ROS, Zenoh, `blake3` + `ed25519-dalek` (both new dependencies — neither ships in NCP or crebain today), Tauri 2 + React 19. **Effort:** ambitious — roughly a quarter for a credible MVP, more for full scenario coverage and the signed-anchor verifier. **Composes with:** crebain (transport commands, fusion gate, `DetectionOverlay`/`SensorFusionPanel`), NCP (`zenoh-access-control.json5` observer role, `SafetyGovernor`, `CommandWatchdog`), Fëanor’s Mark (hardens the seams this range attacks), and the sibling blue-team detector guardians it validates live.
-

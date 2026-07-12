@@ -79,9 +79,10 @@ Run every offline acceptance check in one command:
 bash tools/p0r-exit-gate.sh
 ```
 
-It runs rustfmt, clippy (`-D warnings`), the workspace tests, the source-pin /
-evidence-layout / forbidden-claim / generated-vector verifiers, and the
-independent COSE/CBOR interop check (re-emit + diff + verify). The TLA+ model
-check runs in CI (`.github/workflows/formal.yml`, `CL-FORMAL-01`), not locally,
-because it needs a JRE. Every claim these gates back is listed in
+It runs rustfmt, both feature-matrix Clippy gates (`-D warnings`), all-target /
+all-feature tests and doc tests, warning-free docs, no-default and cold builds,
+dependency policy, source/CI/formal/evidence/claim/generated-artifact verifiers,
+diff hygiene, and the independent COSE/CBOR interop check (re-emit + diff +
+verify). The pinned TLA+ model check runs in CI (`.github/workflows/formal.yml`,
+`CL-FORMAL-01`) and can run locally when a JRE is available. Every claim these gates back is listed in
 [`CLAIM-LEDGER.md`](CLAIM-LEDGER.md).

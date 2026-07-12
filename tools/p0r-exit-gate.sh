@@ -3,8 +3,8 @@
 # in one place. Mirrors the CI jobs so a developer can reproduce the gate locally
 # before pushing. Each check is reported; any failure makes the whole gate fail.
 #
-# Not covered here (requires a JRE / CI): the TLA+ model check (CL-FORMAL-01),
-# which runs in .github/workflows/formal.yml.
+# Not covered here when a JRE is unavailable: the independently pinned TLA+
+# model check (CL-FORMAL-01), which always runs in .github/workflows/formal.yml.
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,14 +37,31 @@ interop_gate() {
   python3 tools/interop/verify_cose.py tools/interop/vectors.json
 }
 
+clean_build_gate() {
+  local tmp
+  tmp="$(mktemp -d)" || return 1
+  CARGO_TARGET_DIR="$tmp" cargo build --workspace --locked
+  local status=$?
+  rm -rf "$tmp"
+  return "$status"
+}
+
 run "rustfmt"              cargo fmt --all --check
 run "clippy (deny warns)" cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-run "tests"               cargo test --workspace --locked
+run "tests"               cargo test --workspace --all-targets --all-features --locked
+run "doc tests"           cargo test --workspace --doc --locked
+run "docs (deny warns)"   env "RUSTDOCFLAGS=-D warnings" cargo doc --workspace --no-deps --all-features --locked
+run "no-default build"    cargo build --workspace --no-default-features --locked
+run "default clippy"      cargo clippy --workspace --locked -- -D warnings
+run "clean build"         clean_build_gate
+run "dependency policy"   cargo deny check
 run "source pins"         python3 tools/verify-pins.py
+run "CI/formal pins"       python3 tools/verify-ci-pins.py
 run "evidence layout"     python3 tools/verify-evidence.py
 run "forbidden claims"    python3 tools/verify-claims.py
 run "generated vectors"   python3 tools/verify-generated.py
 run "interop (COSE/CBOR)" interop_gate
+run "diff hygiene"        git diff --check
 
 printf '\n============================================================\n'
 printf 'P0-R exit gate: %d passed, %d failed\n' "$pass" "$fail"

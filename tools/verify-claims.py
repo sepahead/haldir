@@ -58,6 +58,7 @@ AUTHORED_DOCS = [
     "docs/RESEARCH-PROTOCOL.md",
     "docs/DEPENDENCY-RATIONALE.md",
     "docs/CLAIM-LEDGER.md",
+    "docs/ROADMAP-STATUS.md",
 ]
 # Architecture decision records are authored claim surface too; scan them all.
 FILES = [ROOT / p for p in AUTHORED_DOCS] + sorted((ROOT / "docs" / "adr").glob("*.md"))

@@ -17,7 +17,7 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   in-process actor the re-check is structurally present but inert (nothing can race
   the decision); it is scaffolding for a future concurrent actor and is NOT claimed
   to defeat a real mid-pipeline race here. *Verify:* `revoke_active_lease_then_intent_denies`,
-  `clock_regression_latches_and_denies` (both in `haldir-gate`).
+  `clock_regression_latches_and_errors` (both in `haldir-gate`).
 - `[x]` **B2** S6 no-liveness-effect: duplicate/stale/malformed/wrong-session/unauthorized
   input never refreshes lease, watchdog, horizon, source freshness, output authority,
   counters, or any burst/hold/slew timer. Highest-value mediation test.
@@ -38,9 +38,11 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   declared kind; `alg`/`kid`/content-type in the protected header; `kid` selects exactly
   one key (no fallback search, no message-supplied algorithm, Ed25519-only, reject
   multi-sig/detached); role must match; reject `DEVELOPMENT_ONLY` under assurance profile.
-- `[x]` **B8** Size + rate limits BEFORE signature verification; pre-verify token bucket
-  keyed on the authenticated transport principal; bounded outstanding-verification;
-  control-plane reserve so revocation/session-close survive a flood.
+- `[~]` **B8** P0 enforces the 16-KiB envelope bound before signature verification,
+  but its per-lease rate limit runs only after verification. A pre-verify token bucket
+  keyed on the authenticated transport principal, bounded outstanding verification,
+  and a control-plane reserve require the live transport actor and are not implemented
+  in P0. The earlier `[x]` marking overstated the code.
 - `[x]` **B9** Fixed-point core cannot fail open: component types pinned so squared/summed
   terms fit i128; range rejection before norm; overflow → specific DENY (never
   panic/saturate/wrap); prospective integration rounds reach UP.
@@ -54,8 +56,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   detection are implemented and tested (in-memory). **Not wired in P0:** durable
   temp→fsync→rename, separate-key MAC (semantic-rewind detection), and persist/load;
   so a `missing/rewound-to-lower-high-water` store is not yet a fault. See LIMITATIONS.
-- `[x]` **B13** Monotonic-clock regression while ACTIVE → FAULT_LATCHED; clock-read failure
-  → DENY (never "fresh").
+- `[~]` **B13** Monotonic-clock regression while ACTIVE now coherently latches both
+  enforcement and public process state as `FAULT_LATCHED`. P0 receives a supplied
+  `MonoInstant`; real clock-read failure handling belongs to the future runtime.
 - `[x]` **B14** Evidence outage never turns DENY into ALLOW (direction test).
 - `[x]` **B15** Reference plant has exactly one command ingress; zero application from any
   non-Gate principal; safe action is plant-owned (Gate only requests).
@@ -84,18 +87,21 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   `state_snapshot_digest` (per-kind prefix so digest domains cannot collide).
 - `[x]` **H11** Structural limits enforced DURING decode; strict ASCII security IDs; reject
   seq 0 / malformed UUID.
-- `[x]` **H12** Lease step 13 durably advances accepted-term high-water before exposing active;
-  test failure-after-commit (higher term consumed, no active lease).
+- `[~]` **H12** Lease acceptance advances the in-memory accepted-term high-water before
+  exposing ACTIVE state. Crash-durable commit and failure-after-persist recovery are
+  not implemented until the durable P1 store (`CL-DURABLE-01`).
 - `[x]` **H13** Wall-clock jumps don't move a live lease deadline; far-future `controller_t_ns`
   no effect; `controller_t_ns` never becomes final `t`.
 - `[x]` **H14** Handoff changes only mission authority; Gate keeps its own output epoch/seq.
 - `[x]` **H15** `haldir-contracts` does NOT depend on `haldir-ncp08`; `NcpSessionIdentityV1`/
   `NcpSourceRefV1` are Haldir's own stable types.
-- `[x]` **H16** Controller-influenced TTL clamped by the min; `ALLOW_NOT_PUBLISHED_OVERLOAD`
-  refreshes nothing and reserves queue capacity before allocating the sequence.
+- `[~]` **H16** Controller-influenced TTL is clamped by the full min-set. The P0
+  single-thread actor denies allocation failure before frame construction, but a real
+  reserved publish queue and `ALLOW_NOT_PUBLISHED_OVERLOAD` evidence require the live runtime.
 - `[x]` **H17** 1:1 Haldir-UUID `gate_output_epoch` ↔ wire `stream.epoch`; conversion labeled
-  `FIXED_POINT_TO_NCP_FLOAT_V1` with monotonicity/finiteness/bounds/error property tests
-  over the full i32 domain.
+  `FIXED_POINT_TO_NCP_FLOAT_V1` with sampled monotonicity/finiteness/bounds/round-trip
+  property tests plus an explicitly ignored exhaustive full-i32 sweep. NCP's JSON-safe
+  integer boundary is enforced for both source and output sequences.
 
 ## 3. Plan gaps / sequencing
 
@@ -104,7 +110,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   is relabeled P0-only; `haldir-transport-zenoh` is a documented trait-only seam.
 - `[~]` **G3** Actuator-path disposition table needs Crebain + a live bypass campaign (out of P0).
 - `[x]` **G4** Assurance profiles + pins + verify + dependency rationale as an entry gate.
-- `[x]` **G5** `evidence/<phase>/` with manifest + raw logs + checksums from Phase 1.
+- `[~]` **G5** The evidence layout verifier and source ledger exist, but no
+  `evidence/<phase>/` campaign directory with manifest + raw logs + checksums has yet
+  been committed; tests/CI are the P0 evidence surface.
 - `[x]` **G6** Coding-rule clippy gates from Phase 1.
 - `[x]` **G7** Preregister TLA/model properties against invariants; preregister any thresholds.
 - `[x]` **G8** Explicit P0 exit gate = strict subset of the Definition-of-Done.

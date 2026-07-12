@@ -10,7 +10,8 @@
 > Under NCP v0.8.0, controllers sign typed `HaldirIntentV1` semantic intents; Gate
 > originates every final NCP command with its own stream, timestamp, current
 > session generation, and verified source. Gate is the exclusive ACL-authorized
-> final publisher in the current `PRE_AUTHORITY_ACL_ONLY` profile and would hold
+> final publisher in the modeled current `PRE_AUTHORITY_ACL_ONLY` profile; live ACL
+> exclusivity remains unproven (`CL-LIVE-TRANSPORT-01`). Gate would hold
 > plant authority only after a future NCP authority increment. No maximum sequence
 > is reserved and no whole-frame byte-preserving relay claim remains. See
 > `docs/LIMITATIONS.md` for what the current implementation does and does not prove.

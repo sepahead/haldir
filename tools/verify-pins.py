@@ -5,6 +5,7 @@ Enforces:
   * the NCP commit is a full 40-hex SHA (never a branch name or short SHA);
   * the Rust toolchain channel is an exact release (never "stable"/"nightly");
   * rust-toolchain.toml agrees with tools/pins.toml;
+  * the compiled NCP compatibility constants agree with tools/pins.toml;
   * Cargo.lock exists (dependencies are pinned).
 
 Exits non-zero on the first violation. No third-party dependencies.
@@ -55,7 +56,28 @@ def main() -> None:
     if not re.fullmatch(r"[0-9a-f]{64}", proto_sha):
         fail(f"ncp.proto_sha256 is not a 64-hex digest: {proto_sha!r}")
 
-    print("verify-pins: OK (ncp commit, toolchain channel, proto digest, Cargo.lock)")
+    compatibility_path = ROOT / "crates" / "haldir-ncp08" / "src" / "compatibility.rs"
+    compatibility = compatibility_path.read_text()
+    fields = {
+        "ncp_tag": "tag",
+        "ncp_commit": "commit",
+        "wire_version": "wire_version",
+        "contract_hash": "contract_hash",
+        "proto_sha256": "proto_sha256",
+        "capability_profile": "capability_profile",
+    }
+    for rust_field, pin_field in fields.items():
+        expected = pins.get("ncp", {}).get(pin_field, "")
+        if f'{rust_field}: "{expected}"' not in compatibility:
+            fail(
+                f"haldir-ncp08 {rust_field} disagrees with "
+                f"tools/pins.toml ncp.{pin_field}"
+            )
+
+    print(
+        "verify-pins: OK "
+        "(NCP record, toolchain channel, proto digest, Cargo.lock)"
+    )
 
 
 if __name__ == "__main__":

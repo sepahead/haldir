@@ -53,6 +53,10 @@ Every load-bearing claim above is reconciled against its evidence in
 [`docs/CLAIM-LEDGER.md`](docs/CLAIM-LEDGER.md); statements not backed by a test or CI gate
 there are marked UNPROVEN or out of scope rather than asserted.
 
+The P0 result is not completion of the full project roadmap. The roadmap-wide,
+phase-by-phase status and current ecosystem blockers are tracked in
+[`docs/ROADMAP-STATUS.md`](docs/ROADMAP-STATUS.md).
+
 ### What is deliberately **out of scope** and **not claimed** here
 
 See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: live secure-Zenoh mTLS/ACL
@@ -79,4 +83,4 @@ canonical gate.
 
 ## License
 
-Apache-2.0 OR MIT, inherited from the Sepahead ecosystem.
+Dual-licensed under [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your option.

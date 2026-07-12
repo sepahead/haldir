@@ -26,7 +26,8 @@ subtle = "2"
 getrandom = "0.2"
 proptest = "1"
 
-[tools]
-# Present but not exercised in this deliverable (documented in docs/LIMITATIONS.md):
-# TLA+/TLC (model files under formal/ authored; invariants also encoded as Rust model tests).
-tlc = "not-installed-locally"
+[formal]
+# Exact release asset used by the formal workflow. The workflow verifies this
+# digest before executing the jar; moving `latest` URLs are forbidden.
+tla_tools_version = "1.7.4"
+tla_tools_sha256 = "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"

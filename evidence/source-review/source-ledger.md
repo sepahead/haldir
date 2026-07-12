@@ -7,8 +7,8 @@ owner-visible inventory) is out of P0 scope.
 ## Haldir
 
 - repository: `git@github.com:sepahead/haldir.git`
-- base branch: `main` (reviewed commit `2ad8058d2665dabf22e5943d0cdf7aac6f4d1c30`)
-- work branch: `feat/haldir-gate-core`
+- base branch: `main` (completion re-audit baseline `2a55f3d` on 2026-07-13)
+- work branch: `main`
 
 ## NCP baseline (immutable, pinned)
 
@@ -18,6 +18,9 @@ owner-visible inventory) is out of P0 scope.
 - `proto/ncp.proto` sha256: `6f13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227`
   (measured locally 2026-07-12 from the tagged worktree)
 - capability profile: `PRE_AUTHORITY_ACL_ONLY`
+- current upstream `main` observed during the 2026-07-13 re-audit:
+  `205384508d619923e05aef192bedaeb57cf665fc`; the two post-tag commits affect
+  release/consumer-pin metadata, not the immutable v0.8.0 wire baseline.
 
 ## Toolchain
 

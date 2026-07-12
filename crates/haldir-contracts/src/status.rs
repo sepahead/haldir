@@ -110,10 +110,16 @@ impl PlantPublicationAuthorityStateV1 {
         }
     }
 
-    /// Whether this state currently authorizes publication.
+    /// Whether this state authorizes publication under the current
+    /// `PRE_AUTHORITY_ACL_ONLY` compatibility profile.
+    ///
+    /// The future [`Self::NcpLeaseV1`] variant intentionally returns `false`
+    /// until an NCP authority-aware adapter validates its session, epoch, term,
+    /// lease id, and expiry. Merely constructing that future evidence shape must
+    /// never grant authority to the ACL-only Gate.
     #[must_use]
-    pub const fn authorizes_publication(&self) -> bool {
-        !matches!(self, Self::Unavailable { .. })
+    pub const fn authorizes_acl_only_publication(&self) -> bool {
+        matches!(self, Self::AclExclusiveV1(_))
     }
 }
 

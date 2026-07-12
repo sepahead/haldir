@@ -213,6 +213,7 @@ mod range {
             actor.register_challenge(
                 ChallengeNonce::new([7; 32]),
                 MonoInstant::from_nanos(u64::MAX),
+                now,
             );
 
             let lease_env = sign_message(

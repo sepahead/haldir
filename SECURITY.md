@@ -25,8 +25,8 @@ not replace PX4/plant failsafes, and does not provide the plant authority, wire
 ## Handling of secrets
 
 - No private keys, certificates, tokens, or absolute local paths are committed.
-- Development PKI lives only under `range/certs-dev/` and is unmistakably non-production;
-  CI fails if a development certificate fingerprint appears in an assurance deployment
-  package.
+- The current P0 repository ships no development PKI or assurance deployment package.
+  A later live-transport profile must add an unmistakably non-production fixture location
+  and a real CI fingerprint-denylist check before either property is claimed.
 - Logs and receipts never contain signatures, private-key material, full certificates,
   raw untrusted payloads, or sensitive paths.

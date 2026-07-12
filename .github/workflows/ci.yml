@@ -9,15 +9,14 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# NOTE (hardening, tracked in docs/CLAIM-LEDGER.md CL-CI-02): third-party Actions
-# should be pinned by immutable commit SHA before a release. They are kept on major
-# tags here for readability during remediation.
+# Every third-party Action is pinned to an immutable commit SHA (CL-CI-02). The
+# trailing version comment keeps the reviewed release human-readable.
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       # The pinned toolchain + components come from rust-toolchain.toml. `rustup show`
       # installs and selects it; we then verify (H-B01: the previous single-line
       # `--component rustfmt clippy` mis-parsed `clippy` as a positional toolchain).
@@ -28,7 +27,7 @@ jobs:
           rustc -Vv
           cargo -V
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: |
             ~/.cargo/registry
@@ -55,7 +54,7 @@ jobs:
   feature-matrix:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install toolchain
         run: rustup toolchain install 1.96.0 --profile minimal --component clippy
       # Prove the workspace compiles with minimal / no-default features too.
@@ -67,7 +66,7 @@ jobs:
   macos-compile:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install toolchain
         run: rustup toolchain install 1.96.0 --profile minimal --component clippy
       - name: Build + test on macOS
@@ -78,7 +77,7 @@ jobs:
     # undeclared generated artifacts (runbook Phase 1 step 7).
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install toolchain
         run: rustup toolchain install 1.96.0 --profile minimal
       - name: Cold build
@@ -87,15 +86,17 @@ jobs:
   supply-chain:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Verify source pins
         run: python3 tools/verify-pins.py
+      - name: Verify immutable CI and formal-tool pins
+        run: python3 tools/verify-ci-pins.py
       - name: Verify evidence layout
         run: python3 tools/verify-evidence.py
       - name: Forbidden-claim drift check
         run: python3 tools/verify-claims.py
       - name: cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@v2
+        uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
 
   interop:
     # An independent (second-implementation) check of the COSE_Sign1 /
@@ -104,7 +105,7 @@ jobs:
     # vector with the dependency-free Python verifier.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install pinned toolchain
         run: rustup toolchain install 1.96.0 --profile minimal
       - name: Regenerate interop vectors (drift check)

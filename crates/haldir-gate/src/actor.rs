@@ -139,6 +139,7 @@ pub struct VehicleActor {
     revision: RevisionCounter,
     process: GateProcessMachine,
     next_decision: u64,
+    terminal_decision: Option<DecisionRecord>,
     local_cap_ms: u32,
     last_seen_mono: Option<MonoInstant>,
     gate_signer: SigningKey,
@@ -278,6 +279,7 @@ impl VehicleActor {
         ] {
             if process.transition(to).is_err() {
                 fault.latch("STARTUP_TRANSITION");
+                process.latch_fault();
             }
         }
         Self {
@@ -305,6 +307,7 @@ impl VehicleActor {
             revision: RevisionCounter::new(),
             process,
             next_decision: 0,
+            terminal_decision: None,
             local_cap_ms: cfg.local_cap_ms,
             last_seen_mono: None,
             gate_signer: cfg.gate_signer,
@@ -324,6 +327,18 @@ impl VehicleActor {
         &self.evidence
     }
 
+    /// Latch both representations of a terminal process fault and invalidate any
+    /// in-flight authorization snapshot. Keeping this transition in one helper
+    /// prevents the public process state from disagreeing with the enforcement
+    /// latch.
+    fn latch_fault(&mut self, reason: &'static str) {
+        if !self.fault.is_latched() {
+            self.revision.bump();
+        }
+        self.fault.latch(reason);
+        self.process.latch_fault();
+    }
+
     /// Detect a monotonic-clock regression (spec T5/B13, punch-list BUG-2). A
     /// backward `now` while ACTIVE latches a fault and denies rather than extending
     /// a live lease's deadline; on success the last-seen instant is advanced.
@@ -331,8 +346,7 @@ impl VehicleActor {
         if let Some(last) = self.last_seen_mono
             && now < last
         {
-            self.fault.latch("MONOTONIC_REGRESSION");
-            self.revision.bump();
+            self.latch_fault("MONOTONIC_REGRESSION");
             return false;
         }
         self.last_seen_mono = Some(now);
@@ -351,7 +365,7 @@ impl VehicleActor {
         self.history.clear_slew_reference();
         // A tombstone-full replay retirement is an invariant/resource failure (H-H07).
         if self.replay.retire_active().is_err() {
-            self.fault.latch("REPLAY_TOMBSTONE_FULL");
+            self.latch_fault("REPLAY_TOMBSTONE_FULL");
         }
         self.revision.bump();
         if self
@@ -359,7 +373,7 @@ impl VehicleActor {
             .transition(GateProcessStateV1::SessionBound)
             .is_err()
         {
-            self.fault.latch("REVOKE_TRANSITION");
+            self.latch_fault("REVOKE_TRANSITION");
         }
     }
 
@@ -381,8 +395,9 @@ impl VehicleActor {
         &mut self,
         nonce: haldir_contracts::ids::ChallengeNonce,
         expires_at: MonoInstant,
+        now: MonoInstant,
     ) -> bool {
-        self.challenges.insert(nonce, expires_at)
+        self.challenges.insert(nonce, expires_at, now)
     }
 
     /// Validate and set the current trusted-state snapshot (H-B05). Rejects a
@@ -498,7 +513,7 @@ impl VehicleActor {
         self.history.clear_slew_reference();
         self.revision.bump();
         if self.process.transition(GateProcessStateV1::Active).is_err() {
-            self.fault.latch("ACTIVATE_TRANSITION");
+            self.latch_fault("ACTIVATE_TRANSITION");
             return Err(GateError::Faulted);
         }
         Ok(())
@@ -506,16 +521,18 @@ impl VehicleActor {
 
     fn make_decision_id(&mut self) -> DecisionId {
         // Checked counter (H-H06): exhaustion latches a fault (caught at Stage 0).
-        // The 128-bit id is a boot-unique prefix concatenated with the counter.
+        // Counter zero is reserved for the terminal exhaustion decision.
         match self.next_decision.checked_add(1) {
             Some(n) => self.next_decision = n,
-            None => self.fault.latch("DECISION_ID_EXHAUSTED"),
+            None => {
+                // Counter zero is reserved for the one terminal exhaustion
+                // receipt. Subsequent calls return that exact cached decision,
+                // rather than presenting repeated ids as distinct decisions.
+                self.latch_fault("DECISION_ID_EXHAUSTED");
+                self.next_decision = 0;
+            }
         }
-        let mut b = [0u8; 16];
-        let (lo, hi) = b.split_at_mut(8);
-        lo.copy_from_slice(self.gate_boot_id.as_bytes().get(..8).unwrap_or(&[0u8; 8]));
-        hi.copy_from_slice(&self.next_decision.to_be_bytes());
-        DecisionId::new(b)
+        derive_decision_id(&self.gate_boot_id, self.next_decision)
     }
 
     fn sign_receipt(&self, receipt: &DecisionReceiptV1) -> Vec<u8> {
@@ -569,8 +586,14 @@ impl VehicleActor {
         actual_key: &str,
         now: MonoInstant,
     ) -> DecisionRecord {
+        if let Some(record) = &self.terminal_decision {
+            return record.clone();
+        }
         let record = self.decide_intent_inner(env, actual_key, now);
         let _ = self.evidence.append(&record.signed_receipt);
+        if self.fault.reason() == Some("DECISION_ID_EXHAUSTED") {
+            self.terminal_decision = Some(record.clone());
+        }
         record
     }
 
@@ -766,7 +789,7 @@ impl VehicleActor {
         if self.revision.get() != captured_rev {
             return self.respond(&draft, R::ErrorInternalFault, now);
         }
-        if !self.publication.authorizes_publication() {
+        if !self.publication.authorizes_acl_only_publication() {
             return self.respond(&draft, R::DenyNoPublicationAuthority, now);
         }
         let out_seq = match self.output_stream.allocate() {
@@ -789,8 +812,7 @@ impl VehicleActor {
         let frame = match self.adapter.build_command(&build_input) {
             Ok(f) => f,
             Err(_) => {
-                self.fault.latch("NCP_BUILD_FAILED");
-                self.revision.bump();
+                self.latch_fault("NCP_BUILD_FAILED");
                 return self.respond(&draft, R::ErrorInternalFault, now);
             }
         };
@@ -799,8 +821,7 @@ impl VehicleActor {
             .validate_exact_command(&frame, &build_input)
             .is_err()
         {
-            self.fault.latch("NCP_VALIDATE_FAILED");
-            self.revision.bump();
+            self.latch_fault("NCP_VALIDATE_FAILED");
             return self.respond(&draft, R::ErrorInternalFault, now);
         }
 
@@ -818,7 +839,7 @@ impl VehicleActor {
             source: state.primary_source.source.clone(),
             action: plant_action,
             validity_ms: effective_validity_ms,
-            output_frame_digest: frame.digest,
+            output_frame_digest: frame.digest(),
         };
         let window_start = MonoInstant::from_nanos(
             now.as_nanos()
@@ -840,7 +861,7 @@ impl VehicleActor {
         receipt.reason_codes = BoundedVec::from_vec(vec![R::AllowPrepared]).unwrap_or_default();
         receipt.effective_validity_ms = Some(effective_validity_ms);
         receipt.gate_output_stream = Some(build_input.stream.clone());
-        receipt.output_frame_digest = Some(frame.digest);
+        receipt.output_frame_digest = Some(frame.digest());
         receipt.transformation_relation = Some(if frame.is_hold() {
             TransformationRelationV1::Identity
         } else {
@@ -861,6 +882,22 @@ impl VehicleActor {
     }
 }
 
+fn derive_decision_id(gate_boot_id: &GateBootId, counter: u64) -> DecisionId {
+    // Commit the full 128-bit boot id rather than truncating it. The resulting
+    // 128-bit identifier is a domain-separated digest of (boot id || counter),
+    // so two adversarially chosen boot ids with the same first half do not share
+    // a decision-id namespace.
+    let mut input = [0u8; 24];
+    let (boot, count) = input.split_at_mut(16);
+    boot.copy_from_slice(gate_boot_id.as_bytes());
+    count.copy_from_slice(&counter.to_be_bytes());
+    let digest = DigestV1::compute(DigestDomain::DecisionId, &input);
+    let (truncated, _) = digest.value.split_at(16);
+    let mut id = [0u8; 16];
+    id.copy_from_slice(truncated);
+    DecisionId::new(id)
+}
+
 fn crypto_reason(e: &CryptoError) -> R {
     match e.reason_code() {
         "DENY_WRONG_ROLE" => R::DenyWrongRole,
@@ -875,6 +912,26 @@ fn replay_reason(cls: haldir_state::ReplayClass) -> R {
     match cls {
         haldir_state::ReplayClass::RetiredEpoch => R::DenyRetiredEpoch,
         _ => R::DenyIntentReplay,
+    }
+}
+
+#[cfg(test)]
+mod decision_id_tests {
+    use super::derive_decision_id;
+    use haldir_contracts::ids::GateBootId;
+
+    #[test]
+    fn full_boot_id_and_counter_define_the_namespace() {
+        let mut second_boot = [1u8; 16];
+        second_boot[15] = 2;
+        let first = GateBootId::new([1u8; 16]);
+        let second = GateBootId::new(second_boot);
+
+        assert_ne!(
+            derive_decision_id(&first, 1),
+            derive_decision_id(&second, 1)
+        );
+        assert_ne!(derive_decision_id(&first, 0), derive_decision_id(&first, 1));
     }
 }
 
