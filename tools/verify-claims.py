@@ -59,7 +59,8 @@ AUTHORED_DOCS = [
     "docs/DEPENDENCY-RATIONALE.md",
     "docs/CLAIM-LEDGER.md",
 ]
-FILES = [ROOT / p for p in AUTHORED_DOCS]
+# Architecture decision records are authored claim surface too; scan them all.
+FILES = [ROOT / p for p in AUTHORED_DOCS] + sorted((ROOT / "docs" / "adr").glob("*.md"))
 
 
 def fail(msg: str) -> None:
