@@ -48,12 +48,7 @@ profile matrix and `docs/LIMITATIONS.md` for what P0 deliberately does not do.
 | CL-INTEROP-01 | The `COSE_Sign1`/Ed25519 envelope and deterministic-CBOR payload codec are decoded and verified by an independent, dependency-free second implementation over shared vectors, which also rejects tampering and mismatched kind/key. Vectors cover every wire major type and integer width; per-contract schema vectors are a future extension. | PROVEN | `tools/interop/verify_cose.py` over `tools/interop/vectors.json` (emitted by `haldir-crypto` `emit_interop_vectors`); CI `interop` job |
 | CL-CI-01 | The Rust quality gate (build, clippy `-D warnings`, tests, docs, fmt) runs on a single pinned toolchain reproducibly (H-B01). | PROVEN | `.github/workflows/ci.yml` `build-test`; `rust-toolchain.toml` |
 | CL-CI-02 | Every third-party GitHub Action and the exact TLA+ release asset are pinned immutably; automated drift checks reject mutable refs/URLs or a missing digest verification. | PROVEN | `tools/verify-ci-pins.py`; CI `supply-chain`; `.github/workflows/formal.yml`; `tools/pins.toml` |
-
-## Pending an evidence gate
-
-| Claim | Statement | Status | Evidence |
-| --- | --- | --- | --- |
-| CL-FORMAL-01 | The bounded TLA+ authority model (`RetiredNeverActive`, `NoOutputReuse`, `LeaseBindsCurrentIncarnation`) model-checks with no error. | PENDING | `formal/HaldirAuthority.tla` + exact TLA+ v1.7.4/digest in `.github/workflows/formal.yml`; record the first green run of the pinned workflow |
+| CL-FORMAL-01 | The bounded TLA+ authority model (`RetiredNeverActive`, `NoOutputReuse`, `LeaseBindsCurrentIncarnation`) model-checks with no error under the pinned TLA+ v1.7.4 jar. | PROVEN | `formal/HaldirAuthority.tla`; exact jar digest in `tools/pins.toml`; GitHub formal run `29211573130` on commit `6ca5958` |
 
 ## Unproven or out of scope in P0 (require a later profile)
 

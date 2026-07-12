@@ -31,7 +31,7 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 3 — signatures, roles, trust | Done (P0) | COSE/Ed25519, domain binding, trust conflict handling, role/subject enforcement (`CL-COSE-01`, `CL-TRUST-01`, `CL-IDENTITY-01`). |
 | 4 — controller/backend admission | Partial | Structural digest admission exists; profile reconstruction and behavioral backend equivalence do not (`CL-BACKEND-01`). |
 | 5 — challenges, leases, revocation | Partial | One-shot bounded challenges, signed leases, revocation, and in-process high-water ordering exist; durable recovery and live preemption do not (`CL-DURABLE-01`). |
-| 6 — bounded state and formal model | Partial | Rust state/model tests are green; the exact pinned TLC workflow must be recorded green for `CL-FORMAL-01`. |
+| 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
 | 9 — NCP v0.8.0 adapter | Partial | The immutable baseline is still correct and the modeled adapter is mutation/range hardened; it is not the real NCP JSON/corpus implementation (`CL-LIVE-TRANSPORT-01`). |

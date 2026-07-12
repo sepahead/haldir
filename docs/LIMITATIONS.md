@@ -51,11 +51,10 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
 - **Performance.** There is no performance/latency campaign. Any timing number is
   "measured on named host/kernel/load; not hard real-time"; **p99/p99.9 on named
   hardware is UNPROVEN**.
-- **TLA+ model checking.** A prior GitHub workflow completed on `main`, but it
-  downloaded a moving `latest` asset and therefore did not establish reproducible
-  tool identity. The workflow now pins TLA+ v1.7.4 and verifies its SHA-256 before
-  execution; `CL-FORMAL-01` remains PENDING until that pinned workflow is recorded
-  green. The Rust `model` tests remain an independent executable encoding.
+- **TLA+ model scope.** The bounded model now checks green under the SHA-verified
+  TLA+ v1.7.4 jar (`CL-FORMAL-01`, GitHub run `29211573130`). This proves only the
+  registered finite model; the Rust `model` tests remain an independent executable
+  encoding, and neither result proves the absent live transport or durable runtime.
 - **`missing_docs` hardening.** Deferred; the workspace does not yet
   `deny(missing_docs)`. Crate- and item-level docs are written voluntarily.
 - **Durable anti-rollback / restart rollback protection.** The anti-rollback store
