@@ -1,5 +1,20 @@
 <!-- markdownlint-disable MD013 MD024 -->
 
+> **NCP wire-0.8 supersession notice.** The project-selection conclusions in this
+> record remain current. The implementation mechanics — "Intended data flow,"
+> "Signed intent," "Downstream sequence ownership," "Denial and reversion," any
+> reserved-sequence CI cases, and any sequence/re-anchoring acceptance criterion —
+> were written for NCP 0.7.1 and are **superseded** by
+> [`HALDIR-NCP-V0.8.0-TRIPLE-CHECKED-AUDIT-AND-IMPLEMENTATION-SPECIFICATION-2026.md`](HALDIR-NCP-V0.8.0-TRIPLE-CHECKED-AUDIT-AND-IMPLEMENTATION-SPECIFICATION-2026.md)
+> and implemented as described in [`ARCHITECTURE`/authority docs](AUTHORITY-GRAPH.md).
+> Under NCP v0.8.0, controllers sign typed `HaldirIntentV1` semantic intents; Gate
+> originates every final NCP command with its own stream, timestamp, current
+> session generation, and verified source. Gate is the exclusive ACL-authorized
+> final publisher in the current `PRE_AUTHORITY_ACL_ONLY` profile and would hold
+> plant authority only after a future NCP authority increment. No maximum sequence
+> is reserved and no whole-frame byte-preserving relay claim remains. See
+> `docs/LIMITATIONS.md` for what the current implementation does and does not prove.
+
 # Haldir discussion and decision record — 2026-07-11
 
 ## Purpose and authority
