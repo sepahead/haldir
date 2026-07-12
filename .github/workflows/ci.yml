@@ -9,15 +9,24 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# NOTE (hardening, tracked in docs/CLAIM-LEDGER.md CL-CI-02): third-party Actions
+# should be pinned by immutable commit SHA before a release. They are kept on major
+# tags here for readability during remediation.
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install pinned toolchain
+      # The pinned toolchain + components come from rust-toolchain.toml. `rustup show`
+      # installs and selects it; we then verify (H-B01: the previous single-line
+      # `--component rustfmt clippy` mis-parsed `clippy` as a positional toolchain).
+      - name: Install + verify pinned toolchain
         run: |
-          rustup toolchain install 1.96.0 --profile minimal --component rustfmt clippy
-          rustup default 1.96.0
+          rustup toolchain install 1.96.0 --profile minimal --component rustfmt --component clippy
+          rustup show active-toolchain
+          rustc -Vv
+          cargo -V
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -43,6 +52,38 @@ jobs:
       - name: No generated-file drift
         run: python3 tools/verify-generated.py
 
+  feature-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal --component clippy
+      # Prove the workspace compiles with minimal / no-default features too.
+      - name: Build no-default-features
+        run: cargo build --workspace --no-default-features --locked
+      - name: Clippy default features only
+        run: cargo clippy --workspace --locked -- -D warnings
+
+  macos-compile:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal --component clippy
+      - name: Build + test on macOS
+        run: cargo test --workspace --locked
+
+  clean-build:
+    # Deliberately no restored target cache: catches warm-cache assumptions and
+    # undeclared generated artifacts (runbook Phase 1 step 7).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal
+      - name: Cold build
+        run: cargo build --workspace --locked
+
   supply-chain:
     runs-on: ubuntu-latest
     steps:
@@ -51,5 +92,7 @@ jobs:
         run: python3 tools/verify-pins.py
       - name: Verify evidence layout
         run: python3 tools/verify-evidence.py
+      - name: Forbidden-claim drift check
+        run: python3 tools/verify-claims.py
       - name: cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2

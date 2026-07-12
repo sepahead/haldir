@@ -1,0 +1,37 @@
+name: formal
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  tlc-model-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JRE
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Fetch pinned TLA+ tools
+        run: |
+          # tla2tools.jar from the TLA+ release; a digest is recorded on first
+          # green run in docs/CLAIM-LEDGER.md (CL-FORMAL-01).
+          curl -sSL -o tla2tools.jar \
+            https://github.com/tlaplus/tlaplus/releases/latest/download/tla2tools.jar
+          sha256sum tla2tools.jar
+      - name: Model-check HaldirAuthority
+        run: |
+          java -XX:+UseParallelGC -cp tla2tools.jar tlc2.TLC \
+            -workers auto \
+            -config formal/HaldirAuthority.cfg \
+            formal/HaldirAuthority.tla | tee tlc.log
+          grep -q "Model checking completed. No error has been found." tlc.log
+      - name: Upload TLC log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tlc-log
+          path: tlc.log
