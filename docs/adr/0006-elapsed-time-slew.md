@@ -30,6 +30,12 @@ than skip the check (the previous code cleared the reference to none).
   streams are unchanged; a stale reference can never grant an unbounded step.
 - The bound after a legitimately slow interval stays at the nominal envelope
   (conservative) rather than expanding — accepted as fail-closed.
+- The slew reference is cleared at every lease boundary (accept and revoke), so a
+  new lease never inherits the previous mission's last-published velocity. The
+  first velocity command of a lease (and the first per gate boot) therefore has no
+  reference and is bounded only by the absolute component/norm/speed caps — the
+  vehicle's true velocity at lease start is not known to the Gate, and that first
+  published command establishes the reference for subsequent slew checks.
 
 ## Evidence
 

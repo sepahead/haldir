@@ -38,7 +38,7 @@ mod e2e {
     use haldir_contracts::lease::MissionLeaseV1;
     use haldir_contracts::limits::MissionLeaseLimitsV1;
     use haldir_contracts::receipt::DecisionReceiptV1;
-    use haldir_contracts::receipt::{DecisionOutcomeV1, DecisionReasonCodeV1};
+    use haldir_contracts::receipt::{DecisionOutcomeV1, DecisionReasonCodeV1, PublishStageV1};
     use haldir_contracts::scalar::{
         AsciiId, BoundedAscii, BoundedSet, BoundedVec, CanonicalUuidV4String,
     };
@@ -325,7 +325,11 @@ mod e2e {
         actor
             .accept_lease_env(&lease_env, now)
             .expect("lease accepted");
-        actor.set_trusted_state(trusted_state(now)).unwrap();
+        // Capture the initial snapshot 1 ms before decision time so a later re-set
+        // at `now` strictly advances the anti-rollback capture clock (H-B05).
+        let mut initial = trusted_state(now);
+        initial.captured_mono = MonoInstant::from_nanos(now.as_nanos() - 1_000_000);
+        actor.set_trusted_state(initial).unwrap();
 
         Fixture {
             actor,
@@ -554,6 +558,66 @@ mod e2e {
     }
 
     #[test]
+    fn decision_id_exhaustion_latches_error() {
+        // H-H06: the decision-id counter is checked; exhaustion latches a fault and
+        // yields ERROR (no wrap, no output), rather than silently reusing an id.
+        let mut f = setup();
+        f.actor.force_next_decision_for_test(u64::MAX);
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Error);
+        assert!(
+            out.receipt
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::ErrorInternalFault)
+        );
+        assert!(out.plant_command.is_none());
+    }
+
+    #[test]
+    fn set_trusted_state_rejects_bad_ingress() {
+        // H-B05: ingress is validated, not blindly accepted. Wrong vehicle, wrong
+        // session, an invalid source frame, and a non-advancing capture are each
+        // rejected with a stable reason code.
+        let mut f = setup();
+
+        let mut wrong_vehicle = trusted_state(f.now);
+        wrong_vehicle.vehicle_id = VehicleId::new("uav-2").unwrap();
+        assert_eq!(
+            f.actor.set_trusted_state(wrong_vehicle),
+            Err(DecisionReasonCodeV1::DenyStateProducer)
+        );
+
+        let mut wrong_session = trusted_state(f.now);
+        wrong_session.session.session_id = AsciiId::new("sess-9").unwrap();
+        assert_eq!(
+            f.actor.set_trusted_state(wrong_session),
+            Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+
+        let mut invalid = trusted_state(f.now);
+        invalid.primary_source.valid = false;
+        assert_eq!(
+            f.actor.set_trusted_state(invalid),
+            Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+
+        // Anti-rollback: a capture older than the currently held snapshot (set at
+        // now - 1 ms by the fixture) is rejected.
+        let mut rolled_back = trusted_state(f.now);
+        rolled_back.captured_mono = MonoInstant::from_nanos(f.now.as_nanos() - 2_000_000);
+        assert_eq!(
+            f.actor.set_trusted_state(rolled_back),
+            Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+    }
+
+    #[test]
     fn decision_receipt_is_signed_and_verifies_to_gate_identity() {
         // H-B02/H-H03: every decision emits a COSE_Sign1 receipt signed by the
         // Gate application key and bound to the Gate's own subject. Verify it
@@ -597,6 +661,21 @@ mod e2e {
         assert_eq!(subject, Some("gate-1".to_owned()));
         assert_eq!(decoded.decision, DecisionOutcomeV1::Allow);
         assert_eq!(decoded.decision_id, out.receipt.decision_id);
+        // Honesty (CL-ALLOW-HONEST-01): the ALLOW receipt claims only that output
+        // was prepared, never that it was published downstream.
+        assert!(
+            decoded
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::AllowPrepared)
+        );
+        assert!(
+            !decoded
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::AllowPublished)
+        );
+        assert_eq!(decoded.publish_stage, PublishStageV1::OutputPrepared);
         // The exact signed bytes must re-encode from the in-memory receipt.
         assert_eq!(decoded.reason_codes, out.receipt.reason_codes);
     }

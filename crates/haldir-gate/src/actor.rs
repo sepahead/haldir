@@ -346,6 +346,9 @@ impl VehicleActor {
     pub fn revoke_active_lease(&mut self) {
         self.lease = None;
         self.lease_usage = None;
+        // The revoked mission's last-published velocity must not seed the next
+        // lease's slew reference (its authority has ended).
+        self.history.clear_slew_reference();
         // A tombstone-full replay retirement is an invariant/resource failure (H-H07).
         if self.replay.retire_active().is_err() {
             self.fault.latch("REPLAY_TOMBSTONE_FULL");
@@ -366,6 +369,13 @@ impl VehicleActor {
         self.process.state()
     }
 
+    /// Test-only: preset the decision-id counter so the exhaustion/latch path
+    /// (H-H06) is reachable without issuing `u64::MAX` real decisions.
+    #[cfg(test)]
+    pub(crate) fn force_next_decision_for_test(&mut self, v: u64) {
+        self.next_decision = v;
+    }
+
     /// Register a pending challenge nonce (issued out of band by the orchestrator).
     pub fn register_challenge(
         &mut self,
@@ -377,9 +387,13 @@ impl VehicleActor {
 
     /// Validate and set the current trusted-state snapshot (H-B05). Rejects a
     /// snapshot that is not for this vehicle/session, whose causal source is not in
-    /// this session, or that is flagged invalid — a blind setter would let whichever
-    /// task can call it author the causal truth Gate relies on. Full signed
-    /// state-producer contracts are a later profile (see `docs/LIMITATIONS.md`).
+    /// this session, that is flagged invalid, or whose capture time does not
+    /// strictly advance the currently held snapshot — a blind setter would let
+    /// whichever task can call it author the causal truth Gate relies on, and
+    /// without the monotonicity check a producer could roll the vehicle back to an
+    /// older-but-still-fresh favourable snapshot and flip a geofence/phase DENY to
+    /// ALLOW. Full signed state-producer contracts are a later profile (see
+    /// `docs/LIMITATIONS.md`).
     ///
     /// # Errors
     /// Returns a stable reason code on any ingress-validation failure.
@@ -391,6 +405,14 @@ impl VehicleActor {
             return Err(R::DenyStateStale);
         }
         if !state.primary_source.valid {
+            return Err(R::DenyStateStale);
+        }
+        // Anti-rollback: capture time must strictly advance. Two different truths
+        // cannot share one capture instant, and a non-advancing snapshot carries
+        // no new causal information — reject it rather than regress.
+        if let Some(prev) = &self.trusted_state
+            && state.captured_mono <= prev.captured_mono
+        {
             return Err(R::DenyStateStale);
         }
         self.trusted_state = Some(state);
@@ -472,6 +494,8 @@ impl VehicleActor {
         self.lease = Some(snap);
         self.lease_usage = Some(usage);
         self.replay = ControllerReplayState::new(MAX_RETIRED);
+        // Do not inherit a prior mission's slew reference into this lease.
+        self.history.clear_slew_reference();
         self.revision.bump();
         if self.process.transition(GateProcessStateV1::Active).is_err() {
             self.fault.latch("ACTIVATE_TRANSITION");

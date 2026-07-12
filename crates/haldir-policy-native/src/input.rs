@@ -76,6 +76,19 @@ impl BoundedActionHistory {
         self.last_published_at = Some(at);
     }
 
+    /// Clear the slew reference at an authority boundary (lease accept / revoke).
+    /// A new lease must not inherit the previous mission's last-published velocity
+    /// as a slew reference — that mission's authority has ended and the vehicle's
+    /// true velocity is no longer known to the Gate. The first velocity command of
+    /// the new lease is then bounded by the absolute component/norm/speed caps
+    /// (its slew reference is established by that first published command). The
+    /// duty window is left intact: it is time-based and reflects real motion that
+    /// does not vanish at a lease boundary.
+    pub fn clear_slew_reference(&mut self) {
+        self.last_published_velocity_mm_s = None;
+        self.last_published_at = None;
+    }
+
     /// Actual elapsed milliseconds since the slew reference was published, floored
     /// (a shorter interval permits a smaller change — conservative), zero on a
     /// clock regression or when there is no reference, and capped at

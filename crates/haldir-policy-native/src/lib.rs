@@ -406,4 +406,21 @@ mod tests {
         let d = decide_with_history(&vel(500, 0, 0, 100), &st, &hist, now);
         assert!(d.has_reason(R::DenySlew), "{:?}", d.reasons);
     }
+
+    #[test]
+    fn clear_slew_reference_drops_cross_lease_reference() {
+        // A lease boundary must not carry a prior mission's velocity forward as a
+        // slew reference (the gate calls this on accept/revoke).
+        let mut hist = BoundedActionHistory::new(16);
+        hist.record_velocity(
+            [500, 0, 0],
+            MonoInstant::from_nanos(1),
+            MonoInstant::from_nanos(2),
+            MonoInstant::from_nanos(0),
+        );
+        assert_eq!(hist.last_published_velocity_mm_s, Some([500, 0, 0]));
+        hist.clear_slew_reference();
+        assert_eq!(hist.last_published_velocity_mm_s, None);
+        assert_eq!(hist.last_published_at, None);
+    }
 }

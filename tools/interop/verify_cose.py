@@ -257,10 +257,20 @@ def verify_envelope(env: bytes, kind: str, schema_major: int, public_key: bytes)
         raise ValueError("signature must be 64 bytes")
 
     # Protected header: strictly {alg: EdDSA, content_type, kid}, ascending keys.
+    # Enforce the EXACT field set — no missing kid, no extra keys — so this
+    # verifier is no laxer than the Rust reference (cose.rs parse_protected
+    # rejects unknown keys and requires kid). Otherwise structural drift would
+    # not fail a vector, defeating CL-INTEROP-01.
     hdr = cbor_decode_exact(protected)
     if hdr[0] != "map":
         raise ValueError("protected header must be a map")
+    if any(k[0] != "uint" for k, _ in hdr[1]):
+        raise ValueError("protected header keys must be unsigned integers")
     fields = dict((k[1], v) for k, v in hdr[1])
+    if set(fields) != {HDR_ALG, HDR_CONTENT_TYPE, HDR_KID}:
+        raise ValueError("protected header must be exactly {alg, content_type, kid}")
+    if fields[HDR_KID][0] != "bstr":
+        raise ValueError("kid must be a byte string")
     if fields.get(HDR_ALG) != ("nint", ALG_EDDSA):
         raise ValueError("alg must be EdDSA (-8)")
     ct = fields.get(HDR_CONTENT_TYPE)
