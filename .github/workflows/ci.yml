@@ -96,3 +96,20 @@ jobs:
         run: python3 tools/verify-claims.py
       - name: cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
+
+  interop:
+    # An independent (second-implementation) check of the COSE_Sign1 /
+    # deterministic-CBOR wire format (CL-INTEROP-01). Re-emits the vectors from
+    # Rust, fails on any drift from the committed file, then verifies every
+    # vector with the dependency-free Python verifier.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal
+      - name: Regenerate interop vectors (drift check)
+        run: |
+          cargo run -q -p haldir-crypto --example emit_interop_vectors > /tmp/vectors.json
+          diff -u tools/interop/vectors.json /tmp/vectors.json
+      - name: Independently verify COSE/CBOR vectors
+        run: python3 tools/interop/verify_cose.py tools/interop/vectors.json

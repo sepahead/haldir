@@ -1,0 +1,42 @@
+{
+  "profile": "assurance-reference-v1",
+  "note": "COSE_Sign1/Ed25519 over deterministic CBOR; regenerate with cargo run -p haldir-crypto --example emit_interop_vectors",
+  "vectors": [
+    {
+      "name": "scalars",
+      "kind": "haldir.interop.scalars",
+      "schema_major": 1,
+      "content_type": "application/haldir-interop-scalars+cbor",
+      "public_key_hex": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+      "payload_hex": "a401182a02260344deadbeef046668616c646972",
+      "cose_hex": "845832a301270378276170706c69636174696f6e2f68616c6469722d696e7465726f702d7363616c6172732b63626f720443010203a054a401182a02260344deadbeef046668616c64697258407ad4392462f01772d0f19c11ea109080cd6e31921f77f2a29f86364a3f51a64b5a578478d41187ae092390fbd5e5f1a76bdaf9f98791ee095c36181c888ef103"
+    },
+    {
+      "name": "nested",
+      "kind": "haldir.interop.nested",
+      "schema_major": 1,
+      "content_type": "application/haldir-interop-nested+cbor",
+      "public_key_hex": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+      "payload_hex": "8301820203a10943010203",
+      "cose_hex": "845831a301270378266170706c69636174696f6e2f68616c6469722d696e7465726f702d6e65737465642b63626f720443010203a04b8301820203a109430102035840e11692b4536bf4da16e2be849a52fecc44fe7abb023e4e784e7f91e0fb49f249f96bf03f025d4d056ccc7f6746b13ae7f5ac8bf1f4839f78157bceaac814100d"
+    },
+    {
+      "name": "wide-ints",
+      "kind": "haldir.interop.wideints",
+      "schema_major": 1,
+      "content_type": "application/haldir-interop-wideints+cbor",
+      "public_key_hex": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+      "payload_hex": "a401170219012c031a000f4240041b0000000100000000",
+      "cose_hex": "845833a301270378286170706c69636174696f6e2f68616c6469722d696e7465726f702d77696465696e74732b63626f720443010203a057a401170219012c031a000f4240041b00000001000000005840c6303d3ed360af9e910ade01d4c12a878d03cd834612a547a263ea93a2ea1f13ac4d06f8b0254092e5fb8302b897aab27de348479c82e849f7fb19a2d0a0fc01"
+    },
+    {
+      "name": "bools",
+      "kind": "haldir.interop.bools",
+      "schema_major": 1,
+      "content_type": "application/haldir-interop-bools+cbor",
+      "public_key_hex": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+      "payload_hex": "83f5f480",
+      "cose_hex": "845830a301270378256170706c69636174696f6e2f68616c6469722d696e7465726f702d626f6f6c732b63626f720443010203a04483f5f480584083f316cfdf56653a6506021800f07ac44dcac63334956a29334e4d4ea28414c95b14fb2209449a0ad1a61e5fc7af5a6dbd0cf1da9c5609c930caf309eecd1301"
+    }
+  ]
+}

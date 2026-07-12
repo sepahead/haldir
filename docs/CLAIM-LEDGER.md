@@ -42,13 +42,15 @@ profile matrix and `docs/LIMITATIONS.md` for what P0 deliberately does not do.
 | CL-FIXEDPOINT-01 | The native policy uses only integer / fixed-point arithmetic with widened comparisons; no floating point participates in an authorization decision. | PROVEN | `haldir-policy-native` `decide.rs` + tests |
 | CL-DECISION-ID-01 | Decision ids come from a checked counter with a boot-unique prefix; exhaustion latches a fault instead of wrapping (H-H06). | PROVEN | `haldir-gate` `make_decision_id` |
 | CL-EVIDENCE-01 | Every decision (ALLOW or DENY) appends its signed receipt to a bounded, digest-chained in-process spool that stays verifiable; a full spool drops only the export copy and can never change a decision. The chain is in-process — crash-durability is out of P0 (`CL-DURABLE-01`). | PROVEN | `haldir-gate` `decisions_are_journaled_to_the_evidence_chain`; `haldir-evidence` chain tests |
+| CL-INTEROP-01 | The `COSE_Sign1`/Ed25519 envelope and deterministic-CBOR payload codec are decoded and verified by an independent, dependency-free second implementation over shared vectors, which also rejects tampering and mismatched kind/key. Vectors cover every wire major type and integer width; per-contract schema vectors are a future extension. | PROVEN | `tools/interop/verify_cose.py` over `tools/interop/vectors.json` (emitted by `haldir-crypto` `emit_interop_vectors`); CI `interop` job |
+| CL-CI-01 | The Rust quality gate (build, clippy `-D warnings`, tests, docs, fmt) runs on a single pinned toolchain reproducibly (H-B01). | PROVEN | `.github/workflows/ci.yml` `build-test`; `rust-toolchain.toml` |
 
 ## Pending an evidence gate
 
 | Claim | Statement | Status | Evidence |
 | --- | --- | --- | --- |
 | CL-FORMAL-01 | The bounded TLA+ authority model (`RetiredNeverActive`, `NoOutputReuse`, `LeaseBindsCurrentIncarnation`) model-checks with no error. | PENDING | `formal/HaldirAuthority.tla` + `.github/workflows/formal.yml`; first green CI run not yet recorded |
-| CL-INTEROP-01 | The CBOR/COSE encoding is verifiable by an independent implementation against shared vectors. | PENDING | independent verifier + vectors not yet built (roadmap item) |
+| CL-CI-02 | Third-party GitHub Actions are pinned by immutable commit SHA (not a mutable tag) before a release. | PENDING | `.github/workflows/ci.yml` actions currently on major tags; SHA-pinning is a pre-release hardening step |
 
 ## Unproven or out of scope in P0 (require a later profile)
 
