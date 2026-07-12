@@ -17,15 +17,35 @@ structs. Only `haldir-ncp08` is aware of NCP wire semantics.
 These are encoded in `crates/haldir-ncp08/src/compatibility.rs` (`NCP_V0_8_0`) and
 `tools/pins.toml`, and enforced by `tools/verify-pins.py`.
 
-## P0 modeling note
+## Default P0 model and exact conformance adapter
 
-For the P0 profile `haldir-ncp08` **models** the NCP v0.8.0 command-frame
-semantics (typed stream/source/session, Gate-owned publisher fields, no
-`authority`/`publisher_id` fields) without linking the real `ncp-core`/Zenoh
-stack. This keeps the pure core buildable and testable offline. A future adapter
-(`haldir-ncpXX`) swaps in the real dependency behind a semantic-diff +
-corpus-replay gate; the stable `HaldirIntentV1` and Gate contracts do not change.
-See `docs/LIMITATIONS.md`.
+The default `AclOnlyAdapter` models the NCP v0.8.0 command semantics without an
+upstream or Zenoh dependency, keeping the pure P0 core dependency-light. The
+off-by-default `real-ncp` feature adds `RealNcp08Adapter`, compiled from
+`ncp-core` v0.8.0 at the exact commit above. It constructs the upstream
+`CommandFrame`, runs `WireFrame::validate_wire`, serializes the exact compact
+JSON bytes, and validates those bytes again with
+`decode_validated::<CommandFrame>` before exposing them.
+
+The frozen upstream command vector and schema live under
+`crates/haldir-ncp08/tests/data/ncp-v0.8.0`; their SHA-256 values are recorded in
+`tools/pins.toml` and checked by `tools/verify-pins.py`. Differential tests cover
+Active/HOLD mapping, exact session/stream/source identity, JSON-safe sequence
+boundaries, Crebain's `velocity_setpoint` vec3/`m/s` profile, and byte/digest/
+transformation tampering. The stable `HaldirIntentV1` contracts do not depend on
+the upstream type.
+
+`frame_id` is copied from the independently validated trusted source state. It is
+part of the trusted-state digest and is never hardcoded: NCP's safety governor
+requires the sensor and command coordinate frames to agree. NCP has no field for
+Haldir's trusted `source_key`, so that key remains evidence/cache metadata while
+`source.{epoch,seq}` is carried on the NCP frame. Nanosecond Gate/source times are
+projected to NCP binary64 seconds; at the full `u64` nanosecond range the tested
+round-trip error bound is 2,048 ns, so this mapping is not byte identity.
+
+The current in-process Gate still selects `AclOnlyAdapter`. Selecting the exact
+adapter in the runnable service and proving live Zenoh/ACL delivery remain later
+roadmap gates; conformance here is not a live transport claim.
 
 ## Deferred upstream capabilities (increment 1)
 

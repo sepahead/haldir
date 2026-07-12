@@ -16,6 +16,7 @@ use haldir_contracts::action::RequestedActionV1;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::ids::DecisionId;
 use haldir_contracts::receipt::TransformationRelationV1;
+use haldir_contracts::scalar::BoundedAscii;
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
 
 /// Largest integer that NCP v0.8.0 can carry losslessly through its JSON wire.
@@ -32,6 +33,8 @@ pub struct GateCommandBuildInputV1 {
     pub stream: NcpStreamPositionV1,
     /// Verified causal source (Gate trusted-state cache).
     pub source: NcpSourceRefV1,
+    /// Validated coordinate-frame identifier from the trusted source frame.
+    pub frame_id: BoundedAscii<128>,
     /// Trusted source time (from the trusted frame).
     pub source_t_ns: u64,
     /// Gate-local monotonic creation time `t`.
@@ -51,6 +54,8 @@ pub struct NcpCommandFrameV1 {
     pub stream: NcpStreamPositionV1,
     /// Causal source.
     pub source: NcpSourceRefV1,
+    /// Coordinate frame copied from the trusted source frame.
+    pub frame_id: BoundedAscii<128>,
     /// Gate creation time `t`.
     pub t_ns: u64,
     /// Source time.
@@ -84,6 +89,7 @@ impl NcpCommandFrameV1 {
         put_str(&mut b, self.source.source_key.as_str());
         b.extend_from_slice(self.source.stream_epoch.as_bytes());
         b.extend_from_slice(&self.source.stream_seq.get().to_be_bytes());
+        put_str(&mut b, self.frame_id.as_str());
         b.extend_from_slice(&self.t_ns.to_be_bytes());
         b.extend_from_slice(&self.source_t_ns.to_be_bytes());
         b.push(u8::from(self.is_hold));
@@ -99,13 +105,27 @@ impl NcpCommandFrameV1 {
 /// declared transformation relation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExactNcpCommandFrame {
-    frame: NcpCommandFrameV1,
-    bytes: Vec<u8>,
-    digest: DigestV1,
-    transformation: TransformationRelationV1,
+    pub(crate) frame: NcpCommandFrameV1,
+    pub(crate) bytes: Vec<u8>,
+    pub(crate) digest: DigestV1,
+    pub(crate) transformation: TransformationRelationV1,
 }
 
 impl ExactNcpCommandFrame {
+    pub(crate) fn from_parts(
+        frame: NcpCommandFrameV1,
+        bytes: Vec<u8>,
+        transformation: TransformationRelationV1,
+    ) -> Self {
+        let digest = DigestV1::compute(DigestDomain::OutputFrame, &bytes);
+        Self {
+            frame,
+            bytes,
+            digest,
+            transformation,
+        }
+    }
+
     /// Borrow the exact serialized bytes.
     #[must_use]
     pub fn bytes(&self) -> &[u8] {
@@ -159,6 +179,52 @@ impl ExactNcpCommandFrame {
             && serialized == self.bytes
             && DigestV1::compute(DigestDomain::OutputFrame, &self.bytes) == self.digest
     }
+}
+
+pub(crate) fn build_semantic_frame(
+    input: &GateCommandBuildInputV1,
+) -> Result<(NcpCommandFrameV1, TransformationRelationV1), NcpAdapterError> {
+    if input.stream.seq.get() > NCP_JSON_SAFE_INTEGER_MAX
+        || input.source.stream_seq.get() > NCP_JSON_SAFE_INTEGER_MAX
+    {
+        return Err(NcpAdapterError::ConversionOutOfRange);
+    }
+
+    let (is_hold, vel_mm, transformation) = match input.action {
+        RequestedActionV1::Hold { .. } => (true, [0i32; 3], TransformationRelationV1::Identity),
+        RequestedActionV1::VelocityLocalNed {
+            north_mm_s,
+            east_mm_s,
+            down_mm_s,
+            ..
+        } => (
+            false,
+            [north_mm_s, east_mm_s, down_mm_s],
+            TransformationRelationV1::FixedPointToNcpFloatV1,
+        ),
+    };
+    let velocity_m_s = [
+        mm_s_to_ncp_m_s(vel_mm[0]),
+        mm_s_to_ncp_m_s(vel_mm[1]),
+        mm_s_to_ncp_m_s(vel_mm[2]),
+    ];
+    Ok((
+        NcpCommandFrameV1 {
+            session: input.session.clone(),
+            stream: NcpStreamPositionV1 {
+                epoch: input.stream.epoch,
+                seq: input.stream.seq,
+            },
+            source: input.source.clone(),
+            frame_id: input.frame_id.clone(),
+            t_ns: input.gate_t_ns,
+            source_t_ns: input.source_t_ns,
+            is_hold,
+            velocity_m_s,
+            validity_ms: input.effective_validity_ms,
+        },
+        transformation,
+    ))
 }
 
 /// The Gate-owned NCP command adapter.
@@ -216,51 +282,13 @@ impl NcpCommandAdapter for AclOnlyAdapter {
         &self,
         input: &GateCommandBuildInputV1,
     ) -> Result<ExactNcpCommandFrame, NcpAdapterError> {
-        if input.stream.seq.get() > NCP_JSON_SAFE_INTEGER_MAX
-            || input.source.stream_seq.get() > NCP_JSON_SAFE_INTEGER_MAX
-        {
-            return Err(NcpAdapterError::ConversionOutOfRange);
-        }
-
-        let (is_hold, vel_mm, transformation) = match input.action {
-            RequestedActionV1::Hold { .. } => (true, [0i32; 3], TransformationRelationV1::Identity),
-            RequestedActionV1::VelocityLocalNed {
-                north_mm_s,
-                east_mm_s,
-                down_mm_s,
-                ..
-            } => (
-                false,
-                [north_mm_s, east_mm_s, down_mm_s],
-                TransformationRelationV1::FixedPointToNcpFloatV1,
-            ),
-        };
-        let velocity_m_s = [
-            mm_s_to_ncp_m_s(vel_mm[0]),
-            mm_s_to_ncp_m_s(vel_mm[1]),
-            mm_s_to_ncp_m_s(vel_mm[2]),
-        ];
-        let frame = NcpCommandFrameV1 {
-            session: input.session.clone(),
-            stream: NcpStreamPositionV1 {
-                epoch: input.stream.epoch,
-                seq: input.stream.seq,
-            },
-            source: input.source.clone(),
-            t_ns: input.gate_t_ns,
-            source_t_ns: input.source_t_ns,
-            is_hold,
-            velocity_m_s,
-            validity_ms: input.effective_validity_ms,
-        };
+        let (frame, transformation) = build_semantic_frame(input)?;
         let bytes = frame.wire_bytes();
-        let digest = DigestV1::compute(DigestDomain::OutputFrame, &bytes);
-        Ok(ExactNcpCommandFrame {
+        Ok(ExactNcpCommandFrame::from_parts(
             frame,
             bytes,
-            digest,
             transformation,
-        })
+        ))
     }
 
     fn validate_exact_command(
@@ -299,6 +327,7 @@ mod tests {
                 stream_epoch: CanonicalUuidV4String::from_random_bytes([2; 16]),
                 stream_seq: SourceSeq::new(NonZeroU64::new(7).unwrap()),
             },
+            frame_id: BoundedAscii::new("map").unwrap(),
             source_t_ns: 111,
             gate_t_ns: 222,
             action,

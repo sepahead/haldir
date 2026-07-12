@@ -27,8 +27,10 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **PARTIAL** — Actual route + principal bound: the actual key and application
   signer are bound (`actor.rs` Stage 3); the *authenticated transport principal*
   binding needs live mTLS (out of P0).
-- **PARTIAL** — NCP stream/source/session semantics: modeled exactly and pinned by
-  digest; upstream frozen-corpus conformance is out of P0 (modeled adapter).
+- **PARTIAL** — NCP stream/source/session semantics: the default Gate path remains
+  modeled, while the optional exact-revision adapter passes upstream validated
+  JSON, frozen-corpus, differential, and tamper tests (`CL-NCP-REAL-01`). Selecting
+  that path in a live Gate/Crebain deployment remains outstanding.
 - **YES** — A retry is byte-identical and a new logical command is a new sequence
   (`output_stream`, `haldir-ncp08` tests).
 

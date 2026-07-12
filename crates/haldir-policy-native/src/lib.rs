@@ -148,6 +148,7 @@ mod tests {
                     stream_seq: SourceSeq::new(NonZeroU64::new(1).unwrap()),
                 },
                 session: sess(),
+                frame_id: haldir_contracts::scalar::BoundedAscii::new("map").unwrap(),
                 publisher_t_ns: 0,
                 receive_mono: recv,
                 valid: true,

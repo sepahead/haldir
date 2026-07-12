@@ -14,6 +14,8 @@ not a routine bump.
 | `subtle` | 2 | Constant-time primitives (available for comparison paths). | `haldir-contracts` |
 | `getrandom` | 0.2 | OS CSPRNG for boot ids / nonces / epochs (used by the runtime, not the pure policy). | `haldir-crypto`, `haldir-state` |
 | `proptest` | 1 | Property tests (dev-dependency only). | several crates |
+| `ncp-core` | 0.8.0 at `2f5bd586…` | Normative upstream NCP wire types and validation for the off-by-default exact conformance adapter. The immutable git source is checked against `tools/pins.toml` and `.ncp-consumer`. | `haldir-ncp08` `real-ncp` feature only |
+| `serde_json` | 1.0 (locked) | Serialize and decode the upstream NCP JSON frame in the exact conformance adapter; never used in signed Haldir contracts or policy. | `haldir-ncp08` `real-ncp` feature only |
 
 ## Deliberately absent
 
@@ -21,10 +23,11 @@ not a routine bump.
   hand-written (`haldir-contracts/src/cbor.rs`) because the profile enforces rules
   generic decoders do not (shortest ints, ascending integer keys, no floats/tags/
   indefinite, one top-level item, re-encode equality).
-- **No `serde`/`serde_json` on the trusted path**, no `HashMap` where iteration
-  feeds a digest or decision (deterministic `BTreeMap`/sorted vectors only).
-- **No async runtime, no Zenoh, no NCP crate, no Python/PyO3, no neural runtime**
-  in the pure core. These belong to future profiles (P1+) behind versioned seams.
+- **No `serde`/`serde_json` in signed Haldir contracts or policy**, no `HashMap`
+  where iteration feeds a digest or decision. `serde_json` exists only in the
+  opt-in exact NCP boundary.
+- **No async runtime, Zenoh, Python/PyO3, or neural runtime** in the pure core.
+  The NCP crate exists only behind the `real-ncp` adapter feature.
 - **No floating point in signed authority/policy/replay/action contracts.** Floats
-  appear only in the modeled NCP wire value inside `haldir-ncp08`, with an
-  error-bounded conversion.
+  appear only at the modeled/exact NCP wire boundary, with an error-bounded
+  conversion.

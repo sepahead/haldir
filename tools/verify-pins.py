@@ -12,6 +12,7 @@ Exits non-zero on the first violation. No third-party dependencies.
 """
 from __future__ import annotations
 
+import hashlib
 import re
 import sys
 import tomllib
@@ -51,10 +52,42 @@ def main() -> None:
 
     if not (ROOT / "Cargo.lock").is_file():
         fail("Cargo.lock missing (dependencies must be pinned)")
+    cargo_lock = (ROOT / "Cargo.lock").read_text()
+    ncp_source = f"git+https://github.com/sepahead/NCP?rev={commit}#{commit}"
+    if f'source = "{ncp_source}"' not in cargo_lock:
+        fail("Cargo.lock does not resolve ncp-core from the exact pinned NCP revision")
+
+    cargo = tomllib.loads((ROOT / "Cargo.toml").read_text())
+    ncp_dep = cargo.get("workspace", {}).get("dependencies", {}).get("ncp-core", {})
+    if (
+        ncp_dep.get("git") != "https://github.com/sepahead/NCP"
+        or ncp_dep.get("rev") != commit
+        or ncp_dep.get("version") != "=0.8.0"
+    ):
+        fail("workspace ncp-core dependency is not exact v0.8.0 at ncp.commit")
+
+    descriptor = (ROOT / ".ncp-consumer").read_text()
+    expected_descriptor_suffix = f"v0.8.0 {commit}"
+    if descriptor.count(expected_descriptor_suffix) != 2:
+        fail(".ncp-consumer does not contain exact manifest and lock revision rows")
 
     proto_sha = pins.get("ncp", {}).get("proto_sha256", "")
     if not re.fullmatch(r"[0-9a-f]{64}", proto_sha):
         fail(f"ncp.proto_sha256 is not a 64-hex digest: {proto_sha!r}")
+
+    corpus_root = ROOT / "crates" / "haldir-ncp08" / "tests" / "data" / "ncp-v0.8.0"
+    corpus = {
+        "command_frame.json": "command_vector_sha256",
+        "command_frame.schema.json": "command_schema_sha256",
+    }
+    for filename, pin_field in corpus.items():
+        path = corpus_root / filename
+        if not path.is_file():
+            fail(f"frozen NCP corpus file missing: {path.relative_to(ROOT)}")
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        expected = pins.get("ncp", {}).get(pin_field, "")
+        if actual != expected:
+            fail(f"frozen NCP corpus digest mismatch for {filename}: {actual}")
 
     compatibility_path = ROOT / "crates" / "haldir-ncp08" / "src" / "compatibility.rs"
     compatibility = compatibility_path.read_text()
@@ -76,7 +109,7 @@ def main() -> None:
 
     print(
         "verify-pins: OK "
-        "(NCP record, toolchain channel, proto digest, Cargo.lock)"
+        "(NCP record/dependency/corpus, toolchain channel, proto digest, Cargo.lock)"
     )
 
 

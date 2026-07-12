@@ -13,7 +13,7 @@ use haldir_contracts::ids::{
     VehicleId,
 };
 use haldir_contracts::limits::MissionLeaseLimitsV1;
-use haldir_contracts::scalar::AsciiId;
+use haldir_contracts::scalar::{AsciiId, BoundedAscii};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1};
 
 /// Fixed-point kinematic state (integer millimetres / mm-per-second).
@@ -41,7 +41,9 @@ pub struct VerifiedSourceStateV1 {
     pub source: NcpSourceRefV1,
     /// The session the source frame was observed under.
     pub session: NcpSessionIdentityV1,
-    /// Source publisher time (diagnostic only).
+    /// Validated coordinate-frame identifier from the source NCP frame.
+    pub frame_id: BoundedAscii<128>,
+    /// Source publisher time, carried as causal provenance but never used for freshness.
     pub publisher_t_ns: u64,
     /// Gate receive monotonic time (authoritative freshness basis).
     pub receive_mono: MonoInstant,
@@ -80,12 +82,13 @@ impl TrustedStateSnapshotV1 {
         // Commit EVERY field any decision or adapter function can read (H-B06);
         // the `digest_coverage` test module below enforces this by asserting that
         // a change to any single field changes the digest.
-        w.array_header(14);
+        w.array_header(15);
         self.vehicle_id.encode(&mut w);
         self.session.encode(&mut w);
         w.uint(self.captured_mono.as_nanos());
         self.primary_source.source.encode(&mut w);
         self.primary_source.session.encode(&mut w);
+        self.primary_source.frame_id.encode(&mut w);
         w.uint(self.primary_source.publisher_t_ns);
         w.uint(self.primary_source.receive_mono.as_nanos());
         w.bool(self.primary_source.valid);
@@ -240,6 +243,7 @@ mod digest_coverage {
                     session_id: AsciiId::new("sess-1").unwrap(),
                     generation: uuid(1),
                 },
+                frame_id: BoundedAscii::new("map").unwrap(),
                 publisher_t_ns: 111,
                 receive_mono: MonoInstant::from_nanos(1_000),
                 valid: true,
@@ -301,6 +305,10 @@ mod digest_coverage {
         assert_ne!(
             d0,
             mutated(|s| s.primary_source.session.session_id = AsciiId::new("sess-3").unwrap())
+        );
+        assert_ne!(
+            d0,
+            mutated(|s| s.primary_source.frame_id = BoundedAscii::new("odom").unwrap())
         );
         assert_ne!(d0, mutated(|s| s.primary_source.publisher_t_ns = 424_242));
         assert_ne!(

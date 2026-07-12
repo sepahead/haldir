@@ -35,7 +35,8 @@ says they mean.
   controller, one Gate, one **deterministic reference plant**, `Hold` + local-NED velocity,
   no live network, no neural runtime, no physical hardware.
 - **NCP baseline pinned:** tag `v0.8.0`, commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`,
-  wire `0.8`, contract hash `d1b50a2d8a265276`.
+  wire `0.8`, contract hash `d1b50a2d8a265276`; the optional `real-ncp`
+  conformance adapter compiles that exact revision and replays its frozen corpus.
 
 ### What is implemented and tested locally (the P0 pure core)
 
@@ -43,7 +44,8 @@ The complete offline-testable reference-monitor core: canonical contracts, COSE/
 trust, controller/backend admission, challenge-bound mission leases with anti-rollback,
 bounded authority/session/stream/replay state machines with restart semantics, a
 fixed-point deterministic policy engine, a deterministic reference plant with staged
-evidence, the Gate-owned NCP v0.8.0 output adapter (modeled P0 semantic layer), a bounded evidence
+evidence, the Gate-owned NCP v0.8.0 modeled output adapter plus an opt-in exact
+upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts (lossy on overflow; a durable,
 tamper-evident signed journal is out of P0, see `CL-DURABLE-01`), the composed Gate runtime
 with its 13-stage decision pipeline, and a deterministic adversarial range + end-to-end

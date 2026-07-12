@@ -3320,6 +3320,7 @@ If the output queue is full, the decision becomes `ALLOW_NOT_PUBLISHED_OVERLOAD`
 | `stream.epoch` | Gate output state |
 | `stream.seq` | Gate output allocator |
 | `source.epoch` / `source.seq` | verified primary source from Gate cache |
+| `frame_id` | validated coordinate-frame id from the trusted primary source |
 | `t` | Gate monotonic creation time |
 | `source_t` | trusted source frame, when available |
 | `authority.term` / `lease_id` | absent in NCP `v0.8.0`; populated only by a future adapter from a verified Gate-held NCP plant-authority lease |

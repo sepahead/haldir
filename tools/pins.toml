@@ -7,14 +7,16 @@ edition = "2024"
 components = ["rustfmt", "clippy"]
 
 [ncp]
-# Immutable NCP baseline. Haldir builds its own semantic types; the adapter's
-# compatibility record binds these exactly (see docs/NCP-COMPATIBILITY.md).
+# Immutable NCP baseline. Haldir keeps stable semantic types and the optional
+# exact adapter compiles the upstream crate at this revision.
 tag = "v0.8.0"
 commit = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
 wire_version = "0.8"
 contract_hash = "d1b50a2d8a265276"
 # sha256 of proto/ncp.proto at v0.8.0, measured locally on 2026-07-12.
 proto_sha256 = "6f13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227"
+command_vector_sha256 = "3e3d73235fe2dd4288158c29f9cd2f3f17034f7a58d803682f45c145a9733f2e"
+command_schema_sha256 = "abd9743323e4f6eabdbc27888704462b1b1fd128777422b35146605709a01344"
 capability_profile = "PRE_AUTHORITY_ACL_ONLY"
 
 [dependencies]
@@ -25,6 +27,8 @@ zeroize = "1"
 subtle = "2"
 getrandom = "0.2"
 proptest = "1"
+ncp-core = "0.8.0@2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
+serde_json = "1.0"
 
 [formal]
 # Exact release asset used by the formal workflow. The workflow verifies this

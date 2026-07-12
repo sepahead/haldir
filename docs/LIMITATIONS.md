@@ -32,10 +32,12 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
 - **`PRE_AUTHORITY_ACL_ONLY` as a proven live property.** It is used here as a
   declared compatibility *label* on the modeled adapter; the live ACL-exclusive
   publication property it names is **UNPROVEN** (needs the transport campaign).
-- **Real `ncp-core` / Zenoh dependency.** `haldir-ncp08` is a P0 semantic model of
-  the NCP v0.8.0 command frame. It is pinned by digest to the real release but
-  does not link the upstream crate. Conformance against the upstream frozen
-  corpus is not run here.
+- **Exact NCP adapter is not the selected live Gate path.** The off-by-default
+  `real-ncp` feature compiles the exact pinned `ncp-core` v0.8.0 revision and its
+  frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). The in-process Gate
+  still selects the dependency-light modeled adapter, and no Zenoh transport or
+  plant delivery is present. Exact wire conformance therefore does not prove live
+  publication, acceptance, application, or ACL exclusivity.
 - **NEST / Engram controllers.** No neural runtime is present. Admission checks
   digest equality only; **no backend behavioural conformance** (running NEST /
   Norse / Rockpool / XyloSim) is performed. Admission levels A1–A6 are structural

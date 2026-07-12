@@ -12,10 +12,16 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+real-ncp = ["dep:ncp-core", "dep:serde_json"]
+
 [dependencies]
 haldir-contracts.workspace = true
 haldir-core.workspace = true
 sha2.workspace = true
+ncp-core = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true

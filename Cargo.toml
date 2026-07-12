@@ -51,6 +51,10 @@ zeroize = { version = "1", default-features = false }
 subtle = { version = "2", default-features = false }
 getrandom = { version = "0.2" }
 proptest = { version = "1" }
+# Exact upstream NCP release implementation, compiled only by haldir-ncp08's
+# off-by-default `real-ncp` conformance feature.
+ncp-core = { version = "=0.8.0", git = "https://github.com/sepahead/NCP", rev = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e", default-features = false }
+serde_json = { version = "1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

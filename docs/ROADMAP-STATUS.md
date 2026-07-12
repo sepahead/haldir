@@ -13,9 +13,10 @@ fully proven; **not started** means no qualifying implementation/evidence is pre
 ## Current verdict
 
 The offline P0 reference-monitor core is implemented and its local exit gate passes.
-The full Haldir project remains incomplete: the real NCP adapter, durable recovery,
-live secure transport/ACL proof, Crebain and Engram integration, backend-conformance
-research, performance/endurance campaigns, and experimental release are outstanding.
+The full Haldir project remains incomplete: durable recovery, selection of the exact
+NCP adapter in a runnable Gate, live secure transport/ACL proof, Crebain and Engram
+integration, backend-conformance research, performance/endurance campaigns, and an
+experimental release are outstanding.
 Those stronger properties remain explicitly unproven or out of scope under
 `CL-DURABLE-01`, `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
 `CL-PRODUCTION-01`.
@@ -34,7 +35,7 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
-| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline is still correct and the modeled adapter is mutation/range hardened; it is not the real NCP JSON/corpus implementation (`CL-LIVE-TRANSPORT-01`). |
+| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, and opt-in exact `ncp-core` JSON/frozen-corpus differential path are tested (`CL-NCP-REAL-01`); the Gate runtime does not select it and no live transport evidence exists (`CL-LIVE-TRANSPORT-01`). |
 | 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage in-process actor and signed chained receipts exist; runnable service/configuration, bounded async queues, and durable journal/recovery do not (`CL-DURABLE-01`). |
 | 11 — secure Zenoh and ACL proof | Not started | `haldir-transport-zenoh` is a trait seam; no mTLS principal×route campaign exists (`CL-LIVE-TRANSPORT-01`). |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
@@ -59,8 +60,9 @@ Those stronger properties remain explicitly unproven or out of scope under
   release/consumer-pin metadata and do not change the released wire.
 - Crebain, Engram, Galadriel, and Prisoma have moved to the v0.8 baseline, so old
   roadmap language telling every consumer to migrate from v0.7.1 is historical.
-- Haldir is not yet a real NCP consumer. Its P0 adapter intentionally uses a private
-  deterministic model, while NCP/Crebain use the released JSON `CommandFrame`.
+- Haldir is now registered as an exact-revision NCP consumer and the optional
+  adapter validates released JSON `CommandFrame` bytes against the pinned crate and
+  frozen corpus. The default in-process Gate still uses its deterministic model.
 - The current NCP assurance template still grants command publication to a commander;
   the Haldir profile needs a distinct Gate principal as the sole exact-command writer
   and controllers confined to typed intent routes before `CL-LIVE-TRANSPORT-01` can
@@ -70,8 +72,8 @@ Those stronger properties remain explicitly unproven or out of scope under
 
 1. **Authority:** make Gate configuration fallible and cross-field validated; add durable
    boot/high-water/evidence recovery before authority can become active.
-2. **Wire/ecosystem:** add an exact-v0.8 real NCP adapter and frozen-corpus differential
-   tests; preserve the stable Haldir semantic contracts.
+2. **Wire/ecosystem:** select the now-tested exact-v0.8 adapter in the runnable
+   service, preserving the stable Haldir semantic contracts.
 3. **Time/restart/evidence:** prove crash recovery, boot-id uniqueness, and terminal
    evidence semantics under fault injection.
 4. **Operations/security:** implement the live transport actor, exact route builder,

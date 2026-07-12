@@ -804,6 +804,7 @@ impl VehicleActor {
                 seq: out_seq,
             },
             source: state.primary_source.source.clone(),
+            frame_id: state.primary_source.frame_id.clone(),
             source_t_ns: state.primary_source.publisher_t_ns,
             gate_t_ns: now.as_nanos(),
             action: intent.action,

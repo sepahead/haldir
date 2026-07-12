@@ -191,6 +191,7 @@ mod e2e {
             primary_source: VerifiedSourceStateV1 {
                 source: source(),
                 session: sess(),
+                frame_id: BoundedAscii::new("map").unwrap(),
                 publisher_t_ns: 111,
                 receive_mono: now,
                 valid: true,

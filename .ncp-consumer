@@ -1,0 +1,5 @@
+# .ncp-consumer — Haldir's exact off-by-default NCP conformance dependency.
+# NCP's consumer checker discovers this repository through these immutable
+# revision rows; see NCP/INTEGRATING.md.
+cargo_rev       Cargo.toml v0.8.0 2f5bd586d4bb20c90362bb6f5698b7f64057ba4e
+cargo_lock_rev  Cargo.lock v0.8.0 2f5bd586d4bb20c90362bb6f5698b7f64057ba4e

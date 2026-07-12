@@ -1,12 +1,11 @@
 //! `haldir-ncp08` — the immutable-tag-pinned NCP `v0.8.0` command adapter.
 //!
 //! This is the ONLY crate aware of NCP wire semantics (spec §Isolation rule).
-//! For the P0 `PRE_AUTHORITY_ACL_ONLY` profile it models the wire without the real
-//! `ncp-core`/Zenoh dependency; the compatibility record pins the exact upstream
-//! release so a future adapter can swap in the real dependency behind a
-//! semantic-diff + corpus-replay gate. Every publisher-owned field of the emitted
-//! frame comes from Gate state; plant authority/publisher-id fields do not exist
-//! under increment 1 and are NOT fabricated (see `docs/LIMITATIONS.md`).
+//! The default P0 `PRE_AUTHORITY_ACL_ONLY` adapter remains a dependency-light
+//! semantic model. The off-by-default `real-ncp` feature adds an exact adapter
+//! against the immutable upstream `ncp-core` revision and frozen v0.8.0 corpus.
+//! Every publisher-owned field comes from Gate state; plant authority/publisher-id
+//! fields do not exist under increment 1 and are NOT fabricated.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -23,6 +22,8 @@ pub mod adapter;
 pub mod compatibility;
 pub mod conversion;
 pub mod error;
+#[cfg(feature = "real-ncp")]
+pub mod real;
 
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -34,6 +35,8 @@ pub use adapter::{
 pub use compatibility::{NCP_V0_8_0, NcpCompatibilityRecordV1};
 pub use conversion::{mm_s_to_ncp_m_s, ncp_m_s_to_mm_s};
 pub use error::NcpAdapterError;
+#[cfg(feature = "real-ncp")]
+pub use real::RealNcp08Adapter;
 
 #[cfg(test)]
 mod tests {
@@ -60,6 +63,7 @@ mod tests {
                 stream_epoch: CanonicalUuidV4String::from_random_bytes([2; 16]),
                 stream_seq: SourceSeq::new(NonZeroU64::new(7).unwrap()),
             },
+            frame_id: BoundedAscii::new("map").unwrap(),
             source_t_ns: 111,
             gate_t_ns: 222,
             action,
