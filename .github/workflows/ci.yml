@@ -34,8 +34,10 @@ jobs:
         run: cargo test --workspace --all-targets --all-features --locked
       - name: Doc tests
         run: cargo test --workspace --doc --locked
-      - name: Docs build
+      - name: Docs build (deny warnings)
         run: cargo doc --workspace --no-deps --all-features --locked
+        env:
+          RUSTDOCFLAGS: "-D warnings"
       - name: git diff --check
         run: git diff --check
       - name: No generated-file drift

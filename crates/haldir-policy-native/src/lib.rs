@@ -1,7 +1,7 @@
 //! `haldir-policy-native` — the smallest trustworthy mission policy for `Hold`
 //! and local-NED velocity, using fixed-point checked arithmetic.
 //!
-//! The [`decide`] function is pure: no I/O, no floats, no unbounded allocation.
+//! The [`decide()`] function is pure: no I/O, no floats, no unbounded allocation.
 //! An out-of-range value can never wrap into an accepted boundary value, a
 //! monotonic-clock regression denies (never "fresh"), the prospective geofence
 //! over-approximates the reachable set, and the effective validity is the minimum
