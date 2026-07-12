@@ -75,12 +75,20 @@ impl TrustedStateSnapshotV1 {
     /// (deterministic: fixed field order, no floats, no hash-map iteration).
     #[must_use]
     pub fn canonical_digest(&self) -> DigestV1 {
+        use haldir_contracts::cbor::CanonicalValue;
         let mut w = CborWriter::new();
-        w.array_header(9);
-        haldir_contracts::cbor::CanonicalValue::encode(&self.vehicle_id, &mut w);
-        haldir_contracts::cbor::CanonicalValue::encode(&self.session, &mut w);
+        // Commit EVERY field any decision or adapter function can read (H-B06);
+        // the `digest_coverage` test module below enforces this by asserting that
+        // a change to any single field changes the digest.
+        w.array_header(14);
+        self.vehicle_id.encode(&mut w);
+        self.session.encode(&mut w);
         w.uint(self.captured_mono.as_nanos());
-        haldir_contracts::cbor::CanonicalValue::encode(&self.primary_source.source, &mut w);
+        self.primary_source.source.encode(&mut w);
+        self.primary_source.session.encode(&mut w);
+        w.uint(self.primary_source.publisher_t_ns);
+        w.uint(self.primary_source.receive_mono.as_nanos());
+        w.bool(self.primary_source.valid);
         w.array_header(3);
         for v in self.kinematic.position_mm {
             w.int(v);
@@ -97,7 +105,8 @@ impl TrustedStateSnapshotV1 {
         for v in self.uncertainty.velocity_mm_s {
             w.int(i64::from(v));
         }
-        haldir_contracts::cbor::CanonicalValue::encode(&self.mission_phase, &mut w);
+        self.mission_phase.encode(&mut w);
+        self.plant_mode.encode(&mut w);
         DigestV1::compute(DigestDomain::StateSnapshot, w.as_bytes())
     }
 }
@@ -155,6 +164,10 @@ pub struct ActiveMissionLeaseSnapshot {
     pub allowed_source_keys: Vec<String>,
     /// Numeric lease limits.
     pub limits: MissionLeaseLimitsV1,
+    /// Maximum intent rate (milli-Hz) the lease authorizes (H-B07).
+    pub max_intent_rate_millihz: u32,
+    /// Maximum total intents the lease authorizes (H-B07).
+    pub max_total_intents: u64,
     /// Monotonic acceptance time.
     pub accepted_at_mono: MonoInstant,
     /// Monotonic expiry (min of requested duration and local cap).
@@ -186,5 +199,126 @@ impl ActiveMissionLeaseSnapshot {
         self.expires_at_mono
             .checked_duration_since(now)
             .map_or(0, |d| d.as_millis())
+    }
+}
+
+#[cfg(test)]
+mod digest_coverage {
+    //! H-B06: the canonical state digest must commit every policy-relevant field.
+    //! We prove it by showing that changing any single field changes the digest —
+    //! an uncommitted field would let two policy-distinct states share a digest.
+    use super::{
+        KinematicStateFixedV1, StateUncertaintyFixedV1, TrustedStateSnapshotV1,
+        VerifiedSourceStateV1,
+    };
+    use crate::time::MonoInstant;
+    use core::num::NonZeroU64;
+    use haldir_contracts::digest::DigestV1;
+    use haldir_contracts::ids::{SourceSeq, VehicleId};
+    use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
+    use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1};
+
+    fn uuid(s: u8) -> CanonicalUuidV4String {
+        CanonicalUuidV4String::from_random_bytes([s; 16])
+    }
+
+    fn base() -> TrustedStateSnapshotV1 {
+        TrustedStateSnapshotV1 {
+            vehicle_id: VehicleId::new("uav-1").unwrap(),
+            session: NcpSessionIdentityV1 {
+                session_id: AsciiId::new("sess-1").unwrap(),
+                generation: uuid(1),
+            },
+            captured_mono: MonoInstant::from_nanos(1_000),
+            primary_source: VerifiedSourceStateV1 {
+                source: NcpSourceRefV1 {
+                    source_key: BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
+                    stream_epoch: uuid(2),
+                    stream_seq: SourceSeq::new(NonZeroU64::new(7).unwrap()),
+                },
+                session: NcpSessionIdentityV1 {
+                    session_id: AsciiId::new("sess-1").unwrap(),
+                    generation: uuid(1),
+                },
+                publisher_t_ns: 111,
+                receive_mono: MonoInstant::from_nanos(1_000),
+                valid: true,
+            },
+            kinematic: KinematicStateFixedV1 {
+                position_mm: [0, 0, 0],
+                velocity_mm_s: [0, 0, 0],
+            },
+            uncertainty: StateUncertaintyFixedV1 {
+                position_mm: [10, 10, 10],
+                velocity_mm_s: [0, 0, 0],
+            },
+            mission_phase: AsciiId::new("INSPECTION").unwrap(),
+            plant_mode: AsciiId::new("NOMINAL").unwrap(),
+        }
+    }
+
+    fn mutated(f: impl FnOnce(&mut TrustedStateSnapshotV1)) -> DigestV1 {
+        let mut s = base();
+        f(&mut s);
+        s.canonical_digest()
+    }
+
+    #[test]
+    fn digest_is_deterministic() {
+        assert_eq!(base().canonical_digest(), base().canonical_digest());
+    }
+
+    #[test]
+    fn every_policy_relevant_field_is_committed() {
+        let d0 = base().canonical_digest();
+        assert_ne!(
+            d0,
+            mutated(|s| s.vehicle_id = VehicleId::new("uav-2").unwrap())
+        );
+        assert_ne!(
+            d0,
+            mutated(|s| s.session.session_id = AsciiId::new("sess-2").unwrap())
+        );
+        assert_ne!(d0, mutated(|s| s.session.generation = uuid(9)));
+        assert_ne!(
+            d0,
+            mutated(|s| s.captured_mono = MonoInstant::from_nanos(2_000))
+        );
+        assert_ne!(
+            d0,
+            mutated(|s| s.primary_source.source.stream_seq =
+                SourceSeq::new(NonZeroU64::new(9).unwrap()))
+        );
+        assert_ne!(
+            d0,
+            mutated(|s| s.primary_source.source.stream_epoch = uuid(8))
+        );
+        assert_ne!(
+            d0,
+            mutated(|s| s.primary_source.source.source_key =
+                BoundedAscii::new("veh/uav-1/state/other").unwrap())
+        );
+        assert_ne!(
+            d0,
+            mutated(|s| s.primary_source.session.session_id = AsciiId::new("sess-3").unwrap())
+        );
+        assert_ne!(d0, mutated(|s| s.primary_source.publisher_t_ns = 424_242));
+        assert_ne!(
+            d0,
+            mutated(|s| s.primary_source.receive_mono = MonoInstant::from_nanos(9_999))
+        );
+        assert_ne!(d0, mutated(|s| s.primary_source.valid = false));
+        assert_ne!(d0, mutated(|s| s.kinematic.position_mm[1] = 12_345));
+        assert_ne!(d0, mutated(|s| s.kinematic.velocity_mm_s[2] = 55));
+        assert_ne!(d0, mutated(|s| s.uncertainty.position_mm[0] = 999));
+        assert_ne!(d0, mutated(|s| s.uncertainty.velocity_mm_s[0] = 7));
+        assert_ne!(
+            d0,
+            mutated(|s| s.mission_phase = AsciiId::new("TRANSIT").unwrap())
+        );
+        assert_ne!(
+            d0,
+            mutated(|s| s.plant_mode = AsciiId::new("DEGRADED").unwrap())
+        );
     }
 }

@@ -122,6 +122,8 @@ mod tests {
                 max_continuous_motion_ms: NonZeroU32::new(2000).unwrap(),
                 minimum_hold_between_bursts_ms: 500,
             },
+            max_intent_rate_millihz: 50_000,
+            max_total_intents: 100_000,
             accepted_at_mono: MonoInstant::from_nanos(0),
             expires_at_mono: MonoInstant::from_nanos(60_000_000_000),
         }

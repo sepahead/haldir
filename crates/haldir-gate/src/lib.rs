@@ -31,12 +31,14 @@ mod e2e {
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
     use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
+    use haldir_contracts::cbor::Limits;
     use haldir_contracts::digest::{DigestDomain, DigestV1};
     use haldir_contracts::ids::*;
     use haldir_contracts::intent::HaldirIntentV1;
     use haldir_contracts::lease::MissionLeaseV1;
     use haldir_contracts::limits::MissionLeaseLimitsV1;
-    use haldir_contracts::receipt::DecisionOutcomeV1;
+    use haldir_contracts::receipt::DecisionReceiptV1;
+    use haldir_contracts::receipt::{DecisionOutcomeV1, DecisionReasonCodeV1};
     use haldir_contracts::scalar::{
         AsciiId, BoundedAscii, BoundedSet, BoundedVec, CanonicalUuidV4String,
     };
@@ -48,7 +50,8 @@ mod e2e {
     };
     use haldir_core::time::MonoInstant;
     use haldir_crypto::{
-        KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore, sign_message,
+        ExpectedContext, KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
+        sign_message, verify_and_decode,
     };
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
     use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
@@ -243,23 +246,39 @@ mod e2e {
     fn setup() -> Fixture {
         let ctrl_sk = SigningKey::from_seed([1; 32]);
         let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
         let now = MonoInstant::from_nanos(1_000_000_000);
 
         let mut trust = TrustStore::new();
-        trust.insert(KeyRecord {
-            kid: kid(1),
-            role: KeyRole::ControllerIntent,
-            verifying_key: ctrl_sk.verifying_key(),
-            subject: Some("survey-v1".to_owned()),
-            class: KeyClass::Assurance,
-        });
-        trust.insert(KeyRecord {
-            kid: kid(2),
-            role: KeyRole::MissionAuthority,
-            verifying_key: mission_sk.verifying_key(),
-            subject: Some("mission-authority".to_owned()),
-            class: KeyClass::Assurance,
-        });
+        trust
+            .insert(KeyRecord {
+                kid: kid(1),
+                role: KeyRole::ControllerIntent,
+                verifying_key: ctrl_sk.verifying_key(),
+                subject: Some("survey-v1".to_owned()),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
+        trust
+            .insert(KeyRecord {
+                kid: kid(2),
+                role: KeyRole::MissionAuthority,
+                verifying_key: mission_sk.verifying_key(),
+                subject: Some("mission-authority".to_owned()),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
+        // The Gate application key that signs decision receipts (H-B02). Enrolled
+        // to the Gate's own id so a receipt verifier can bind signer→gate (H-H03).
+        trust
+            .insert(KeyRecord {
+                kid: kid(3),
+                role: KeyRole::GateApplication,
+                verifying_key: gate_sk.verifying_key(),
+                subject: Some("gate-1".to_owned()),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
 
         let rec = admission_record();
         let admission_digest = rec.admission_digest();
@@ -287,6 +306,8 @@ mod e2e {
             }),
             output_epoch: GateOutputEpoch::new(uuid(5)),
             local_cap_ms: 30_000,
+            gate_signer: gate_sk,
+            gate_signer_kid: kid(3),
         };
         let mut actor = VehicleActor::new(cfg);
         actor.register_challenge(
@@ -304,7 +325,7 @@ mod e2e {
         actor
             .accept_lease_env(&lease_env, now)
             .expect("lease accepted");
-        actor.set_trusted_state(trusted_state(now));
+        actor.set_trusted_state(trusted_state(now)).unwrap();
 
         Fixture {
             actor,
@@ -445,9 +466,10 @@ mod e2e {
     }
 
     #[test]
-    fn clock_regression_latches_and_denies() {
-        // BUG-2: a backward `now` latches a fault and denies rather than extending
-        // a live lease's deadline.
+    fn clock_regression_latches_and_errors() {
+        // BUG-2 / H-H10: a backward `now` is an internal fault, not a policy
+        // refusal. It latches the fault and yields ERROR (never extending a live
+        // lease's deadline) with no output — distinct from an authorization DENY.
         let mut f = setup();
         let rec = admission_record();
         let env1 = sign_intent(
@@ -464,16 +486,22 @@ mod e2e {
             &build_intent(f.admission_digest, &rec, 2, velocity(2, 400)),
         );
         let out = f.actor.decide_intent(&env2, INTENT_KEY, earlier);
-        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Error);
         assert!(out.plant_command.is_none());
-        // the fault is latched: a subsequent well-formed intent still denies
+        assert!(
+            out.receipt
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::ErrorInternalFault)
+        );
+        // the fault is latched: a subsequent well-formed intent still errors
         let env3 = sign_intent(
             &f.ctrl_sk,
             &build_intent(f.admission_digest, &rec, 3, velocity(3, 400)),
         );
         assert_eq!(
             f.actor.decide_intent(&env3, INTENT_KEY, f.now).outcome,
-            DecisionOutcomeV1::Deny
+            DecisionOutcomeV1::Error
         );
     }
 
@@ -498,5 +526,78 @@ mod e2e {
         let out = f.actor.decide_intent(&env2, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
         assert!(out.plant_command.is_none());
+    }
+
+    #[test]
+    fn mission_phase_mismatch_denies() {
+        // H-P04: the lease authorizes exactly one mission phase (INSPECTION). If
+        // the Gate-owned trusted state reports a different phase, the lease
+        // confers no authority — denied before the per-action policy even runs.
+        let mut f = setup();
+        let rec = admission_record();
+        let mut st = trusted_state(f.now);
+        st.mission_phase = AsciiId::new("TRANSIT").unwrap();
+        f.actor.set_trusted_state(st).unwrap();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(
+            out.receipt
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::DenyScopeMismatch)
+        );
+        assert!(out.plant_command.is_none());
+    }
+
+    #[test]
+    fn decision_receipt_is_signed_and_verifies_to_gate_identity() {
+        // H-B02/H-H03: every decision emits a COSE_Sign1 receipt signed by the
+        // Gate application key and bound to the Gate's own subject. Verify it
+        // independently against a trust store holding only that key.
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Allow);
+        assert!(!out.signed_receipt.is_empty());
+
+        let gate_vk = SigningKey::from_seed([3; 32]).verifying_key();
+        let mut trust = TrustStore::new();
+        trust
+            .insert(KeyRecord {
+                kid: kid(3),
+                role: KeyRole::GateApplication,
+                verifying_key: gate_vk,
+                subject: Some("gate-1".to_owned()),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
+        let ctx = ExpectedContext {
+            kind: DecisionReceiptV1::KIND,
+            schema_major: 1,
+            required_role: KeyRole::GateApplication,
+            assurance_profile: true,
+        };
+        let (decoded, signer_kid, subject): (DecisionReceiptV1, _, _) = verify_and_decode(
+            &out.signed_receipt,
+            &ctx,
+            &trust,
+            &RevocationSnapshot::new(),
+            Limits::DEFAULT,
+        )
+        .expect("gate receipt verifies");
+        assert_eq!(signer_kid, kid(3));
+        assert_eq!(subject, Some("gate-1".to_owned()));
+        assert_eq!(decoded.decision, DecisionOutcomeV1::Allow);
+        assert_eq!(decoded.decision_id, out.receipt.decision_id);
+        // The exact signed bytes must re-encode from the in-memory receipt.
+        assert_eq!(decoded.reason_codes, out.receipt.reason_codes);
     }
 }
