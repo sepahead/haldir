@@ -17,6 +17,12 @@ not a routine bump.
 | `ncp-core` | 0.8.0 at `2f5bd586…` | Normative upstream NCP wire types and validation for the off-by-default exact conformance adapter. The immutable git source is checked against `tools/pins.toml` and `.ncp-consumer`. | `haldir-ncp08` `real-ncp` feature only |
 | `serde_json` | 1.0 (locked) | Serialize and decode the upstream NCP JSON frame in the exact conformance adapter; never used in signed Haldir contracts or policy. | `haldir-ncp08` `real-ncp` feature only |
 
+The transitive `unicode-ident` build dependency uses the OSI-approved
+`Unicode-3.0` data license in addition to MIT/Apache-2.0; `deny.toml` admits that
+license explicitly. Git sources remain denied by default, with only the exact NCP
+repository allowed and `rev` required; `tools/verify-pins.py` separately enforces
+the full immutable commit in both manifest and lockfile.
+
 ## Deliberately absent
 
 - **No general CBOR library on the trusted path.** The canonical codec is

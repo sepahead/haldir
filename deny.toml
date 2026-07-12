@@ -8,7 +8,7 @@ yanked = "deny"
 
 [licenses]
 version = 2
-allow = ["Apache-2.0", "MIT", "BSD-3-Clause"]
+allow = ["Apache-2.0", "MIT", "BSD-3-Clause", "Unicode-3.0"]
 confidence-threshold = 0.9
 
 [bans]
@@ -24,4 +24,8 @@ deny = []
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+required-git-spec = "rev"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# One exact upstream source is admitted for the off-by-default NCP conformance
+# adapter. The manifest/lock revision is independently checked by verify-pins.py.
+allow-git = ["https://github.com/sepahead/NCP"]

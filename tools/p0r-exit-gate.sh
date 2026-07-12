@@ -54,7 +54,7 @@ run "docs (deny warns)"   env "RUSTDOCFLAGS=-D warnings" cargo doc --workspace -
 run "no-default build"    cargo build --workspace --no-default-features --locked
 run "default clippy"      cargo clippy --workspace --locked -- -D warnings
 run "clean build"         clean_build_gate
-run "dependency policy"   cargo deny check
+run "dependency policy"   cargo deny --all-features check
 run "source pins"         python3 tools/verify-pins.py
 run "CI/formal pins"       python3 tools/verify-ci-pins.py
 run "evidence layout"     python3 tools/verify-evidence.py
