@@ -135,7 +135,7 @@ fn lease() -> MissionLeaseV1 {
     }
 }
 
-fn intent() -> HaldirIntentV1 {
+pub(crate) fn intent() -> HaldirIntentV1 {
     HaldirIntentV1 {
         schema_major: 1,
         schema_minor: 0,

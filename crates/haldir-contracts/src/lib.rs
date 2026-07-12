@@ -55,6 +55,43 @@ pub use error::DecodeError;
 mod tests_contracts;
 
 #[cfg(test)]
+mod fuzz_smoke {
+    //! The hostile parser must never panic, overflow, or over-allocate on arbitrary
+    //! bytes (spec Phase D "fuzz targets before network ingress" / punch-list H11).
+    //! Decoding must always return `Ok`/`Err`, never unwind.
+    use super::*;
+    use crate::challenge::GateChallengeV1;
+    use crate::intent::HaldirIntentV1;
+    use crate::lease::MissionLeaseV1;
+    use crate::receipt::DecisionReceiptV1;
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(4000))]
+
+        #[test]
+        fn decoder_never_panics_on_arbitrary_bytes(bytes in proptest::collection::vec(any::<u8>(), 0..2048)) {
+            // Each of these returns a Result; the test passes iff none unwinds.
+            let _ = from_canonical_bytes::<HaldirIntentV1>(&bytes, Limits::DEFAULT);
+            let _ = from_canonical_bytes::<MissionLeaseV1>(&bytes, Limits::LARGE);
+            let _ = from_canonical_bytes::<GateChallengeV1>(&bytes, Limits::LARGE);
+            let _ = from_canonical_bytes::<DecisionReceiptV1>(&bytes, Limits::LARGE);
+        }
+
+        #[test]
+        fn one_bit_flips_of_a_valid_intent_never_panic(i in 0usize..4096, bit in 0u8..8) {
+            // Mutate a valid encoding and re-decode: must be Ok(different)/Err, never panic.
+            let base = to_canonical_bytes(&crate::tests_contracts::intent());
+            if i < base.len() {
+                let mut m = base.clone();
+                m[i] ^= 1u8 << (bit % 8);
+                let _ = from_canonical_bytes::<HaldirIntentV1>(&m, Limits::LARGE);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 mod codec_tests {
     use super::*;
     use crate::action::RequestedActionV1;
