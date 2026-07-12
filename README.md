@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img alt="Haldir Gate logo" src="assets/logo-light.svg" width="200">
+  </picture>
+</p>
+
 # Haldir Gate
 
 **Experimental, inline, backend-aware mission-authorization reference monitor for the Sepahead ecosystem.**
