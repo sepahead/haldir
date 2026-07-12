@@ -28,6 +28,7 @@ use haldir_crypto::{
     CryptoError, ExpectedContext, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
     sign_message, verify_and_decode,
 };
+use haldir_evidence::EvidenceSpool;
 use haldir_ncp08::{
     AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter,
 };
@@ -143,7 +144,13 @@ pub struct VehicleActor {
     gate_signer: SigningKey,
     gate_signer_kid: KeyId,
     lease_usage: Option<LeaseUsage>,
+    evidence: EvidenceSpool,
 }
+
+/// Bound on retained decision-receipt evidence records (in-process P0 spool).
+const MAX_EVIDENCE_RECORDS: usize = 4096;
+/// Bound on retained evidence bytes.
+const MAX_EVIDENCE_BYTES: usize = 8 * 1024 * 1024;
 
 /// Per-lease usage enforcement: total-intent counter and a fixed-point token
 /// bucket (H-B07 / runbook Phase 3F). Tokens are micro-intents; the bucket
@@ -303,7 +310,18 @@ impl VehicleActor {
             gate_signer: cfg.gate_signer,
             gate_signer_kid: cfg.gate_signer_kid,
             lease_usage: None,
+            evidence: EvidenceSpool::new(MAX_EVIDENCE_RECORDS, MAX_EVIDENCE_BYTES),
         }
+    }
+
+    /// The digest-chained decision-receipt evidence spool (read-only). The chain
+    /// head commits every appended signed receipt in order; `verify_chain`
+    /// detects a truncated tail or a mutated completed record. The spool is
+    /// in-process and lossy on overflow — a durable, crash-surviving journal is
+    /// out of P0 (see `CL-DURABLE-01`).
+    #[must_use]
+    pub fn evidence(&self) -> &EvidenceSpool {
+        &self.evidence
     }
 
     /// Detect a monotonic-clock regression (spec T5/B13, punch-list BUG-2). A
@@ -517,9 +535,24 @@ impl VehicleActor {
         }
     }
 
+    /// Process one intent and append its signed receipt to the digest-chained
+    /// evidence spool. Journaling never changes the decision: an ALLOW is already
+    /// committed to the returned frame, and a full spool drops only the export
+    /// copy (a spool outage can never turn a DENY into an ALLOW).
+    pub fn decide_intent(
+        &mut self,
+        env: &[u8],
+        actual_key: &str,
+        now: MonoInstant,
+    ) -> DecisionRecord {
+        let record = self.decide_intent_inner(env, actual_key, now);
+        let _ = self.evidence.append(&record.signed_receipt);
+        record
+    }
+
     /// The full 13-stage intent decision pipeline.
     #[allow(clippy::too_many_lines)]
-    pub fn decide_intent(
+    fn decide_intent_inner(
         &mut self,
         env: &[u8],
         actual_key: &str,

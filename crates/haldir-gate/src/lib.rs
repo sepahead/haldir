@@ -600,4 +600,37 @@ mod e2e {
         // The exact signed bytes must re-encode from the in-memory receipt.
         assert_eq!(decoded.reason_codes, out.receipt.reason_codes);
     }
+
+    #[test]
+    fn decisions_are_journaled_to_the_evidence_chain() {
+        // Every decision — ALLOW or DENY — appends its signed receipt to the
+        // digest-chained spool, which advances and stays verifiable.
+        let mut f = setup();
+        let rec = admission_record();
+        assert_eq!(f.actor.evidence().len(), 0);
+
+        let e1 = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        assert_eq!(
+            f.actor.decide_intent(&e1, INTENT_KEY, f.now).outcome,
+            DecisionOutcomeV1::Allow
+        );
+        assert_eq!(f.actor.evidence().len(), 1);
+        let head1 = f.actor.evidence().chain_head();
+        assert!(head1.is_some());
+
+        // An over-range velocity denies but is still journaled.
+        let e2 = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 2, velocity(2, 999_999)),
+        );
+        let out2 = f.actor.decide_intent(&e2, INTENT_KEY, f.now);
+        assert_eq!(out2.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(f.actor.evidence().len(), 2);
+        // The chain advanced (new head) and the whole chain still verifies.
+        assert_ne!(f.actor.evidence().chain_head(), head1);
+        assert!(f.actor.evidence().verify_chain());
+    }
 }

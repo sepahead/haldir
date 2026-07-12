@@ -41,6 +41,7 @@ profile matrix and `docs/LIMITATIONS.md` for what P0 deliberately does not do.
 | CL-DUTY-01 | Duty accounting unions overlapping possibly-active horizons rather than summing them, and at capacity merges the closest pair rather than dropping an interval, so it never under-counts (H-P02/H-P03/H-B04). | PROVEN | `haldir-policy-native` `duty_union_does_not_double_count_overlap`, `bounded_history_merges_instead_of_dropping` |
 | CL-FIXEDPOINT-01 | The native policy uses only integer / fixed-point arithmetic with widened comparisons; no floating point participates in an authorization decision. | PROVEN | `haldir-policy-native` `decide.rs` + tests |
 | CL-DECISION-ID-01 | Decision ids come from a checked counter with a boot-unique prefix; exhaustion latches a fault instead of wrapping (H-H06). | PROVEN | `haldir-gate` `make_decision_id` |
+| CL-EVIDENCE-01 | Every decision (ALLOW or DENY) appends its signed receipt to a bounded, digest-chained in-process spool that stays verifiable; a full spool drops only the export copy and can never change a decision. The chain is in-process — crash-durability is out of P0 (`CL-DURABLE-01`). | PROVEN | `haldir-gate` `decisions_are_journaled_to_the_evidence_chain`; `haldir-evidence` chain tests |
 
 ## Pending an evidence gate
 
