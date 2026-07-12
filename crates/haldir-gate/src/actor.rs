@@ -771,7 +771,7 @@ impl VehicleActor {
             .checked_add_ms(u64::from(effective_validity_ms))
             .unwrap_or(now);
         match plant_action {
-            PlantAction::Hold => self.history.record_hold(),
+            PlantAction::Hold => self.history.record_hold(now),
             PlantAction::Velocity(v) => self.history.record_velocity(v, now, end, window_start),
         }
 

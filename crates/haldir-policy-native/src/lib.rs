@@ -301,4 +301,109 @@ mod tests {
         let d = decide_vel(&vel(100, 0, 0, 100), &st);
         assert!(d.has_reason(R::DenyPhaseRule));
     }
+
+    fn decide_with_history(
+        action: &RequestedActionV1,
+        st: &TrustedStateSnapshotV1,
+        hist: &BoundedActionHistory,
+        now_ns: u64,
+    ) -> PolicyDecision {
+        let ls = lease();
+        let pl = policy();
+        decide(&PolicyInput {
+            now: MonoInstant::from_nanos(now_ns),
+            lease: &ls,
+            state: st,
+            action,
+            history: hist,
+            policy: &pl,
+        })
+    }
+
+    #[test]
+    fn slew_bound_tracks_actual_elapsed_time() {
+        // H-P01: the admissible velocity change scales with the ACTUAL elapsed time
+        // since the last published command, not a static nominal period. Publish a
+        // 100 mm/s command, then request a change of 600 mm/s at two elapsed times.
+        // slew_limit = 100_000 mm/s^2, nominal cap = 20 ms.
+        let t_prev = 1_000_000_000u64;
+        let mut hist = BoundedActionHistory::new(16);
+        hist.record_velocity(
+            [100, 0, 0],
+            MonoInstant::from_nanos(t_prev),
+            MonoInstant::from_nanos(t_prev + 300_000_000),
+            MonoInstant::from_nanos(t_prev.saturating_sub(10_000_000_000)),
+        );
+        // 5 ms later: bound = 100_000 * 5 / 1000 = 500 mm/s < 600 -> DENY_SLEW.
+        let now5 = t_prev + 5_000_000;
+        let st5 = state(now5, 5, [0, 0, 0], [10, 10, 10]);
+        let d5 = decide_with_history(&vel(700, 0, 0, 100), &st5, &hist, now5);
+        assert!(d5.has_reason(R::DenySlew), "{:?}", d5.reasons);
+        // 20 ms later (at the nominal cap): bound = 2000 mm/s >= 600 -> passes slew.
+        let now20 = t_prev + 20_000_000;
+        let st20 = state(now20, 5, [0, 0, 0], [10, 10, 10]);
+        let d20 = decide_with_history(&vel(700, 0, 0, 100), &st20, &hist, now20);
+        assert!(d20.is_allow(), "{:?}", d20.reasons);
+    }
+
+    #[test]
+    fn duty_union_does_not_double_count_overlap() {
+        // H-P02/H-P03: overlapping published horizons are unioned, not summed.
+        let mut hist = BoundedActionHistory::new(16);
+        let ws = MonoInstant::from_nanos(0);
+        hist.record_velocity(
+            [100, 0, 0],
+            MonoInstant::from_nanos(1_000_000_000),
+            MonoInstant::from_nanos(2_000_000_000),
+            ws,
+        );
+        hist.record_velocity(
+            [100, 0, 0],
+            MonoInstant::from_nanos(1_100_000_000),
+            MonoInstant::from_nanos(2_100_000_000),
+            ws,
+        );
+        // Two overlapping 1000 ms intervals collapse to one [1.0s, 2.1s] = 1100 ms;
+        // a naive sum would report 2000 ms.
+        assert_eq!(hist.active_intervals.len(), 1);
+        assert_eq!(
+            hist.active_ms_in_window(ws, MonoInstant::from_nanos(3_000_000_000)),
+            1100
+        );
+    }
+
+    #[test]
+    fn bounded_history_merges_instead_of_dropping() {
+        // H-B04: at capacity, the ring must not silently drop an active interval
+        // (that would UNDER-count duty). It merges the closest pair instead, which
+        // over-approximates (counts gaps as active) and so can only deny more.
+        let mut hist = BoundedActionHistory::new(2);
+        let ws = MonoInstant::from_nanos(0);
+        for k in 0..4u64 {
+            let s = MonoInstant::from_nanos(k * 1_000_000_000 + 1_000_000_000);
+            let e = MonoInstant::from_nanos(k * 1_000_000_000 + 1_100_000_000);
+            hist.record_velocity([100, 0, 0], s, e, ws);
+        }
+        assert!(hist.active_intervals.len() <= 2);
+        let counted = hist.active_ms_in_window(ws, MonoInstant::from_nanos(6_000_000_000));
+        // True active = 4 * 100 ms = 400 ms; merging can only raise the count.
+        assert!(counted >= 400, "under-counted duty: {counted}");
+    }
+
+    #[test]
+    fn hold_sets_slew_reference_to_rest() {
+        // A hold commands the vehicle to stop, so the slew reference becomes zero:
+        // a velocity command shortly after must ramp up from rest within the slew
+        // limit, never unconstrained (previously the reference was cleared to None,
+        // silently skipping the slew check).
+        let mut hist = BoundedActionHistory::new(16);
+        let t = 1_000_000_000u64;
+        hist.record_hold(MonoInstant::from_nanos(t));
+        assert_eq!(hist.last_published_velocity_mm_s, Some([0, 0, 0]));
+        // 3 ms later: bound = 100_000 * 3 / 1000 = 300 mm/s < 500 -> DENY_SLEW.
+        let now = t + 3_000_000;
+        let st = state(now, 5, [0, 0, 0], [10, 10, 10]);
+        let d = decide_with_history(&vel(500, 0, 0, 100), &st, &hist, now);
+        assert!(d.has_reason(R::DenySlew), "{:?}", d.reasons);
+    }
 }
