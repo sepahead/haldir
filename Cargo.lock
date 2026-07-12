@@ -196,9 +196,6 @@ name = "haldir-evidence"
 version = "0.1.0-experimental"
 dependencies = [
  "haldir-contracts",
- "haldir-crypto",
- "haldir-testkit",
- "sha2",
 ]
 
 [[package]]
@@ -214,7 +211,6 @@ dependencies = [
  "haldir-policy-native",
  "haldir-reference-plant",
  "haldir-state",
- "haldir-testkit",
 ]
 
 [[package]]

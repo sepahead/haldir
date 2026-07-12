@@ -1,5 +1,11 @@
-//! haldir-gate — composition of the pure Haldir subsystems into one one-vehicle
-//! authorization runtime with explicit side-effect boundaries. See `docs/`.
+//! `haldir-gate` — composition of the pure Haldir subsystems into one one-vehicle
+//! authorization runtime with explicit side-effect boundaries.
+//!
+//! The end-to-end path is: trusted state + signed controller intent -> the
+//! 13-stage [`actor::VehicleActor::decide_intent`] pipeline -> Gate-authored NCP
+//! command -> the deterministic reference plant -> staged evidence. This is the P0
+//! `assurance-reference-v1` profile: in-process, deterministic, no live transport,
+//! no neural runtime, no physical hardware (see `docs/LIMITATIONS.md`).
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -12,5 +18,415 @@
     )
 )]
 
+pub mod actor;
+
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub use actor::{DecisionRecord, GateConfig, GateError, VehicleActor};
+
+#[cfg(test)]
+mod e2e {
+    use super::*;
+    use core::num::{NonZeroU32, NonZeroU64};
+    use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
+    use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
+    use haldir_contracts::digest::{DigestDomain, DigestV1};
+    use haldir_contracts::ids::*;
+    use haldir_contracts::intent::HaldirIntentV1;
+    use haldir_contracts::lease::MissionLeaseV1;
+    use haldir_contracts::limits::MissionLeaseLimitsV1;
+    use haldir_contracts::receipt::DecisionOutcomeV1;
+    use haldir_contracts::scalar::{
+        AsciiId, BoundedAscii, BoundedSet, BoundedVec, CanonicalUuidV4String,
+    };
+    use haldir_contracts::session::{HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1};
+    use haldir_contracts::status::{AclExclusiveEvidenceV1, PlantPublicationAuthorityStateV1};
+    use haldir_core::snapshot::{
+        KinematicStateFixedV1, StateUncertaintyFixedV1, TrustedStateSnapshotV1,
+        VerifiedSourceStateV1,
+    };
+    use haldir_core::time::MonoInstant;
+    use haldir_crypto::{
+        KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore, sign_message,
+    };
+    use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
+    use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
+
+    const INTENT_KEY: &str = "veh/uav-1/haldir/intent/survey-v1";
+
+    fn kid(seed: u8) -> KeyId {
+        KeyId::new(vec![seed, 0xAB, seed]).unwrap()
+    }
+    fn uuid(s: u8) -> CanonicalUuidV4String {
+        CanonicalUuidV4String::from_random_bytes([s; 16])
+    }
+    fn sess() -> NcpSessionIdentityV1 {
+        NcpSessionIdentityV1 {
+            session_id: AsciiId::new("sess-1").unwrap(),
+            generation: uuid(1),
+        }
+    }
+    fn source() -> NcpSourceRefV1 {
+        NcpSourceRefV1 {
+            source_key: BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
+            stream_epoch: uuid(2),
+            stream_seq: SourceSeq::new(NonZeroU64::new(7).unwrap()),
+        }
+    }
+    fn policy() -> NativePolicySnapshot {
+        NativePolicySnapshot {
+            max_component_mm_s: 3000,
+            max_speed_mm_s: 3000,
+            max_output_validity_ms: 500,
+            min_useful_validity_ms: 50,
+            publication_safety_margin_ms: 20,
+            source_freshness_cap_ms: 200,
+            state_freshness_cap_ms: 200,
+            ncp_validity_cap_ms: 1000,
+            plant_validity_cap_ms: 1000,
+            nominal_update_ms: 20,
+            tracking_error_mm: 50,
+            uncertainty_margin_mm: 50,
+            max_position_uncertainty_mm: 500,
+            geofence: GeofenceBoxV1 {
+                min_mm: [-100_000, -100_000, -100_000],
+                max_mm: [100_000, 100_000, 100_000],
+            },
+            duty_window_ms: 10_000,
+            max_active_ms_in_window: 6000,
+            phase_rules: vec![PhaseRuleV1 {
+                phase: "INSPECTION".to_owned(),
+                allowed: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
+            }],
+        }
+    }
+
+    struct Fixture {
+        actor: VehicleActor,
+        ctrl_sk: SigningKey,
+        now: MonoInstant,
+        admission_digest: DigestV1,
+    }
+
+    fn admission_record() -> AdmissionRecordV1 {
+        AdmissionRecordV1 {
+            schema_major: 1,
+            schema_minor: 0,
+            issuer_id: AsciiId::new("admission-authority").unwrap(),
+            admission_id: AdmissionId::new([4; 16]),
+            controller_id: ControllerId::new("survey-v1").unwrap(),
+            admission_profile_id: AsciiId::new("fixed-weight-lif-control-v1").unwrap(),
+            level: AdmissionLevelV1::A2ReferenceConformance,
+            controller_bundle_digest: DigestV1::compute(DigestDomain::Bundle, b"bundle"),
+            backend_profile_digest: DigestV1::compute(DigestDomain::BackendProfile, b"nest-3.9"),
+            codec_digest: DigestV1::compute(DigestDomain::Payload, b"codec"),
+            validity_term: NonZeroU64::new(1).unwrap(),
+            conformance_run_digest: None,
+        }
+    }
+
+    fn build_lease(admission_digest: DigestV1, rec: &AdmissionRecordV1) -> MissionLeaseV1 {
+        MissionLeaseV1 {
+            schema_major: 1,
+            schema_minor: 0,
+            issuer_id: AsciiId::new("mission-authority").unwrap(),
+            issuer_key_id: kid(2),
+            lease_id: MissionLeaseId::new([2; 16]),
+            lease_term: NonZeroU64::new(10).unwrap(),
+            gate_id: GateId::new("gate-1").unwrap(),
+            gate_boot_id: GateBootId::new([9; 16]),
+            challenge_nonce: ChallengeNonce::new([7; 32]),
+            realm: AsciiId::new("range-a").unwrap(),
+            vehicle_id: VehicleId::new("uav-1").unwrap(),
+            mission_id: MissionId::new("inspect-1").unwrap(),
+            mission_phase: AsciiId::new("INSPECTION").unwrap(),
+            ncp_session: sess(),
+            gate_output_epoch: GateOutputEpoch::new(uuid(5)),
+            controller_id: ControllerId::new("survey-v1").unwrap(),
+            controller_intent_key: BoundedAscii::new(INTENT_KEY).unwrap(),
+            controller_intent_signing_key_id: kid(1),
+            admission_id: AdmissionId::new([4; 16]),
+            admission_digest,
+            controller_bundle_digest: rec.controller_bundle_digest,
+            backend_profile_digest: rec.backend_profile_digest,
+            policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
+            allowed_actions: BoundedSet::from_iter_checked([
+                ActionClassV1::Hold,
+                ActionClassV1::VelocityLocalNed,
+            ])
+            .unwrap(),
+            allowed_frames: BoundedSet::from_iter_checked([CoordinateFrameV1::LocalNed]).unwrap(),
+            allowed_source_keys: BoundedVec::from_vec(vec![
+                BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
+            ])
+            .unwrap(),
+            limits: MissionLeaseLimitsV1 {
+                max_output_validity_ms: NonZeroU32::new(500).unwrap(),
+                max_linear_speed_mm_s: NonZeroU32::new(3000).unwrap(),
+                max_linear_accel_mm_s2: NonZeroU32::new(2000).unwrap(),
+                max_linear_slew_mm_s2: NonZeroU32::new(100_000).unwrap(),
+                max_source_age_ms: NonZeroU32::new(200).unwrap(),
+                max_state_age_ms: NonZeroU32::new(200).unwrap(),
+                max_continuous_motion_ms: NonZeroU32::new(2000).unwrap(),
+                minimum_hold_between_bursts_ms: 500,
+            },
+            max_active_duration_ms: NonZeroU32::new(60_000).unwrap(),
+            max_intent_rate_millihz: NonZeroU32::new(50_000).unwrap(),
+            max_total_intents: NonZeroU64::new(100_000).unwrap(),
+            operator_context_digest: None,
+        }
+    }
+
+    fn trusted_state(now: MonoInstant) -> TrustedStateSnapshotV1 {
+        TrustedStateSnapshotV1 {
+            vehicle_id: VehicleId::new("uav-1").unwrap(),
+            session: sess(),
+            captured_mono: now,
+            primary_source: VerifiedSourceStateV1 {
+                source: source(),
+                session: sess(),
+                publisher_t_ns: 111,
+                receive_mono: now,
+                valid: true,
+            },
+            kinematic: KinematicStateFixedV1 {
+                position_mm: [0, 0, 0],
+                velocity_mm_s: [0, 0, 0],
+            },
+            uncertainty: StateUncertaintyFixedV1 {
+                position_mm: [10, 10, 10],
+                velocity_mm_s: [0, 0, 0],
+            },
+            mission_phase: AsciiId::new("INSPECTION").unwrap(),
+            plant_mode: AsciiId::new("NOMINAL").unwrap(),
+        }
+    }
+
+    fn build_intent(
+        admission_digest: DigestV1,
+        rec: &AdmissionRecordV1,
+        seq: u64,
+        action: RequestedActionV1,
+    ) -> HaldirIntentV1 {
+        HaldirIntentV1 {
+            schema_major: 1,
+            schema_minor: 0,
+            controller_id: ControllerId::new("survey-v1").unwrap(),
+            controller_instance_id: ControllerInstanceId::new([1; 16]),
+            controller_signing_key_id: kid(1),
+            actual_intent_key: BoundedAscii::new(INTENT_KEY).unwrap(),
+            gate_id: GateId::new("gate-1").unwrap(),
+            gate_boot_id: GateBootId::new([9; 16]),
+            realm: AsciiId::new("range-a").unwrap(),
+            vehicle_id: VehicleId::new("uav-1").unwrap(),
+            mission_id: MissionId::new("inspect-1").unwrap(),
+            ncp_session: sess(),
+            mission_lease_id: MissionLeaseId::new([2; 16]),
+            mission_lease_term: NonZeroU64::new(10).unwrap(),
+            admission_id: AdmissionId::new([4; 16]),
+            admission_digest,
+            controller_bundle_digest: rec.controller_bundle_digest,
+            backend_profile_digest: rec.backend_profile_digest,
+            intent_position: HaldirIntentPositionV1 {
+                epoch: IntentEpoch::new([6; 16]),
+                seq: IntentSeq::new(NonZeroU64::new(seq).unwrap()),
+            },
+            controller_t_ns: 1,
+            primary_source: source(),
+            input_watermarks: BoundedVec::new(),
+            action,
+            controller_context_digest: None,
+        }
+    }
+
+    fn setup() -> Fixture {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+
+        let mut trust = TrustStore::new();
+        trust.insert(KeyRecord {
+            kid: kid(1),
+            role: KeyRole::ControllerIntent,
+            verifying_key: ctrl_sk.verifying_key(),
+            subject: Some("survey-v1".to_owned()),
+            class: KeyClass::Assurance,
+        });
+        trust.insert(KeyRecord {
+            kid: kid(2),
+            role: KeyRole::MissionAuthority,
+            verifying_key: mission_sk.verifying_key(),
+            subject: Some("mission-authority".to_owned()),
+            class: KeyClass::Assurance,
+        });
+
+        let rec = admission_record();
+        let admission_digest = rec.admission_digest();
+        let mut admission = AdmissionSnapshot::new();
+        admission.insert(rec.clone());
+
+        let policy_snapshot_digest = DigestV1::compute(DigestDomain::PolicySnapshot, b"policy");
+        let cfg = GateConfig {
+            gate_id: GateId::new("gate-1").unwrap(),
+            gate_boot_id: GateBootId::new([9; 16]),
+            realm: AsciiId::new("range-a").unwrap(),
+            vehicle_id: VehicleId::new("uav-1").unwrap(),
+            trust,
+            revocations: RevocationSnapshot::new(),
+            admission,
+            policy: policy(),
+            policy_snapshot_digest,
+            session: sess(),
+            publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
+                gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
+                final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
+                certificate_fingerprint: DigestV1::compute(DigestDomain::Payload, b"cert"),
+                acl_policy_digest: DigestV1::compute(DigestDomain::Payload, b"acl"),
+                verified_at_mono_ns: 900,
+            }),
+            output_epoch: GateOutputEpoch::new(uuid(5)),
+            local_cap_ms: 30_000,
+        };
+        let mut actor = VehicleActor::new(cfg);
+        actor.register_challenge(
+            ChallengeNonce::new([7; 32]),
+            MonoInstant::from_nanos(u64::MAX),
+        );
+
+        let lease_env = sign_message(
+            &build_lease(admission_digest, &rec),
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &mission_sk,
+        );
+        actor
+            .accept_lease_env(&lease_env, now)
+            .expect("lease accepted");
+        actor.set_trusted_state(trusted_state(now));
+
+        Fixture {
+            actor,
+            ctrl_sk,
+            now,
+            admission_digest,
+        }
+    }
+
+    fn sign_intent(sk: &SigningKey, intent: &HaldirIntentV1) -> Vec<u8> {
+        sign_message(intent, HaldirIntentV1::KIND, 1, &kid(1), sk)
+    }
+
+    fn velocity(seq: u64, n: i32) -> RequestedActionV1 {
+        let _ = seq;
+        RequestedActionV1::VelocityLocalNed {
+            north_mm_s: n,
+            east_mm_s: 0,
+            down_mm_s: 0,
+            requested_validity_ms: NonZeroU32::new(300).unwrap(),
+        }
+    }
+
+    #[test]
+    fn end_to_end_allow_drives_reference_plant() {
+        let mut f = setup();
+        let rec = admission_record();
+        // 400 mm/s converges in 5 ticks (80 mm/s/tick) — well within the ~180 ms
+        // effective validity window (9 ticks).
+        let intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 400));
+        let env = sign_intent(&f.ctrl_sk, &intent);
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(
+            out.outcome,
+            DecisionOutcomeV1::Allow,
+            "reasons: {:?}",
+            out.receipt.reason_codes.as_slice()
+        );
+        let cmd = out.plant_command.expect("plant command");
+
+        let mut plant = ReferencePlant::new(PlantConfig::default());
+        plant.ingest(cmd).expect("plant accepts Gate command");
+        plant.run(15);
+        assert!(
+            plant
+                .events()
+                .iter()
+                .any(|e| e.kind == PlantEventKind::Applied)
+        );
+        assert!(
+            plant
+                .events()
+                .iter()
+                .any(|e| e.kind == PlantEventKind::ResponseObserved)
+        );
+    }
+
+    #[test]
+    fn tampered_intent_denies_and_produces_no_command() {
+        let mut f = setup();
+        let rec = admission_record();
+        let intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 800));
+        let mut env = sign_intent(&f.ctrl_sk, &intent);
+        let mid = env.len() / 2;
+        env[mid] ^= 0x01;
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none(), "deny must produce no output");
+    }
+
+    #[test]
+    fn wrong_actual_key_denies() {
+        let mut f = setup();
+        let rec = admission_record();
+        let intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 800));
+        let env = sign_intent(&f.ctrl_sk, &intent);
+        let out = f
+            .actor
+            .decide_intent(&env, "veh/uav-1/haldir/intent/OTHER", f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none());
+    }
+
+    #[test]
+    fn replayed_intent_denies_second_time() {
+        let mut f = setup();
+        let rec = admission_record();
+        let intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 800));
+        let env = sign_intent(&f.ctrl_sk, &intent);
+        assert_eq!(
+            f.actor.decide_intent(&env, INTENT_KEY, f.now).outcome,
+            DecisionOutcomeV1::Allow
+        );
+        // identical intent (same seq) is a replay -> deny, no output
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none());
+    }
+
+    #[test]
+    fn stale_session_intent_denies() {
+        let mut f = setup();
+        let rec = admission_record();
+        let mut intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 800));
+        intent.ncp_session = NcpSessionIdentityV1 {
+            session_id: AsciiId::new("sess-1").unwrap(),
+            generation: uuid(9), // wrong generation
+        };
+        let env = sign_intent(&f.ctrl_sk, &intent);
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none());
+    }
+
+    #[test]
+    fn excessive_velocity_denies_on_policy() {
+        let mut f = setup();
+        let rec = admission_record();
+        let intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 9000)); // > 3000 cap
+        let env = sign_intent(&f.ctrl_sk, &intent);
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(out.plant_command.is_none());
+    }
+}

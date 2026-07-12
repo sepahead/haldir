@@ -147,6 +147,7 @@ pub fn accept_lease(
         gate_output_epoch: lease.gate_output_epoch,
         controller: ctx.controller.clone(),
         controller_intent_key: lease.controller_intent_key.as_str().to_owned(),
+        controller_intent_signing_key_id: lease.controller_intent_signing_key_id.clone(),
         policy_snapshot_digest: lease.policy_snapshot_digest,
         allowed_actions: lease.allowed_actions.as_slice().to_vec(),
         allowed_frames: lease.allowed_frames.as_slice().to_vec(),

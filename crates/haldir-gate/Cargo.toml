@@ -27,4 +27,3 @@ haldir-reference-plant.workspace = true
 haldir-evidence.workspace = true
 
 [dev-dependencies]
-haldir-testkit.workspace = true

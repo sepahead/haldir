@@ -107,6 +107,7 @@ mod tests {
                 admission_digest: dig(3),
             },
             controller_intent_key: "veh/uav-1/haldir/intent/survey-v1".to_owned(),
+            controller_intent_signing_key_id: KeyId::new(vec![8, 8]).unwrap(),
             policy_snapshot_digest: dig(1),
             allowed_actions: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
             allowed_frames: vec![CoordinateFrameV1::LocalNed],

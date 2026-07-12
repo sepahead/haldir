@@ -9,7 +9,8 @@ use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1};
 use haldir_contracts::cbor::CborWriter;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::ids::{
-    AdmissionId, ControllerId, GateBootId, GateOutputEpoch, MissionId, MissionLeaseId, VehicleId,
+    AdmissionId, ControllerId, GateBootId, GateOutputEpoch, KeyId, MissionId, MissionLeaseId,
+    VehicleId,
 };
 use haldir_contracts::limits::MissionLeaseLimitsV1;
 use haldir_contracts::scalar::AsciiId;
@@ -142,6 +143,8 @@ pub struct ActiveMissionLeaseSnapshot {
     pub controller: AdmittedControllerSnapshot,
     /// Concrete controller intent route.
     pub controller_intent_key: String,
+    /// The controller intent signing key id the intent must be signed under.
+    pub controller_intent_signing_key_id: KeyId,
     /// Policy snapshot digest bound into the lease.
     pub policy_snapshot_digest: DigestV1,
     /// Allowed action classes.
