@@ -1,28 +1,31 @@
 # Formal models
 
-`HaldirAuthority.tla` is an abstract TLA+ model of Gate authority/session/stream/
-replay/restart safety (specification Phase 6).
+`HaldirAuthority.tla` is a **bounded, finite** TLA+ model of Gate authority /
+session / stream / replay / restart safety (specification Phase 6).
 
-## Important honesty note
+## Model-checking status
 
-TLC (the TLA+ model checker) is **not installed in the delivery environment**, so
-this model has **not** been model-checked here (see `docs/LIMITATIONS.md`). Do not
-represent it as "model-checked".
+TLC runs in CI via [`.github/workflows/formal.yml`](../.github/workflows/formal.yml)
+on a GitHub runner (a JRE is available there). It was **not** run in the delivery
+shell (no local JRE), so until the first public green TLC run is recorded in
+`docs/CLAIM-LEDGER.md` (`CL-FORMAL-01`), the authoritative, CI-enforced encoding of
+the same invariants is the executable `model` test module in
+`crates/haldir-state/src/lib.rs`, which runs on every build.
 
-The **CI-enforced** encoding of the same safety invariants is the executable
-`model` test module in `crates/haldir-state/src/lib.rs`, which runs on every build:
+The model is bounded (`GateRestart`/`SessionReopen`/`AllocateOutput` are disabled
+at their `MaxBoot`/`MaxGen`/`MaxSeq` caps) so TLC terminates; a prior version grew
+counters without bound and would not have.
 
-- restart mints a fresh boot id and no pre-restart lease survives (`RetiredNeverActive`,
-  `LeaseBindsCurrentIncarnation`);
-- a session-generation change invalidates the active lease;
-- a lower/equal lease term is rejected (anti-rollback);
-- a denied intent consumes its replay sequence but allocates no output;
-- output sequences are strictly increasing and never reused;
-- a fault latch never self-clears.
+Checked invariants (`Safety`): `TypeOK`, `RetiredNeverActive`, `NoOutputReuse`
+(allocated positions are exactly `1..lastOutputSeq` — no gaps or reuse within an
+epoch), and `LeaseBindsCurrentIncarnation`.
 
-## Running the model (when TLC is available)
+## Running locally
 
 ```bash
-# with the TLA+ tools (tla2tools.jar) on the classpath:
-java -cp tla2tools.jar tlc2.TLC -config formal/HaldirAuthority.cfg formal/HaldirAuthority.tla
+# needs a JRE and tla2tools.jar
+curl -sSL -o tla2tools.jar \
+  https://github.com/tlaplus/tlaplus/releases/latest/download/tla2tools.jar
+java -cp tla2tools.jar tlc2.TLC \
+  -config formal/HaldirAuthority.cfg formal/HaldirAuthority.tla
 ```

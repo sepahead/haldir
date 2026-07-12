@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img alt="Haldir Gate logo" src="assets/logo-light.svg" width="200">
+  </picture>
+</p>
+
 # Haldir Gate
 
 **Experimental, inline, backend-aware mission-authorization reference monitor for the Sepahead ecosystem.**
@@ -36,9 +43,15 @@ The complete offline-testable reference-monitor core: canonical contracts, COSE/
 trust, controller/backend admission, challenge-bound mission leases with anti-rollback,
 bounded authority/session/stream/replay state machines with restart semantics, a
 fixed-point deterministic policy engine, a deterministic reference plant with staged
-evidence, the Gate-owned NCP v0.8.0 output adapter (modeled P0 semantic layer), a bounded
-signed evidence spool, the composed Gate runtime with its 13-stage decision pipeline, and a
-deterministic adversarial range + end-to-end acceptance campaign.
+evidence, the Gate-owned NCP v0.8.0 output adapter (modeled P0 semantic layer), a bounded evidence
+spool that holds the Gate-signed decision receipts (lossy on overflow; a durable,
+tamper-evident signed journal is out of P0, see `CL-DURABLE-01`), the composed Gate runtime
+with its 13-stage decision pipeline, and a deterministic adversarial range + end-to-end
+acceptance campaign.
+
+Every load-bearing claim above is reconciled against its evidence in
+[`docs/CLAIM-LEDGER.md`](docs/CLAIM-LEDGER.md); statements not backed by a test or CI gate
+there are marked UNPROVEN or out of scope rather than asserted.
 
 ### What is deliberately **out of scope** and **not claimed** here
 

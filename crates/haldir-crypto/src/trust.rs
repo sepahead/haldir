@@ -9,6 +9,14 @@ use crate::role::{KeyClass, KeyRole};
 use haldir_contracts::ids::KeyId;
 use std::collections::{BTreeMap, BTreeSet};
 
+/// A trust-store insertion error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrustStoreError {
+    /// A different key record already exists for this `kid` (silent replacement
+    /// would turn load order into authority — H-H03).
+    ConflictingKid,
+}
+
 /// One trusted application key record.
 #[derive(Debug, Clone)]
 pub struct KeyRecord {
@@ -39,9 +47,21 @@ impl TrustStore {
         }
     }
 
-    /// Insert a key record, replacing any prior record for the same `kid`.
-    pub fn insert(&mut self, record: KeyRecord) {
-        self.keys.insert(record.kid.as_bytes().to_vec(), record);
+    /// Insert a key record, REJECTING a conflicting record for an existing `kid`
+    /// (H-H03). An exact idempotent re-insert of an identical record is allowed.
+    ///
+    /// # Errors
+    /// Returns [`TrustStoreError::ConflictingKid`] if a different record already
+    /// exists for this `kid`.
+    pub fn insert(&mut self, record: KeyRecord) -> Result<(), TrustStoreError> {
+        let key = record.kid.as_bytes().to_vec();
+        if let Some(existing) = self.keys.get(&key)
+            && !records_equal(existing, &record)
+        {
+            return Err(TrustStoreError::ConflictingKid);
+        }
+        self.keys.insert(key, record);
+        Ok(())
     }
 
     /// Resolve exactly one key record by `kid` (no fallback search).
@@ -61,6 +81,14 @@ impl TrustStore {
     pub fn is_empty(&self) -> bool {
         self.keys.is_empty()
     }
+}
+
+fn records_equal(a: &KeyRecord, b: &KeyRecord) -> bool {
+    a.kid == b.kid
+        && a.role == b.role
+        && a.class == b.class
+        && a.subject == b.subject
+        && a.verifying_key.to_bytes() == b.verifying_key.to_bytes()
 }
 
 /// A revocation snapshot: which key ids are revoked, with a monotonic epoch.

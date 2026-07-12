@@ -1,31 +1,50 @@
 ---------------------------- MODULE HaldirAuthority ----------------------------
 (*
-  Abstract safety model of Haldir Gate authority, session, stream, replay, and
-  restart semantics (specification Phase 6).
+  Abstract, FINITE safety model of Haldir Gate authority, session, stream,
+  replay, and restart semantics (specification Phase 6; runbook Phase 1/24).
 
-  STATUS: this model is AUTHORED but NOT model-checked in the delivery
-  environment (TLC is not installed here — see docs/LIMITATIONS.md). The
-  CI-enforced encoding of these same invariants is the executable `model` test
-  module in crate `haldir-state` (`crates/haldir-state/src/lib.rs`). Do not cite
-  this file as "model-checked".
+  This model is BOUNDED so TLC terminates: `GateRestart`, `SessionReopen`, and
+  `AllocateOutput` are disabled at their configured caps (a previous version grew
+  gateBoot/sessionGen/lastOutputSeq without bound and would not have terminated).
+
+  STATUS: TLC is run in CI (`.github/workflows/formal.yml`) where a JRE is
+  available; it was NOT run in the delivery shell (no local JRE). Until the first
+  public green TLC run is recorded, treat the CI-enforced executable `model` tests
+  in `crates/haldir-state/src/lib.rs` as the authoritative encoding, and see
+  `docs/CLAIM-LEDGER.md` (CL-FORMAL-01).
 *)
 EXTENDS Naturals, FiniteSets
 
-CONSTANTS Epochs, Seqs   \* small finite sets for a future TLC run
+CONSTANTS
+  Epochs,     \* finite set of controller intent epoch ids
+  MaxBoot,    \* cap on Gate boot generations
+  MaxGen,     \* cap on session generations
+  MaxSeq      \* cap on output sequence within one epoch
 
 VARIABLES
   gateBoot,              \* current Gate boot id (Nat); a restart increments it
   sessionGen,            \* current session generation (Nat); a reopen changes it
-  leaseBoot,             \* the boot a currently-active lease is bound to, or 0 if none
-  leaseSession,          \* the session generation the active lease is bound to, or 0
-  activeIntentEpoch,     \* the active controller intent epoch, or 0 if none
+  leaseBoot,             \* the boot a currently-active lease is bound to, or 0
+  leaseSession,          \* the session generation the active lease binds, or 0
+  activeIntentEpoch,     \* active controller intent epoch, or 0 if none
   retiredIntentEpochs,   \* set of retired controller intent epochs
-  lastOutputSeq,         \* highest allocated Gate output sequence in the current epoch
-  publishedPositions,    \* set of allocated output sequences (uniqueness witness)
+  lastOutputSeq,         \* highest allocated output sequence in the CURRENT epoch
+  publishedPositions,    \* set of allocated output sequences in the current epoch
   faultLatched
 
 vars == << gateBoot, sessionGen, leaseBoot, leaseSession, activeIntentEpoch,
            retiredIntentEpochs, lastOutputSeq, publishedPositions, faultLatched >>
+
+TypeOK ==
+  /\ gateBoot \in 1..MaxBoot
+  /\ sessionGen \in 1..MaxGen
+  /\ leaseBoot \in 0..MaxBoot
+  /\ leaseSession \in 0..MaxGen
+  /\ activeIntentEpoch \in (Epochs \cup {0})
+  /\ retiredIntentEpochs \subseteq Epochs
+  /\ lastOutputSeq \in 0..MaxSeq
+  /\ publishedPositions \subseteq (1..MaxSeq)
+  /\ faultLatched \in BOOLEAN
 
 Init ==
   /\ gateBoot = 1
@@ -40,24 +59,31 @@ Init ==
 
 LeaseActive == leaseBoot = gateBoot /\ leaseSession = sessionGen /\ leaseBoot # 0
 
-\* A restart mints a fresh boot id; no pre-restart lease survives (T4/B11).
+\* A restart mints a fresh boot id; no pre-restart lease survives, and the output
+\* epoch is retired so its positions reset (T4/B11/S3).
 GateRestart ==
   /\ ~faultLatched
+  /\ gateBoot < MaxBoot
   /\ gateBoot' = gateBoot + 1
   /\ leaseBoot' = 0
   /\ leaseSession' = 0
   /\ activeIntentEpoch' = 0
   /\ lastOutputSeq' = 0
-  /\ UNCHANGED << sessionGen, retiredIntentEpochs, publishedPositions, faultLatched >>
+  /\ publishedPositions' = {}
+  /\ UNCHANGED << sessionGen, retiredIntentEpochs, faultLatched >>
 
-\* A session reopen changes the generation and invalidates the active lease (S1/S6).
+\* A session reopen changes the generation, invalidates the lease, and retires the
+\* output stream (S1/S6).
 SessionReopen ==
   /\ ~faultLatched
+  /\ sessionGen < MaxGen
   /\ sessionGen' = sessionGen + 1
   /\ leaseBoot' = 0
   /\ leaseSession' = 0
   /\ activeIntentEpoch' = 0
-  /\ UNCHANGED << gateBoot, retiredIntentEpochs, lastOutputSeq, publishedPositions, faultLatched >>
+  /\ lastOutputSeq' = 0
+  /\ publishedPositions' = {}
+  /\ UNCHANGED << gateBoot, retiredIntentEpochs, faultLatched >>
 
 \* Mission authority issues a lease bound to the CURRENT boot and session.
 ActivateLease ==
@@ -68,7 +94,8 @@ ActivateLease ==
   /\ UNCHANGED << gateBoot, sessionGen, activeIntentEpoch, retiredIntentEpochs,
                   lastOutputSeq, publishedPositions, faultLatched >>
 
-\* A fresh controller intent epoch activates only when a lease is active.
+\* A fresh controller intent epoch activates only when a lease is active and the
+\* epoch is not retired.
 StartIntentEpoch(e) ==
   /\ ~faultLatched
   /\ LeaseActive
@@ -85,16 +112,19 @@ RetireIntentEpoch ==
   /\ UNCHANGED << gateBoot, sessionGen, leaseBoot, leaseSession,
                   lastOutputSeq, publishedPositions, faultLatched >>
 
-\* Gate allocates the next output sequence ONLY under an active lease (A5/Deny=>NoOutput).
+\* Gate allocates the next output sequence ONLY under an active lease + active
+\* intent epoch (A5 / Deny=>NoOutput). A new sequence is never reused.
 AllocateOutput ==
   /\ ~faultLatched
   /\ LeaseActive
   /\ activeIntentEpoch # 0
+  /\ lastOutputSeq < MaxSeq
   /\ lastOutputSeq' = lastOutputSeq + 1
   /\ publishedPositions' = publishedPositions \cup { lastOutputSeq + 1 }
   /\ UNCHANGED << gateBoot, sessionGen, leaseBoot, leaseSession, activeIntentEpoch,
                   retiredIntentEpochs, faultLatched >>
 
+\* Always enabled (guarantees a successor => no spurious deadlock).
 LatchFault ==
   /\ faultLatched' = TRUE
   /\ UNCHANGED << gateBoot, sessionGen, leaseBoot, leaseSession, activeIntentEpoch,
@@ -111,23 +141,23 @@ Next ==
 
 Spec == Init /\ [][Next]_vars
 
-\* --- Safety invariants (the properties a future TLC run must check) ---
-
-\* Output is only ever allocated under a matching active lease at that step.
-OutputImpliesLease == (lastOutputSeq > 0) => TRUE  \* structural: AllocateOutput requires LeaseActive
+\* --- Safety invariants ---
 
 \* A retired intent epoch is never the active epoch.
 RetiredNeverActive == activeIntentEpoch \notin retiredIntentEpochs
 
-\* An active lease always binds the current boot and session.
-LeaseBindsCurrentIncarnation ==
-  LeaseActive => (leaseBoot = gateBoot /\ leaseSession = sessionGen)
+\* Within the current output epoch, allocated positions are exactly 1..lastOutputSeq
+\* with no gaps or reuse (each AllocateOutput adds a unique strictly-greater seq).
+NoOutputReuse == publishedPositions = (1..lastOutputSeq)
 
-\* Output sequence never exceeds the number of allocations (no reuse/gap-collapse).
-OutputSeqMonotone == lastOutputSeq >= 0
+\* An active lease always binds the current boot and session (stale leases cannot be
+\* active; restart/reopen clears them).
+LeaseBindsCurrentIncarnation ==
+  (leaseBoot # 0) => (leaseBoot <= gateBoot /\ leaseSession <= sessionGen)
 
 Safety ==
+  /\ TypeOK
   /\ RetiredNeverActive
+  /\ NoOutputReuse
   /\ LeaseBindsCurrentIncarnation
-  /\ OutputSeqMonotone
 ================================================================================

@@ -160,6 +160,8 @@ pub fn accept_lease(
             .map(|k| k.as_str().to_owned())
             .collect(),
         limits: lease.limits.clone(),
+        max_intent_rate_millihz: lease.max_intent_rate_millihz.get(),
+        max_total_intents: lease.max_total_intents.get(),
         accepted_at_mono: now,
         expires_at_mono: expires_at,
     })

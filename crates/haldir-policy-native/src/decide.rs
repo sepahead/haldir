@@ -92,11 +92,12 @@ pub fn decide(input: &PolicyInput<'_>) -> PolicyDecision {
         if !within_speed(v, eff_speed) {
             push(&mut reasons, R::DenyNormBound);
         }
-        // slew vs last published command
-        if let Some(prev) = input.history.last_published_velocity_mm_s
-            && !slew_ok(v, prev, lease, p)
-        {
-            push(&mut reasons, R::DenySlew);
+        // slew vs last published command, bounded by ACTUAL elapsed time (H-P01)
+        if let Some(prev) = input.history.last_published_velocity_mm_s {
+            let elapsed_ms = input.history.slew_elapsed_ms(now, p.nominal_update_ms);
+            if !slew_ok(v, prev, elapsed_ms, lease) {
+                push(&mut reasons, R::DenySlew);
+            }
         }
         // duty window (charged conservatively on the requested horizon)
         let window_start =
@@ -167,13 +168,12 @@ fn within_speed(v: [i32; 3], max_speed: i64) -> bool {
 fn slew_ok(
     v: [i32; 3],
     prev: [i32; 3],
+    elapsed_ms: u64,
     lease: &ActiveMissionLeaseSnapshot,
-    p: &NativePolicySnapshot,
 ) -> bool {
-    // Allowed change over one nominal update = slew_limit(mm/s^2) * update(ms) / 1000.
-    let bound: i128 = i128::from(lease.limits.max_linear_slew_mm_s2.get())
-        * i128::from(p.nominal_update_ms)
-        / 1000;
+    // Allowed change over the elapsed interval = slew_limit(mm/s^2) * elapsed(ms) / 1000.
+    let bound: i128 =
+        i128::from(lease.limits.max_linear_slew_mm_s2.get()) * i128::from(elapsed_ms) / 1000;
     v.iter()
         .zip(prev.iter())
         .all(|(&a, &b)| (i128::from(a) - i128::from(b)).abs() <= bound)

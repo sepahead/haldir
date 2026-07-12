@@ -29,6 +29,8 @@ tagged_enum! {
     pub enum DecisionReasonCodeV1 {
         AllowPublished = 1 => "ALLOW_PUBLISHED",
         AllowNotPublishedOverload = 2 => "ALLOW_NOT_PUBLISHED_OVERLOAD",
+        AllowPolicy = 3 => "ALLOW_POLICY",
+        AllowPrepared = 4 => "ALLOW_PREPARED",
         DenyOversize = 10 => "DENY_OVERSIZE",
         DenyOverload = 11 => "DENY_OVERLOAD",
         DenyMalformed = 12 => "DENY_MALFORMED",
@@ -64,7 +66,13 @@ tagged_enum! {
         DenyPolicyDiagnostic = 42 => "DENY_POLICY_DIAGNOSTIC",
         DenyNoPublicationAuthority = 43 => "DENY_NO_PUBLICATION_AUTHORITY",
         DenyArithmeticOverflow = 44 => "DENY_ARITHMETIC_OVERFLOW",
+        DenyRateLimit = 45 => "DENY_RATE_LIMIT",
+        DenyTotalIntents = 46 => "DENY_TOTAL_INTENTS",
+        DenyStateProducer = 47 => "DENY_STATE_PRODUCER",
+        DenyAdmissionLevel = 48 => "DENY_ADMISSION_LEVEL",
         ErrorInternalFault = 90 => "ERROR_INTERNAL_FAULT",
+        ErrorNamespaceExhausted = 91 => "ERROR_NAMESPACE_EXHAUSTED",
+        ErrorStateTransition = 92 => "ERROR_STATE_TRANSITION",
     }
 }
 
@@ -73,7 +81,24 @@ impl DecisionReasonCodeV1 {
     /// and be retained first when the bounded reason vector overflows (H6/P4).
     #[must_use]
     pub const fn is_hard_deny(self) -> bool {
-        !matches!(self, Self::AllowPublished | Self::AllowNotPublishedOverload)
+        !matches!(
+            self,
+            Self::AllowPublished
+                | Self::AllowNotPublishedOverload
+                | Self::AllowPolicy
+                | Self::AllowPrepared
+        )
+    }
+
+    /// Whether this reason denotes an internal ERROR (inability to decide) rather
+    /// than a policy/authorization DENY. Both prohibit output but differ
+    /// operationally (H-H10).
+    #[must_use]
+    pub const fn is_error(self) -> bool {
+        matches!(
+            self,
+            Self::ErrorInternalFault | Self::ErrorNamespaceExhausted | Self::ErrorStateTransition
+        )
     }
 }
 
@@ -84,6 +109,8 @@ tagged_enum! {
     pub enum PublishStageV1 {
         DecidedDeny = 1 => "DECIDED_DENY",
         DecidedAllow = 2 => "DECIDED_ALLOW",
+        DecidedError = 15 => "DECIDED_ERROR",
+        OutputReserved = 16 => "OUTPUT_RESERVED",
         OutputPrepared = 3 => "OUTPUT_PREPARED",
         PublishCalled = 4 => "PUBLISH_CALLED",
         PublishReturnedOk = 5 => "PUBLISH_RETURNED_OK",

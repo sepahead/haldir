@@ -144,23 +144,39 @@ mod range {
             let ctrl_sk = SigningKey::from_seed([1; 32]);
             let mission_sk = SigningKey::from_seed([2; 32]);
             let other_sk = SigningKey::from_seed([3; 32]);
+            let gate_sk = SigningKey::from_seed([4; 32]);
             let now = MonoInstant::from_nanos(1_000_000_000);
 
             let mut trust = TrustStore::new();
-            trust.insert(KeyRecord {
-                kid: kid(1),
-                role: KeyRole::ControllerIntent,
-                verifying_key: ctrl_sk.verifying_key(),
-                subject: Some("survey-v1".to_owned()),
-                class: KeyClass::Assurance,
-            });
-            trust.insert(KeyRecord {
-                kid: kid(2),
-                role: KeyRole::MissionAuthority,
-                verifying_key: mission_sk.verifying_key(),
-                subject: Some("mission-authority".to_owned()),
-                class: KeyClass::Assurance,
-            });
+            trust
+                .insert(KeyRecord {
+                    kid: kid(1),
+                    role: KeyRole::ControllerIntent,
+                    verifying_key: ctrl_sk.verifying_key(),
+                    subject: Some("survey-v1".to_owned()),
+                    class: KeyClass::Assurance,
+                })
+                .unwrap();
+            trust
+                .insert(KeyRecord {
+                    kid: kid(2),
+                    role: KeyRole::MissionAuthority,
+                    verifying_key: mission_sk.verifying_key(),
+                    subject: Some("mission-authority".to_owned()),
+                    class: KeyClass::Assurance,
+                })
+                .unwrap();
+            // Gate application key that signs decision receipts (H-B02), enrolled
+            // to the Gate id so a verifier binds signer→gate (H-H03).
+            trust
+                .insert(KeyRecord {
+                    kid: kid(4),
+                    role: KeyRole::GateApplication,
+                    verifying_key: gate_sk.verifying_key(),
+                    subject: Some("gate-1".to_owned()),
+                    class: KeyClass::Assurance,
+                })
+                .unwrap();
 
             let rec = admission_record();
             let admission_digest = rec.admission_digest();
@@ -190,6 +206,8 @@ mod range {
                 ),
                 output_epoch: GateOutputEpoch::new(uuid(5)),
                 local_cap_ms: 30_000,
+                gate_signer: gate_sk,
+                gate_signer_kid: kid(4),
             };
             let mut actor = VehicleActor::new(cfg);
             actor.register_challenge(
@@ -207,7 +225,12 @@ mod range {
             actor
                 .accept_lease_env(&lease_env, now)
                 .expect("lease accepted");
-            actor.set_trusted_state(Self::trusted_state(now));
+            // Capture the initial snapshot 1 ms before decision time so a later
+            // re-set at `now` strictly advances the anti-rollback capture clock.
+            let initial_capture = MonoInstant::from_nanos(now.as_nanos() - 1_000_000);
+            actor
+                .set_trusted_state(Self::trusted_state(initial_capture))
+                .unwrap();
 
             Self {
                 actor,
@@ -538,7 +561,7 @@ mod range {
             let now = s.now;
             let mut st = RangeScenario::trusted_state(now);
             st.kinematic.position_mm = [99_000, 0, 0];
-            s.actor.set_trusted_state(st);
+            s.actor.set_trusted_state(st).unwrap();
             let env = s.sign(&s.intent(1, velocity(3000)));
             assert_denied(&s.decide(&env, INTENT_KEY));
         }
@@ -546,13 +569,27 @@ mod range {
         #[test]
         fn stale_state_denied() {
             let mut s = RangeScenario::new();
-            // trusted state captured far in the past relative to `now`
-            let old = MonoInstant::from_nanos(1);
-            let mut st = RangeScenario::trusted_state(old);
-            st.primary_source.receive_mono = old;
-            s.actor.set_trusted_state(st);
+            // A snapshot that passes ingress (capture advances) but whose source
+            // frame is far in the past relative to `now`: policy denies on source
+            // freshness. (An older *capture* is now rejected at ingress by the
+            // anti-rollback check — see stale_state_rollback_rejected.)
+            let mut st = RangeScenario::trusted_state(s.now);
+            st.primary_source.receive_mono = MonoInstant::from_nanos(1);
+            s.actor.set_trusted_state(st).unwrap();
             let env = s.sign(&s.intent(1, velocity(400)));
             assert_denied(&s.decide(&env, INTENT_KEY));
+        }
+
+        #[test]
+        fn stale_state_rollback_rejected() {
+            // Anti-rollback (H-B05): after a snapshot at `now`, a producer cannot
+            // regress to an older-but-still-fresh capture to revive a stale truth.
+            let mut s = RangeScenario::new();
+            let fresh = RangeScenario::trusted_state(s.now);
+            s.actor.set_trusted_state(fresh).unwrap();
+            let older =
+                RangeScenario::trusted_state(MonoInstant::from_nanos(s.now.as_nanos() - 500_000));
+            assert!(s.actor.set_trusted_state(older).is_err());
         }
 
         #[test]

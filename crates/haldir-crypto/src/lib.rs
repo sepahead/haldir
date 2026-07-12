@@ -31,7 +31,7 @@ pub use cose::{ExpectedContext, VerifiedCose, content_type_for, external_aad_for
 pub use error::CryptoError;
 pub use key::{Signature, SigningKey, VerifyingKey};
 pub use role::{KeyClass, KeyRole};
-pub use trust::{KeyRecord, RevocationSnapshot, TrustStore};
+pub use trust::{KeyRecord, RevocationSnapshot, TrustStore, TrustStoreError};
 
 use haldir_contracts::cbor::{
     CanonicalValue, Limits, Validate, from_canonical_bytes, to_canonical_bytes,
@@ -165,7 +165,7 @@ mod tests {
 
     fn trust_with(k: &KeyId, sk: &SigningKey, role: KeyRole, class: KeyClass) -> TrustStore {
         let mut t = TrustStore::new();
-        t.insert(record(k, sk, role, class));
+        t.insert(record(k, sk, role, class)).unwrap();
         t
     }
 
@@ -317,6 +317,51 @@ mod tests {
             Limits::LARGE,
         );
         assert_eq!(res.err(), Some(CryptoError::ContentTypeMismatch));
+    }
+
+    #[test]
+    fn duplicate_conflicting_kid_rejected() {
+        let k = kid(1);
+        let sk1 = signer(1);
+        let sk2 = signer(2);
+        let mut t = TrustStore::new();
+        t.insert(record(
+            &k,
+            &sk1,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        ))
+        .unwrap();
+        // same kid, different key material -> conflict
+        assert_eq!(
+            t.insert(record(
+                &k,
+                &sk2,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance
+            )),
+            Err(TrustStoreError::ConflictingKid)
+        );
+        // same kid, different role -> conflict
+        assert_eq!(
+            t.insert(record(
+                &k,
+                &sk1,
+                KeyRole::MissionAuthority,
+                KeyClass::Assurance
+            )),
+            Err(TrustStoreError::ConflictingKid)
+        );
+        // exact idempotent re-insert -> ok
+        assert!(
+            t.insert(record(
+                &k,
+                &sk1,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance
+            ))
+            .is_ok()
+        );
     }
 
     #[test]
