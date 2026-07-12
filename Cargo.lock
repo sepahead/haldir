@@ -179,7 +179,6 @@ dependencies = [
  "ed25519-compact",
  "getrandom 0.2.17",
  "haldir-contracts",
- "haldir-testkit",
  "proptest",
  "sha2",
  "subtle",

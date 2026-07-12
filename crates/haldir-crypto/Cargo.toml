@@ -21,4 +21,3 @@ getrandom.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-haldir-testkit.workspace = true
