@@ -60,6 +60,8 @@ MANIFEST_SCHEMA_VERSION = 2
 BUILD_TIMEOUT_SECONDS = 3600
 MAX_PROVISION_ARCHIVE_BYTES = 4 * 1024 * 1024
 MAX_PROVISION_FILE_BYTES = 1024 * 1024
+MAX_BIND_ARCHIVE_BYTES = 256 * 1024
+MAX_BIND_RESULT_BYTES = 64 * 1024
 EXAMPLE_EXECUTABLES = {
     "live_gate_dev_bind_shutdown": BIND_BINARY,
     "live_gate_dev_fixture_provision": PROVISION_BINARY,
@@ -92,6 +94,14 @@ set +e
 {PROVISION_BINARY} /fixture/gate /fixture/provision-result.json
 status=$?
 printf '%s\\n' "$status" > /run/haldir-provision-exit
+while :; do sleep 3600; done
+""".strip()
+
+BIND_SCRIPT = f"""
+set +e
+{BIND_BINARY} /fixture {GATE_CONFIG_PATH} /evidence/bind-result.json
+status=$?
+printf '%s\\n' "$status" > /run/haldir-bind-exit
 while :; do sleep 3600; done
 """.strip()
 
@@ -278,6 +288,90 @@ def copy_provisioned_fixture(
     )
 
 
+def extract_bind_result_archive(
+    archive_bytes: bytes,
+    destination: Path,
+    *,
+    expected_uid: int,
+    expected_gid: int,
+) -> None:
+    """Validate and extract the one bounded result file from Gate's tmpfs."""
+    if not archive_bytes or len(archive_bytes) > MAX_BIND_ARCHIVE_BYTES:
+        raise CampaignError("bind result archive has an invalid size")
+    if destination.exists() or destination.is_symlink():
+        raise CampaignError("bind result destination already exists")
+
+    try:
+        with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:") as archive:
+            members = archive.getmembers()
+            if len(members) != 1:
+                raise CampaignError("bind result archive shape differs")
+            member = members[0]
+            if member.name != "bind-result.json":
+                raise CampaignError("bind result archive member differs")
+            if member.uid != expected_uid or member.gid != expected_gid:
+                raise CampaignError("bind result archive ownership differs")
+            if (
+                member.type != tarfile.REGTYPE
+                or stat.S_IMODE(member.mode) != 0o600
+                or member.size <= 0
+                or member.size > MAX_BIND_RESULT_BYTES
+            ):
+                raise CampaignError("bind result archive file metadata differs")
+            source = archive.extractfile(member)
+            if source is None:
+                raise CampaignError("bind result archive file cannot be read")
+            with source:
+                data = source.read(MAX_BIND_RESULT_BYTES + 1)
+            if len(data) != member.size:
+                raise CampaignError("bind result archive file size differs")
+            _write_restricted_file(destination, data)
+    except CampaignError as error:
+        if not delete_directory(destination):
+            raise CampaignError(
+                "bind result extraction failed and cleanup is incomplete"
+            ) from error
+        raise
+    except (OSError, tarfile.TarError, EOFError) as error:
+        if not delete_directory(destination):
+            raise CampaignError(
+                "bind result extraction failed and cleanup is incomplete"
+            ) from error
+        raise CampaignError("cannot extract bind result archive") from error
+
+
+def copy_bind_result(
+    runner: CommandRunner,
+    *,
+    gate_container: str,
+    destination: Path,
+    expected_uid: int,
+    expected_gid: int,
+) -> None:
+    """Stream Gate's tmpfs result and extract the exact regular file safely."""
+    archive = runner.run_bytes(
+        [
+            "docker",
+            "exec",
+            gate_container,
+            "tar",
+            "-C",
+            "/evidence",
+            "-cf",
+            "-",
+            "bind-result.json",
+        ],
+        max_stdout_bytes=MAX_BIND_ARCHIVE_BYTES,
+        timeout_seconds=60,
+    ).stdout
+    extract_bind_result_archive(
+        archive,
+        destination,
+        expected_uid=expected_uid,
+        expected_gid=expected_gid,
+    )
+
+
 def hash_copied_example_executables(directory: Path) -> dict[str, str]:
     """Hash the exact expected executable copies and reject any shape drift."""
     expected = frozenset(EXAMPLE_EXECUTABLES)
@@ -354,31 +448,74 @@ def resolve_image_id(runner: CommandRunner, image: str) -> str:
     return image_id
 
 
-def wait_for_provision(runner: CommandRunner, container: str) -> int:
-    """Wait for the detached no-network provisioner to publish its exit marker."""
-    for _ in range(240):
+def wait_for_exit_marker(
+    runner: CommandRunner,
+    container: str,
+    *,
+    marker_path: str,
+    label: str,
+    timeout_seconds: int,
+) -> int:
+    """Wait for a detached target while proving it remains running between polls."""
+    deadline = time.monotonic() + timeout_seconds
+    while (remaining := deadline - time.monotonic()) > 0:
         marker = runner.run(
-            ["docker", "exec", container, "cat", "/run/haldir-provision-exit"],
+            ["docker", "exec", container, "cat", marker_path],
             check=False,
-            timeout_seconds=10,
+            timeout_seconds=min(10.0, remaining),
         )
         if marker.returncode == 0:
             value = marker.stdout.strip()
             if re.fullmatch(r"[0-9]+", value) is None:
-                raise CampaignError("provisioner emitted a malformed exit marker")
+                raise CampaignError(f"{label} emitted a malformed exit marker")
             return int(value)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
         running = runner.run(
             ["docker", "inspect", "--format", "{{.State.Running}}", container],
             check=False,
-            timeout_seconds=10,
+            timeout_seconds=min(10.0, remaining),
         )
         if running.returncode != 0 or running.stdout.strip() != "true":
-            logs = runner.run(["docker", "logs", container], check=False)
+            remaining = deadline - time.monotonic()
+            log_tail = ""
+            if remaining > 0:
+                logs = runner.run(
+                    ["docker", "logs", container],
+                    check=False,
+                    timeout_seconds=min(10.0, remaining),
+                )
+                log_tail = logs.stderr[-2000:]
             raise CampaignError(
-                f"provisioner stopped before reporting status: {logs.stderr[-2000:]}"
+                f"{label} stopped before reporting status: {log_tail}"
             )
-        time.sleep(0.25)
-    raise CampaignError("provisioner did not finish within 60 seconds")
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            time.sleep(min(0.25, remaining))
+    raise CampaignError(f"{label} did not finish within {timeout_seconds} seconds")
+
+
+def wait_for_provision(runner: CommandRunner, container: str) -> int:
+    """Wait for the detached no-network provisioner to publish its exit marker."""
+    return wait_for_exit_marker(
+        runner,
+        container,
+        marker_path="/run/haldir-provision-exit",
+        label="provisioner",
+        timeout_seconds=60,
+    )
+
+
+def wait_for_bind(runner: CommandRunner, container: str) -> int:
+    """Wait for the detached live Gate target to publish its exit marker."""
+    return wait_for_exit_marker(
+        runner,
+        container,
+        marker_path="/run/haldir-bind-exit",
+        label="bind/shutdown target",
+        timeout_seconds=180,
+    )
 
 
 def validate_result(path: Path, *, provision: bool) -> dict[str, Any]:
@@ -771,10 +908,11 @@ def run_smoke(output: Path) -> Path:
 
         gate_config = rendered / "clients" / "gate.json"
         fixture = provisioned / "gate"
-        gate = runner.run(
+        runner.run(
             [
                 "docker",
                 "run",
+                "--detach",
                 "--name",
                 gate_container,
                 "--network",
@@ -785,6 +923,7 @@ def run_smoke(output: Path) -> Path:
                 "--cap-drop=ALL",
                 "--security-opt=no-new-privileges",
                 f"--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=16m,{owner_options}",
+                f"--tmpfs=/run:rw,noexec,nosuid,nodev,size=1m,{owner_options}",
                 "--mount",
                 f"type=bind,src={fixture},dst=/fixture",
                 "--mount",
@@ -792,38 +931,40 @@ def run_smoke(output: Path) -> Path:
                 "--mount",
                 f"type=bind,src={gate_mount},dst={RUNTIME_SECRET_ROOT},readonly",
                 f"--tmpfs=/evidence:rw,noexec,nosuid,nodev,size=1m,{owner_options}",
+                "--entrypoint",
+                "/bin/sh",
                 smoke_image_id,
-                BIND_BINARY,
-                "/fixture",
-                GATE_CONFIG_PATH,
-                "/evidence/bind-result.json",
+                "-c",
+                BIND_SCRIPT,
             ],
-            check=False,
-            timeout_seconds=180,
+            timeout_seconds=60,
         )
-        (raw / "bind.stdout.log").write_text(gate.stdout)
-        (raw / "bind.stderr.log").write_text(gate.stderr)
+        bind_exit = wait_for_bind(runner, gate_container)
+        gate_logs = runner.run(
+            ["docker", "logs", gate_container], check=False, timeout_seconds=60
+        )
+        (raw / "bind.stdout.log").write_text(gate_logs.stdout)
+        (raw / "bind.stderr.log").write_text(gate_logs.stderr)
         router_logs = runner.run(
             ["docker", "logs", router_container], check=False, timeout_seconds=60
         )
         (raw / "router.log").write_text(router_logs.stdout + router_logs.stderr)
-        bind_result_copy = runner.run(
-            [
-                "docker",
-                "cp",
-                f"{gate_container}:/evidence/bind-result.json",
-                str(raw / "bind-result.json"),
-            ],
-            check=False,
-            timeout_seconds=60,
-        )
-        if gate.returncode != 0:
+        if bind_exit != 0:
             raise CampaignError(
-                f"bind/shutdown target failed with exit code {gate.returncode}"
+                f"bind/shutdown target failed with exit code {bind_exit}"
             )
-        if bind_result_copy.returncode != 0:
-            raise CampaignError("bind/shutdown target produced no copyable result")
+        copy_bind_result(
+            runner,
+            gate_container=gate_container,
+            destination=raw / "bind-result.json",
+            expected_uid=uid,
+            expected_gid=gid,
+        )
         validate_result(raw / "bind-result.json", provision=False)
+        runner.run(
+            ["docker", "stop", "--time", "1", gate_container],
+            timeout_seconds=30,
+        )
 
         docker_metadata = {
             "builder_image": docker_json(runner, ["image", "inspect", BUILDER_IMAGE]),

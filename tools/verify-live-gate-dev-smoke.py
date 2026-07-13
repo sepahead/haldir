@@ -60,6 +60,14 @@ printf '%s\\n' "$status" > /run/haldir-provision-exit
 while :; do sleep 3600; done
 """.strip()
 
+BIND_SCRIPT = f"""
+set +e
+{BIND_BINARY} /fixture {GATE_CONFIG_PATH} /evidence/bind-result.json
+status=$?
+printf '%s\\n' "$status" > /run/haldir-bind-exit
+while :; do sleep 3600; done
+""".strip()
+
 HEX_64 = re.compile(r"[0-9a-f]{64}")
 HEX_40 = re.compile(r"[0-9a-f]{40}")
 SUFFIX = re.compile(r"[0-9a-f]{12}")
@@ -941,6 +949,110 @@ def verify_provision_export_commands(
     return provision_export
 
 
+def verify_gate_export_commands(
+    records: list[dict[str, Any]], gate_container: str
+) -> list[str]:
+    """Require one ordered, bounded tar export from the live Gate tmpfs."""
+    argvs = [record["argv"] for record in records]
+    gate_export = [
+        "docker",
+        "exec",
+        gate_container,
+        "tar",
+        "-C",
+        "/evidence",
+        "-cf",
+        "-",
+        "bind-result.json",
+    ]
+    if argvs.count(gate_export) != 1:
+        raise VerificationError(
+            "campaign did not retain exactly one Gate result archive export"
+        )
+    marker_poll = [
+        "docker",
+        "exec",
+        gate_container,
+        "cat",
+        "/run/haldir-bind-exit",
+    ]
+    running_inspect = [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.State.Running}}",
+        gate_container,
+    ]
+    marker_indices = [
+        index for index, record in enumerate(records) if record["argv"] == marker_poll
+    ]
+    successful_markers = [
+        index for index in marker_indices if records[index]["exit_code"] == 0
+    ]
+    if len(successful_markers) != 1:
+        raise VerificationError(
+            "Gate exit marker was not observed exactly once successfully"
+        )
+    successful_marker = successful_markers[0]
+    if not marker_indices or marker_indices[-1] != successful_marker:
+        raise VerificationError("Gate was polled again after its successful marker")
+    failed_marker_indices = marker_indices[:-1]
+    expected_running_inspects = [index + 1 for index in failed_marker_indices]
+    actual_running_inspects = [
+        index
+        for index, record in enumerate(records)
+        if record["argv"] == running_inspect
+    ]
+    if actual_running_inspects != expected_running_inspects or any(
+        records[index]["exit_code"] != 0 for index in actual_running_inspects
+    ):
+        raise VerificationError(
+            "failed Gate marker polls were not paired with running-state checks"
+        )
+    export_index = argvs.index(gate_export)
+    logs = ["docker", "logs", gate_container]
+    if argvs.count(logs) != 1:
+        raise VerificationError("Gate logs were not captured exactly once")
+    logs_index = argvs.index(logs)
+    if records[logs_index]["exit_code"] != 0:
+        raise VerificationError("Gate log capture was unsuccessful")
+    stop = ["docker", "stop", "--time", "1", gate_container]
+    if argvs.count(stop) != 1:
+        raise VerificationError("Gate was not stopped exactly once")
+    stop_index = argvs.index(stop)
+    if not successful_marker < logs_index < export_index < stop_index:
+        raise VerificationError(
+            "Gate marker, log capture, result export, and stop order differs"
+        )
+
+    allowed_touching_commands = {
+        tuple(marker_poll),
+        tuple(running_inspect),
+        tuple(gate_export),
+        tuple(logs),
+        tuple(stop),
+        ("docker", "container", "inspect", gate_container),
+        ("docker", "rm", "--force", gate_container),
+    }
+    for argv in argvs:
+        touches_gate = any(
+            item == gate_container or item.startswith(f"{gate_container}:")
+            for item in argv
+        )
+        if not touches_gate:
+            continue
+        is_gate_run = (
+            argv[:2] == ["docker", "run"]
+            and "--name" in argv
+            and option_value(argv, "--name") == gate_container
+        )
+        if not is_gate_run and tuple(argv) not in allowed_touching_commands:
+            raise VerificationError(
+                "Gate contains an unexpected lifecycle or export command"
+            )
+    return gate_export
+
+
 def verify_commands(
     evidence: Path,
     profile: dict[str, Any],
@@ -1142,6 +1254,7 @@ def verify_commands(
     expected_gate = [
         "docker",
         "run",
+        "--detach",
         "--name",
         names["gate"],
         "--network",
@@ -1152,6 +1265,7 @@ def verify_commands(
         "--cap-drop=ALL",
         "--security-opt=no-new-privileges",
         f"--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=16m,{owner}",
+        f"--tmpfs=/run:rw,noexec,nosuid,nodev,size=1m,{owner}",
         "--mount",
         "type=bind,src=$WORK/provisioned/gate,dst=/fixture",
         "--mount",
@@ -1159,21 +1273,18 @@ def verify_commands(
         "--mount",
         f"type=bind,src=$WORK/gate-secrets,dst={RUNTIME_SECRET_ROOT},readonly",
         f"--tmpfs=/evidence:rw,noexec,nosuid,nodev,size=1m,{owner}",
+        "--entrypoint",
+        "/bin/sh",
         smoke_image_id,
-        BIND_BINARY,
-        "/fixture",
-        GATE_CONFIG_PATH,
-        "/evidence/bind-result.json",
+        "-c",
+        BIND_SCRIPT,
     ]
     require_once(expected_gate, "live Gate bind/shutdown run")
-    gate_result_copy = [
-        "docker",
-        "cp",
-        f"{names['gate']}:/evidence/bind-result.json",
-        "$WORK/raw/bind-result.json",
-    ]
-    allowed_docker_copies.append(gate_result_copy)
-    require_once(gate_result_copy, "Gate result extraction")
+    verify_gate_export_commands(records, names["gate"])
+    require_once(
+        ["docker", "stop", "--time", "1", names["gate"]],
+        "Gate stop",
+    )
     docker_copy_commands = matching(
         lambda argv: (
             argv[:2] == ["docker", "cp"] or argv[:3] == ["docker", "container", "cp"]
@@ -1206,7 +1317,8 @@ def verify_commands(
     allowed_failures = {
         tuple(
             ["docker", "exec", names["provision"], "cat", "/run/haldir-provision-exit"]
-        )
+        ),
+        tuple(["docker", "exec", names["gate"], "cat", "/run/haldir-bind-exit"]),
     }
     for record in records:
         if record["exit_code"] != 0 and tuple(record["argv"]) not in allowed_failures:
@@ -1401,6 +1513,7 @@ def verify_commands_and_docker(
         "gate container",
         {
             "/evidence": {"rw", "noexec", "nosuid", "nodev", "size=1m", *owner},
+            "/run": {"rw", "noexec", "nosuid", "nodev", "size=1m", *owner},
             "/tmp": {"rw", "noexec", "nosuid", "nodev", "size=16m", *owner},
         },
     )
@@ -1435,8 +1548,8 @@ def verify_commands_and_docker(
     provision_state = require_object(provision.get("State"), "provision.State")
     inspector_state = require_object(inspector.get("State"), "inspector.State")
     router_state = require_object(router.get("State"), "router.State")
-    if gate_state.get("Status") != "exited" or gate_state.get("ExitCode") != 0:
-        raise VerificationError("Gate container did not exit successfully")
+    if gate_state.get("Status") != "exited" or gate_state.get("Running") is not False:
+        raise VerificationError("Gate container was not stopped before metadata capture")
     if (
         provision_state.get("Status") != "exited"
         or provision_state.get("Running") is not False
@@ -1453,14 +1566,12 @@ def verify_commands_and_docker(
         )
     if router_state.get("Running") is not True:
         raise VerificationError("router was not running when metadata was captured")
-    if require_object(gate.get("Config"), "gate.Config").get("Cmd") != [
-        BIND_BINARY,
-        "/fixture",
-        GATE_CONFIG_PATH,
-        "/evidence/bind-result.json",
-    ]:
+    gate_config = require_object(gate.get("Config"), "gate.Config")
+    if gate_config.get("Cmd") != ["-c", BIND_SCRIPT] or gate_config.get(
+        "Entrypoint"
+    ) != ["/bin/sh"]:
         raise VerificationError(
-            "Gate inspect command differs from exact bind target invocation"
+            "Gate inspect command differs from exact bind wrapper"
         )
     provision_config = require_object(provision.get("Config"), "provision.Config")
     if provision_config.get("Cmd") != ["-c", PROVISION_SCRIPT] or provision_config.get(

@@ -105,7 +105,7 @@ class CommandRunner:
         cwd: Path | None = None,
         check: bool = True,
         input_text: str | None = None,
-        timeout_seconds: int = 120,
+        timeout_seconds: int | float = 120,
     ) -> subprocess.CompletedProcess[str]:
         try:
             process = subprocess.run(

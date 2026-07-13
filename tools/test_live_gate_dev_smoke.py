@@ -13,6 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -24,6 +25,8 @@ from live_gate_dev_smoke import (
     GATE_SECRET_FILES,
     GENERATOR_ACTIONS,
     MANIFEST_SCHEMA_VERSION,
+    MAX_BIND_ARCHIVE_BYTES,
+    MAX_BIND_RESULT_BYTES,
     MAX_PROVISION_FILE_BYTES,
     PROVISION_ARCHIVE_DIRECTORIES,
     PROVISION_ARCHIVE_FILES,
@@ -32,16 +35,61 @@ from live_gate_dev_smoke import (
     CampaignError,
     build_candidate,
     cleanup_runtime,
+    copy_bind_result,
+    extract_bind_result_archive,
     extract_provision_archive,
     hash_copied_example_executables,
     isolate_gate_secrets,
     require_safe_output,
     resolve_image_id,
     validate_result,
+    wait_for_exit_marker,
 )
 
 
 class LiveGateDevSmokeTests(unittest.TestCase):
+    @staticmethod
+    def bind_result_archive(
+        *,
+        name: str | None = "bind-result.json",
+        data: bytes = b'{"status":"pass"}\n',
+        member_type: bytes = tarfile.REGTYPE,
+        duplicate: bool = False,
+        extra: str | None = None,
+        wrong_owner: bool = False,
+        wrong_group: bool = False,
+        wrong_mode: bool = False,
+    ) -> bytes:
+        output = io.BytesIO()
+        with tarfile.open(fileobj=output, mode="w") as archive:
+            if name is not None:
+                member = tarfile.TarInfo(name)
+                member.type = member_type
+                member.mode = 0o644 if wrong_mode else 0o600
+                member.uid = os.getuid() + (1 if wrong_owner else 0)
+                member.gid = os.getgid() + (1 if wrong_group else 0)
+                if member_type in (tarfile.SYMTYPE, tarfile.LNKTYPE):
+                    member.linkname = "elsewhere"
+                    archive.addfile(member)
+                else:
+                    member.size = len(data)
+                    archive.addfile(member, io.BytesIO(data))
+                if duplicate:
+                    repeated = tarfile.TarInfo(name)
+                    repeated.mode = 0o600
+                    repeated.uid = os.getuid()
+                    repeated.gid = os.getgid()
+                    repeated.size = len(data)
+                    archive.addfile(repeated, io.BytesIO(data))
+            if extra is not None:
+                unexpected = tarfile.TarInfo(extra)
+                unexpected.mode = 0o600
+                unexpected.uid = os.getuid()
+                unexpected.gid = os.getgid()
+                unexpected.size = len(data)
+                archive.addfile(unexpected, io.BytesIO(data))
+        return output.getvalue()
+
     @staticmethod
     def provision_archive(
         *,
@@ -234,6 +282,161 @@ class LiveGateDevSmokeTests(unittest.TestCase):
                     expected_gid=os.getgid(),
                 )
             self.assertEqual(sentinel.read_text(), "preserve")
+
+    def test_exact_bind_result_archive_is_extracted_restricted(self) -> None:
+        data = b'{"status":"pass"}\n'
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "bind-result.json"
+            extract_bind_result_archive(
+                self.bind_result_archive(data=data),
+                destination,
+                expected_uid=os.getuid(),
+                expected_gid=os.getgid(),
+            )
+            self.assertEqual(destination.read_bytes(), data)
+            self.assertEqual(stat.S_IMODE(destination.stat().st_mode), 0o600)
+
+    def test_bind_result_export_uses_one_exact_bounded_tar_stream(self) -> None:
+        archive = self.bind_result_archive()
+
+        class Runner:
+            def __init__(self) -> None:
+                self.calls: list[tuple[list[str], dict[str, object]]] = []
+
+            def run_bytes(
+                self, argv: list[str], **kwargs: object
+            ) -> SimpleNamespace:
+                self.calls.append((argv, kwargs))
+                return SimpleNamespace(stdout=archive)
+
+        runner = Runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "bind-result.json"
+            copy_bind_result(
+                runner,
+                gate_container="gate-container",
+                destination=destination,
+                expected_uid=os.getuid(),
+                expected_gid=os.getgid(),
+            )
+            self.assertTrue(destination.is_file())
+        self.assertEqual(
+            runner.calls,
+            [
+                (
+                    [
+                        "docker",
+                        "exec",
+                        "gate-container",
+                        "tar",
+                        "-C",
+                        "/evidence",
+                        "-cf",
+                        "-",
+                        "bind-result.json",
+                    ],
+                    {
+                        "max_stdout_bytes": MAX_BIND_ARCHIVE_BYTES,
+                        "timeout_seconds": 60,
+                    },
+                )
+            ],
+        )
+
+    def test_bind_result_archive_rejects_shape_and_type_attacks(self) -> None:
+        cases = {
+            "missing": self.bind_result_archive(name=None),
+            "extra": self.bind_result_archive(extra="unexpected"),
+            "traversal": self.bind_result_archive(name="../bind-result.json"),
+            "absolute": self.bind_result_archive(name="/bind-result.json"),
+            "symlink": self.bind_result_archive(member_type=tarfile.SYMTYPE),
+            "hardlink": self.bind_result_archive(member_type=tarfile.LNKTYPE),
+            "directory": self.bind_result_archive(member_type=tarfile.DIRTYPE),
+            "fifo": self.bind_result_archive(member_type=tarfile.FIFOTYPE),
+            "duplicate": self.bind_result_archive(duplicate=True),
+            "wrong owner": self.bind_result_archive(wrong_owner=True),
+            "wrong group": self.bind_result_archive(wrong_group=True),
+            "wrong mode": self.bind_result_archive(wrong_mode=True),
+            "contiguous file": self.bind_result_archive(member_type=tarfile.CONTTYPE),
+            "empty file": self.bind_result_archive(data=b""),
+            "oversized file": self.bind_result_archive(
+                data=b"x" * (MAX_BIND_RESULT_BYTES + 1)
+            ),
+            "truncated": b"not a tar archive",
+            "oversized archive": b"x" * (MAX_BIND_ARCHIVE_BYTES + 1),
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for label, archive in cases.items():
+                with self.subTest(label=label):
+                    destination = root / label
+                    with self.assertRaises(CampaignError):
+                        extract_bind_result_archive(
+                            archive,
+                            destination,
+                            expected_uid=os.getuid(),
+                            expected_gid=os.getgid(),
+                        )
+                    self.assertFalse(destination.exists())
+
+    def test_bind_result_archive_never_replaces_an_existing_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "bind-result.json"
+            destination.write_text("preserve")
+            with self.assertRaises(CampaignError):
+                extract_bind_result_archive(
+                    self.bind_result_archive(),
+                    destination,
+                    expected_uid=os.getuid(),
+                    expected_gid=os.getgid(),
+                )
+            self.assertEqual(destination.read_text(), "preserve")
+
+    def test_bind_result_archive_reports_incomplete_failure_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "bind-result.json"
+            with patch("live_gate_dev_smoke.delete_directory", return_value=False):
+                with self.assertRaisesRegex(CampaignError, "cleanup is incomplete"):
+                    extract_bind_result_archive(
+                        b"not a tar archive",
+                        destination,
+                        expected_uid=os.getuid(),
+                        expected_gid=os.getgid(),
+                    )
+
+    def test_exit_marker_wait_bounds_early_stop_logs_to_deadline(self) -> None:
+        class Runner:
+            def __init__(self) -> None:
+                self.calls: list[tuple[list[str], dict[str, object]]] = []
+                self.results = iter(
+                    [
+                        SimpleNamespace(returncode=1, stdout="", stderr=""),
+                        SimpleNamespace(returncode=1, stdout="", stderr=""),
+                        SimpleNamespace(returncode=0, stdout="", stderr="diagnostic"),
+                    ]
+                )
+
+            def run(self, argv: list[str], **kwargs: object) -> SimpleNamespace:
+                self.calls.append((argv, kwargs))
+                return next(self.results)
+
+        runner = Runner()
+        with patch(
+            "live_gate_dev_smoke.time.monotonic",
+            side_effect=[100.0, 100.0, 101.0, 104.0],
+        ):
+            with self.assertRaisesRegex(CampaignError, "diagnostic"):
+                wait_for_exit_marker(
+                    runner,
+                    "container",
+                    marker_path="/run/result",
+                    label="target",
+                    timeout_seconds=5,
+                )
+        self.assertEqual(
+            [call[1]["timeout_seconds"] for call in runner.calls],
+            [5.0, 4.0, 1.0],
+        )
 
     def test_manifest_generator_actions_are_location_neutral(self) -> None:
         self.assertEqual(MANIFEST_SCHEMA_VERSION, 2)

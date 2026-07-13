@@ -207,6 +207,179 @@ class LiveGateDevSmokeVerifierTests(unittest.TestCase):
                 with self.assertRaises(VERIFIER.VerificationError):
                     VERIFIER.verify_provision_export_commands(records, provision)
 
+    def test_tmpfs_bind_result_requires_exact_tar_export_command(self) -> None:
+        gate = "haldir-gate-bind-123456789abc"
+
+        def record(argv: list[str], exit_code: int = 0) -> dict[str, object]:
+            return {"argv": argv, "exit_code": exit_code}
+
+        marker = [
+            "docker",
+            "exec",
+            gate,
+            "cat",
+            "/run/haldir-bind-exit",
+        ]
+        running_inspect = [
+            "docker",
+            "inspect",
+            "--format",
+            "{{.State.Running}}",
+            gate,
+        ]
+        export = [
+            "docker",
+            "exec",
+            gate,
+            "tar",
+            "-C",
+            "/evidence",
+            "-cf",
+            "-",
+            "bind-result.json",
+        ]
+        logs = ["docker", "logs", gate]
+        stop = ["docker", "stop", "--time", "1", gate]
+        valid = [record(marker), record(logs), record(export), record(stop)]
+        self.assertEqual(
+            VERIFIER.verify_gate_export_commands(valid, gate),
+            export,
+        )
+        slow_valid = [
+            record(marker, exit_code=1),
+            record(running_inspect),
+            *valid,
+        ]
+        self.assertEqual(
+            VERIFIER.verify_gate_export_commands(slow_valid, gate),
+            export,
+        )
+        invalid_sets = {
+            "missing export": [record(marker), record(logs), record(stop)],
+            "duplicate export": [
+                record(marker),
+                record(logs),
+                record(export),
+                record(export),
+                record(stop),
+            ],
+            "export before marker": [
+                record(export),
+                record(marker),
+                record(logs),
+                record(stop),
+            ],
+            "missing logs": [record(marker), record(export), record(stop)],
+            "duplicate logs": [
+                record(marker),
+                record(logs),
+                record(logs),
+                record(export),
+                record(stop),
+            ],
+            "failed logs": [
+                record(marker),
+                record(logs, exit_code=1),
+                record(export),
+                record(stop),
+            ],
+            "logs before marker": [
+                record(logs),
+                record(marker),
+                record(export),
+                record(stop),
+            ],
+            "logs after export": [
+                record(marker),
+                record(export),
+                record(logs),
+                record(stop),
+            ],
+            "stop before export": [
+                record(marker),
+                record(logs),
+                record(stop),
+                record(export),
+            ],
+            "failed marker without state inspect": [
+                record(marker, exit_code=1),
+                record(marker),
+                record(logs),
+                record(export),
+                record(stop),
+            ],
+            "poll after successful marker": [
+                record(marker),
+                record(marker, exit_code=1),
+                record(running_inspect),
+                record(logs),
+                record(export),
+                record(stop),
+            ],
+            "unexpected exec": [
+                record(marker),
+                record(logs),
+                record(export),
+                record(["docker", "exec", gate, "find", "/evidence"]),
+                record(stop),
+            ],
+            "unexpected start": [
+                record(marker),
+                record(logs),
+                record(export),
+                record(["docker", "start", gate]),
+                record(stop),
+            ],
+            "unsupported copy": [
+                record(marker),
+                record(logs),
+                record(export),
+                record(
+                    [
+                        "docker",
+                        "cp",
+                        f"{gate}:/evidence/bind-result.json",
+                        "$WORK/raw/bind-result.json",
+                    ]
+                ),
+                record(stop),
+            ],
+            "unsupported option copy": [
+                record(marker),
+                record(logs),
+                record(export),
+                record(
+                    [
+                        "docker",
+                        "cp",
+                        "--archive",
+                        f"{gate}:/evidence/bind-result.json",
+                        "$WORK/raw/bind-result.json",
+                    ]
+                ),
+                record(stop),
+            ],
+            "unsupported alias copy": [
+                record(marker),
+                record(logs),
+                record(export),
+                record(
+                    [
+                        "docker",
+                        "container",
+                        "cp",
+                        f"{gate}:/evidence/bind-result.json",
+                        "$WORK/raw/bind-result.json",
+                    ]
+                ),
+                record(stop),
+            ],
+        }
+        for label, records in invalid_sets.items():
+            with self.subTest(label=label):
+                with self.assertRaises(VERIFIER.VerificationError):
+                    VERIFIER.verify_gate_export_commands(records, gate)
+
     def test_duplicate_json_key_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "duplicate.json"
