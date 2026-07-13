@@ -1,0 +1,64 @@
+{
+  "ca_sha256_fingerprint": "183c368a99c46ba892902cc40c8b8e71fb5aabe6f29bf62ec5f7e4c39f5e4469",
+  "ca_subject": "CN=haldir-live-campaign-ephemeral-ca",
+  "identities": {
+    "admission-authority": {
+      "common_name": "haldir-admission-authority.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "0158a5f7a23f6ba1c046bbc0e7c1a25c6fd1c0691037e174c77a87a5def8c3ff",
+      "subject_alt_names": []
+    },
+    "controller-a": {
+      "common_name": "haldir-controller-a.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "8105f72701d3ae7f45128b037158713d2c1d8a308d13a40fb9dee76a0f368a5b",
+      "subject_alt_names": []
+    },
+    "controller-b": {
+      "common_name": "haldir-controller-b.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "23e552acaf386bd14d7906e80475682d53e33d65b95db6134466316bdbe7b023",
+      "subject_alt_names": []
+    },
+    "gate": {
+      "common_name": "haldir-gate.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "7896bd210e719ad5d98c6919739d56550785f784095dda9c9b1843528920a009",
+      "subject_alt_names": []
+    },
+    "lifecycle": {
+      "common_name": "haldir-lifecycle.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "1a4031bcdf3288fbc8215d2dbfaebbad654a745eb49f74492b7f313e74f53491",
+      "subject_alt_names": []
+    },
+    "mission-authority": {
+      "common_name": "haldir-mission-authority.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "651313bf95443f22c5404bbf1e02ac91183088ccb5dd86adb6ed1d82d500566e",
+      "subject_alt_names": []
+    },
+    "observer": {
+      "common_name": "haldir-observer.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "097dadbf0a108fc102be9ab9f62bd6d6cc28c79371eb577622458fe670a38c93",
+      "subject_alt_names": []
+    },
+    "robot-crebain": {
+      "common_name": "haldir-robot-crebain.secure-reference-v1",
+      "purpose": "client",
+      "sha256_fingerprint": "ad83698ca4e6e512379e9f7211bc0403df52eac98b6a3c2e3df40bbff5535d97",
+      "subject_alt_names": []
+    },
+    "router": {
+      "common_name": "router.haldir.invalid",
+      "purpose": "server",
+      "sha256_fingerprint": "c729a97749313a675ce6a35619c8bd6645ae159811b55316d7f03864fd8a4cdc",
+      "subject_alt_names": [
+        "DNS:router.haldir.invalid"
+      ]
+    }
+  },
+  "private_keys_retained": false,
+  "schema_version": 1
+}

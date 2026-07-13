@@ -24,12 +24,13 @@ fully proven; **not started** means no qualifying implementation/evidence is pre
 
 The offline P0 reference-monitor core is implemented and its local exit gate passes.
 The full Haldir project remains incomplete: production durable recovery, selection
-of the exact NCP adapter and strict transport in a runnable Gate, receiver-observed
-secure transport/ACL proof, Crebain and Engram integration, backend-conformance
-research, performance/endurance campaigns, and an experimental release are outstanding.
+of the exact NCP adapter and strict transport in a runnable Gate, certificate-lifecycle/
+reconnect and bypass proof beyond the retained synthetic ACL subset, Crebain and Engram
+integration, backend-conformance research, performance/endurance campaigns, and an
+experimental release are outstanding.
 Those stronger properties remain explicitly unproven or out of scope under
-`CL-DURABLE-01`, `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
-`CL-PRODUCTION-01`.
+`CL-DURABLE-01`, the limitations inside `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`,
+`CL-TIMING-01`, and `CL-PRODUCTION-01`.
 
 ## Phase ledger
 
@@ -45,17 +46,17 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
-| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); the Gate runtime does not select the exact frame adapter and no live transport evidence exists (`CL-LIVE-TRANSPORT-01`). |
+| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); valid exact JSON also traverses the synthetic live campaign, but the Gate runtime still does not select the exact frame adapter (`CL-LIVE-TRANSPORT-01`). |
 | 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, and a bounded locked evidence directory manager exist (`CL-CONFIG-01`, `CL-DURABLE-STARTUP-DEV-01`, `CL-EVIDENCE-MANAGER-01`); service/package loading, bounded async queues, actor journal selection, and crash-tested recovery do not (`CL-DURABLE-01`). |
-| 11 — secure Zenoh and ACL proof | Partial | Exact routes, an off-by-default TLS-only Zenoh 1.9 boundary, bounded ingress, typed exact-command publication, and a deterministic immutable-image/default-deny/direction-specific ACL package are statically tested (`CL-TRANSPORT-BOUNDARY-01`). A receiver-observed mTLS principal×route campaign, live runtime wiring, and complete bypass inventory do not yet exist (`CL-LIVE-TRANSPORT-01`). |
+| 11 — secure Zenoh and ACL proof | Partial | Exact routes, a TLS-only Zenoh 1.9 boundary, bounded ingress, typed exact-command publication, and an immutable-image/default-deny/direction-specific ACL package are statically tested (`CL-TRANSPORT-BOUNDARY-01`). The retained ephemeral-PKI campaign receiver-observes the fixed final-command/controller-intent subset across all configured principals (`CL-LIVE-TRANSPORT-01`). Runnable Gate wiring, certificate lifecycle/reconnect, the full operation/route matrix, production credential custody, and bypass inventory remain open. |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
-| 14 — deterministic acceptance campaign | Partial | The in-process adversarial range is green (`CL-GATE-MEDIATION-01`); live transport/backend scenarios remain absent. |
+| 14 — deterministic acceptance campaign | Partial | The in-process adversarial range and narrow synthetic transport ACL campaign are green (`CL-GATE-MEDIATION-01`, `CL-LIVE-TRANSPORT-01`); backend, service, and plant scenarios remain absent. |
 | 15 — PX4-SITL/Gazebo | Not started | No qualifying Haldir integration evidence. |
 | 16 — Galadriel advisory evidence | Not started | No advisory-only contract/runtime integration evidence. |
 | 17 — trace exports | Not started | No verified export adapters or consumer replay evidence. |
 | 18 — backend-aware admission research | Not started | No NEST reconstruction, independent backend, NIR, or XyloSim campaign (`CL-BACKEND-01`). |
-| 19 — adversarial range | Partial | P0 contract/state/policy attacks exist; live bypass, transport, backend, and plant campaigns do not. |
+| 19 — adversarial range | Partial | P0 contract/state/policy attacks and the synthetic command/intent ACL subset exist; live service bypass, certificate-lifecycle, backend, and plant campaigns do not. |
 | 20 — performance and reliability | Not started | No p99/p99.9, overload, soak, or recovery campaign (`CL-TIMING-01`). |
 | 21 — first experimental release | Partial | CI/supply-chain hardening is underway; no SBOM, provenance, signed tag, release artifacts, or release evidence (`CL-PRODUCTION-01`). |
 | 22 — future NCP authority increments | Not started / upstream-triggered | NCP v0.8.0 still defers plant authority, publisher binding, and apply/stop acknowledgements. |
@@ -77,8 +78,10 @@ Those stronger properties remain explicitly unproven or out of scope under
 - Haldir's static secure-reference profile now makes Gate the sole exact-command
   `put` ingress principal and confines each controller to its exact intent route.
   Because Zenoh authorizes publisher ingress and receiver egress separately, the
-  generated rules are direction-specific. `CL-LIVE-TRANSPORT-01` remains UNPROVEN
-  until receiver-observed live tests exercise the pinned router and real certificates.
+  generated rules are direction-specific. The source-bound retained campaign now
+  receiver-observes that fixed command/intent subset on the pinned router with ephemeral
+  certificates and all eight configured principals (`CL-LIVE-TRANSPORT-01`); its stated
+  service, lifecycle, trust-union, application, and bypass limitations remain open.
 
 ## Next completion slice, reviewed from five lenses
 
@@ -91,7 +94,7 @@ Those stronger properties remain explicitly unproven or out of scope under
    evidence semantics under fault injection.
 4. **Operations/security:** wire the strict transport into a single-owner Gate
    service with a reserved output slot and two-phase publication state; run the
-   receiver-observed mTLS/ACL matrix, reconnect/expiry tests, and bypass inventory.
+   remaining operation/route matrix, reconnect/revocation/expiry tests, and bypass inventory.
 5. **Research/release honesty:** integrate Crebain then Engram in that order, run the
    registered campaigns, and create an experimental release only after every stronger
    claim has direct evidence.

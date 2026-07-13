@@ -1,0 +1,26 @@
+{
+  "builder_image": "docker.io/library/rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc",
+  "cleanup": {
+    "network_removed": true,
+    "private_material_removed": true,
+    "probe_container_removed": true,
+    "probe_image_removed": true,
+    "router_container_removed": true
+  },
+  "finished_at_utc": "2026-07-13T02:20:49Z",
+  "limitations": [
+    "stock Zenoh 1.9 combines WebPKI roots with the configured custom CA",
+    "the synthetic harness holds all ephemeral client keys in one test container",
+    "local put return values are not used as delivery evidence",
+    "this does not prove Gate service wiring, credential custody, Crebain application, or complete mediation"
+  ],
+  "profile_id": "haldir-secure-reference-v1",
+  "profile_sha256": "76a10873155ef5fe85f13117fdf6fcb6f3938399823cbb6af9bff523a3b54e06",
+  "result_sha256": "6296ddc5759d057dd42abd336070da66c327bfc9e94f0af4a723c3f3dcbc9527",
+  "router_image": "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+  "schema_version": 1,
+  "source_commit": "a10f41f7edd2309520652b87e4d4c5c1e4cbf3c8",
+  "source_dirty": false,
+  "source_snapshot_sha256": "7cd593f27f2c93eafc9cd0ed335abf18305ed8cc0ce9e6ebc91040a9e44a0bed",
+  "started_at_utc": "2026-07-13T02:18:14Z"
+}

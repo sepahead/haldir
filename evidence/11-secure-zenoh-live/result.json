@@ -1,0 +1,257 @@
+{
+  "attempts": [
+    {
+      "case_id": "controller-a-final-subscribe-denied",
+      "expected_receivers": [],
+      "local_declare_ok": true,
+      "local_put_ok": null,
+      "operation": "subscribe",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "controller-a"
+    },
+    {
+      "case_id": "final-positive-pre",
+      "expected_receivers": [
+        "observer",
+        "robot-crebain"
+      ],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "gate"
+    },
+    {
+      "case_id": "final-denied-admission-authority",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "admission-authority"
+    },
+    {
+      "case_id": "final-denied-controller-a",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "controller-a"
+    },
+    {
+      "case_id": "final-denied-controller-b",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "controller-b"
+    },
+    {
+      "case_id": "final-denied-lifecycle",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "lifecycle"
+    },
+    {
+      "case_id": "final-denied-mission-authority",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "mission-authority"
+    },
+    {
+      "case_id": "final-denied-observer",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "observer"
+    },
+    {
+      "case_id": "final-denied-robot-crebain",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "robot-crebain"
+    },
+    {
+      "case_id": "final-positive-post",
+      "expected_receivers": [
+        "observer",
+        "robot-crebain"
+      ],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/command",
+      "sender": "gate"
+    },
+    {
+      "case_id": "intent-a-positive-pre",
+      "expected_receivers": [
+        "gate"
+      ],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-a",
+      "sender": "controller-a"
+    },
+    {
+      "case_id": "intent-a-denied-controller-b",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-a",
+      "sender": "controller-b"
+    },
+    {
+      "case_id": "intent-a-positive-post",
+      "expected_receivers": [
+        "gate"
+      ],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-a",
+      "sender": "controller-a"
+    },
+    {
+      "case_id": "intent-b-positive-pre",
+      "expected_receivers": [
+        "gate"
+      ],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-b",
+      "sender": "controller-b"
+    },
+    {
+      "case_id": "intent-b-denied-controller-a",
+      "expected_receivers": [],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-b",
+      "sender": "controller-a"
+    },
+    {
+      "case_id": "intent-b-positive-post",
+      "expected_receivers": [
+        "gate"
+      ],
+      "local_put_ok": true,
+      "operation": "put",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-b",
+      "sender": "controller-b"
+    }
+  ],
+  "callback_overflow": false,
+  "denied_case_ids": [
+    "final-denied-admission-authority",
+    "final-denied-controller-a",
+    "final-denied-controller-b",
+    "final-denied-lifecycle",
+    "final-denied-mission-authority",
+    "final-denied-observer",
+    "final-denied-robot-crebain",
+    "intent-a-denied-controller-b",
+    "intent-b-denied-controller-a",
+    "controller-a-final-subscribe-denied"
+  ],
+  "no_certificate_rejected": true,
+  "observations": [
+    {
+      "case_id": "final-positive-pre",
+      "receiver": "robot-crebain",
+      "route": "haldir-ncp/session/uav-1/command"
+    },
+    {
+      "case_id": "final-positive-pre",
+      "receiver": "observer",
+      "route": "haldir-ncp/session/uav-1/command"
+    },
+    {
+      "case_id": "final-positive-post",
+      "receiver": "robot-crebain",
+      "route": "haldir-ncp/session/uav-1/command"
+    },
+    {
+      "case_id": "final-positive-post",
+      "receiver": "observer",
+      "route": "haldir-ncp/session/uav-1/command"
+    },
+    {
+      "case_id": "intent-a-positive-pre",
+      "receiver": "gate",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-a"
+    },
+    {
+      "case_id": "intent-a-positive-post",
+      "receiver": "gate",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-a"
+    },
+    {
+      "case_id": "intent-b-positive-pre",
+      "receiver": "gate",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-b"
+    },
+    {
+      "case_id": "intent-b-positive-post",
+      "receiver": "gate",
+      "route": "haldir-ncp/session/uav-1/haldir/intent/controller-b"
+    }
+  ],
+  "quarantine_ms": 2000,
+  "run_id": "haldir-live-acl-1783909235821737911",
+  "schema_version": 1,
+  "sessions": [
+    {
+      "label": "gate-final-sender",
+      "zid": "b2f9d1d4f004e0ae283f7aff904bd296"
+    },
+    {
+      "label": "gate-intent-receiver",
+      "zid": "47b60f99c542e681556be80cc8800208"
+    },
+    {
+      "label": "admission-authority-attacker",
+      "zid": "4c2db9b7309f3db9f0be67955259ac"
+    },
+    {
+      "label": "controller-a-attacker",
+      "zid": "d632b9a9f0697cfdb5a1cf78ba336910"
+    },
+    {
+      "label": "controller-b-attacker",
+      "zid": "c272cfb4e10be0756bc97e278cc687e"
+    },
+    {
+      "label": "lifecycle-attacker",
+      "zid": "94fcccd71604be0336d406729ab12b38"
+    },
+    {
+      "label": "mission-authority-attacker",
+      "zid": "537e34ea76083cba175e30b77bfac7c9"
+    },
+    {
+      "label": "observer-attacker",
+      "zid": "7f750845df77703c18a09ec964f72222"
+    },
+    {
+      "label": "robot-crebain-attacker",
+      "zid": "99eee4da1ab1f76aa0d34e771ed9e368"
+    },
+    {
+      "label": "robot-crebain-final-receiver",
+      "zid": "67b608be8d478cd29388b7b030523f80"
+    },
+    {
+      "label": "observer-final-receiver",
+      "zid": "1e3f135025baaad0b35a3046deee3422"
+    },
+    {
+      "label": "controller-a-final-receiver",
+      "zid": "1145348518a63c1178ec483d327fb908"
+    }
+  ],
+  "status": "pass"
+}

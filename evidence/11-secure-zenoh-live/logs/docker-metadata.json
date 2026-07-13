@@ -1,0 +1,779 @@
+{
+  "builder_image": [
+    {
+      "Architecture": "arm64",
+      "Author": "",
+      "Comment": "buildkit.dockerfile.v0",
+      "Config": {
+        "AttachStderr": false,
+        "AttachStdin": false,
+        "AttachStdout": false,
+        "Cmd": [
+          "bash"
+        ],
+        "Domainname": "",
+        "Entrypoint": null,
+        "Env": [
+          "PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "RUSTUP_HOME=/usr/local/rustup",
+          "CARGO_HOME=/usr/local/cargo",
+          "RUST_VERSION=1.96.0"
+        ],
+        "Hostname": "",
+        "Image": "",
+        "Labels": {
+          "org.opencontainers.image.source": "https://github.com/rust-lang/docker-rust"
+        },
+        "OnBuild": null,
+        "OpenStdin": false,
+        "StdinOnce": false,
+        "Tty": false,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": ""
+      },
+      "Created": "2026-06-24T05:09:58.223634965Z",
+      "DockerVersion": "27.4.0",
+      "GraphDriver": {
+        "Data": null,
+        "Name": "overlayfs"
+      },
+      "Id": "sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc",
+      "Metadata": {
+        "LastTagTime": "2026-07-13T02:18:15.577867886Z"
+      },
+      "Os": "linux",
+      "Parent": "",
+      "RepoDigests": [
+        "rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc"
+      ],
+      "RepoTags": [],
+      "RootFS": {
+        "Layers": [
+          "sha256:84779591fc57aec53d6ea41b81ecda94b4246d98a671768e35b93d0e59937bb6",
+          "sha256:1a300d7ba41c0e1d8cc2cdbe1a2d853b84062a9c3871bb9acec03f2bb6fb66a4",
+          "sha256:f28dfcac8971c89facb6efb8523905973b1c3eff2b1fad7f6b294ca9d8a967b2",
+          "sha256:483ee8bf286eb9514f4b3439f518c3d7aab294d57cc6ce2c81e5444c04282e72",
+          "sha256:bf5a8aa096dc92e07cd17e61cf72d04f0bf2696191a635d64fffa986a040f992"
+        ],
+        "Type": "layers"
+      },
+      "Size": 519858854,
+      "Variant": "v8"
+    }
+  ],
+  "docker_version": {
+    "Client": {
+      "ApiVersion": "1.47",
+      "Arch": "arm64",
+      "BuildTime": "Fri Apr 18 09:49:45 2025",
+      "Context": "colima",
+      "DefaultAPIVersion": "1.49",
+      "GitCommit": "4eba377",
+      "GoVersion": "go1.23.8",
+      "Os": "darwin",
+      "Version": "28.1.1"
+    },
+    "Server": {
+      "ApiVersion": "1.47",
+      "Arch": "arm64",
+      "BuildTime": "2024-12-07T10:39:01.000000000+00:00",
+      "Components": [
+        {
+          "Details": {
+            "ApiVersion": "1.47",
+            "Arch": "arm64",
+            "BuildTime": "Sat Dec  7 10:39:01 2024",
+            "Experimental": "false",
+            "GitCommit": "92a8393",
+            "GoVersion": "go1.22.10",
+            "KernelVersion": "6.8.0-50-generic",
+            "MinAPIVersion": "1.24",
+            "Os": "linux"
+          },
+          "Name": "Engine",
+          "Version": "27.4.0"
+        },
+        {
+          "Details": {
+            "GitCommit": "88bf19b2105c8b17560993bee28a01ddc2f97182"
+          },
+          "Name": "containerd",
+          "Version": "1.7.24"
+        },
+        {
+          "Details": {
+            "GitCommit": "v1.2.2-0-g7cb3632"
+          },
+          "Name": "runc",
+          "Version": "1.2.2"
+        },
+        {
+          "Details": {
+            "GitCommit": "de40ad0"
+          },
+          "Name": "docker-init",
+          "Version": "0.19.0"
+        }
+      ],
+      "GitCommit": "92a8393",
+      "GoVersion": "go1.22.10",
+      "KernelVersion": "6.8.0-50-generic",
+      "MinAPIVersion": "1.24",
+      "Os": "linux",
+      "Platform": {
+        "Name": "Docker Engine - Community"
+      },
+      "Version": "27.4.0"
+    }
+  },
+  "probe_container": [
+    {
+      "AppArmorProfile": "docker-default",
+      "Args": [],
+      "Config": {
+        "AttachStderr": true,
+        "AttachStdin": false,
+        "AttachStdout": true,
+        "Cmd": null,
+        "Domainname": "",
+        "Entrypoint": [
+          "/usr/local/bin/haldir-live-secure-acl-campaign"
+        ],
+        "Env": [
+          "HALDIR_LIVE_ACL_CONFIG_DIR=/campaign",
+          "HALDIR_LIVE_ACL_RESULT_PATH=/evidence/result.json",
+          "PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "RUSTUP_HOME=/usr/local/rustup",
+          "CARGO_HOME=/usr/local/cargo",
+          "RUST_VERSION=1.96.0"
+        ],
+        "Hostname": "f5a0a3e00a31",
+        "Image": "haldir-live-secure-acl-probe:50fb3b094153",
+        "Labels": {
+          "org.opencontainers.image.source": "https://github.com/rust-lang/docker-rust"
+        },
+        "OnBuild": null,
+        "OpenStdin": false,
+        "StdinOnce": false,
+        "Tty": false,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": ""
+      },
+      "Created": "2026-07-13T02:20:35.696165922Z",
+      "Driver": "overlayfs",
+      "ExecIDs": null,
+      "GraphDriver": {
+        "Data": null,
+        "Name": "overlayfs"
+      },
+      "HostConfig": {
+        "AutoRemove": false,
+        "Binds": null,
+        "BlkioDeviceReadBps": [],
+        "BlkioDeviceReadIOps": [],
+        "BlkioDeviceWriteBps": [],
+        "BlkioDeviceWriteIOps": [],
+        "BlkioWeight": 0,
+        "BlkioWeightDevice": [],
+        "CapAdd": null,
+        "CapDrop": [
+          "ALL"
+        ],
+        "Cgroup": "",
+        "CgroupParent": "",
+        "CgroupnsMode": "private",
+        "ConsoleSize": [
+          0,
+          0
+        ],
+        "ContainerIDFile": "",
+        "CpuCount": 0,
+        "CpuPercent": 0,
+        "CpuPeriod": 0,
+        "CpuQuota": 0,
+        "CpuRealtimePeriod": 0,
+        "CpuRealtimeRuntime": 0,
+        "CpuShares": 0,
+        "CpusetCpus": "",
+        "CpusetMems": "",
+        "DeviceCgroupRules": null,
+        "DeviceRequests": null,
+        "Devices": [],
+        "Dns": [],
+        "DnsOptions": [],
+        "DnsSearch": [],
+        "ExtraHosts": null,
+        "GroupAdd": null,
+        "IOMaximumBandwidth": 0,
+        "IOMaximumIOps": 0,
+        "IpcMode": "private",
+        "Isolation": "",
+        "Links": null,
+        "LogConfig": {
+          "Config": {},
+          "Type": "json-file"
+        },
+        "MaskedPaths": [
+          "/proc/asound",
+          "/proc/acpi",
+          "/proc/kcore",
+          "/proc/keys",
+          "/proc/latency_stats",
+          "/proc/timer_list",
+          "/proc/timer_stats",
+          "/proc/sched_debug",
+          "/proc/scsi",
+          "/sys/firmware",
+          "/sys/devices/virtual/powercap"
+        ],
+        "Memory": 0,
+        "MemoryReservation": 0,
+        "MemorySwap": 0,
+        "MemorySwappiness": null,
+        "Mounts": [
+          {
+            "ReadOnly": true,
+            "Source": "$WORK/client-secrets",
+            "Target": "/run/secrets/haldir-secure-reference-v1",
+            "Type": "bind"
+          },
+          {
+            "ReadOnly": true,
+            "Source": "$WORK/campaign",
+            "Target": "/campaign",
+            "Type": "bind"
+          },
+          {
+            "Source": "$WORK/raw",
+            "Target": "/evidence",
+            "Type": "bind"
+          }
+        ],
+        "NanoCpus": 0,
+        "NetworkMode": "haldir-live-50fb3b094153",
+        "OomKillDisable": null,
+        "OomScoreAdj": 0,
+        "PidMode": "",
+        "PidsLimit": null,
+        "PortBindings": {},
+        "Privileged": false,
+        "PublishAllPorts": false,
+        "ReadonlyPaths": [
+          "/proc/bus",
+          "/proc/fs",
+          "/proc/irq",
+          "/proc/sys",
+          "/proc/sysrq-trigger"
+        ],
+        "ReadonlyRootfs": true,
+        "RestartPolicy": {
+          "MaximumRetryCount": 0,
+          "Name": "no"
+        },
+        "Runtime": "runc",
+        "SecurityOpt": [
+          "no-new-privileges"
+        ],
+        "ShmSize": 67108864,
+        "Tmpfs": {
+          "/tmp": "rw,noexec,nosuid,nodev,size=16m"
+        },
+        "UTSMode": "",
+        "Ulimits": [],
+        "UsernsMode": "",
+        "VolumeDriver": "",
+        "VolumesFrom": null
+      },
+      "HostnamePath": "/var/lib/docker/containers/f5a0a3e00a31b12c642f1b30bd4f42e585dc6538d61ea4ef819d1f64a499ac1c/hostname",
+      "HostsPath": "/var/lib/docker/containers/f5a0a3e00a31b12c642f1b30bd4f42e585dc6538d61ea4ef819d1f64a499ac1c/hosts",
+      "Id": "f5a0a3e00a31b12c642f1b30bd4f42e585dc6538d61ea4ef819d1f64a499ac1c",
+      "Image": "sha256:907544a1ec6e46f54d17bb3b41c104c4ea897efd860b2e1ab0d6c7ef938306ff",
+      "LogPath": "/var/lib/docker/containers/f5a0a3e00a31b12c642f1b30bd4f42e585dc6538d61ea4ef819d1f64a499ac1c/f5a0a3e00a31b12c642f1b30bd4f42e585dc6538d61ea4ef819d1f64a499ac1c-json.log",
+      "MountLabel": "",
+      "Mounts": [
+        {
+          "Destination": "/run/secrets/haldir-secure-reference-v1",
+          "Mode": "",
+          "Propagation": "rprivate",
+          "RW": false,
+          "Source": "$WORK/client-secrets",
+          "Type": "bind"
+        },
+        {
+          "Destination": "/campaign",
+          "Mode": "",
+          "Propagation": "rprivate",
+          "RW": false,
+          "Source": "$WORK/campaign",
+          "Type": "bind"
+        },
+        {
+          "Destination": "/evidence",
+          "Mode": "",
+          "Propagation": "rprivate",
+          "RW": true,
+          "Source": "$WORK/raw",
+          "Type": "bind"
+        }
+      ],
+      "Name": "/haldir-probe-50fb3b094153",
+      "NetworkSettings": {
+        "Bridge": "",
+        "EndpointID": "",
+        "Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "HairpinMode": false,
+        "IPAddress": "",
+        "IPPrefixLen": 0,
+        "IPv6Gateway": "",
+        "LinkLocalIPv6Address": "",
+        "LinkLocalIPv6PrefixLen": 0,
+        "MacAddress": "",
+        "Networks": {
+          "haldir-live-50fb3b094153": {
+            "Aliases": null,
+            "DNSNames": [
+              "haldir-probe-50fb3b094153",
+              "f5a0a3e00a31"
+            ],
+            "DriverOpts": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAMConfig": null,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "Links": null,
+            "MacAddress": "",
+            "NetworkID": "791e3217733c2ca26d86bff62f97692e6e5a769538c06becb1b82e27e5fc866f"
+          }
+        },
+        "Ports": {},
+        "SandboxID": "",
+        "SandboxKey": "",
+        "SecondaryIPAddresses": null,
+        "SecondaryIPv6Addresses": null
+      },
+      "Path": "/usr/local/bin/haldir-live-secure-acl-campaign",
+      "Platform": "linux",
+      "ProcessLabel": "",
+      "ResolvConfPath": "/var/lib/docker/containers/f5a0a3e00a31b12c642f1b30bd4f42e585dc6538d61ea4ef819d1f64a499ac1c/resolv.conf",
+      "RestartCount": 0,
+      "State": {
+        "Dead": false,
+        "Error": "",
+        "ExitCode": 0,
+        "FinishedAt": "2026-07-13T02:20:48.946753542Z",
+        "OOMKilled": false,
+        "Paused": false,
+        "Pid": 0,
+        "Restarting": false,
+        "Running": false,
+        "StartedAt": "2026-07-13T02:20:35.73891367Z",
+        "Status": "exited"
+      }
+    }
+  ],
+  "probe_image": [
+    {
+      "Architecture": "arm64",
+      "Author": "",
+      "Comment": "buildkit.dockerfile.v0",
+      "Config": {
+        "AttachStderr": false,
+        "AttachStdin": false,
+        "AttachStdout": false,
+        "Cmd": null,
+        "Domainname": "",
+        "Entrypoint": [
+          "/usr/local/bin/haldir-live-secure-acl-campaign"
+        ],
+        "Env": [
+          "PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "RUSTUP_HOME=/usr/local/rustup",
+          "CARGO_HOME=/usr/local/cargo",
+          "RUST_VERSION=1.96.0"
+        ],
+        "Hostname": "",
+        "Image": "",
+        "Labels": {
+          "org.opencontainers.image.source": "https://github.com/rust-lang/docker-rust"
+        },
+        "OnBuild": null,
+        "OpenStdin": false,
+        "StdinOnce": false,
+        "Tty": false,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": ""
+      },
+      "Created": "2026-07-13T04:20:32.720155687+02:00",
+      "DockerVersion": "27.4.0",
+      "GraphDriver": {
+        "Data": null,
+        "Name": "overlayfs"
+      },
+      "Id": "sha256:907544a1ec6e46f54d17bb3b41c104c4ea897efd860b2e1ab0d6c7ef938306ff",
+      "Metadata": {
+        "LastTagTime": "2026-07-13T02:20:33.21205683Z"
+      },
+      "Os": "linux",
+      "Parent": "",
+      "RepoDigests": [
+        "haldir-live-secure-acl-probe@sha256:907544a1ec6e46f54d17bb3b41c104c4ea897efd860b2e1ab0d6c7ef938306ff"
+      ],
+      "RepoTags": [
+        "haldir-live-secure-acl-probe:50fb3b094153"
+      ],
+      "RootFS": {
+        "Layers": [
+          "sha256:84779591fc57aec53d6ea41b81ecda94b4246d98a671768e35b93d0e59937bb6",
+          "sha256:1a300d7ba41c0e1d8cc2cdbe1a2d853b84062a9c3871bb9acec03f2bb6fb66a4",
+          "sha256:f28dfcac8971c89facb6efb8523905973b1c3eff2b1fad7f6b294ca9d8a967b2",
+          "sha256:483ee8bf286eb9514f4b3439f518c3d7aab294d57cc6ce2c81e5444c04282e72",
+          "sha256:bf5a8aa096dc92e07cd17e61cf72d04f0bf2696191a635d64fffa986a040f992",
+          "sha256:3596c6eab1724fad49a1e9c25ab47219a30d067f46f456ca6a23f8395267f088"
+        ],
+        "Type": "layers"
+      },
+      "Size": 525967262,
+      "Variant": "v8"
+    }
+  ],
+  "router_container": [
+    {
+      "AppArmorProfile": "docker-default",
+      "Args": [
+        "--config",
+        "/etc/haldir-secure-reference-v1/router.json5",
+        "--adminspace-permissions",
+        "none",
+        "--cfg=adminspace/enabled:false",
+        "--cfg=plugins_loading/enabled:false"
+      ],
+      "Config": {
+        "AttachStderr": false,
+        "AttachStdin": false,
+        "AttachStdout": false,
+        "Cmd": [
+          "--config",
+          "/etc/haldir-secure-reference-v1/router.json5",
+          "--adminspace-permissions",
+          "none",
+          "--cfg=adminspace/enabled:false",
+          "--cfg=plugins_loading/enabled:false"
+        ],
+        "Domainname": "",
+        "Entrypoint": [
+          "/entrypoint.sh"
+        ],
+        "Env": [
+          "RUST_LOG=zenoh::net::routing::interceptor::access_control=trace,zenoh_link_tls=debug,zenohd=info",
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "BINARY=zenohd"
+        ],
+        "ExposedPorts": {
+          "7446/udp": {},
+          "7447/tcp": {},
+          "8000/tcp": {}
+        },
+        "Hostname": "ecadebe63dca",
+        "Image": "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+        "Labels": {
+          "org.opencontainers.image.licenses": "EPL-2.0 OR Apache-2.0",
+          "org.opencontainers.image.source": "https://github.com/eclipse-zenoh/zenoh"
+        },
+        "OnBuild": null,
+        "OpenStdin": false,
+        "StdinOnce": false,
+        "Tty": false,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": "/"
+      },
+      "Created": "2026-07-13T02:20:34.445794839Z",
+      "Driver": "overlayfs",
+      "ExecIDs": null,
+      "GraphDriver": {
+        "Data": null,
+        "Name": "overlayfs"
+      },
+      "HostConfig": {
+        "AutoRemove": false,
+        "Binds": null,
+        "BlkioDeviceReadBps": [],
+        "BlkioDeviceReadIOps": [],
+        "BlkioDeviceWriteBps": [],
+        "BlkioDeviceWriteIOps": [],
+        "BlkioWeight": 0,
+        "BlkioWeightDevice": [],
+        "CapAdd": null,
+        "CapDrop": [
+          "ALL"
+        ],
+        "Cgroup": "",
+        "CgroupParent": "",
+        "CgroupnsMode": "private",
+        "ConsoleSize": [
+          0,
+          0
+        ],
+        "ContainerIDFile": "",
+        "CpuCount": 0,
+        "CpuPercent": 0,
+        "CpuPeriod": 0,
+        "CpuQuota": 0,
+        "CpuRealtimePeriod": 0,
+        "CpuRealtimeRuntime": 0,
+        "CpuShares": 0,
+        "CpusetCpus": "",
+        "CpusetMems": "",
+        "DeviceCgroupRules": null,
+        "DeviceRequests": null,
+        "Devices": [],
+        "Dns": [],
+        "DnsOptions": [],
+        "DnsSearch": [],
+        "ExtraHosts": null,
+        "GroupAdd": null,
+        "IOMaximumBandwidth": 0,
+        "IOMaximumIOps": 0,
+        "IpcMode": "private",
+        "Isolation": "",
+        "Links": null,
+        "LogConfig": {
+          "Config": {},
+          "Type": "json-file"
+        },
+        "MaskedPaths": [
+          "/proc/asound",
+          "/proc/acpi",
+          "/proc/kcore",
+          "/proc/keys",
+          "/proc/latency_stats",
+          "/proc/timer_list",
+          "/proc/timer_stats",
+          "/proc/sched_debug",
+          "/proc/scsi",
+          "/sys/firmware",
+          "/sys/devices/virtual/powercap"
+        ],
+        "Memory": 0,
+        "MemoryReservation": 0,
+        "MemorySwap": 0,
+        "MemorySwappiness": null,
+        "Mounts": [
+          {
+            "ReadOnly": true,
+            "Source": "$WORK/rendered",
+            "Target": "/etc/haldir-secure-reference-v1",
+            "Type": "bind"
+          },
+          {
+            "ReadOnly": true,
+            "Source": "$WORK/router-secrets",
+            "Target": "/run/secrets/haldir-secure-reference-v1",
+            "Type": "bind"
+          }
+        ],
+        "NanoCpus": 0,
+        "NetworkMode": "haldir-live-50fb3b094153",
+        "OomKillDisable": null,
+        "OomScoreAdj": 0,
+        "PidMode": "",
+        "PidsLimit": null,
+        "PortBindings": {},
+        "Privileged": false,
+        "PublishAllPorts": false,
+        "ReadonlyPaths": [
+          "/proc/bus",
+          "/proc/fs",
+          "/proc/irq",
+          "/proc/sys",
+          "/proc/sysrq-trigger"
+        ],
+        "ReadonlyRootfs": true,
+        "RestartPolicy": {
+          "MaximumRetryCount": 0,
+          "Name": "no"
+        },
+        "Runtime": "runc",
+        "SecurityOpt": [
+          "no-new-privileges"
+        ],
+        "ShmSize": 67108864,
+        "Tmpfs": {
+          "/tmp": "rw,noexec,nosuid,nodev,size=16m"
+        },
+        "UTSMode": "",
+        "Ulimits": [],
+        "UsernsMode": "",
+        "VolumeDriver": "",
+        "VolumesFrom": null
+      },
+      "HostnamePath": "/var/lib/docker/containers/ecadebe63dcafbf755369017cd9ca026efc540351a28bcfa692cb36e75c0c1a2/hostname",
+      "HostsPath": "/var/lib/docker/containers/ecadebe63dcafbf755369017cd9ca026efc540351a28bcfa692cb36e75c0c1a2/hosts",
+      "Id": "ecadebe63dcafbf755369017cd9ca026efc540351a28bcfa692cb36e75c0c1a2",
+      "Image": "sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+      "LogPath": "/var/lib/docker/containers/ecadebe63dcafbf755369017cd9ca026efc540351a28bcfa692cb36e75c0c1a2/ecadebe63dcafbf755369017cd9ca026efc540351a28bcfa692cb36e75c0c1a2-json.log",
+      "MountLabel": "",
+      "Mounts": [
+        {
+          "Destination": "/etc/haldir-secure-reference-v1",
+          "Mode": "",
+          "Propagation": "rprivate",
+          "RW": false,
+          "Source": "$WORK/rendered",
+          "Type": "bind"
+        },
+        {
+          "Destination": "/run/secrets/haldir-secure-reference-v1",
+          "Mode": "",
+          "Propagation": "rprivate",
+          "RW": false,
+          "Source": "$WORK/router-secrets",
+          "Type": "bind"
+        }
+      ],
+      "Name": "/haldir-router-50fb3b094153",
+      "NetworkSettings": {
+        "Bridge": "",
+        "EndpointID": "",
+        "Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "HairpinMode": false,
+        "IPAddress": "",
+        "IPPrefixLen": 0,
+        "IPv6Gateway": "",
+        "LinkLocalIPv6Address": "",
+        "LinkLocalIPv6PrefixLen": 0,
+        "MacAddress": "",
+        "Networks": {
+          "haldir-live-50fb3b094153": {
+            "Aliases": [
+              "router.haldir.invalid"
+            ],
+            "DNSNames": [
+              "haldir-router-50fb3b094153",
+              "router.haldir.invalid",
+              "ecadebe63dca"
+            ],
+            "DriverOpts": null,
+            "EndpointID": "398e4441fb58a5fb8857877b0f70c015d7800d316b31cf1f16b2f6c719d2c94c",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAMConfig": null,
+            "IPAddress": "172.21.0.2",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "Links": null,
+            "MacAddress": "02:42:ac:15:00:02",
+            "NetworkID": "791e3217733c2ca26d86bff62f97692e6e5a769538c06becb1b82e27e5fc866f"
+          }
+        },
+        "Ports": {},
+        "SandboxID": "ddb6248ece630750c6f8a0537b7cbb1aba5b1165eca89013c5a986910c506894",
+        "SandboxKey": "/var/run/docker/netns/ddb6248ece63",
+        "SecondaryIPAddresses": null,
+        "SecondaryIPv6Addresses": null
+      },
+      "Path": "/entrypoint.sh",
+      "Platform": "linux",
+      "ProcessLabel": "",
+      "ResolvConfPath": "/var/lib/docker/containers/ecadebe63dcafbf755369017cd9ca026efc540351a28bcfa692cb36e75c0c1a2/resolv.conf",
+      "RestartCount": 0,
+      "State": {
+        "Dead": false,
+        "Error": "",
+        "ExitCode": 0,
+        "FinishedAt": "0001-01-01T00:00:00Z",
+        "OOMKilled": false,
+        "Paused": false,
+        "Pid": 83493,
+        "Restarting": false,
+        "Running": true,
+        "StartedAt": "2026-07-13T02:20:34.490840175Z",
+        "Status": "running"
+      }
+    }
+  ],
+  "router_image": [
+    {
+      "Architecture": "arm64",
+      "Author": "",
+      "Comment": "buildkit.dockerfile.v0",
+      "Config": {
+        "AttachStderr": false,
+        "AttachStdin": false,
+        "AttachStdout": false,
+        "Cmd": null,
+        "Domainname": "",
+        "Entrypoint": [
+          "/entrypoint.sh"
+        ],
+        "Env": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "BINARY=zenohd",
+          "RUST_LOG=info"
+        ],
+        "ExposedPorts": {
+          "7446/udp": {},
+          "7447/tcp": {},
+          "8000/tcp": {}
+        },
+        "Hostname": "",
+        "Image": "",
+        "Labels": {
+          "org.opencontainers.image.licenses": "EPL-2.0 OR Apache-2.0",
+          "org.opencontainers.image.source": "https://github.com/eclipse-zenoh/zenoh"
+        },
+        "OnBuild": null,
+        "OpenStdin": false,
+        "StdinOnce": false,
+        "Tty": false,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": "/"
+      },
+      "Created": "2026-04-10T11:57:27.183857549Z",
+      "DockerVersion": "27.4.0",
+      "GraphDriver": {
+        "Data": null,
+        "Name": "overlayfs"
+      },
+      "Id": "sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+      "Metadata": {
+        "LastTagTime": "2026-07-13T02:18:16.326342395Z"
+      },
+      "Os": "linux",
+      "Parent": "",
+      "RepoDigests": [
+        "eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f"
+      ],
+      "RepoTags": [
+        "eclipse/zenoh:1.9.0"
+      ],
+      "RootFS": {
+        "Layers": [
+          "sha256:45f3ea5848e8a25ca27718b640a21ffd8c8745d342a24e1d4ddfc8c449b0a724",
+          "sha256:943bca19f4ca639be42077bae65bf10a3d3834f47d02e5bf1c96ea1450c25dd4",
+          "sha256:49a069bf249313a6343a2e2c8c6cfd468cf1b40d29f7097b1a315ba11a9d5bf5",
+          "sha256:8b07091b4c926979fa870d64f624332993f88c50e21c588e02a800b0d95a10af",
+          "sha256:4b72e5370e93d46ca0569f3747f670c01eb91783de7e8378cccec96832bbd9ee",
+          "sha256:65c35227f6d2f613e1054a27cd0ac5d8a50550fb51593cb977f002fd524c7423",
+          "sha256:8c6731942b0106fb77423e7a4f07eb6a858d9646e5c25ae6a04692607a6cc63a",
+          "sha256:abdc5379cd37e65453fe5d00ad0041ae445ede45492b4dc5cda757d028dc4068"
+        ],
+        "Type": "layers"
+      },
+      "Size": 14895499
+    }
+  ]
+}

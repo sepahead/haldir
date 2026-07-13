@@ -13,16 +13,19 @@ Haldir Gate's implemented core accepts a signed, typed controller **intent**, pr
 the requesting controller deployment and mission lease are currently admissible, evaluates
 bounded deterministic policy against trusted state, and — only on ALLOW — prepares a fresh
 plant-facing NCP command under Gate's own stream. The static secure-reference profile reserves
-final-route publication to Gate, but no runnable service or live campaign has yet proved that
-exclusivity. Crebain is intended to remain the sole owner of final command application and
-vehicle-specific safe action; that integration is also still unproven.
+final-route publication to Gate, and a retained synthetic mTLS campaign has shown that only
+Gate among all eight configured certificate principals reached the allowed remote receivers on
+that route. No runnable service yet proves runtime selection or credential custody. Crebain is
+intended to remain the sole owner of final command application and vehicle-specific safe action;
+that integration is also still unproven.
 
 > A controller signs a typed Haldir action request. Gate independently validates the
 > controller deployment, mission lease, current NCP session, source/state evidence, and
 > deterministic policy, then constructs a **new** NCP `CommandFrame` with Gate-owned stream
 > position and creation time. In the intended deployment, controllers are provisioned only
 > for their exact intent routes and never receive the final-route publication credential;
-> the repository currently proves that separation only in the static configuration package.
+> the static package and synthetic live command/intent subset test that separation, but no
+> packaged Gate/Crebain runtime has established it end to end.
 
 ## Status — read this first
 
@@ -75,10 +78,12 @@ phase-by-phase status and current ecosystem blockers are tracked in
 
 See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: exact routes, an
 off-by-default strict Zenoh 1.9 mTLS boundary, and a deterministic default-deny ACL
-package now exist, but no receiver-observed live principal×route campaign or runnable
-Gate service selects them yet. NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic
-backends (Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated;
-no delivery, application, complete-mediation, or hardware claim is made about them.
+package now exist, and the retained synthetic campaign proves the fixed final-command/
+controller-intent ACL subset for its ephemeral test PKI. No runnable Gate service selects
+that path, and certificate lifecycle/reconnect, bypass, application, and credential custody
+remain unproved. NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends
+(Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated; no
+application, complete-mediation, production-security, or hardware claim is made.
 
 ## Layout
 

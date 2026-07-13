@@ -123,14 +123,15 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 
 - `[x]` **G1** Keep Stage 0 ingress and the Stage-12 revision-recheck as their own boundaries.
 - `[~]` **G2** The exact-route/strict-client/bounded-ingress/typed-publisher
-  boundary and deterministic direction-specific ACL package now exist, but the
-  live receiver-observed mTLS matrix, service wiring, and bypass inventory remain
-  open; the deliverable is still labeled P0-only.
+  boundary and deterministic direction-specific ACL package now exist. The retained
+  synthetic campaign proves the fixed final-command/controller-intent subset across
+  all configured principals, but certificate lifecycle/reconnect, service wiring,
+  the full matrix, and bypass inventory remain open; the deliverable is still P0-only.
 - `[~]` **G3** Actuator-path disposition table needs Crebain + a live bypass campaign (out of P0).
 - `[x]` **G4** Assurance profiles + pins + verify + dependency rationale as an entry gate.
-- `[~]` **G5** The evidence layout verifier and source ledger exist, but no
-  `evidence/<phase>/` campaign directory with manifest + raw logs + checksums has yet
-  been committed; tests/CI are the P0 evidence surface.
+- `[x]` **G5** The evidence layout/source ledger and the first retained live campaign
+  directory now carry a source-bound manifest, raw logs/configs, result, PKI fingerprint
+  inventory, complete checksums, and a specialized independent verifier.
 - `[x]` **G6** Coding-rule clippy gates from Phase 1.
 - `[x]` **G7** Preregister TLA/model properties against invariants; preregister any thresholds.
 - `[x]` **G8** Explicit P0 exit gate = strict subset of the Definition-of-Done.
@@ -139,9 +140,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 
 ## 4. Overclaiming risks / honesty
 
-- `[x]` **O1** Do not claim `PRE_AUTHORITY_ACL_ONLY` as a *proven live* property from in-process
-  tests; it is a declared compatibility profile string here, with the live mTLS/ACL matrix
-  UNPROVEN (see LIMITATIONS).
+- `[x]` **O1** Do not claim `PRE_AUTHORITY_ACL_ONLY` from in-process tests. The retained
+  external mTLS campaign proves only its fixed synthetic command/intent ACL subset; the
+  packaged runtime, full matrix, certificate lifecycle, and bypass property remain limited
+  exactly as stated in `CL-LIVE-TRANSPORT-01` and `LIMITATIONS.md`.
 - `[x]` **O2** Phase 14/19 range is a **deterministic in-process** campaign, not live
   complete-mediation; bypass/wrong-route/backend vectors that need live transport or a
   second backend are out of scope and labeled so.

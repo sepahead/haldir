@@ -24,28 +24,32 @@ The defensible claim, stated narrowly:
 None of the following stronger outcomes is established here. No result about them
 should be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
 
-- **Live secure transport / ACL delivery matrix.** Exact pinned-NCP route builders,
+- **Full live secure transport / service proof.** Exact pinned-NCP route builders,
   an off-by-default Zenoh 1.9 TLS-only client boundary, bounded actual-key intent
   ingress, a typed exact-frame publisher, and a deterministic default-deny mTLS/ACL
   package are implemented and statically tested (`CL-TRANSPORT-BOUNDARY-01`). The
   package pins an immutable router image and models Zenoh's separate ingress/egress
-  checks so receive permission does not grant publication. There is still no
-  receiver-observed principal×route delivery/non-delivery campaign, provisioned
-  production PKI, or runnable Gate service selecting this path. Invariants **A1**
-  (final-key exclusivity) and **A2** (controller confinement) remain unproven live
-  properties; static configuration equality and a local `put()` result are not
-  delivery evidence. Stock Zenoh 1.9 also combines public WebPKI roots with the
-  configured CA rather than replacing them; the reserved `.invalid` router name
-  is a mitigation, not exclusive certificate pinning. Production-grade exclusive
-  router trust requires a patched/upgraded transport verifier.
-- **`PRE_AUTHORITY_ACL_ONLY` as a proven live property.** It is used here as a
-  declared compatibility *label* on the modeled adapter; the live ACL-exclusive
-  publication property it names is **UNPROVEN** (needs the transport campaign).
+  checks so receive permission does not grant publication. A retained synthetic
+  campaign now proves the fixed final-command/controller-intent ACL subset across all
+  eight configured certificate principals, separate remote sessions, a no-certificate
+  negative, and a two-second quiescent quarantine (`CL-LIVE-TRANSPORT-01`). It uses an
+  ephemeral test PKI and does **not** prove unknown/revoked/expired certificate behavior,
+  reconnect, production credential custody, a runnable Gate selecting this path, a full
+  principal×operation×route matrix, or bypass closure. Static configuration equality and
+  a local `put()` result remain non-evidence; receiver callbacks are the campaign oracle.
+  Stock Zenoh 1.9 also combines public WebPKI roots with the configured CA rather than
+  replacing them; the reserved `.invalid` router name is a mitigation, not exclusive
+  certificate pinning. Production-grade exclusive router trust requires a patched/
+  upgraded transport verifier.
+- **`PRE_AUTHORITY_ACL_ONLY` as a deployed runtime property.** It is a declared
+  compatibility label and now has the narrow synthetic ACL evidence above. It is still
+  not established for a packaged Gate/Crebain deployment, production credentials, or a
+  complete actuator/bypass inventory.
 - **Exact NCP adapter is not the selected live Gate path.** The off-by-default
   `real-ncp` feature compiles the exact pinned `ncp-core` v0.8.0 revision and its
   frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). The in-process Gate
-  still selects the dependency-light modeled adapter, and no Zenoh transport or
-  plant delivery is present. Exact wire conformance therefore does not prove live
+  still selects the dependency-light modeled adapter, and no Zenoh transport is wired
+  to the actor or plant. Exact wire conformance therefore does not prove runtime
   publication, acceptance, application, or ACL exclusivity.
 - **NEST / Engram controllers.** No neural runtime is present. Admission checks
   digest equality only; **no backend behavioural conformance** (running NEST /
@@ -68,7 +72,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
 - **TLA+ model scope.** The bounded model now checks green under the SHA-verified
   TLA+ v1.7.4 jar (`CL-FORMAL-01`, GitHub run `29211573130`). This proves only the
   registered finite model; the Rust `model` tests remain an independent executable
-  encoding, and neither result proves the absent live transport or durable runtime.
+  encoding, and neither result proves a wired live service or durable runtime.
 - **`missing_docs` hardening.** Deferred; the workspace does not yet
   `deny(missing_docs)`. Crate- and item-level docs are written voluntarily.
 - **Durable anti-rollback / restart rollback protection.** The default P0 actor
@@ -129,8 +133,9 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   already-constructed evidence value; it does not load or verify a live ACL package
   (`CL-DURABLE-STARTUP-DEV-01`).
   The current ACL-only evidence type carries no session/output epoch or expected
-  route/principal digest, so configuration validation cannot establish live final-key
-  exclusivity; that remains `CL-LIVE-TRANSPORT-01`.
+  route/principal digest, so configuration validation cannot establish runtime final-key
+  exclusivity. `CL-LIVE-TRANSPORT-01` is instead limited to its external synthetic ACL
+  campaign and does not close this startup/service gap.
 - **Production status.** Not production ready, certified, airworthy, or safe for
   deployment. No independent security review has been performed.
 

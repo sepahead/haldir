@@ -55,10 +55,11 @@ wildcard is the reviewed pinned-NCP `{realm}/rpc/*` propagation declaration for
 no Haldir extension route is widened.
 
 The current in-process Gate still selects `AclOnlyAdapter`, and no runnable service
-coordinates actor preparation with the transport. Selecting the exact adapter and
-strict transport in that service, then proving receiver-observed mTLS/ACL delivery,
-remain later roadmap gates; route/configuration conformance and local Zenoh call
-results are not live delivery or application claims.
+coordinates actor preparation with the transport. The retained synthetic campaign
+proves the exact final-command/controller-intent ACL subset using valid pinned-NCP JSON
+and remote callbacks (`CL-LIVE-TRANSPORT-01`), but it does not select the exact adapter
+inside Gate or prove application. Selecting the adapter/transport in a two-phase runnable
+service remains a later gate; local Zenoh call results are never delivery evidence.
 
 ## Deferred upstream capabilities (increment 1)
 
