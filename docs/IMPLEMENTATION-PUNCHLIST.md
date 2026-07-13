@@ -122,8 +122,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 ## 3. Plan gaps / sequencing
 
 - `[x]` **G1** Keep Stage 0 ingress and the Stage-12 revision-recheck as their own boundaries.
-- `[~]` **G2** Live secure-transport + bypass inventory (Master step K) is OUT of P0 → deliverable
-  is relabeled P0-only; `haldir-transport-zenoh` is a documented trait-only seam.
+- `[~]` **G2** The exact-route/strict-client/bounded-ingress/typed-publisher
+  boundary and deterministic direction-specific ACL package now exist, but the
+  live receiver-observed mTLS matrix, service wiring, and bypass inventory remain
+  open; the deliverable is still labeled P0-only.
 - `[~]` **G3** Actuator-path disposition table needs Crebain + a live bypass campaign (out of P0).
 - `[x]` **G4** Assurance profiles + pins + verify + dependency rationale as an entry gate.
 - `[~]` **G5** The evidence layout verifier and source ledger exist, but no

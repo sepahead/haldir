@@ -53,11 +53,15 @@ zeroize = { version = "1", default-features = false }
 subtle = { version = "2", default-features = false }
 getrandom = { version = "0.2" }
 proptest = { version = "1" }
-# Exact upstream NCP release implementation, compiled only by haldir-ncp08's
-# off-by-default `real-ncp` conformance feature.
+# Exact upstream NCP release implementation. Its key builder is always used by
+# the transport crate; full frame conformance remains off by default elsewhere.
 ncp-core = { version = "=0.8.0", git = "https://github.com/sepahead/NCP", rev = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e", default-features = false }
 serde_json = { version = "1.0" }
 hmac = { version = "0.12.1", default-features = false }
+tokio = { version = "1", default-features = false, features = ["sync"] }
+# Exact match for the pinned NCP v0.8.0 transport baseline. Live transport is
+# off by default; TLS is the only compiled link and compression stays disabled.
+zenoh = { version = "=1.9.0", default-features = false, features = ["transport_tls"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

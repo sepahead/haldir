@@ -5,10 +5,36 @@
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+  # Zenoh 1.9.0 declares lz4_flex 0.10.0 unconditionally, but the affected
+  # block-decompression calls are compiled only by `transport_compression`.
+  # Haldir enables only `transport_tls`, enforced by verify-pins.py. Remove this
+  # exact exception when the pinned Zenoh baseline permits a fixed lz4_flex.
+  "RUSTSEC-2026-0041",
+  # Unmaintained proc-macro pulled through zenoh-keyexpr; this is not a reported
+  # vulnerability and Zenoh 1.9.0 offers no fixed transitive selection.
+  "RUSTSEC-2024-0436",
+  # Unmaintained PEM wrapper pulled through zenoh-link-tls; this is not a
+  # reported vulnerability and Zenoh 1.9.0 offers no fixed transitive selection.
+  "RUSTSEC-2025-0134",
+]
 
 [licenses]
 version = 2
-allow = ["Apache-2.0", "MIT", "BSD-3-Clause", "Unicode-3.0"]
+# Default-deny, reviewed lockfile license set. MPL-2.0 is from option-ext and
+# CDLA-Permissive-2.0 from the WebPKI root data; both are transitive to TLS-only
+# Zenoh. A new license still fails this gate and requires explicit review.
+allow = [
+  "Apache-2.0",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "MPL-2.0",
+  "CDLA-Permissive-2.0",
+]
 confidence-threshold = 0.9
 
 [bans]
@@ -17,8 +43,12 @@ multiple-versions = "warn"
 # are permitted via allow-wildcard-paths.
 wildcards = "deny"
 allow-wildcard-paths = true
-# Neural runtimes, web UI frameworks, and dynamic-plugin loaders must never
-# enter the Gate command-path dependency graph.
+# No project-selected neural runtime or web UI belongs in the Gate command path.
+# Zenoh 1.9.0 itself unconditionally pulls `zenoh-plugin-trait`/`libloading`; it
+# cannot be banned without removing the pinned transport. The strict client
+# rejects plugin configuration/loading, and the pinned router launch re-disables
+# the daemon's forced plugin loader after config load. Replace this transitive
+# exception when Zenoh exposes a plugin-free client feature graph.
 deny = []
 
 [sources]
@@ -26,6 +56,7 @@ unknown-registry = "deny"
 unknown-git = "deny"
 required-git-spec = "rev"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# One exact upstream source is admitted for the off-by-default NCP conformance
-# adapter. The manifest/lock revision is independently checked by verify-pins.py.
+# One exact upstream source is admitted for the always-on NCP key builder and
+# the off-by-default conformance adapter. The manifest/lock revision is
+# independently checked by verify-pins.py.
 allow-git = ["https://github.com/sepahead/NCP"]

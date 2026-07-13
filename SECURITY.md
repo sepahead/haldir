@@ -24,9 +24,13 @@ not replace PX4/plant failsafes, and does not provide the plant authority, wire
 
 ## Handling of secrets
 
-- No private keys, certificates, tokens, or absolute local paths are committed.
-- The current P0 repository ships no development PKI or assurance deployment package.
-  A later live-transport profile must add an unmistakably non-production fixture location
-  and a real CI fingerprint-denylist check before either property is claimed.
-- Logs and receipts never contain signatures, private-key material, full certificates,
-  raw untrusted payloads, or sensitive paths.
+- No private keys, certificates, tokens, or developer-host paths are committed. Fixed
+  absolute paths inside the target runtime namespace are part of generated configuration,
+  not references to a maintainer's machine.
+- The repository ships a deterministic, configuration-only secure-reference package. It
+  contains no PKI, runnable secret loader, live-delivery evidence, or assurance deployment;
+  any later development fixture must be unmistakably non-production and covered by a real
+  CI certificate-fingerprint denylist before stronger properties are claimed.
+- Logs and receipts never contain private-key material, full certificates, raw untrusted
+  payloads, or sensitive paths. Signed receipts contain their public signatures by design;
+  those signatures are evidence, not secret material.

@@ -21,14 +21,23 @@ The defensible claim, stated narrowly:
 
 ## What is explicitly NOT claimed (out of P0 scope)
 
-None of the following is implemented or tested here. No result about them should
-be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
+None of the following stronger outcomes is established here. No result about them
+should be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
 
-- **Live secure transport / ACL delivery matrix.** There is no running Zenoh
-  router, no mTLS, and no principal×route delivery/non-delivery campaign.
-  Invariants **A1** (final-key exclusivity) and **A2** (controller confinement)
-  are transport-level properties that in-process tests cannot establish.
-  `haldir-transport-zenoh` is a documented seam, not an implementation.
+- **Live secure transport / ACL delivery matrix.** Exact pinned-NCP route builders,
+  an off-by-default Zenoh 1.9 TLS-only client boundary, bounded actual-key intent
+  ingress, a typed exact-frame publisher, and a deterministic default-deny mTLS/ACL
+  package are implemented and statically tested (`CL-TRANSPORT-BOUNDARY-01`). The
+  package pins an immutable router image and models Zenoh's separate ingress/egress
+  checks so receive permission does not grant publication. There is still no
+  receiver-observed principal×route delivery/non-delivery campaign, provisioned
+  production PKI, or runnable Gate service selecting this path. Invariants **A1**
+  (final-key exclusivity) and **A2** (controller confinement) remain unproven live
+  properties; static configuration equality and a local `put()` result are not
+  delivery evidence. Stock Zenoh 1.9 also combines public WebPKI roots with the
+  configured CA rather than replacing them; the reserved `.invalid` router name
+  is a mitigation, not exclusive certificate pinning. Production-grade exclusive
+  router trust requires a patched/upgraded transport verifier.
 - **`PRE_AUTHORITY_ACL_ONLY` as a proven live property.** It is used here as a
   declared compatibility *label* on the modeled adapter; the live ACL-exclusive
   publication property it names is **UNPROVEN** (needs the transport campaign).
@@ -49,7 +58,10 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   simulation-only and must not be reused as evidence for any real vehicle.
 - **Second backend / NIR / neuromorphic hardware.** Not attempted. No
   backend-aware admission research result exists.
-- **Cross-repository changes** to NCP, Crebain, or Engram. None were made.
+- **Cross-repository plant/controller integration.** A narrow NCP release-tool fix
+  now accepts Haldir's exact Cargo comparator, but no Crebain/Engram runtime was
+  integrated and no cross-repository change is evidence of plant ownership,
+  controller confinement, or delivery/application.
 - **Performance.** There is no performance/latency campaign. Any timing number is
   "measured on named host/kernel/load; not hard real-time"; **p99/p99.9 on named
   hardware is UNPROVEN**.

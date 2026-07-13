@@ -17,7 +17,7 @@ structs. Only `haldir-ncp08` is aware of NCP wire semantics.
 These are encoded in `crates/haldir-ncp08/src/compatibility.rs` (`NCP_V0_8_0`) and
 `tools/pins.toml`, and enforced by `tools/verify-pins.py`.
 
-## Default P0 model and exact conformance adapter
+## Default P0 model, exact conformance adapter, and route boundary
 
 The default `AclOnlyAdapter` models the NCP v0.8.0 command semantics without an
 upstream or Zenoh dependency, keeping the pure P0 core dependency-light. The
@@ -43,9 +43,22 @@ Haldir's trusted `source_key`, so that key remains evidence/cache metadata while
 projected to NCP binary64 seconds; at the full `u64` nanosecond range the tested
 round-trip error bound is 2,048 ns, so this mapping is not byte identity.
 
-The current in-process Gate still selects `AclOnlyAdapter`. Selecting the exact
-adapter in the runnable service and proving live Zenoh/ACL delivery remain later
-roadmap gates; conformance here is not a live transport claim.
+`haldir-transport-zenoh` always delegates standard command and named-sensor route
+construction to this exact pinned `ncp-core`; its Haldir intent/evidence extensions
+are bounded, fallible, and wildcard-free. The off-by-default `live-zenoh` feature
+pins Zenoh exactly 1.9.0 with default features disabled and only `transport_tls`.
+Its publisher accepts only `ExactNcpCommandFrame` and is permanently bound to the
+standard base command route. The deterministic secure-reference package separately
+pins the router image digest and a direction-specific default-deny ACL. The only ACL
+wildcard is the reviewed pinned-NCP `{realm}/rpc/*` propagation declaration for
+`declare_queryable`; query and reply grants remain the four exact NCP RPC routes, and
+no Haldir extension route is widened.
+
+The current in-process Gate still selects `AclOnlyAdapter`, and no runnable service
+coordinates actor preparation with the transport. Selecting the exact adapter and
+strict transport in that service, then proving receiver-observed mTLS/ACL delivery,
+remain later roadmap gates; route/configuration conformance and local Zenoh call
+results are not live delivery or application claims.
 
 ## Deferred upstream capabilities (increment 1)
 

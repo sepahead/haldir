@@ -93,6 +93,10 @@ jobs:
         run: python3 tools/verify-ci-pins.py
       - name: Verify evidence layout
         run: python3 tools/verify-evidence.py
+      - name: Verify offline secure Zenoh configuration profile
+        run: |
+          python3 -m unittest tools/test_secure_zenoh.py
+          python3 tools/verify-secure-zenoh.py
       - name: Forbidden-claim drift check
         run: python3 tools/verify-claims.py
       - name: cargo-deny

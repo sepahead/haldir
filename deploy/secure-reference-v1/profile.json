@@ -1,0 +1,169 @@
+{
+  "controllers": [
+    "controller-a",
+    "controller-b"
+  ],
+  "principals": {
+    "admission-authority": {
+      "certificate_common_name": "haldir-admission-authority.secure-reference-v1",
+      "publish": [
+        "admission_record",
+        "admission_revocation"
+      ],
+      "query": [],
+      "role": "admission-authority",
+      "serve": [],
+      "subscribe": [
+        "gate_challenge",
+        "gate_status"
+      ]
+    },
+    "controller-a": {
+      "certificate_common_name": "haldir-controller-a.secure-reference-v1",
+      "publish": [
+        "controller_a_intent"
+      ],
+      "query": [],
+      "role": "controller",
+      "serve": [],
+      "subscribe": [
+        "state_pose",
+        "gate_challenge",
+        "gate_status"
+      ]
+    },
+    "controller-b": {
+      "certificate_common_name": "haldir-controller-b.secure-reference-v1",
+      "publish": [
+        "controller_b_intent"
+      ],
+      "query": [],
+      "role": "controller",
+      "serve": [],
+      "subscribe": [
+        "state_pose",
+        "gate_challenge",
+        "gate_status"
+      ]
+    },
+    "gate": {
+      "certificate_common_name": "haldir-gate.secure-reference-v1",
+      "publish": [
+        "final_command",
+        "gate_challenge",
+        "decision_evidence",
+        "gate_status"
+      ],
+      "query": [],
+      "role": "gate",
+      "serve": [],
+      "subscribe": [
+        "controller_a_intent",
+        "controller_b_intent",
+        "state_pose",
+        "session_status",
+        "mission_lease",
+        "mission_revocation",
+        "admission_record",
+        "admission_revocation",
+        "application_evidence"
+      ]
+    },
+    "lifecycle": {
+      "certificate_common_name": "haldir-lifecycle.secure-reference-v1",
+      "publish": [
+        "session_status"
+      ],
+      "query": [],
+      "role": "lifecycle",
+      "serve": [
+        "rpc_open_session",
+        "rpc_step_request",
+        "rpc_run_request",
+        "rpc_close_session"
+      ],
+      "subscribe": [
+        "gate_status"
+      ]
+    },
+    "mission-authority": {
+      "certificate_common_name": "haldir-mission-authority.secure-reference-v1",
+      "publish": [
+        "mission_lease",
+        "mission_revocation"
+      ],
+      "query": [],
+      "role": "mission-authority",
+      "serve": [],
+      "subscribe": [
+        "gate_challenge",
+        "gate_status"
+      ]
+    },
+    "observer": {
+      "certificate_common_name": "haldir-observer.secure-reference-v1",
+      "publish": [],
+      "query": [],
+      "role": "observer",
+      "serve": [],
+      "subscribe": [
+        "final_command",
+        "state_pose",
+        "session_status",
+        "decision_evidence",
+        "gate_status",
+        "application_evidence"
+      ]
+    },
+    "robot-crebain": {
+      "certificate_common_name": "haldir-robot-crebain.secure-reference-v1",
+      "publish": [
+        "state_pose",
+        "application_evidence"
+      ],
+      "query": [
+        "rpc_open_session",
+        "rpc_step_request",
+        "rpc_run_request",
+        "rpc_close_session"
+      ],
+      "role": "robot",
+      "serve": [],
+      "subscribe": [
+        "final_command",
+        "session_status",
+        "gate_status"
+      ]
+    }
+  },
+  "profile_id": "haldir-secure-reference-v1",
+  "realm": "haldir-ncp",
+  "router": {
+    "certificate_common_name": "router.haldir.invalid",
+    "client_endpoint": "tls/router.haldir.invalid:7447",
+    "image": "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+    "listen_endpoint": "tls/0.0.0.0:7447"
+  },
+  "routes": {
+    "admission_record": "haldir-ncp/session/uav-1/haldir/authority/admission/record",
+    "admission_revocation": "haldir-ncp/session/uav-1/haldir/authority/admission/revocation",
+    "application_evidence": "haldir-ncp/session/uav-1/haldir/application",
+    "controller_a_intent": "haldir-ncp/session/uav-1/haldir/intent/controller-a",
+    "controller_b_intent": "haldir-ncp/session/uav-1/haldir/intent/controller-b",
+    "decision_evidence": "haldir-ncp/session/uav-1/haldir/decision",
+    "final_command": "haldir-ncp/session/uav-1/command",
+    "gate_challenge": "haldir-ncp/session/uav-1/haldir/challenge",
+    "gate_status": "haldir-ncp/session/uav-1/haldir/status",
+    "mission_lease": "haldir-ncp/session/uav-1/haldir/authority/mission/lease",
+    "mission_revocation": "haldir-ncp/session/uav-1/haldir/authority/mission/revocation",
+    "rpc_close_session": "haldir-ncp/rpc/close_session",
+    "rpc_open_session": "haldir-ncp/rpc/open_session",
+    "rpc_run_request": "haldir-ncp/rpc/run_request",
+    "rpc_step_request": "haldir-ncp/rpc/step_request",
+    "session_status": "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+    "state_pose": "haldir-ncp/session/uav-1/sensor/pose"
+  },
+  "schema_version": 1,
+  "session_id": "uav-1",
+  "zenoh_version": "1.9.0"
+}

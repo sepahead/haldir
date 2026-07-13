@@ -132,6 +132,15 @@ impl ExactNcpCommandFrame {
         &self.bytes
     }
 
+    /// Session id carried by the immutable semantic frame.
+    ///
+    /// Transport publishers use this to prevent placing valid bytes for one
+    /// session on another session's command route.
+    #[must_use]
+    pub fn session_id(&self) -> &str {
+        self.frame.session.session_id.as_str()
+    }
+
     /// Digest of the exact serialized bytes.
     #[must_use]
     pub const fn digest(&self) -> DigestV1 {

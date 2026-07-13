@@ -58,6 +58,8 @@ run "dependency policy"   cargo deny --all-features check
 run "source pins"         python3 tools/verify-pins.py
 run "CI/formal pins"       python3 tools/verify-ci-pins.py
 run "evidence layout"     python3 tools/verify-evidence.py
+run "offline Zenoh profile tests" python3 -m unittest tools/test_secure_zenoh.py
+run "offline Zenoh profile" python3 tools/verify-secure-zenoh.py
 run "forbidden claims"    python3 tools/verify-claims.py
 run "generated vectors"   python3 tools/verify-generated.py
 run "interop (COSE/CBOR)" interop_gate

@@ -9,18 +9,20 @@
 
 **Experimental, inline, backend-aware mission-authorization reference monitor for the Sepahead ecosystem.**
 
-Haldir Gate accepts a signed, typed controller **intent**, proves that the requesting
-controller deployment and mission lease are currently admissible, evaluates bounded
-deterministic policy against trusted state, and — only on ALLOW — originates a fresh
-plant-facing NCP command under Gate's own stream and exclusive final-route publication
-capability. Crebain remains the sole owner of final command application and vehicle-specific
-safe action.
+Haldir Gate's implemented core accepts a signed, typed controller **intent**, proves that
+the requesting controller deployment and mission lease are currently admissible, evaluates
+bounded deterministic policy against trusted state, and — only on ALLOW — prepares a fresh
+plant-facing NCP command under Gate's own stream. The static secure-reference profile reserves
+final-route publication to Gate, but no runnable service or live campaign has yet proved that
+exclusivity. Crebain is intended to remain the sole owner of final command application and
+vehicle-specific safe action; that integration is also still unproven.
 
 > A controller signs a typed Haldir action request. Gate independently validates the
 > controller deployment, mission lease, current NCP session, source/state evidence, and
 > deterministic policy, then constructs a **new** NCP `CommandFrame` with Gate-owned stream
-> position and creation time. Controllers never receive the credential or capability that
-> publishes the final plant command key.
+> position and creation time. In the intended deployment, controllers are provisioned only
+> for their exact intent routes and never receive the final-route publication credential;
+> the repository currently proves that separation only in the static configuration package.
 
 ## Status — read this first
 
@@ -71,17 +73,19 @@ phase-by-phase status and current ecosystem blockers are tracked in
 
 ### What is deliberately **out of scope** and **not claimed** here
 
-See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: live secure-Zenoh mTLS/ACL
-delivery matrix and selection of the exact NCP path, NEST/Engram controllers, PX4-SITL,
-neuromorphic backends (Norse/Rockpool/XyloSim/SpiNNaker), cross-repository Crebain/Engram
-changes, and physical hardware. These are architected as typed seams but are **not**
-implemented or tested in this deliverable, and no claim is made about them.
+See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: exact routes, an
+off-by-default strict Zenoh 1.9 mTLS boundary, and a deterministic default-deny ACL
+package now exist, but no receiver-observed live principal×route campaign or runnable
+Gate service selects them yet. NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic
+backends (Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated;
+no delivery, application, complete-mediation, or hardware claim is made about them.
 
 ## Layout
 
 See the normative specification in `docs/` and `docs/ASSURANCE-PROFILES.md`. Crates live
-under `crates/`; offline tooling under `tools/`; formal models under `formal/`; adversarial
-scenarios under `crates/haldir-range/`.
+under `crates/`; offline tooling under `tools/`; the configuration-only secure Zenoh fixture
+under `deploy/secure-reference-v1/`; formal models under `formal/`; adversarial scenarios
+under `crates/haldir-range/`.
 
 ## Build
 

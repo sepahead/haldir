@@ -23,10 +23,10 @@ fully proven; **not started** means no qualifying implementation/evidence is pre
 ## Current verdict
 
 The offline P0 reference-monitor core is implemented and its local exit gate passes.
-The full Haldir project remains incomplete: durable recovery, selection of the exact
-NCP adapter in a runnable Gate, live secure transport/ACL proof, Crebain and Engram
-integration, backend-conformance research, performance/endurance campaigns, and an
-experimental release are outstanding.
+The full Haldir project remains incomplete: production durable recovery, selection
+of the exact NCP adapter and strict transport in a runnable Gate, receiver-observed
+secure transport/ACL proof, Crebain and Engram integration, backend-conformance
+research, performance/endurance campaigns, and an experimental release are outstanding.
 Those stronger properties remain explicitly unproven or out of scope under
 `CL-DURABLE-01`, `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
 `CL-PRODUCTION-01`.
@@ -45,9 +45,9 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
-| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, and opt-in exact `ncp-core` JSON/frozen-corpus differential path are tested (`CL-NCP-REAL-01`); the Gate runtime does not select it and no live transport evidence exists (`CL-LIVE-TRANSPORT-01`). |
+| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); the Gate runtime does not select the exact frame adapter and no live transport evidence exists (`CL-LIVE-TRANSPORT-01`). |
 | 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, and a bounded locked evidence directory manager exist (`CL-CONFIG-01`, `CL-DURABLE-STARTUP-DEV-01`, `CL-EVIDENCE-MANAGER-01`); service/package loading, bounded async queues, actor journal selection, and crash-tested recovery do not (`CL-DURABLE-01`). |
-| 11 — secure Zenoh and ACL proof | Not started | `haldir-transport-zenoh` is a trait seam; no mTLS principal×route campaign exists (`CL-LIVE-TRANSPORT-01`). |
+| 11 — secure Zenoh and ACL proof | Partial | Exact routes, an off-by-default TLS-only Zenoh 1.9 boundary, bounded ingress, typed exact-command publication, and a deterministic immutable-image/default-deny/direction-specific ACL package are statically tested (`CL-TRANSPORT-BOUNDARY-01`). A receiver-observed mTLS principal×route campaign, live runtime wiring, and complete bypass inventory do not yet exist (`CL-LIVE-TRANSPORT-01`). |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
 | 14 — deterministic acceptance campaign | Partial | The in-process adversarial range is green (`CL-GATE-MEDIATION-01`); live transport/backend scenarios remain absent. |
@@ -65,18 +65,20 @@ Those stronger properties remain explicitly unproven or out of scope under
 - NCP `v0.8.0` remains the latest immutable release and the Haldir pin remains correct:
   commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`, wire `0.8`, contract
   `d1b50a2d8a265276`, proto digest `6f13b12c…131227`.
-- NCP `main` at audit time was `205384508d619923e05aef192bedaeb57cf665fc`;
-  its two post-tag commits harden
-  release/consumer-pin metadata and do not change the released wire.
+- NCP `main` at the latest audit was
+  `db3fddc170b5235098f540134340ffaa8d9c2d2c`; its post-tag work hardens release
+  metadata and consumer-pin checking (including exact Cargo `=0.8.0`) without
+  changing the released wire.
 - Crebain, Engram, Galadriel, and Prisoma have moved to the v0.8 baseline, so old
   roadmap language telling every consumer to migrate from v0.7.1 is historical.
 - Haldir is now registered as an exact-revision NCP consumer and the optional
   adapter validates released JSON `CommandFrame` bytes against the pinned crate and
   frozen corpus. The default in-process Gate still uses its deterministic model.
-- The current NCP assurance template still grants command publication to a commander;
-  the Haldir profile needs a distinct Gate principal as the sole exact-command writer
-  and controllers confined to typed intent routes before `CL-LIVE-TRANSPORT-01` can
-  move beyond UNPROVEN.
+- Haldir's static secure-reference profile now makes Gate the sole exact-command
+  `put` ingress principal and confines each controller to its exact intent route.
+  Because Zenoh authorizes publisher ingress and receiver egress separately, the
+  generated rules are direction-specific. `CL-LIVE-TRANSPORT-01` remains UNPROVEN
+  until receiver-observed live tests exercise the pinned router and real certificates.
 
 ## Next completion slice, reviewed from five lenses
 
@@ -87,8 +89,9 @@ Those stronger properties remain explicitly unproven or out of scope under
    service, preserving the stable Haldir semantic contracts.
 3. **Time/restart/evidence:** prove crash recovery, boot-id uniqueness, and terminal
    evidence semantics under fault injection.
-4. **Operations/security:** implement the live transport actor, exact route builder,
-   pre-verification principal rate limits, control-plane reserve, and mTLS/ACL matrix.
+4. **Operations/security:** wire the strict transport into a single-owner Gate
+   service with a reserved output slot and two-phase publication state; run the
+   receiver-observed mTLS/ACL matrix, reconnect/expiry tests, and bypass inventory.
 5. **Research/release honesty:** integrate Crebain then Engram in that order, run the
    registered campaigns, and create an experimental release only after every stronger
    claim has direct evidence.

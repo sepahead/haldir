@@ -12,8 +12,22 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+live-zenoh = [
+    "dep:haldir-ncp08",
+    "haldir-ncp08/real-ncp",
+    "dep:serde_json",
+    "dep:tokio",
+    "dep:zenoh",
+]
+
 [dependencies]
-haldir-contracts.workspace = true
+haldir-ncp08 = { workspace = true, optional = true }
+ncp-core.workspace = true
+serde_json = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+zenoh = { workspace = true, optional = true }
 
 [dev-dependencies]
-
+haldir-contracts.workspace = true
