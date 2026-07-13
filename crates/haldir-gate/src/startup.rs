@@ -31,7 +31,7 @@ use haldir_evidence::journal::SegmentIdentity;
 use haldir_evidence::manager::{
     JournalLimits, JournalOpenOptions, JournalRecoveryReport, JournalSigner, RecoveryCaptureLimits,
 };
-use haldir_ncp08::SelectedNcpCommandAdapter;
+use haldir_ncp08::{NcpCommandWireProfile, SelectedNcpCommandAdapter};
 use haldir_policy_native::NativePolicySnapshot;
 use haldir_state::{DurableAntiRollbackError, DurableAntiRollbackStore};
 
@@ -52,6 +52,18 @@ const LOCAL_SNAPSHOT_OVERHEAD_ALLOWANCE: usize = 1024;
 const LOCAL_SNAPSHOT_FILE: &str = "anti-rollback.snapshot";
 const LOCAL_ANCHOR_FILE: &str = "generation.anchor";
 const LOCAL_LOCK_FILE: &str = ".haldir-gate.lock";
+
+/// Caller-declared runtime integration profile for one Gate startup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GateRuntimeProfile {
+    /// Deterministic in-process reference integration.
+    InProcessReference,
+    /// Live Zenoh integration declared by the caller.
+    ///
+    /// Startup retains this declaration for observability. It does not by
+    /// itself prove that a live session, service, or publisher was established.
+    DeclaredLiveZenoh,
+}
 
 /// Static Gate configuration. Runtime boot and output identifiers are supplied
 /// only after durable startup has passed its commit boundary.
@@ -74,8 +86,9 @@ pub struct GateConfigTemplate {
     pub policy_snapshot_digest: DigestV1,
     /// Current NCP session.
     pub session: NcpSessionIdentityV1,
+    /// Caller-declared runtime integration profile.
+    pub runtime_profile: GateRuntimeProfile,
     /// Closed selection of modeled or exact pinned NCP command construction.
-    /// A future live profile must reject modeled selection before calling startup.
     pub ncp_adapter: SelectedNcpCommandAdapter,
     /// Current ACL-only plant-publication authority evidence.
     pub publication: PlantPublicationAuthorityStateV1,
@@ -91,8 +104,10 @@ impl GateConfigTemplate {
     /// Validate every static invariant without opening or changing durable state.
     ///
     /// # Errors
-    /// Returns when signer/cap validation fails or publication authority is not
-    /// the current `PRE_AUTHORITY_ACL_ONLY` profile.
+    /// Returns when signer/cap validation fails, publication authority is not
+    /// the current `PRE_AUTHORITY_ACL_ONLY` profile, the declared runtime profile
+    /// requires a different NCP wire profile, or required live support was not
+    /// compiled.
     pub fn validate(&self) -> Result<(), DurableGateStartupError> {
         validate_static_config(
             &self.gate_id,
@@ -109,7 +124,33 @@ impl GateConfigTemplate {
         ) {
             return Err(DurableGateStartupError::UnsupportedPublicationProfile);
         }
-        Ok(())
+        self.validate_runtime_profile()
+    }
+
+    fn validate_runtime_profile(&self) -> Result<(), DurableGateStartupError> {
+        match self.runtime_profile {
+            GateRuntimeProfile::InProcessReference => Ok(()),
+            GateRuntimeProfile::DeclaredLiveZenoh => {
+                let required = NcpCommandWireProfile::ExactNcpV0_8Json;
+                let actual = self.ncp_adapter.wire_profile();
+                if actual != required {
+                    return Err(DurableGateStartupError::NcpWireProfileMismatch {
+                        runtime_profile: self.runtime_profile,
+                        required,
+                        actual,
+                    });
+                }
+
+                #[cfg(feature = "live-zenoh")]
+                {
+                    Ok(())
+                }
+                #[cfg(not(feature = "live-zenoh"))]
+                {
+                    Err(DurableGateStartupError::LiveZenohSupportNotCompiled)
+                }
+            }
+        }
     }
 
     fn into_runtime(self, boot_id: GateBootId, output_epoch: GateOutputEpoch) -> GateConfig {
@@ -220,6 +261,8 @@ impl EntropySource for OsEntropy {
 /// Observable result of a successful durable startup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StartupReport {
+    /// Caller-declared runtime integration profile retained for observability.
+    pub runtime_profile: GateRuntimeProfile,
     /// Whether generation one was explicitly provisioned by this call.
     pub provisioned: bool,
     /// Existing-state reconciliation result, absent only for provisioning.
@@ -346,6 +389,7 @@ impl RunningGate {
         Self {
             actor,
             report: StartupReport {
+                runtime_profile: GateRuntimeProfile::InProcessReference,
                 provisioned: true,
                 recovery: None,
                 boot_commit: CommitReceipt {
@@ -571,6 +615,17 @@ pub enum DurableGateStartupError {
     Config(GateConfigError),
     /// Publication authority is not the current ACL-only profile.
     UnsupportedPublicationProfile,
+    /// A declared runtime profile requires a different NCP wire profile.
+    NcpWireProfileMismatch {
+        /// Runtime profile declared by the caller.
+        runtime_profile: GateRuntimeProfile,
+        /// Wire profile required by that runtime declaration.
+        required: NcpCommandWireProfile,
+        /// Wire profile selected by the configured adapter.
+        actual: NcpCommandWireProfile,
+    },
+    /// Live Zenoh was declared but this build omits live-Zenoh support.
+    LiveZenohSupportNotCompiled,
     /// Snapshot binding does not name the configured Gate.
     StoreGateMismatch,
     /// A zero or overflowing durable-size bound was supplied.
@@ -648,6 +703,7 @@ pub fn start_local<E: EntropySource + ?Sized>(
     key: StorageMacKey,
     entropy: &mut E,
 ) -> Result<RunningGate, DurableGateStartupError> {
+    template.validate()?;
     let snapshot_path = local.state_directory.join(LOCAL_SNAPSHOT_FILE);
     let anchor_path = local.state_directory.join(LOCAL_ANCHOR_FILE);
     let lock_path = local.state_directory.join(LOCAL_LOCK_FILE);
@@ -665,7 +721,7 @@ pub fn start_local<E: EntropySource + ?Sized>(
         max_payload_bytes: local.max_payload_bytes,
     };
 
-    let prepared = prepare(&template, &state, &anchor, entropy)?;
+    let prepared = prepare_validated_template(&template, &state, &anchor, entropy)?;
     #[cfg(not(unix))]
     {
         let _ = (template, state, storage, anchor, key, prepared);
@@ -692,6 +748,15 @@ fn prepare<A: GenerationAnchor, E: EntropySource + ?Sized>(
     entropy: &mut E,
 ) -> Result<PreparedStartup, DurableGateStartupError> {
     template.validate()?;
+    prepare_validated_template(template, state, anchor, entropy)
+}
+
+fn prepare_validated_template<A: GenerationAnchor, E: EntropySource + ?Sized>(
+    template: &GateConfigTemplate,
+    state: &StartupStateConfig,
+    anchor: &A,
+    entropy: &mut E,
+) -> Result<PreparedStartup, DurableGateStartupError> {
     if !state
         .binding
         .matches_gate_id(template.gate_id.as_str().as_bytes())
@@ -774,9 +839,11 @@ where
 
     let (booted, boot_commit) = store.begin_boot(&template.gate_id, prepared.boot_entropy)?;
     let gate_boot_id = booted.boot_context().gate_boot_id;
+    let runtime_profile = template.runtime_profile;
     let config = template.into_runtime(gate_boot_id, prepared.output_epoch);
     let actor = VehicleActor::new_recovered(config, booted)?;
     let report = StartupReport {
+        runtime_profile,
         provisioned,
         recovery,
         boot_commit,
@@ -858,7 +925,7 @@ fn prepare_local_directory(
 #[cfg(test)]
 mod tests {
     use core::num::NonZeroU32;
-    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
 
     use haldir_contracts::cbor::CanonicalMessage;
@@ -954,6 +1021,46 @@ mod tests {
         }
     }
 
+    #[derive(Clone)]
+    struct CountingStorage(Arc<AtomicUsize>);
+
+    impl SnapshotStorage for CountingStorage {
+        fn load(&self) -> Result<Option<Vec<u8>>, DurableError> {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            Ok(None)
+        }
+
+        fn replace(&mut self, _bytes: &[u8]) -> Result<(), DurableError> {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    #[derive(Clone)]
+    struct CountingAnchor(Arc<AtomicUsize>);
+
+    impl GenerationAnchor for CountingAnchor {
+        fn protection(&self) -> AnchorProtection {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            AnchorProtection::LocalRewritable
+        }
+
+        fn read(&self, _store_id: StoreId) -> Result<Option<Anchor>, DurableError> {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            Ok(None)
+        }
+
+        fn compare_and_set(
+            &mut self,
+            _store_id: StoreId,
+            _expected: Option<Anchor>,
+            _next: Anchor,
+        ) -> Result<(), DurableError> {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
     struct DeterministicEntropy {
         seed: u8,
         calls: usize,
@@ -1037,6 +1144,7 @@ mod tests {
                 session_id: AsciiId::new("session-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
             },
+            runtime_profile: GateRuntimeProfile::InProcessReference,
             ncp_adapter: SelectedNcpCommandAdapter::modeled_p0(),
             publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
                 gate_transport_principal: PrincipalId::new("gate-transport").unwrap(),
@@ -1177,6 +1285,97 @@ mod tests {
         assert_eq!(entropy.calls, 1);
     }
 
+    #[test]
+    fn declared_live_modeled_adapter_is_rejected_before_entropy_lock_or_backend_access() {
+        let directory = TestDirectory::new();
+        let backend_calls = Arc::new(AtomicUsize::new(0));
+        let storage = CountingStorage(Arc::clone(&backend_calls));
+        let anchor = CountingAnchor(Arc::clone(&backend_calls));
+        let mut configured = template();
+        configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let result = start_with_backends(
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage,
+            anchor,
+            key(),
+            &mut entropy,
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::NcpWireProfileMismatch {
+                runtime_profile: GateRuntimeProfile::DeclaredLiveZenoh,
+                required: NcpCommandWireProfile::ExactNcpV0_8Json,
+                actual: NcpCommandWireProfile::ModeledP0,
+            })
+        ));
+        assert_eq!(entropy.calls, 0);
+        assert_eq!(backend_calls.load(Ordering::Relaxed), 0);
+        assert!(!directory.0.join("gate.lock").exists());
+    }
+
+    #[cfg(all(feature = "real-ncp", not(feature = "live-zenoh")))]
+    #[test]
+    fn declared_live_exact_adapter_rejects_when_live_support_is_not_compiled() {
+        let directory = TestDirectory::new();
+        let backend_calls = Arc::new(AtomicUsize::new(0));
+        let storage = CountingStorage(Arc::clone(&backend_calls));
+        let anchor = CountingAnchor(Arc::clone(&backend_calls));
+        let mut configured = template();
+        configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let result = start_with_backends(
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage,
+            anchor,
+            key(),
+            &mut entropy,
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::LiveZenohSupportNotCompiled)
+        ));
+        assert_eq!(entropy.calls, 0);
+        assert_eq!(backend_calls.load(Ordering::Relaxed), 0);
+        assert!(!directory.0.join("gate.lock").exists());
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_exact_adapter_survives_startup_and_report_retains_declaration() {
+        let directory = TestDirectory::new();
+        let mut configured = template();
+        configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let running = start_with_backends(
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut entropy,
+        )
+        .unwrap();
+
+        assert_eq!(
+            running.actor().ncp_command_wire_profile(),
+            NcpCommandWireProfile::ExactNcpV0_8Json
+        );
+        assert_eq!(
+            running.report().runtime_profile,
+            GateRuntimeProfile::DeclaredLiveZenoh
+        );
+    }
+
     #[cfg(feature = "real-ncp")]
     #[test]
     fn explicit_exact_adapter_selection_survives_durable_startup() {
@@ -1197,7 +1396,11 @@ mod tests {
 
         assert_eq!(
             running.actor().ncp_command_wire_profile(),
-            haldir_ncp08::NcpCommandWireProfile::ExactNcpV0_8Json
+            NcpCommandWireProfile::ExactNcpV0_8Json
+        );
+        assert_eq!(
+            running.report().runtime_profile,
+            GateRuntimeProfile::InProcessReference
         );
     }
 
@@ -1220,6 +1423,14 @@ mod tests {
         assert!(first_report.provisioned);
         assert_eq!(first_report.recovery, None);
         assert_eq!(first_report.boot_commit.generation, 2);
+        assert_eq!(
+            first_report.runtime_profile,
+            GateRuntimeProfile::InProcessReference
+        );
+        assert_eq!(
+            first.actor().ncp_command_wire_profile(),
+            NcpCommandWireProfile::ModeledP0
+        );
         drop(first);
 
         let mut second_entropy = DeterministicEntropy::new(91);
@@ -1618,12 +1829,13 @@ mod tests {
     }
 
     #[test]
-    fn invalid_static_config_precedes_entropy_and_durable_generation() {
+    fn invalid_static_config_precedes_live_profile_entropy_and_durable_generation() {
         let directory = TestDirectory::new();
         let storage = MemoryStorage::default();
         let anchor = MemoryAnchor::default();
         let mut invalid = template();
         invalid.local_cap_ms = 0;
+        invalid.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
         let mut entropy = DeterministicEntropy::new(1);
 
         let result = start_with_backends(
@@ -1647,7 +1859,7 @@ mod tests {
     }
 
     #[test]
-    fn non_acl_publication_profile_is_rejected_before_entropy() {
+    fn non_acl_publication_profile_precedes_live_profile_and_entropy() {
         let directory = TestDirectory::new();
         let storage = MemoryStorage::default();
         let anchor = MemoryAnchor::default();
@@ -1655,6 +1867,7 @@ mod tests {
         invalid.publication = PlantPublicationAuthorityStateV1::Unavailable {
             reason: PlantPublicationUnavailableReasonV1::AclNotProvisioned,
         };
+        invalid.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
         let mut entropy = DeterministicEntropy::new(1);
 
         let result = start_with_backends(
@@ -1813,6 +2026,70 @@ mod tests {
             result,
             Err(DurableGateStartupError::EntropyUnavailable)
         ));
+        assert!(!state_directory.exists());
+    }
+
+    #[test]
+    fn declared_live_modeled_adapter_creates_no_local_state_directory_or_files() {
+        let parent = TestDirectory::new();
+        let state_directory = parent.absent_child("not-created-for-profile-mismatch");
+        let mut configured = template();
+        configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let result = start_local(
+            configured,
+            LocalStartupConfig {
+                state_directory: state_directory.clone(),
+                store_id: StoreId::new([1; 16]),
+                open_mode: StateOpenMode::ProvisionNew,
+                profile: StartupProfile::DevelopmentLocal,
+                max_payload_bytes: 4096,
+            },
+            key(),
+            &mut entropy,
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::NcpWireProfileMismatch {
+                runtime_profile: GateRuntimeProfile::DeclaredLiveZenoh,
+                required: NcpCommandWireProfile::ExactNcpV0_8Json,
+                actual: NcpCommandWireProfile::ModeledP0,
+            })
+        ));
+        assert_eq!(entropy.calls, 0);
+        assert!(!state_directory.exists());
+    }
+
+    #[cfg(all(feature = "real-ncp", not(feature = "live-zenoh")))]
+    #[test]
+    fn declared_live_exact_adapter_without_live_support_creates_no_local_state_directory() {
+        let parent = TestDirectory::new();
+        let state_directory = parent.absent_child("not-created-without-live-support");
+        let mut configured = template();
+        configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let result = start_local(
+            configured,
+            LocalStartupConfig {
+                state_directory: state_directory.clone(),
+                store_id: StoreId::new([1; 16]),
+                open_mode: StateOpenMode::ProvisionNew,
+                profile: StartupProfile::DevelopmentLocal,
+                max_payload_bytes: 4096,
+            },
+            key(),
+            &mut entropy,
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::LiveZenohSupportNotCompiled)
+        ));
+        assert_eq!(entropy.calls, 0);
         assert!(!state_directory.exists());
     }
 

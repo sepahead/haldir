@@ -30,10 +30,10 @@ pub use actor::{
     PublicationError, PublicationState, PublishCalledPublication, VehicleActor,
 };
 pub use startup::{
-    DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, JournalBindingError,
-    JournalBoundRunningGate, LocalStartupConfig, OsEntropy, PublicationJournalConfigError,
-    PublicationJournalStartupConfig, RunningGate, StartupProfile, StartupReport,
-    StartupStateConfig, StateOpenMode, start_local, start_with_backends,
+    DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, GateRuntimeProfile,
+    JournalBindingError, JournalBoundRunningGate, LocalStartupConfig, OsEntropy,
+    PublicationJournalConfigError, PublicationJournalStartupConfig, RunningGate, StartupProfile,
+    StartupReport, StartupStateConfig, StateOpenMode, start_local, start_with_backends,
 };
 
 #[cfg(test)]
@@ -899,6 +899,10 @@ mod e2e {
             lock,
         )
         .unwrap();
+        assert_eq!(
+            bound.report().runtime_profile,
+            GateRuntimeProfile::InProcessReference
+        );
         let clock = SharedClock::new(fixture.now);
         let coordinator = PublicationCoordinator::new(bound, clock.clone()).unwrap();
         let output_pool = OutputCapacityPool::new(NonZeroUsize::new(1).unwrap());

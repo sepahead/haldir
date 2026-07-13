@@ -45,15 +45,25 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   compatibility label and now has the narrow synthetic ACL evidence above. It is still
   not established for a packaged Gate/Crebain deployment, production credentials, or a
   complete actuator/bypass inventory.
-- **Exact NCP adapter selection is not a live Gate path.** The off-by-default
+- **Declared-live startup validation is not a live Gate path.** The off-by-default
   `real-ncp` feature compiles the exact pinned `ncp-core` v0.8.0 revision and its
-  frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). Gate startup now carries a
-  closed explicit selection, and an exact-selected actor is tested through its Called
-  boundary. Current P0 fixtures deliberately choose the dependency-light model, whose bytes
-  are not the pinned-NCP JSON accepted by the strict Zenoh publisher. No service requires
-  exact mode or wires Zenoh to the actor/coordinator/plant. Exact selection therefore does
-  not prove runtime publication, acceptance, application, or ACL exclusivity; a future live
-  profile must reject modeled selection before durable startup or authority exposure.
+  frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). `GateConfigTemplate` now carries
+  both the closed adapter selection and an explicit `GateRuntimeProfile`.
+  `InProcessReference` retains the dependency-light P0 paths. `DeclaredLiveZenoh` is rejected
+  unless `live-zenoh` was compiled and `ExactNcpV0_8Json` was selected; that rejection occurs
+  before startup-owned backend-trait calls, entropy, locks, or local-directory access. A
+  successful `StartupReport` retains the declaration only as observable process-local data.
+
+  The declaration is supplied cooperatively by the caller. It is not authenticated, signed,
+  loaded from a protected package, or committed into durable state, and it does not prevent
+  downgrade on restart. Public `GateConfig` and direct `VehicleActor` construction bypass the
+  template-startup check. The crate-private coordinator also does not consume or require the
+  retained declaration, so future internal code could pair an `InProcessReference` startup
+  that selected the exact adapter with that binding. No runnable binary or service selects
+  `DeclaredLiveZenoh`, opens a live session from it, or binds it to the journal coordinator,
+  strict publisher, or plant.
+  It therefore proves neither transport invocation nor publication, delivery, acceptance,
+  application, credential custody, bypass closure, or ACL exclusivity.
 - **Publication lifecycle coordination is internal; its strict binding is not runnable.** The actor keeps
   one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
   non-cloneable; exact bytes become accessible only after the actor rechecks authority,

@@ -54,10 +54,14 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   last ID, rejects a mismatched authenticated Gate binding, and returns a non-cloneable
   booted-store capability only after commit; the actor's recovered constructor consumes
   that capability and requires its boot ID in configuration. The startup library now
-  validates profile/entropy before durable access, retains the instance lock, and
-  explicitly provisions or opens development-local state. **Still absent:** a service
-  package and deployed external non-rewindable anchor, so end-to-end cross-restart
-  protection is not established (see `docs/LIMITATIONS.md`).
+  validates static and anchor profiles plus an explicit `GateRuntimeProfile`: a
+  `DeclaredLiveZenoh` template requires exact NCP selection and the compiled `live-zenoh`
+  feature before startup-owned backend calls, entropy, locks, or directories. It retains
+  the declaration in `StartupReport`, holds the instance lock, and explicitly provisions or
+  opens development-local state. **Still absent:** an authenticated or durably bound runtime
+  declaration, a service package that selects it, and a deployed external non-rewindable
+  anchor, so end-to-end cross-restart protection is not established (see
+  `docs/LIMITATIONS.md`). Direct actor construction bypasses template startup.
 - `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,
   an unambiguous versioned `(logical issuer, vehicle)` term namespace with a
   conservative legacy-scope upgrade read, separate-key authenticated snapshots,
@@ -135,10 +139,14 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 
 - `[x]` **G1** Keep Stage 0 ingress and the Stage-12 revision-recheck as their own boundaries.
 - `[~]` **G2** The exact-route/strict-client/bounded-ingress/typed-publisher
-  boundary and deterministic direction-specific ACL package now exist. The retained
-  synthetic campaign proves the fixed final-command/controller-intent subset across
-  all configured principals, but certificate lifecycle/reconnect, service wiring,
-  the full matrix, and bypass inventory remain open; the deliverable is still P0-only.
+  boundary and deterministic direction-specific ACL package now exist. Template startup
+  also rejects an inexact or feature-disabled `DeclaredLiveZenoh` declaration before its
+  listed backend calls, entropy, locks, or directory access, but that caller-supplied
+  declaration is neither authenticated nor durable and no service selects it. The retained
+  synthetic campaign proves the fixed
+  final-command/controller-intent subset across all configured principals, but certificate
+  lifecycle/reconnect, service wiring, the full matrix, and bypass inventory remain open;
+  the deliverable is still P0-only.
 - `[~]` **G3** Actuator-path disposition table needs Crebain + a live bypass campaign (out of P0).
 - `[x]` **G4** Assurance profiles + pins + verify + dependency rationale as an entry gate.
 - `[x]` **G5** The evidence layout/source ledger and the first retained live campaign

@@ -64,6 +64,15 @@ through the Called boundary with its receipt digest intact. The strict
 `FinalCommandPublisher` still deliberately rejects modeled non-JSON bytes and accepts only
 upstream-validated NCP JSON.
 
+Template startup separately requires an explicit `GateRuntimeProfile`; it is not inferred
+from the selected adapter or compiled Cargo features. `InProcessReference` preserves the P0
+model and exact-conformance paths. `DeclaredLiveZenoh` requires both
+`ExactNcpV0_8Json` and the compiled `live-zenoh` feature. In particular, compiling only
+`real-ncp` makes the exact constructor available but cannot satisfy the declared-live feature
+requirement by itself. A mismatch is rejected before startup-owned backend-trait calls,
+entropy, locks, or local-directory access, and a successful `StartupReport` retains the
+declaration for process-local observation.
+
 Gate's off-by-default `live-zenoh` feature now provides a crate-private consuming binding
 from one durable coordinator Called state to one awaited invocation of the concrete
 `FinalCommandPublisher`. Coordinator construction derives the exact pinned command route
@@ -84,13 +93,17 @@ after the real terminal append and sync, with reopen respectively producing Unkn
 exact terminal state. These tests do not open a live Zenoh session, execute the concrete
 method, enforce a real deadline, or inject an OS-I/O fault.
 
-No runnable service yet selects that binding or requires exact mode. A future live service
-profile must reject `ModeledP0` before durable startup or authority exposure and select
-`ExactNcpV0_8Json`; it must not rely on Cargo feature unification, strict-publisher
-preflight rejection, or a default. The retained synthetic campaign proves the exact
-final-command/controller-intent ACL subset using valid pinned-NCP JSON and remote callbacks
-(`CL-LIVE-TRANSPORT-01`), but not the service binding or application. Even a local Zenoh
-success would not prove delivery or application.
+No runnable binary or service selects `DeclaredLiveZenoh` or the coordinator/publisher
+binding. The runtime-profile value is a cooperative caller declaration, not authenticated
+package data or a durable anti-downgrade state; public `GateConfig` and direct
+`VehicleActor` construction bypass it. The crate-private coordinator does not require the
+retained declaration, so a future internal caller could pair it with an
+`InProcessReference` runtime that selected the exact adapter. Validation does not open a
+Zenoh session, construct or select the coordinator, invoke the concrete publisher, or
+establish credential custody.
+The retained synthetic campaign proves the exact final-command/controller-intent ACL subset
+using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not the service
+binding or application. Even a local Zenoh success would not prove delivery or application.
 
 ## Deferred upstream capabilities (increment 1)
 

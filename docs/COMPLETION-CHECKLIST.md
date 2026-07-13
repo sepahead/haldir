@@ -33,8 +33,11 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **PARTIAL** — NCP stream/source/session semantics: current P0 fixtures remain modeled,
   while a closed explicit exact-revision selection passes upstream validated JSON,
   frozen-corpus, differential, tamper, and actor-Called-boundary tests
-  (`CL-NCP-REAL-01`). Requiring that selection and binding it to a publisher in a live
-  Gate/Crebain deployment remain outstanding.
+  (`CL-NCP-REAL-01`). Template startup's explicit `DeclaredLiveZenoh` profile now requires
+  that exact selection and the compiled `live-zenoh` feature before startup-owned backend
+  calls, entropy, locks, or directories. The declaration is cooperative, process-local, and
+  bypassed by direct actor construction; no runnable Gate selects it or binds it to a
+  publisher or Crebain deployment.
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
   coordinator orders local receipt/Called/terminal evidence and blocks replacement after

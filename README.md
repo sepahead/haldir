@@ -15,9 +15,12 @@ bounded deterministic policy against trusted state, and — only on ALLOW — pr
 plant-facing NCP command under Gate's own stream. The static secure-reference profile reserves
 final-route publication to Gate, and a retained synthetic mTLS campaign has shown that only
 Gate among all eight configured certificate principals reached the allowed remote receivers on
-that route. No runnable service yet enforces exact mode, binds it to strict transport, or
-proves credential custody. Crebain is intended to remain the sole owner of final command
-application and vehicle-specific safe action; that integration is also still unproven.
+that route. The startup library rejects a `DeclaredLiveZenoh` template unless the exact adapter
+is selected and the `live-zenoh` feature is compiled, before startup-owned backend calls,
+entropy, locks, or directories. No runnable service selects that declaration, binds it to
+strict transport, or proves credential custody. Crebain is intended to remain the sole owner
+of final command application and vehicle-specific safe action; that integration is also still
+unproven.
 
 > A controller signs a typed Haldir action request. Gate independently validates the
 > controller deployment, mission lease, current NCP session, source/state evidence, and
@@ -41,10 +44,14 @@ says they mean.
   no live network, no neural runtime, no physical hardware.
 - **NCP baseline pinned:** tag `v0.8.0`, commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`,
   wire `0.8`, contract hash `d1b50a2d8a265276`; the optional `real-ncp`
-  conformance adapter compiles that exact revision and replays its frozen corpus. Gate
-  startup carries a closed explicit modeled/exact selection; current P0 fixtures choose the
-  model, while the exact selection is exercised through durable startup and the actor Called
-  boundary.
+  conformance adapter compiles that exact revision and replays its frozen corpus. Gate template
+  startup carries both a closed modeled/exact adapter selection and an explicit
+  `GateRuntimeProfile` declaration. `InProcessReference` retains the P0 paths;
+  `DeclaredLiveZenoh` requires `ExactNcpV0_8Json` plus the compiled `live-zenoh` feature before
+  the listed startup-owned backend calls, entropy, locks, or directory access. The latter
+  remains only a caller-supplied process-local declaration; current P0 fixtures choose the
+  reference profile, while the exact selection is exercised through durable startup and the
+  actor Called boundary.
 
 ### What is implemented and tested locally (the P0 pure core)
 
@@ -78,9 +85,13 @@ authenticated snapshot/generation-anchor primitives with commit-before-mutation
 anti-rollback tests,
 Unix atomic-file mechanics, classified local-development recovery, and Gate-bound
 durable startup/boot-ID mechanisms (`CL-DURABLE-PRIMITIVE-01`,
-`CL-DURABLE-STARTUP-DEV-01`). The actor can consume the non-cloneable booted-store
-capability returned only after a fresh matching boot commit, and faults if a term
-commit is unavailable.
+`CL-DURABLE-STARTUP-DEV-01`). Template startup validates `DeclaredLiveZenoh` against the
+compiled feature and exact adapter before its backend traits, entropy source, lock, or local
+directory can be touched, and the startup report retains the validated declaration for
+observation. That declaration is cooperative, unauthenticated, and not durably committed;
+public `GateConfig`/direct `VehicleActor` construction bypasses it. The actor can consume the
+non-cloneable booted-store capability returned only after a fresh matching boot commit, and
+faults if a term commit is unavailable.
 The startup library explicitly provisions or opens those paths, but no service package
 loads protected secrets or a deployed external non-rewindable anchor. The direct
 `VehicleActor` profile still selects the lossy in-process spool, while the new bound type
@@ -116,8 +127,9 @@ See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: exact routes, an
 off-by-default strict Zenoh 1.9 mTLS boundary, and a deterministic default-deny ACL
 package now exist, and the retained synthetic campaign proves the fixed final-command/
 controller-intent ACL subset for its ephemeral test PKI. No runnable Gate service selects
-that path, and certificate lifecycle/reconnect, bypass, application, and credential custody
-remain unproved. NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends
+the `DeclaredLiveZenoh` startup profile or coordinator path, and certificate
+lifecycle/reconnect, bypass, application, and credential custody remain unproved.
+NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends
 (Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated; no
 application, complete-mediation, production-security, or hardware claim is made.
 
