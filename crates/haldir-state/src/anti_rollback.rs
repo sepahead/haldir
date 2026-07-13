@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
 const BOOT_ID_DOMAIN: &[u8] = b"haldir.state.gate-boot-id.v1\0";
+const STORE_FORMAT_VERSION: u64 = 2;
 
 /// An anti-rollback failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -210,11 +211,13 @@ impl AntiRollbackStore {
         Ok(candidate)
     }
 
-    /// Serialize to a durable byte representation (canonical, deterministic).
+    /// Serialize to the current durable byte representation (canonical,
+    /// deterministic, and rejected by pre-v2 readers after the next write).
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut w = CborWriter::new();
-        w.array_header(4);
+        w.array_header(5);
+        w.uint(STORE_FORMAT_VERSION);
         w.uint(self.boot_counter);
         match self.last_gate_boot_id {
             Some(gate_boot_id) => w.bytes(gate_boot_id.as_bytes()),
@@ -225,16 +228,25 @@ impl AntiRollbackStore {
         w.into_bytes()
     }
 
-    /// Parse from durable bytes. A parse failure is corruption (latch a fault).
+    /// Parse current v2 or legacy v1 durable bytes. The next serialization always
+    /// writes v2 so restoring a pre-v2 binary fails closed rather than reusing a
+    /// high-water advanced only in the collision-free namespace.
     ///
     /// # Errors
     /// Returns [`AntiRollbackError::Corrupt`] on any structural failure.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, AntiRollbackError> {
         let mut r = CborReader::new(bytes, Limits::LARGE);
         let n = r.read_array_len().map_err(|_| AntiRollbackError::Corrupt)?;
-        if n != 4 {
-            return Err(AntiRollbackError::Corrupt);
-        }
+        let legacy_v1 = match n {
+            4 => true,
+            5 => {
+                if r.read_uint().map_err(|_| AntiRollbackError::Corrupt)? != STORE_FORMAT_VERSION {
+                    return Err(AntiRollbackError::Corrupt);
+                }
+                false
+            }
+            _ => return Err(AntiRollbackError::Corrupt),
+        };
         let boot_counter = r.read_uint().map_err(|_| AntiRollbackError::Corrupt)?;
         let last_gate_boot_id = match r.read_bytes().map_err(|_| AntiRollbackError::Corrupt)? {
             [] => None,
@@ -252,10 +264,28 @@ impl AntiRollbackStore {
             terms,
             revocation_epochs,
         };
-        if store.to_bytes() != bytes {
+        let canonical = if legacy_v1 {
+            store.to_legacy_v1_bytes()
+        } else {
+            store.to_bytes()
+        };
+        if canonical != bytes {
             return Err(AntiRollbackError::Corrupt);
         }
         Ok(store)
+    }
+
+    fn to_legacy_v1_bytes(&self) -> Vec<u8> {
+        let mut w = CborWriter::new();
+        w.array_header(4);
+        w.uint(self.boot_counter);
+        match self.last_gate_boot_id {
+            Some(gate_boot_id) => w.bytes(gate_boot_id.as_bytes()),
+            None => w.bytes(&[]),
+        }
+        encode_map(&mut w, &self.terms);
+        encode_map(&mut w, &self.revocation_epochs);
+        w.into_bytes()
     }
 }
 
@@ -474,6 +504,31 @@ mod tests {
         assert_eq!(
             AntiRollbackStore::from_bytes(&legacy.into_bytes()),
             Err(AntiRollbackError::Corrupt)
+        );
+    }
+
+    #[test]
+    fn legacy_v1_store_is_readable_but_every_new_write_blocks_binary_downgrade() {
+        let mut legacy = AntiRollbackStore::new_empty();
+        legacy
+            .accept_term(b"lease:mission-authority:uav-1", 10)
+            .unwrap();
+        let legacy_bytes = legacy.to_legacy_v1_bytes();
+        let migrated = AntiRollbackStore::from_bytes(&legacy_bytes).unwrap();
+        assert_eq!(migrated.highest_term(b"lease:mission-authority:uav-1"), 10);
+
+        let mut rewritten = migrated;
+        rewritten.accept_term(b"canonical-scope", 11).unwrap();
+        let rewritten_bytes = rewritten.to_bytes();
+
+        let mut old_reader = CborReader::new(&rewritten_bytes, Limits::LARGE);
+        assert_eq!(old_reader.read_array_len().unwrap(), 5);
+        assert_ne!(rewritten_bytes, rewritten.to_legacy_v1_bytes());
+        assert_eq!(
+            AntiRollbackStore::from_bytes(&rewritten_bytes)
+                .unwrap()
+                .highest_term(b"canonical-scope"),
+            11
         );
     }
 }

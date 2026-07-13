@@ -7,6 +7,7 @@
 
 use crate::anti_rollback::AntiRollbackStore;
 use crate::challenge::ChallengeTable;
+use haldir_contracts::cbor::{CanonicalValue, CborWriter};
 use haldir_contracts::digest::DigestV1;
 use haldir_contracts::ids::{GateBootId, GateId, GateOutputEpoch, VehicleId};
 use haldir_contracts::lease::MissionLeaseV1;
@@ -15,6 +16,8 @@ use haldir_contracts::scalar::AsciiId;
 use haldir_contracts::session::NcpSessionIdentityV1;
 use haldir_core::snapshot::{ActiveMissionLeaseSnapshot, AdmittedControllerSnapshot};
 use haldir_core::time::MonoInstant;
+
+const LEASE_TERM_SCOPE_DOMAIN: &[u8] = b"haldir.state.lease-term-scope.v1\0";
 
 /// A mission-lease acceptance failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,13 +106,36 @@ pub struct LeaseAcceptContext {
     pub local_cap_ms: u32,
 }
 
-fn term_scope(lease: &MissionLeaseV1) -> Vec<u8> {
-    let mut s = Vec::new();
-    s.extend_from_slice(b"lease:");
-    s.extend_from_slice(lease.issuer_id.as_str().as_bytes());
-    s.push(b':');
-    s.extend_from_slice(lease.vehicle_id.as_str().as_bytes());
-    s
+/// Build the persistent lease-term namespace for a logical issuer and vehicle.
+///
+/// The versioned domain is followed by a canonical CBOR array. CBOR's canonical
+/// text lengths make the two fields unambiguous even though `AsciiId` permits
+/// `:`. The issuer signing-key id is deliberately absent so key rotation cannot
+/// reset the high-water. Realm, Gate incarnation, and NCP session/output epochs
+/// are also absent: they are acceptance bindings, not rollback namespaces. A
+/// different logical issuer id does select a different namespace; this state
+/// layer does not authorize or transfer issuer identity. A
+/// durable store is separately bound to one provisioned Gate ID; moving a
+/// vehicle to another store does not transfer high-water state automatically.
+pub(crate) fn canonical_term_scope(issuer_id: &AsciiId<64>, vehicle_id: &VehicleId) -> Vec<u8> {
+    let mut encoded = CborWriter::new();
+    encoded.array_header(2);
+    issuer_id.encode(&mut encoded);
+    vehicle_id.encode(&mut encoded);
+
+    let mut scope = Vec::with_capacity(LEASE_TERM_SCOPE_DOMAIN.len() + encoded.as_bytes().len());
+    scope.extend_from_slice(LEASE_TERM_SCOPE_DOMAIN);
+    scope.extend_from_slice(encoded.as_bytes());
+    scope
+}
+
+fn legacy_term_scope(lease: &MissionLeaseV1) -> Vec<u8> {
+    let mut scope = Vec::new();
+    scope.extend_from_slice(b"lease:");
+    scope.extend_from_slice(lease.issuer_id.as_str().as_bytes());
+    scope.push(b':');
+    scope.extend_from_slice(lease.vehicle_id.as_str().as_bytes());
+    scope
 }
 
 /// Accept a verified mission lease into an active snapshot.
@@ -154,8 +180,17 @@ pub fn accept_lease(
         return Err(LeaseAcceptError::AdmissionMismatch);
     }
     // 5. Term anti-rollback check (peek before any commit).
-    let scope = term_scope(lease);
-    if lease.lease_term.get() <= anti_rollback.highest_term(&scope) {
+    let scope = canonical_term_scope(&lease.issuer_id, &lease.vehicle_id);
+    // Compatibility read: older snapshots keyed terms with an ambiguous
+    // colon-delimited encoding. Taking the maximum prevents an upgrade from
+    // resetting a pre-existing high-water. New commits use only the canonical
+    // namespace, so formerly colliding logical scopes diverge safely after the
+    // shared legacy floor.
+    let legacy_scope = legacy_term_scope(lease);
+    let highest_term = anti_rollback
+        .highest_term(&scope)
+        .max(anti_rollback.highest_term(&legacy_scope));
+    if lease.lease_term.get() <= highest_term {
         return Err(LeaseAcceptError::TermRollback);
     }
     // 6. Verify the challenge without consuming it. The per-vehicle actor lock

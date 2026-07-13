@@ -66,6 +66,7 @@ mod model {
     use haldir_contracts::session::NcpSessionIdentityV1;
     use haldir_core::snapshot::AdmittedControllerSnapshot;
     use haldir_core::time::MonoInstant;
+    use proptest::prelude::*;
 
     fn dig(s: u8) -> DigestV1 {
         DigestV1::compute(DigestDomain::Payload, &[s])
@@ -166,6 +167,58 @@ mod model {
     }
 
     #[test]
+    fn canonical_term_scope_has_stable_versioned_length_framing() {
+        let issuer = AsciiId::new("mission-authority").unwrap();
+        let vehicle = VehicleId::new("uav-1").unwrap();
+        let scope = mission::canonical_term_scope(&issuer, &vehicle);
+
+        let mut expected = b"haldir.state.lease-term-scope.v1\0".to_vec();
+        expected.extend_from_slice(&[
+            0x82, // two-element array
+            0x71, // 17-byte text string
+        ]);
+        expected.extend_from_slice(b"mission-authority");
+        expected.push(0x65); // five-byte text string
+        expected.extend_from_slice(b"uav-1");
+
+        assert_eq!(scope, expected);
+    }
+
+    #[test]
+    fn canonical_term_scope_separates_a_legacy_delimiter_collision() {
+        let left_issuer = AsciiId::new("mission:authority").unwrap();
+        let left_vehicle = VehicleId::new("uav").unwrap();
+        let right_issuer = AsciiId::new("mission").unwrap();
+        let right_vehicle = VehicleId::new("authority:uav").unwrap();
+
+        assert_ne!(
+            mission::canonical_term_scope(&left_issuer, &left_vehicle),
+            mission::canonical_term_scope(&right_issuer, &right_vehicle)
+        );
+    }
+
+    proptest! {
+        #[test]
+        fn canonical_term_scope_is_injective_for_distinct_bounded_pairs(
+            issuer_a in "[A-Za-z0-9._:-]{1,16}",
+            vehicle_a in "[A-Za-z0-9._:-]{1,16}",
+            issuer_b in "[A-Za-z0-9._:-]{1,16}",
+            vehicle_b in "[A-Za-z0-9._:-]{1,16}",
+        ) {
+            prop_assume!(issuer_a != issuer_b || vehicle_a != vehicle_b);
+            let issuer_a = AsciiId::new(&issuer_a).unwrap();
+            let vehicle_a = VehicleId::new(&vehicle_a).unwrap();
+            let issuer_b = AsciiId::new(&issuer_b).unwrap();
+            let vehicle_b = VehicleId::new(&vehicle_b).unwrap();
+
+            prop_assert_ne!(
+                mission::canonical_term_scope(&issuer_a, &vehicle_a),
+                mission::canonical_term_scope(&issuer_b, &vehicle_b)
+            );
+        }
+    }
+
+    #[test]
     fn lease_accepts_and_anchors_deadline() {
         let mut ch = table_with_nonce();
         let mut ar = AntiRollbackStore::new_empty();
@@ -208,6 +261,104 @@ mod model {
         let mut ch2 = table_with_nonce();
         let err =
             accept_lease(&lease(1, 1, 1, 10), &ctx(1, 1, 1), &mut ch2, &mut ar, now()).unwrap_err();
+        assert_eq!(err, LeaseAcceptError::TermRollback);
+    }
+
+    #[test]
+    fn formerly_colliding_issuer_vehicle_pairs_have_independent_terms() {
+        let mut anti_rollback = AntiRollbackStore::new_empty();
+
+        let mut left = lease(1, 1, 1, 10);
+        left.issuer_id = AsciiId::new("mission:authority").unwrap();
+        left.vehicle_id = VehicleId::new("uav").unwrap();
+        let mut left_ctx = ctx(1, 1, 1);
+        left_ctx.vehicle_id = left.vehicle_id.clone();
+        accept_lease(
+            &left,
+            &left_ctx,
+            &mut table_with_nonce(),
+            &mut anti_rollback,
+            now(),
+        )
+        .unwrap();
+
+        let mut right = lease(1, 1, 1, 10);
+        right.issuer_id = AsciiId::new("mission").unwrap();
+        right.vehicle_id = VehicleId::new("authority:uav").unwrap();
+        let mut right_ctx = ctx(1, 1, 1);
+        right_ctx.vehicle_id = right.vehicle_id.clone();
+        accept_lease(
+            &right,
+            &right_ctx,
+            &mut table_with_nonce(),
+            &mut anti_rollback,
+            now(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn legacy_scope_high_water_remains_a_conservative_upgrade_floor() {
+        let mut anti_rollback = AntiRollbackStore::new_empty();
+        anti_rollback
+            .accept_term(b"lease:mission-authority:uav-1", 10)
+            .unwrap();
+
+        let mut challenges = table_with_nonce();
+        let err = accept_lease(
+            &lease(1, 1, 1, 10),
+            &ctx(1, 1, 1),
+            &mut challenges,
+            &mut anti_rollback,
+            now(),
+        )
+        .unwrap_err();
+        assert_eq!(err, LeaseAcceptError::TermRollback);
+        assert!(challenges.is_pending(&ChallengeNonce::new([7; 32]), now()));
+
+        accept_lease(
+            &lease(1, 1, 1, 11),
+            &ctx(1, 1, 1),
+            &mut challenges,
+            &mut anti_rollback,
+            now(),
+        )
+        .unwrap();
+        let canonical = mission::canonical_term_scope(
+            &AsciiId::new("mission-authority").unwrap(),
+            &VehicleId::new("uav-1").unwrap(),
+        );
+        assert_eq!(anti_rollback.highest_term(&canonical), 11);
+    }
+
+    #[test]
+    fn realm_gate_boot_session_and_key_rotation_do_not_reset_term_high_water() {
+        let mut anti_rollback = AntiRollbackStore::new_empty();
+        accept_lease(
+            &lease(1, 1, 1, 10),
+            &ctx(1, 1, 1),
+            &mut table_with_nonce(),
+            &mut anti_rollback,
+            now(),
+        )
+        .unwrap();
+
+        let mut rotated = lease(2, 2, 2, 10);
+        rotated.issuer_key_id = KeyId::new(vec![9, 9]).unwrap();
+        rotated.gate_id = GateId::new("gate-2").unwrap();
+        rotated.realm = AsciiId::new("range-b").unwrap();
+        let mut rotated_ctx = ctx(2, 2, 2);
+        rotated_ctx.gate_id = rotated.gate_id.clone();
+        rotated_ctx.realm = rotated.realm.clone();
+
+        let err = accept_lease(
+            &rotated,
+            &rotated_ctx,
+            &mut table_with_nonce(),
+            &mut anti_rollback,
+            now(),
+        )
+        .unwrap_err();
         assert_eq!(err, LeaseAcceptError::TermRollback);
     }
 
