@@ -58,8 +58,14 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   continuation. An initially inactive marked actor is tested through local state/challenge/lease
   activation, canonical intent-route binding, and fake-publisher service binding. A separate
   fake session/ingress facade tests the outer aggregate's derivation, journal-capacity
-  retention/retry, closure,
-  drops, and shutdown ordering. Service result, cold/pending-drop, rejection, and terminal-fault
+  retention/retry, closure, drops, and shutdown ordering. Its local stop-only handle is tested
+  before receive, before a retained retry, and during an in-flight publication; the latter reaches
+  its ordinary transition before the latched request is returned, and the underlying race helper
+  wakes a pending idle operation. Dropping a pending shutdown-aware future is separately tested to
+  destroy the owners and make the handle reject another request. The latch remains cooperative:
+  successful request acceptance is not cleanup acknowledgment, legacy `process_next` ignores it,
+  and clones must be restricted. This does not establish an in-flight timeout, OS-signal runner,
+  journal finalization, remote session retirement, or graceful production shutdown. Service result, cold/pending-drop, rejection, and terminal-fault
   tests still use a fake publisher rather than a live session. No runnable Gate credential-opening
   package, control loop, or publisher worker selects it; lower APIs remain bypasses, the frame
   remains copyable there, and exactly-once submission is not enforced.

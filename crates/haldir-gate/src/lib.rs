@@ -40,7 +40,7 @@ pub use startup::{
     LivePublisherError, LiveServiceBindError, LiveServiceFatal, LiveServiceOutcome,
     LiveServiceStop, LiveServiceTransition, LiveZenohServiceBindError, LiveZenohServiceBindFailure,
     LiveZenohServiceStop, LiveZenohServiceTransition, LiveZenohShutdownError,
-    LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
+    LiveZenohShutdownHandle, LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 pub use startup::{
     DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, GateRuntimeProfile,
@@ -230,6 +230,27 @@ mod e2e {
         fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
             self.get_mut().polls.fetch_add(1, Ordering::SeqCst);
             Poll::Pending
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    struct CompleteWhenShutdownRequested {
+        shutdown: LiveZenohShutdownHandle,
+        polls: Arc<AtomicUsize>,
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    impl Future for CompleteWhenShutdownRequested {
+        type Output = Result<(), TestPublishError>;
+
+        fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
+            let this = self.get_mut();
+            this.polls.fetch_add(1, Ordering::SeqCst);
+            if this.shutdown.is_shutdown_requested() {
+                Poll::Ready(Ok(()))
+            } else {
+                Poll::Pending
+            }
         }
     }
 
@@ -2739,7 +2760,79 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
-    fn declared_live_zenoh_continue_then_pending_process_drop_destroys_every_owner() {
+    fn declared_live_zenoh_shutdown_request_precedes_owned_ingress_receive() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let next_calls = Arc::new(AtomicUsize::new(0));
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let factory_next_calls = Arc::clone(&next_calls);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 25,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(1024, 1).unwrap(),
+            move |session, keys, _controller_id, _limits| async move {
+                let lineage = session.lineage;
+                Ok::<_, SecureZenohError>((
+                    session,
+                    IoTestPublisher {
+                        lineage,
+                        drops: factory_publisher_drops,
+                    },
+                    IoTestIngress {
+                        lineage,
+                        events: VecDeque::from([IntentIngressEvent {
+                            actual_key: INTENT_KEY.to_owned(),
+                            bytes: b"must-remain-queued".to_vec(),
+                        }]),
+                        next_calls: factory_next_calls,
+                        drops: factory_ingress_drops,
+                    },
+                    keys.final_command().to_owned(),
+                ))
+            },
+        ));
+        let service = match poll_once(bind.as_mut()) {
+            Poll::Ready(Ok(service)) => service,
+            _ => panic!("ready fake transport factory must bind synchronously"),
+        };
+        let shutdown = service.shutdown_handle();
+        assert!(shutdown.request_shutdown());
+        assert!(shutdown.is_shutdown_requested());
+
+        let mut process = Box::pin(service.process_next_or_shutdown_with_test_future(|_| {
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let service = match poll_once(process.as_mut()) {
+            Poll::Ready(TestLiveZenohServiceTransition::ShutdownRequested { service }) => service,
+            _ => panic!("a prior shutdown request must return the untouched aggregate"),
+        };
+        assert_eq!(next_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(service.ingress().events.len(), 1);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
+
+        drop(service);
+        assert!(!shutdown.request_shutdown());
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_pending_shutdown_aware_process_drop_destroys_every_owner() {
         let fixture = unactivated_live_fixture();
         let valid_intent = build_intent(
             fixture.admission_digest,
@@ -2817,13 +2910,15 @@ mod e2e {
         assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
         assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
 
+        let shutdown = service.shutdown_handle();
         let publisher_polls = Arc::new(AtomicUsize::new(0));
         let observed_polls = Arc::clone(&publisher_polls);
-        let mut second = Box::pin(
-            service.process_next_with_test_future(move |_| PendingPublish {
-                polls: observed_polls,
-            }),
-        );
+        let mut second =
+            Box::pin(
+                service.process_next_or_shutdown_with_test_future(move |_| PendingPublish {
+                    polls: observed_polls,
+                }),
+            );
         assert!(matches!(poll_once(second.as_mut()), Poll::Pending));
         assert_eq!(next_calls.load(Ordering::SeqCst), 2);
         assert_eq!(publisher_polls.load(Ordering::SeqCst), 1);
@@ -2831,6 +2926,103 @@ mod e2e {
         assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
         assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
         drop(second);
+        assert!(!shutdown.request_shutdown());
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_shutdown_waits_for_in_flight_publication_then_latches() {
+        let fixture = unactivated_live_fixture();
+        let valid_intent = build_intent(
+            fixture.admission_digest,
+            &fixture.admission_record,
+            1,
+            velocity(1, 400),
+        );
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let next_calls = Arc::new(AtomicUsize::new(0));
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let factory_next_calls = Arc::clone(&next_calls);
+        let signed_intent = sign_intent(&fixture.ctrl_sk, &valid_intent);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 28,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(HARD_MAX_INTENT_BYTES, 1).unwrap(),
+            move |session, keys, _controller_id, _limits| async move {
+                let lineage = session.lineage;
+                Ok::<_, SecureZenohError>((
+                    session,
+                    IoTestPublisher {
+                        lineage,
+                        drops: factory_publisher_drops,
+                    },
+                    IoTestIngress {
+                        lineage,
+                        events: VecDeque::from([IntentIngressEvent {
+                            actual_key: INTENT_KEY.to_owned(),
+                            bytes: signed_intent,
+                        }]),
+                        next_calls: factory_next_calls,
+                        drops: factory_ingress_drops,
+                    },
+                    keys.final_command().to_owned(),
+                ))
+            },
+        ));
+        let service = match poll_once(bind.as_mut()) {
+            Poll::Ready(Ok(service)) => service,
+            _ => panic!("ready fake transport factory must bind synchronously"),
+        };
+        let shutdown = service.shutdown_handle();
+        let publisher_polls = Arc::new(AtomicUsize::new(0));
+        let observed_polls = Arc::clone(&publisher_polls);
+        let completion_shutdown = shutdown.clone();
+        let mut process = Box::pin(service.process_next_or_shutdown_with_test_future(move |_| {
+            CompleteWhenShutdownRequested {
+                shutdown: completion_shutdown,
+                polls: observed_polls,
+            }
+        }));
+
+        assert!(matches!(poll_once(process.as_mut()), Poll::Pending));
+        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_polls.load(Ordering::SeqCst), 1);
+        assert!(shutdown.request_shutdown());
+        let service = match poll_once(process.as_mut()) {
+            Poll::Ready(TestLiveZenohServiceTransition::Continue {
+                service,
+                outcome: LiveServiceOutcome::PublishReturnedOk { .. },
+            }) => service,
+            _ => panic!("shutdown must not cancel an already in-flight publication"),
+        };
+        assert_eq!(publisher_polls.load(Ordering::SeqCst), 2);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
+
+        let mut stop = Box::pin(service.process_next_or_shutdown_with_test_future(|_| {
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let service = match poll_once(stop.as_mut()) {
+            Poll::Ready(TestLiveZenohServiceTransition::ShutdownRequested { service }) => service,
+            _ => panic!("the in-flight request must remain latched for the returned owner"),
+        };
+        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
+        drop(service);
         assert_eq!(session_drops.load(Ordering::SeqCst), 1);
         assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
         assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
@@ -2969,6 +3161,18 @@ mod e2e {
         let service = match poll_once(retry.as_mut()) {
             Poll::Ready(TestLiveZenohServiceTransition::Unavailable { service, .. }) => service,
             _ => panic!("private refused event must retry before a newer receive"),
+        };
+        assert!(service.has_pending_event());
+        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
+
+        let shutdown_request = service.shutdown_handle();
+        assert!(shutdown_request.request_shutdown());
+        let mut stop = Box::pin(service.process_next_or_shutdown_with_test_future(|_| {
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let service = match poll_once(stop.as_mut()) {
+            Poll::Ready(TestLiveZenohServiceTransition::ShutdownRequested { service }) => service,
+            _ => panic!("shutdown must precede a privately retained retry"),
         };
         assert!(service.has_pending_event());
         assert_eq!(next_calls.load(Ordering::SeqCst), 1);

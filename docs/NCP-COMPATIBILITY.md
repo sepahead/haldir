@@ -123,7 +123,11 @@ caller-supplied rather than authenticated control/state ingress, and no refresh/
 exists. A separate `DeclaredLiveGateZenohService` consumes the route capability, one supplied
 session wrapper, and bounded limits; it derives the matched publisher and exact accepted-controller-
 route ingress internally from that same session lineage, then exposes only consuming receive/process/
-shutdown paths. Offline fake tests prove the composition and ownership ordering, not concrete
+shutdown paths. A cloneable local handle can latch a request that lets the shutdown-aware method
+return the owner before retry/new receive or wake an idle receive, but never request-cancels a
+selected event and supplies no in-flight timeout or signal supervision. The request is cooperative:
+legacy `process_next` ignores it, successful latching is not a cleanup acknowledgment, and a runner
+must restrict clones and exclusively use the shutdown-aware method. Offline fake tests prove the composition and ownership ordering, not concrete
 Zenoh invocation. No runnable Gate binary/service package selects `DeclaredLiveZenoh`, constructs
 the concrete aggregate, or opens/authenticates its session or credentials.
 The runtime-profile value is a cooperative caller declaration, not authenticated package data

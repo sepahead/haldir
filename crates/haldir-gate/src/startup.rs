@@ -58,7 +58,7 @@ pub use live_service::{
     LivePublisherError, LiveServiceBindError, LiveServiceFatal, LiveServiceOutcome,
     LiveServiceStop, LiveServiceTransition, LiveZenohServiceBindError, LiveZenohServiceBindFailure,
     LiveZenohServiceStop, LiveZenohServiceTransition, LiveZenohShutdownError,
-    LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
+    LiveZenohShutdownHandle, LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 
 #[cfg(all(test, feature = "live-zenoh"))]

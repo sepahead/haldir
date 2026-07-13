@@ -4,12 +4,16 @@
 //! startup-marked coordinator, one locally primed canonical intent binding, one
 //! concrete strict publisher, and one output-capacity slot. Activation performs
 //! no network activity. The outer Zenoh aggregate can additionally retain one
-//! caller-opened session wrapper and an internally declared ingress. This module
-//! deliberately does not load credentials, spawn a worker, or provide supervision
-//! and reconnect policy.
+//! caller-opened session wrapper and an internally declared ingress, plus a
+//! cloneable stop-only request handle observed by its consuming shutdown-aware
+//! method at an idle boundary.
+//! This module deliberately does not load credentials, spawn a worker, or provide
+//! timeout, signal, supervision, and reconnect policy.
 
 use core::fmt;
+use core::future::{Future, poll_fn};
 use core::num::NonZeroUsize;
+use core::task::Poll;
 
 use haldir_contracts::cbor::Limits;
 use haldir_contracts::digest::DigestV1;
@@ -24,6 +28,7 @@ use haldir_transport_zenoh::{
     IngressCountersSnapshot, IngressLimits, IntentIngress, IntentIngressEvent,
     MAX_HALDIR_ROUTE_BYTES, SecureZenohError, SecureZenohSession,
 };
+use tokio::sync::watch;
 
 use crate::actor::{DecisionRecord, GateError, PublicationError};
 use crate::startup::publication_coordinator::{
@@ -731,6 +736,49 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
     }
 }
 
+/// Cloneable local request handle for a safe-boundary Gate aggregate shutdown.
+///
+/// A request is persistent and monotonic. It can wake
+/// [`DeclaredLiveGateZenohService::process_next_or_shutdown`] while that method is
+/// waiting for ingress, but it never cancels an event already handed to the Gate
+/// decision/publication lifecycle. The aggregate remains the sole explicit close
+/// handle. The request is cooperative and irreversible, so production wiring must
+/// restrict clones and exclusively drive the aggregate through the shutdown-aware
+/// processing method.
+#[derive(Clone)]
+pub struct LiveZenohShutdownHandle {
+    requested: watch::Sender<bool>,
+}
+
+impl LiveZenohShutdownHandle {
+    /// Persistently request shutdown at the next safe receive boundary.
+    ///
+    /// Returns `false` only after the aggregate-side receiver has already been
+    /// dropped. `true` means the local latch accepted the request, not that an
+    /// aggregate owner will be returned or cleanup will run; either can still be
+    /// concurrently dropped. Repeated requests while the receiver exists remain
+    /// successful.
+    #[must_use]
+    pub fn request_shutdown(&self) -> bool {
+        self.requested.send(true).is_ok()
+    }
+
+    /// Whether shutdown has already been requested through any cloned handle.
+    #[must_use]
+    pub fn is_shutdown_requested(&self) -> bool {
+        *self.requested.borrow()
+    }
+}
+
+impl fmt::Debug for LiveZenohShutdownHandle {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LiveZenohShutdownHandle")
+            .field("requested", &self.is_shutdown_requested())
+            .finish()
+    }
+}
+
 /// Terminal result of the owned Zenoh receive/process path.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -746,6 +794,11 @@ pub enum LiveZenohServiceStop {
 /// Result of receiving and processing one event through the owned Zenoh ingress.
 #[must_use = "the returned Zenoh service is required to receive another event through this owner"]
 pub enum LiveZenohServiceTransition<C> {
+    /// A persistent local shutdown request won at a safe receive boundary.
+    ShutdownRequested {
+        /// Same aggregate owner, ready for explicit [`DeclaredLiveGateZenohService::shutdown`].
+        service: DeclaredLiveGateZenohService<C>,
+    },
     /// The aggregate may receive another event only through the returned owner.
     Continue {
         /// Same single-owner aggregate after a safe continuation path.
@@ -824,8 +877,9 @@ impl std::error::Error for LiveZenohShutdownError {}
 ///
 /// Binding consumes an accepted-lease-derived route capability, constructs the
 /// strict publisher and exact bounded ingress internally from the same supplied
-/// session wrapper, and retains all of them behind [`Self::process_next`]. No
-/// public method accepts or returns a raw [`IntentIngressEvent`]. An ownership-preserving
+/// session wrapper, and retains all of them behind the consuming
+/// [`Self::process_next`] and [`Self::process_next_or_shutdown`] methods. No public
+/// method accepts or returns a raw [`IntentIngressEvent`]. An ownership-preserving
 /// journal-capacity or restart-clearance refusal is retained privately and retried
 /// byte-for-byte before receiving a newer event. Input/key/output-capacity refusals
 /// are unreachable through this owned topology and stop as an invariant violation.
@@ -846,6 +900,8 @@ pub struct DeclaredLiveGateZenohService<C> {
     ingress: IntentIngress,
     session: SecureZenohSession,
     pending_event: Option<IntentIngressEvent>,
+    shutdown_sender: watch::Sender<bool>,
+    shutdown_receiver: watch::Receiver<bool>,
 }
 
 struct PreparedLiveZenohBinding<C> {
@@ -926,12 +982,15 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
                     .await);
                 }
             };
+        let (shutdown_sender, shutdown_receiver) = watch::channel(false);
 
         Ok(Self {
             service,
             session,
             ingress,
             pending_event: None,
+            shutdown_sender,
+            shutdown_receiver,
         })
     }
 
@@ -959,11 +1018,26 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
         self.ingress.counters()
     }
 
+    /// Obtain a cloneable local handle that can request safe-boundary shutdown.
+    ///
+    /// Only [`Self::process_next_or_shutdown`] observes this request. The handle
+    /// cannot close transport resources or extract the aggregate owner. Each clone
+    /// is an irreversible cooperative stop capability and should remain restricted
+    /// to the runner's shutdown path.
+    #[must_use]
+    pub fn shutdown_handle(&self) -> LiveZenohShutdownHandle {
+        LiveZenohShutdownHandle {
+            requested: self.shutdown_sender.clone(),
+        }
+    }
+
     /// Receive internally and consume one event through the Gate hard boundary.
     ///
     /// A private pending event always precedes a newer receive. Cancellation while
     /// awaiting ingress or publication drops every aggregate-local capability; if
     /// Called was already confirmed, restart recovery classifies that ambiguity.
+    /// This legacy method does not observe [`Self::shutdown_handle`] requests; a
+    /// shutdown-capable runner must exclusively use [`Self::process_next_or_shutdown`].
     pub async fn process_next(mut self) -> LiveZenohServiceTransition<C> {
         let event = match self.pending_event.take() {
             Some(event) => event,
@@ -976,11 +1050,60 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
                 }
             },
         };
+        self.process_owned_event(event).await
+    }
+
+    /// Wait for one owned-ingress event or return the aggregate at a safe local
+    /// shutdown boundary.
+    ///
+    /// A prior request wins before a privately retained retry or a newer receive.
+    /// While idle, a later request wakes the receive and returns
+    /// [`LiveZenohServiceTransition::ShutdownRequested`] with the same owner. Once
+    /// an event is selected, the Gate decision/publication lifecycle runs to its
+    /// ordinary transition without request-driven cancellation; a request arriving then remains
+    /// latched for the next returned owner. This avoids inventing a publisher
+    /// result, but does not provide a timeout for a stalled in-flight transport
+    /// call. Cancelling this consuming future still drops the aggregate; callers
+    /// must signal through [`Self::shutdown_handle`] and await the transition to
+    /// preserve the owner for explicit shutdown. The race prioritizes an already
+    /// observable request, but request and receive selection are not one atomic
+    /// wall-clock action: if a concurrent event is selected first, that event runs
+    /// to its ordinary transition and the request remains latched for the next
+    /// returned owner.
+    pub async fn process_next_or_shutdown(mut self) -> LiveZenohServiceTransition<C> {
+        if *self.shutdown_receiver.borrow() {
+            return LiveZenohServiceTransition::ShutdownRequested { service: self };
+        }
+
+        let event = match self.pending_event.take() {
+            Some(event) => event,
+            None => {
+                let shutdown_receiver = &mut self.shutdown_receiver;
+                let ingress = &mut self.ingress;
+                match race_shutdown(shutdown_receiver, ingress.recv()).await {
+                    ShutdownRace::Requested => {
+                        return LiveZenohServiceTransition::ShutdownRequested { service: self };
+                    }
+                    ShutdownRace::Completed(Some(event)) => event,
+                    ShutdownRace::Completed(None) => {
+                        return LiveZenohServiceTransition::Stopped(
+                            LiveZenohServiceStop::IngressClosed,
+                        );
+                    }
+                }
+            }
+        };
+        self.process_owned_event(event).await
+    }
+
+    async fn process_owned_event(self, event: IntentIngressEvent) -> LiveZenohServiceTransition<C> {
         let Self {
             service,
             session,
             ingress,
             pending_event,
+            shutdown_sender,
+            shutdown_receiver,
         } = self;
         debug_assert!(pending_event.is_none());
         drop(pending_event);
@@ -993,6 +1116,8 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
                         session,
                         ingress,
                         pending_event: None,
+                        shutdown_sender,
+                        shutdown_receiver,
                     },
                     outcome,
                 }
@@ -1014,6 +1139,8 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
                             session,
                             ingress,
                             pending_event: Some(event),
+                            shutdown_sender,
+                            shutdown_receiver,
                         },
                         reason,
                     }
@@ -1029,6 +1156,10 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
 
     /// Explicitly undeclare/drain ingress, drop the publisher-owning Gate service,
     /// and then close the retained session. Cleanup continues after undeclare error.
+    /// This is local transport cleanup, not durable-journal footer finalization or
+    /// confirmed remote session retirement. Because dropping the service releases
+    /// its retained instance lock before session close completes, a runnable package
+    /// must retain its own outer instance lock through final teardown.
     ///
     /// # Errors
     /// Returns either or both explicit transport cleanup failures. Cancellation
@@ -1039,7 +1170,10 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
             session,
             ingress,
             pending_event,
+            shutdown_sender,
+            shutdown_receiver,
         } = self;
+        drop((shutdown_receiver, shutdown_sender));
         let pending_count = usize::from(pending_event.is_some());
         let ingress_result = ingress.undeclare_and_drain().await;
         drop(pending_event);
@@ -1051,6 +1185,35 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
             pending_count,
         )
     }
+}
+
+enum ShutdownRace<T> {
+    Requested,
+    Completed(T),
+}
+
+async fn race_shutdown<F, T>(
+    shutdown_receiver: &mut watch::Receiver<bool>,
+    operation: F,
+) -> ShutdownRace<T>
+where
+    F: Future<Output = T>,
+{
+    if *shutdown_receiver.borrow() {
+        return ShutdownRace::Requested;
+    }
+    let mut shutdown = core::pin::pin!(shutdown_receiver.changed());
+    let mut operation = core::pin::pin!(operation);
+    poll_fn(|context| {
+        if shutdown.as_mut().poll(context).is_ready() {
+            return Poll::Ready(ShutdownRace::Requested);
+        }
+        operation
+            .as_mut()
+            .poll(context)
+            .map(ShutdownRace::Completed)
+    })
+    .await
 }
 
 async fn close_failed_zenoh_binding(
@@ -1407,6 +1570,8 @@ pub(crate) struct TestDeclaredLiveGateZenohService<C, P, S, I> {
     ingress: I,
     session: S,
     pending_event: Option<IntentIngressEvent>,
+    shutdown_sender: watch::Sender<bool>,
+    shutdown_receiver: watch::Receiver<bool>,
     controller_id: ControllerId,
     intent_route: String,
 }
@@ -1424,6 +1589,9 @@ pub(crate) enum TestLiveZenohServiceTransition<C, P, S, I, E> {
     Unavailable {
         service: TestDeclaredLiveGateZenohService<C, P, S, I>,
         reason: LiveDecisionUnavailable,
+    },
+    ShutdownRequested {
+        service: TestDeclaredLiveGateZenohService<C, P, S, I>,
     },
     IngressClosed,
     OwnedIoInvariant(LiveDecisionUnavailable),
@@ -1466,11 +1634,14 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
         let service =
             TestDeclaredLiveGateService::bind_route_bound(route_bound, publisher, &publisher_route)
                 .map_err(LiveZenohServiceBindFailure::Publisher)?;
+        let (shutdown_sender, shutdown_receiver) = watch::channel(false);
         Ok(Self {
             service,
             session,
             ingress,
             pending_event: None,
+            shutdown_sender,
+            shutdown_receiver,
             controller_id,
             intent_route,
         })
@@ -1496,6 +1667,12 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
         self.pending_event.is_some()
     }
 
+    pub(crate) fn shutdown_handle(&self) -> LiveZenohShutdownHandle {
+        LiveZenohShutdownHandle {
+            requested: self.shutdown_sender.clone(),
+        }
+    }
+
     pub(crate) async fn process_next_with_test_future<E, F, Fut>(
         mut self,
         invoke: F,
@@ -1512,11 +1689,59 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
                 None => return TestLiveZenohServiceTransition::IngressClosed,
             },
         };
+        self.process_owned_event_with_test_future(event, invoke)
+            .await
+    }
+
+    pub(crate) async fn process_next_or_shutdown_with_test_future<E, F, Fut>(
+        mut self,
+        invoke: F,
+    ) -> TestLiveZenohServiceTransition<C, P, S, I, E>
+    where
+        I: Iterator<Item = IntentIngressEvent>,
+        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        Fut: core::future::Future<Output = Result<(), E>>,
+    {
+        if *self.shutdown_receiver.borrow() {
+            return TestLiveZenohServiceTransition::ShutdownRequested { service: self };
+        }
+        let event = match self.pending_event.take() {
+            Some(event) => event,
+            None => {
+                let shutdown_receiver = &mut self.shutdown_receiver;
+                let ingress = &mut self.ingress;
+                let next = poll_fn(|_| Poll::Ready(ingress.next()));
+                match race_shutdown(shutdown_receiver, next).await {
+                    ShutdownRace::Requested => {
+                        return TestLiveZenohServiceTransition::ShutdownRequested { service: self };
+                    }
+                    ShutdownRace::Completed(Some(event)) => event,
+                    ShutdownRace::Completed(None) => {
+                        return TestLiveZenohServiceTransition::IngressClosed;
+                    }
+                }
+            }
+        };
+        self.process_owned_event_with_test_future(event, invoke)
+            .await
+    }
+
+    async fn process_owned_event_with_test_future<E, F, Fut>(
+        self,
+        event: IntentIngressEvent,
+        invoke: F,
+    ) -> TestLiveZenohServiceTransition<C, P, S, I, E>
+    where
+        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        Fut: core::future::Future<Output = Result<(), E>>,
+    {
         let Self {
             service,
             session,
             ingress,
             pending_event,
+            shutdown_sender,
+            shutdown_receiver,
             controller_id,
             intent_route,
         } = self;
@@ -1530,6 +1755,8 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
                         session,
                         ingress,
                         pending_event: None,
+                        shutdown_sender,
+                        shutdown_receiver,
                         controller_id,
                         intent_route,
                     },
@@ -1551,6 +1778,8 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
                             session,
                             ingress,
                             pending_event: Some(event),
+                            shutdown_sender,
+                            shutdown_receiver,
                             controller_id,
                             intent_route,
                         },
@@ -1596,14 +1825,56 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
             session,
             ingress,
             pending_event,
+            shutdown_sender,
+            shutdown_receiver,
             controller_id: _,
             intent_route: _,
         } = self;
+        drop((shutdown_receiver, shutdown_sender));
         let pending_count = usize::from(pending_event.is_some());
         let ingress_result = undeclare(ingress).await;
         drop(pending_event);
         drop(service);
         let session_result = close(session).await;
         finish_zenoh_shutdown(ingress_result, session_result, pending_count)
+    }
+}
+
+#[cfg(test)]
+mod shutdown_race_tests {
+    use super::{ShutdownRace, race_shutdown};
+    use core::future::{Future, pending};
+    use core::sync::atomic::{AtomicUsize, Ordering};
+    use core::task::{Context, Poll, Waker};
+    use std::sync::Arc;
+    use std::task::Wake;
+
+    struct WakeCounter(AtomicUsize);
+
+    impl Wake for WakeCounter {
+        fn wake(self: Arc<Self>) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+
+        fn wake_by_ref(self: &Arc<Self>) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[test]
+    fn later_shutdown_request_wakes_a_pending_idle_operation() {
+        let (sender, mut receiver) = tokio::sync::watch::channel(false);
+        let mut race = Box::pin(race_shutdown(&mut receiver, pending::<()>()));
+        let wakes = Arc::new(WakeCounter(AtomicUsize::new(0)));
+        let waker = Waker::from(Arc::clone(&wakes));
+        let mut context = Context::from_waker(&waker);
+
+        assert!(matches!(race.as_mut().poll(&mut context), Poll::Pending));
+        assert!(sender.send(true).is_ok());
+        assert!(wakes.0.load(Ordering::SeqCst) > 0);
+        assert!(matches!(
+            race.as_mut().poll(&mut context),
+            Poll::Ready(ShutdownRace::Requested)
+        ));
     }
 }

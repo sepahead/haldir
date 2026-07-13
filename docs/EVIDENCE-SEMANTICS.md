@@ -147,12 +147,37 @@ controller, route, keys, publisher, or event; re-derives the retained accepted-c
 before declaration; and builds both typed handles from one supplied session wrapper. Its
 `process_next` receives only from its owned ingress and retains a journal-capacity or
 restart-clearance event privately before newer receive; otherwise-unreachable input/key/output-
-capacity refusals stop the aggregate as invariant violations. Explicit shutdown orders
-undeclare/drain before dropping the lower service
-and closing the wrapper. Public transport borrowing constructors may already have minted other
-handles, however, and the lower raw-event service remains public. Fake-only tests establish this
-orchestration without a broker; they do not establish concrete session/subscriber invocation,
-credentials, transport principal, ACL delivery, remote cleanup, or complete mediation.
+capacity refusals stop the aggregate as invariant violations. A `LiveZenohShutdownHandle` is a
+cloneable, process-local, monotonic request latch: any clone can request the same one-way
+`false`-to-`true` transition, but none can reset it or close the aggregate. Each clone is therefore
+an irreversible cooperative stop/denial capability; production wiring must restrict clones and
+exclusively use the shutdown-aware processing method because legacy `process_next` ignores the
+latch. A successful request call means only that the local latch accepted the request, not that
+the aggregate will be returned or cleanup will run; the owner/future may concurrently drop. The consuming
+`process_next_or_shutdown` method checks that latch before taking a privately retained retry and
+then races it only against an otherwise-idle owned ingress receive. A prior request therefore
+returns the untouched aggregate before the retry or receive, and a later request wakes an idle
+receive and returns the same owner. Once an event has been selected, the method runs that event's
+ordinary Gate decision/publication transition without cancelling it or inventing a publisher
+result. When that transition returns an aggregate owner, a request made in flight remains latched
+so the next shutdown-aware call returns the owner for explicit shutdown. Cancelling the consuming
+future itself still destroys the aggregate; preserving the owner requires signalling through the
+handle and awaiting the transition. Polling gives an already-observable request priority, but the
+request check and receive are not one atomic wall-clock action: if a concurrent event is selected
+first, that event completes normally and the request applies to the next returned owner.
+
+Explicit shutdown orders undeclare/drain before dropping the lower service and closing the
+wrapper. Neither the request handle nor the shutdown-aware method supplies a timeout, an OS-signal
+runner or supervisor, durable-journal footer/finalization, or proof of remote session retirement;
+it is not graceful production shutdown. Public transport borrowing constructors may already have
+minted other handles, and the lower raw-event service remains public. Fake-only tests establish
+prior-request preservation, return before a private retry, in-flight publication completion and
+request latching, shutdown-aware-future cancellation/drop, ownership, and explicit local cleanup
+ordering without a broker. The production
+receive race is unit-tested to wake after a later request, but no live broker test exercises it.
+This evidence does not establish concrete session/subscriber invocation, credentials, transport
+principal, ACL delivery, remote cleanup, or supervision, and it does not establish complete
+mediation.
 
 Test-only terminal-record fault injection also covers both observed publisher `Ok` and
 `Err`. A definite failure before terminal bytes are appended consumes the runtime and
@@ -165,8 +190,9 @@ backends is tested through marked coordinator construction. Separately, a test-m
 capability around an initially inactive actor and the actual journal manager exercises caller-
 supplied local activation, canonical route validation, and the shared fake-publisher binding core;
 lifecycle/result fault cases still use a test-only publisher. Fake session/ingress tests separately
-exercise the outer aggregate's binding, journal-capacity retry, closure, and shutdown ownership. No live invocation
-exercises the concrete method. No runnable Gate executable/service package selects the public
+exercise the outer aggregate's binding, journal-capacity retry, stop-before-retry boundary,
+in-flight stop-request latching, closure, and shutdown ownership. No live invocation exercises the
+concrete method. No runnable Gate executable/service package selects the public
 aggregate, authenticates or refreshes its state/lease controls, or opens its session/credentials.
 Lower-level actor/frame and
 publisher/session constructors still permit copying

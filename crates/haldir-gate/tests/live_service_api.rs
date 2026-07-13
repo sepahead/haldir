@@ -9,7 +9,7 @@ use haldir_gate::{
     LiveIntentActivationInputError, LiveIntentRouteBoundGate, LiveKernelStartError,
     LiveServiceBindError, LiveServiceTransition, LiveZenohServiceBindError,
     LiveZenohServiceBindFailure, LiveZenohServiceStop, LiveZenohServiceTransition,
-    LiveZenohShutdownError, LiveZenohShutdownReport,
+    LiveZenohShutdownError, LiveZenohShutdownHandle, LiveZenohShutdownReport,
 };
 use haldir_transport_zenoh::{FinalCommandPublisher, IngressLimits, SecureZenohSession};
 
@@ -24,7 +24,9 @@ impl MonotonicClock for ExternalClock {
 
 #[test]
 fn public_live_service_surface_is_root_exported_consuming_and_send() {
+    fn assert_type_clone<T: Clone>() {}
     fn assert_type_send<T: Send>() {}
+    fn assert_type_sync<T: Sync>() {}
     type Start = fn(
         JournalBoundRunningGate,
         ExternalClock,
@@ -47,6 +49,9 @@ fn public_live_service_surface_is_root_exported_consuming_and_send() {
     type ControllerAccessor =
         for<'a> fn(&'a LiveIntentRouteBoundGate<ExternalClock>) -> &'a ControllerId;
     type RouteAccessor = for<'a> fn(&'a LiveIntentRouteBoundGate<ExternalClock>) -> &'a str;
+    type ShutdownHandleAccessor =
+        for<'a> fn(&'a DeclaredLiveGateZenohService<ExternalClock>) -> LiveZenohShutdownHandle;
+    type ShutdownRequest = for<'a> fn(&'a LiveZenohShutdownHandle) -> bool;
 
     let _: Start = DeclaredLiveGateKernel::<ExternalClock>::start;
     let _: NewActivationInput = LiveIntentActivationInput::new;
@@ -54,6 +59,9 @@ fn public_live_service_surface_is_root_exported_consuming_and_send() {
     let _: Bind = DeclaredLiveGateService::<ExternalClock>::bind;
     let _: ControllerAccessor = LiveIntentRouteBoundGate::<ExternalClock>::controller_id;
     let _: RouteAccessor = LiveIntentRouteBoundGate::<ExternalClock>::intent_route;
+    let _: ShutdownHandleAccessor = DeclaredLiveGateZenohService::<ExternalClock>::shutdown_handle;
+    let _: ShutdownRequest = LiveZenohShutdownHandle::request_shutdown;
+    let _: ShutdownRequest = LiveZenohShutdownHandle::is_shutdown_requested;
 
     fn check_zenoh_bind(
         route_bound: LiveIntentRouteBoundGate<ExternalClock>,
@@ -69,6 +77,9 @@ fn public_live_service_surface_is_root_exported_consuming_and_send() {
     fn check_zenoh_process(service: DeclaredLiveGateZenohService<ExternalClock>) {
         assert_send(service.process_next());
     }
+    fn check_zenoh_process_or_shutdown(service: DeclaredLiveGateZenohService<ExternalClock>) {
+        assert_send(service.process_next_or_shutdown());
+    }
     fn check_zenoh_shutdown(service: DeclaredLiveGateZenohService<ExternalClock>) {
         assert_send(service.shutdown());
     }
@@ -77,6 +88,7 @@ fn public_live_service_surface_is_root_exported_consuming_and_send() {
     let _: fn(LiveIntentRouteBoundGate<ExternalClock>, SecureZenohSession, IngressLimits) =
         check_zenoh_bind;
     let _: fn(DeclaredLiveGateZenohService<ExternalClock>) = check_zenoh_process;
+    let _: fn(DeclaredLiveGateZenohService<ExternalClock>) = check_zenoh_process_or_shutdown;
     let _: fn(DeclaredLiveGateZenohService<ExternalClock>) = check_zenoh_shutdown;
 
     assert_type_send::<DeclaredLiveGateKernel<ExternalClock>>();
@@ -94,6 +106,9 @@ fn public_live_service_surface_is_root_exported_consuming_and_send() {
     assert_type_send::<LiveZenohServiceStop>();
     assert_type_send::<LiveZenohServiceTransition<ExternalClock>>();
     assert_type_send::<LiveZenohShutdownError>();
+    assert_type_clone::<LiveZenohShutdownHandle>();
+    assert_type_send::<LiveZenohShutdownHandle>();
+    assert_type_sync::<LiveZenohShutdownHandle>();
     assert_type_send::<LiveZenohShutdownReport>();
     assert_type_send::<
         fn(LiveIntentRouteBoundGate<ExternalClock>, SecureZenohSession, IngressLimits),

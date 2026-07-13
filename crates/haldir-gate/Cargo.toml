@@ -18,6 +18,7 @@ real-ncp = ["haldir-ncp08/real-ncp"]
 live-zenoh = [
     "real-ncp",
     "dep:haldir-transport-zenoh",
+    "dep:tokio",
     "haldir-transport-zenoh/live-zenoh",
 ]
 
@@ -38,5 +39,6 @@ haldir-evidence.workspace = true
 haldir-durable.workspace = true
 haldir-transport-zenoh = { workspace = true, optional = true }
 getrandom.workspace = true
+tokio = { workspace = true, optional = true }
 
 [dev-dependencies]

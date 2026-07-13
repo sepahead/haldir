@@ -130,8 +130,23 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   and the publisher-owning lower service; `process_next` receives from that ingress and keeps a
   journal-capacity or restart-clearance refusal private for ordered retry. An input/key/output-
   capacity refusal is unreachable through the owned topology and fail-stops as an invariant
-  violation. Its explicit shutdown attempts
+  violation. A cloneable process-local stop handle is monotonic, and
+  `process_next_or_shutdown` returns the same aggregate before a retained retry or wakes an idle
+  receive when that request wins the boundary. A successful request call acknowledges only local
+  latch acceptance, not aggregate return or cleanup; the owner/future may concurrently drop. The
+  legacy `process_next` ignores the latch, and every clone is an irreversible cooperative stop/
+  denial capability, so a future runner must restrict clones and exclusively use the
+  shutdown-aware method. If a concurrent event is selected before the request is observed, it
+  is processed without request-driven cancellation; the request remains latched for the next returned
+  owner. There is no timeout for a hung in-flight transport call and no OS-signal runner or
+  supervisor uses this API yet. Cancelling the consuming future itself still drops the aggregate,
+  so a future runner must signal through the handle and await the ownership-returning transition.
+  Its explicit shutdown attempts
   undeclare/drain, then drops the publisher-owning service, then closes the retained wrapper.
+  That is local transport cleanup, not a durable evidence-journal footer/finalization operation
+  or confirmed remote session retirement. Dropping the service releases its durable instance
+  lock before session close returns; a future package needs a separate outer instance lock held
+  from before credential/session setup through final teardown.
   Offline tests use an explicit fake session/ingress/publisher seam and prove only local
   composition and ownership ordering; no test opens the concrete session, declares the concrete
   subscriber, or invokes the concrete publisher. `SecureZenohSession` is move-only but wraps a
@@ -139,7 +154,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   the wrapper is consumed. The aggregate therefore does not prove exclusive credentials, a sole
   global session/subscriber/publisher handle, or confirmed remote cleanup after cancellation/drop.
   No production control plane, credential-opening package, publisher worker, supervisor, or runnable
-  executable selects it. A Called record alone is a
+  executable selects it, and no graceful production-shutdown property is established. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.
   Lower-level actor frame access, the copyable frame type, the reusable publisher API, and
   independently constructible session-backed publishers still permit resubmission outside

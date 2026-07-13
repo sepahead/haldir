@@ -24,7 +24,11 @@ admission-bound controller and requires the signed lease route to match. Only th
 route-bound capability can create the lower publisher-bound service. A separate outer aggregate
 consumes it with one caller-opened session wrapper and bounded ingress limits, then internally
 derives the matched publisher and exact accepted-controller-route ingress from the same session lineage
-(`CL-LIVE-INGRESS-BINDING-01`). No runnable Gate executable or service package selects the
+(`CL-LIVE-INGRESS-BINDING-01`). A cloneable local handle latches a request that lets the
+shutdown-aware consuming method return the aggregate owner before a retained retry or wake an idle
+receive; once an event is selected, request-driven cancellation does not occur and the request
+remains latched for the next owner. The request is cooperative: success is not a cleanup
+acknowledgment, legacy `process_next` ignores it, and clones must be restricted. No runnable Gate executable or service package selects the
 aggregate and authenticates the provenance or
 delivery of the caller-supplied state and nonce, selects the declaration, opens/authenticates the
 session, loads credentials, or proves credential or handle exclusivity. Successful
@@ -68,7 +72,9 @@ says they mean.
   route against the canonical realm/session/verified-controller route before authority commits.
   The lower live service consumes that route-bound result plus a preconstructed matched publisher.
   The outer Zenoh aggregate instead derives its publisher and exact ingress internally from one
-  supplied session wrapper, but no runnable Gate executable/package selects this aggregate,
+  supplied session wrapper. Its shutdown-aware consuming method preserves the owner when a local
+  request wins at an idle boundary and never request-cancels an already-selected event. The
+  request remains cooperative rather than enforced, and no runnable Gate executable/package selects this aggregate,
   provides authenticated ongoing control/state delivery, or opens its credentials/session.
   Exact selection is also exercised through durable startup and the actor Called boundary.
 
@@ -142,10 +148,15 @@ state/challenge/signed-lease activation, canonical intent-route validation, and 
 fake-publisher service-binding core. Decision/Called and publisher-result fault composition still
 uses clearly test-only publisher seams. Separate fake session/ingress tests exercise aggregate
 binding, journal-capacity retention/retry, closure, drop, and explicit shutdown ordering; no real session is opened. The
+same seam proves that a prior request precedes receive and retained retry, while an in-flight
+publication reaches its ordinary transition before the latched request is returned. A direct
+helper test proves that a later request wakes a pending idle receive. The
 service kernel owns one canonical capacity-one pool for its own
 process-local lifetime. The outer aggregate retains one supplied session wrapper and internally
 derived ingress, but it is not a credential-opening package, exclusive handle owner, separate
-publisher worker, supervisor, or runnable transport package. Publisher-result
+publisher worker, supervisor, or runnable transport package. Its local request latch is not an
+OS-signal runner, an in-flight timeout, durable-journal finalization, confirmed remote session
+retirement, or graceful production shutdown. Publisher-result
 ordering, cold drop before first poll, pending timeout-as-drop, panic unwind, and synthetic
 terminal-record faults use test-only seams; no live Zenoh session executes the concrete
 service/coordinator method in tests. A cold-dropped service `process_one` future never polls
@@ -177,7 +188,8 @@ off-by-default strict Zenoh 1.9 mTLS boundary, and a deterministic default-deny 
 package now exist, and the retained synthetic campaign proves the fixed final-command/
 controller-intent ACL subset for its ephemeral test PKI. A public no-network activation and
 single-owner live service kernel plus an aggregate-local session/ingress owner exist, but their
-initial state/challenge delivery remains caller-supplied and no runnable Gate executable/package
+initial state/challenge delivery remains caller-supplied. The aggregate has a stop-only local
+safe-boundary request handle, but no runnable Gate executable/package
 opens credentials/session or selects the `DeclaredLiveZenoh` startup/control path. Certificate
 lifecycle/reconnect, bypass, application, and credential custody remain unproved.
 NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends

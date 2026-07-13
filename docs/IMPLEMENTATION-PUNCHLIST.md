@@ -112,7 +112,12 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   initial state/challenge/signed lease and mints a canonical route capability only from the
   verified controller. The lower consuming service encloses that marked route-bound coordinator,
   preconstructed matched publisher, and one private slot. The outer aggregate can instead retain
-  one supplied session wrapper plus internally derived publisher/ingress handles, while no runnable
+  one supplied session wrapper plus internally derived publisher/ingress handles. Its cloneable
+  local stop-only handle can latch a request that lets the consuming method return the aggregate
+  before receive/retry or wake idle receive, while never request-cancelling an already-selected
+  event; a concurrent request then stays latched. The cooperative clones must remain restricted and
+  a runner must exclusively use the shutdown-aware method. This is not
+  an in-flight timeout, signal runner, or graceful production shutdown, and no runnable
   Gate credential-opening executable/control package selects it. Preparation/output allocation
   alone does not mutate history; duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
@@ -160,6 +165,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   typestate requires bounded initial state/challenge/signed-lease input and derives the intent
   route from the verified controller; the outer aggregate can consume that route-bound result
   plus one supplied session wrapper and derive its publisher/exact ingress internally.
+  A local monotonic request latch now preserves the owner across idle stop, without cancelling an
+  already-selected event or claiming timeout/supervision behavior.
   The declaration and activation delivery are neither authenticated nor durable, and no
   authenticated credential-opening executable/package or ongoing control loop selects them. The retained
   synthetic campaign proves the fixed
