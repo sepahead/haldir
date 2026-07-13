@@ -78,12 +78,15 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   provisions disposable state+journal, while the networked target refuses provisioning, opens that
   existing fixture, performs caller-local activation, consumes a caller-supplied strict-client
   configuration, binds, and immediately invokes explicit shutdown under its own outer lock. It
-  receives/processes no intent and invokes no command publication. No retained clean-source live
-  campaign has exercised those calls yet (`CL-LIVE-GATE-DEV-BIND-01`). Neither target authenticates
-  or continually supplies control/state inputs, loads protected credentials, or supplies a plant
-  binding. Compile/offline evidence therefore proves neither concrete transport invocation nor
-  publication, delivery, acceptance, application, credential custody, bypass closure, or ACL
-  exclusivity. The target preflights the exact state files and bounded journal namespace before
+  receives/processes no intent and invokes no command publication. The retained clean-source
+  campaign in `evidence/12-live-gate-dev-smoke` proves one fresh offline `ProvisionNew` followed by
+  live `OpenExisting`, strict local session open, concrete aggregate bind, and immediate local
+  shutdown return with zero processing/publication (`CL-LIVE-GATE-DEV-BIND-01`). Neither target
+  authenticates or continually supplies control/state inputs, loads protected credentials, or
+  supplies a plant binding. The retained run proves neither authenticated package/control
+  provenance, peer identity, exclusive custom-CA trust or handle ownership, publication, delivery,
+  acceptance, application, credential custody, bypass closure, ACL exclusivity, nor remote
+  undeclare/session retirement. The target preflights the exact state files and bounded journal namespace before
   committing its fresh boot, publishes its result atomically outside the fixture, and attempts to
   publish a bounded cleanup classification for failures after the outer lock is acquired. Result
   publication is best-effort under storage failure; fixture/result preflight and lock-acquisition
@@ -96,7 +99,8 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   runner cleans its named containers, network, image, copied fixture, and ephemeral private-key
   directories on handled exits, but abrupt process/daemon/host loss can leave material below the
   ignored `target/live-gate-dev-smoke/` output and requires manual cleanup. BuildKit caches are not
-  retained campaign evidence and are outside that runtime cleanup result.
+  retained campaign evidence and are outside that runtime cleanup result. One successful fresh run
+  is not crash-durability, retry, reconnect, supervision, or endurance evidence.
 - **A public single-owner kernel exists; deployment binding is limited to a disposable smoke.** The actor keeps
   one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
   non-cloneable; exact bytes become accessible only after the actor rechecks authority,
@@ -164,7 +168,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   That is local transport cleanup, not a durable evidence-journal footer/finalization operation
   or confirmed remote session retirement. Dropping the service releases its durable instance
   lock before session close returns. The development bind target adds a separate target-local lock
-  held from before configuration/session setup through final teardown; a production package still
+  held from before configuration/session setup through its local aggregate-shutdown return; a production package still
   needs an authenticated, deployment-wide version of that rule.
   Offline tests use an explicit fake session/ingress/publisher seam and prove only local
   composition and ownership ordering; no test opens the concrete session, declares the concrete

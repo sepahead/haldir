@@ -47,8 +47,9 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   supplied session wrapper, internally deriving the publisher and exact ingress from the same
   lineage. Separate development examples explicitly provision then `OpenExisting`-open that path
   for immediate bind/shutdown only; they do not authenticate/refresh control inputs, protect
-  credential custody, process an intent, or select a Crebain deployment, and their retained live
-  evidence is still open (`CL-LIVE-GATE-DEV-BIND-01`).
+  credential custody, process an intent, or select a Crebain deployment. Retained evidence proves
+  only the strict-session-open, aggregate-bind, and immediate aggregate-shutdown local returns
+  with zero processing/publication (`CL-LIVE-GATE-DEV-BIND-01`).
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
   coordinator orders local receipt/Called/terminal evidence and blocks replacement after
@@ -109,16 +110,19 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   Separately, a test-minted marked capability around an initially inactive actor and the actual
   journal manager exercises bounded local activation, canonical route capability, and fake-
   publisher service binding; fake session/ingress tests exercise only aggregate orchestration,
-  while decision/Called result and fault composition remains publisher-seam-only. An
+  while decision/Called result and fault composition remains publisher-seam-only. The retained
+  development smoke separately exercises concrete session open, aggregate bind, and immediate
+  local shutdown, but no decision or publisher path (`CL-LIVE-GATE-DEV-BIND-01`). An
   executable authenticated service package, Prepared abandonment/reclamation, OS-level append/write/
   `sync_data` or disk-full fault injection, live-session faults, panic-abort/supervisor handling, child-process
   crash, and power-loss behavior remain absent.
 - **YES** — Evidence storage bounded; tamper/chain-break detected; full-spool drop
   never flips a decision.
 - **PARTIAL** — The retained live mTLS/ACL campaign proves only the pinned synthetic
-  command/intent subset (`CL-LIVE-TRANSPORT-01`). The remaining operation/route and
-  certificate-lifecycle matrix, a retained Gate bind/shutdown run
-  (`CL-LIVE-GATE-DEV-BIND-01`), p99/p99.9 latency, and long-run resource campaign are absent.
+  command/intent subset (`CL-LIVE-TRANSPORT-01`), while the separate retained development Gate
+  campaign proves only immediate local bind/shutdown with zero processing/publication
+  (`CL-LIVE-GATE-DEV-BIND-01`). The remaining operation/route and certificate-lifecycle matrix,
+  p99/p99.9 latency, and long-run resource campaign are absent.
 - **PARTIAL** — Exact commits/lockfile pinned and `pins.toml`/`verify-pins.py`
   present; SBOM/provenance/reproducible-release is a release-phase task.
 - **YES** — Every push was normal and non-forced.

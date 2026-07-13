@@ -121,8 +121,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   a runner must exclusively use the shutdown-aware method. This is not
   an in-flight timeout, signal runner, or graceful production shutdown. The development target
   opens an external strict-client configuration and immediately shuts down under an outer lock,
-  but no authenticated protected-credential/control package selects it, and retained live
-  evidence is still open (`CL-LIVE-GATE-DEV-BIND-01`). Preparation/output allocation
+  and retained evidence proves those local calls for one fresh fixture with zero processing or
+  publication (`CL-LIVE-GATE-DEV-BIND-01`). No authenticated protected-credential/control package
+  selects it. Preparation/output allocation
   alone does not mutate history; duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.
@@ -173,16 +174,17 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   already-selected event or claiming timeout/supervision behavior. Separate development examples
   now enforce explicit disposable provisioning versus `OpenExisting` live bind/immediate shutdown.
   The declaration and activation delivery are neither authenticated nor durable, and no
-  authenticated credential-opening executable/package or ongoing control loop selects them. The retained
-  synthetic campaign proves the fixed
-  final-command/controller-intent subset across all configured principals, but certificate
-  lifecycle/reconnect, retained concrete bind evidence, the full matrix, and bypass inventory remain open;
-  the deliverable is still P0-only.
+  authenticated credential-opening executable/package or ongoing control loop selects them. The
+  retained synthetic ACL campaign proves the fixed final-command/controller-intent subset across all
+  configured principals, and the separate retained development campaign proves only concrete
+  session-open, aggregate-bind, and immediate local-shutdown returns. Certificate
+  lifecycle/reconnect, the full matrix, and bypass inventory remain open; the deliverable is still
+  P0-only.
 - `[~]` **G3** Actuator-path disposition table needs Crebain + a live bypass campaign (out of P0).
 - `[x]` **G4** Assurance profiles + pins + verify + dependency rationale as an entry gate.
-- `[x]` **G5** The evidence layout/source ledger and the first retained live campaign
-  directory now carry a source-bound manifest, raw logs/configs, result, PKI fingerprint
-  inventory, complete checksums, and a specialized independent verifier.
+- `[x]` **G5** The evidence layout/source ledger and retained live campaign directories now carry
+  source-bound manifests, raw logs/configs, results, PKI fingerprint inventories, complete
+  checksums, and specialized independent verifiers.
 - `[x]` **G6** Coding-rule clippy gates from Phase 1.
 - `[x]` **G7** Preregister TLA/model properties against invariants; preregister any thresholds.
 - `[x]` **G8** Explicit P0 exit gate = strict subset of the Definition-of-Done.

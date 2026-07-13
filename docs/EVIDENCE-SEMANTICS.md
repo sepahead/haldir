@@ -28,10 +28,12 @@ lower process-local ownership boundary. The outer `DeclaredLiveGateZenohService`
 the route capability, one caller-opened session wrapper, and bounded ingress limits; it internally
 derives the publisher and exact accepted-controller-route ingress from the same session lineage and
 exposes a consuming receive/process API. The additional development examples select that topology
-only to provision a disposable fixture and then open/bind/immediately shut it down without a
-receive/process call. This remains static local priming and code-shape ownership, not authenticated
-state/control provenance, a protected credential-opening package, publisher worker, supervisor, or
-production transport pipeline (`CL-LIVE-INGRESS-BINDING-01`, `CL-LIVE-GATE-DEV-BIND-01`).
+to provision a disposable fixture and then open/bind/immediately shut it down without a
+receive/process call. The retained clean-source campaign proves those concrete local calls and
+returns for one fresh fixture while processing zero intents and publishing zero commands. It does
+not prove authenticated state/control provenance, a protected credential-opening package, peer
+identity, publisher worker, supervisor, delivery, remote cleanup, or a production transport pipeline
+(`CL-LIVE-INGRESS-BINDING-01`, `CL-LIVE-GATE-DEV-BIND-01`).
 
 ## Each producer signs only what it observed
 
@@ -193,15 +195,16 @@ capability around an initially inactive actor and the actual journal manager exe
 supplied local activation, canonical route validation, and the shared fake-publisher binding core;
 lifecycle/result fault cases still use a test-only publisher. Fake session/ingress tests separately
 exercise the outer aggregate's binding, journal-capacity retry, stop-before-retry boundary,
-in-flight stop-request latching, closure, and shutdown ownership. No retained live invocation yet
-exercises the aggregate. The development target can open an existing disposable fixture/session,
-bind, and immediately shut down, but it does not call `process_next` or
+in-flight stop-request latching, closure, and shutdown ownership. The retained development
+invocation exercises aggregate bind and immediate local shutdown against an existing disposable
+fixture/session. It does not call `process_next` or
 `process_next_or_shutdown`, cannot reach the concrete publisher method, and does not authenticate
 or refresh state/lease controls or protect credential custody (`CL-LIVE-GATE-DEV-BIND-01`). Its
 success result is an atomic, out-of-fixture report; post-lock failures attempt a separate bounded
 failure report that distinguishes session-open, aggregate-bind cleanup, and aggregate-shutdown
 cleanup classes. These are local return/cleanup observations, not remote undeclare or session-
-retirement evidence. A journal reopen may consume one of the disposable fixture's 32 segment
+retirement evidence; the single clean run is not retry, reconnect, or endurance evidence. A journal
+reopen may consume one of the disposable fixture's 32 segment
 slots before a later network-stage failure, so repeated attempts are not endurance evidence and
 must use a newly provisioned fixture once capacity or state is uncertain.
 Lower-level actor/frame and

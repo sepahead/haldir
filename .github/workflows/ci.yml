@@ -95,7 +95,7 @@ jobs:
         run: python3 tools/verify-ci-pins.py
       - name: Verify evidence layout
         run: python3 tools/verify-evidence.py
-      - name: Verify offline secure Zenoh configuration profile
+      - name: Verify secure Zenoh profiles and retained live evidence
         run: |
           python3 -m unittest \
             tools/test_secure_zenoh.py \
@@ -104,6 +104,7 @@ jobs:
             tools/test_live_gate_dev_smoke_verifier.py
           python3 tools/verify-secure-zenoh.py
           python3 tools/verify-live-secure-zenoh.py
+          python3 tools/verify-live-gate-dev-smoke.py
       - name: Forbidden-claim drift check
         run: python3 tools/verify-claims.py
       - name: cargo-deny

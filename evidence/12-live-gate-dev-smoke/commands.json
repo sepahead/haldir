@@ -1,0 +1,1429 @@
+[
+  {
+    "argv": [
+      "git",
+      "status",
+      "--porcelain=v1"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "git",
+      "archive",
+      "--format=tar",
+      "--output=$WORK/source.tar",
+      "3a75c039c3e73b999a74741b5633ee43a0a69e97"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "pull",
+      "docker.io/library/rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "pull",
+      "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "build",
+      "--progress=plain",
+      "--pull",
+      "--file",
+      "$WORK/source/tools/live-gate-dev-smoke/Dockerfile",
+      "--tag",
+      "haldir-live-gate-dev-smoke:485e3516d4fd",
+      "$WORK/source"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "image",
+      "inspect",
+      "--format",
+      "{{.Id}}",
+      "haldir-live-gate-dev-smoke:485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "create",
+      "--name",
+      "haldir-gate-inspect-485e3516d4fd",
+      "--network=none",
+      "--read-only",
+      "--cap-drop=ALL",
+      "--security-opt=no-new-privileges",
+      "sha256:1ae37a1cfc60dbb283c6e542c9d872d5eca8e431d0c721db4e31d09da39ef5ef"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "cp",
+      "haldir-gate-inspect-485e3516d4fd:/usr/local/bin/live_gate_dev_bind_shutdown",
+      "$WORK/built-executable-inspection/live_gate_dev_bind_shutdown"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "cp",
+      "haldir-gate-inspect-485e3516d4fd:/usr/local/bin/live_gate_dev_fixture_provision",
+      "$WORK/built-executable-inspection/live_gate_dev_fixture_provision"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "run",
+      "--detach",
+      "--name",
+      "haldir-gate-provision-485e3516d4fd",
+      "--network=none",
+      "--read-only",
+      "--user",
+      "501:20",
+      "--cap-drop=ALL",
+      "--security-opt=no-new-privileges",
+      "--tmpfs=/fixture:rw,noexec,nosuid,nodev,size=128m,mode=0700,uid=501,gid=20",
+      "--tmpfs=/run:rw,noexec,nosuid,nodev,size=1m,mode=0700,uid=501,gid=20",
+      "--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=501,gid=20",
+      "--entrypoint",
+      "/bin/sh",
+      "sha256:1ae37a1cfc60dbb283c6e542c9d872d5eca8e431d0c721db4e31d09da39ef5ef",
+      "-c",
+      "set +e\n/usr/local/bin/live_gate_dev_fixture_provision /fixture/gate /fixture/provision-result.json\nstatus=$?\nprintf '%s\\n' \"$status\" > /run/haldir-provision-exit\nwhile :; do sleep 3600; done"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "exec",
+      "haldir-gate-provision-485e3516d4fd",
+      "cat",
+      "/run/haldir-provision-exit"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "logs",
+      "haldir-gate-provision-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "exec",
+      "haldir-gate-provision-485e3516d4fd",
+      "tar",
+      "-C",
+      "/fixture",
+      "-cf",
+      "-",
+      "gate",
+      "provision-result.json"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "stop",
+      "--time",
+      "1",
+      "haldir-gate-provision-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:3072",
+      "-nodes",
+      "-sha256",
+      "-days",
+      "2",
+      "-subj",
+      "/CN=haldir-live-campaign-ephemeral-ca",
+      "-addext",
+      "basicConstraints=critical,CA:TRUE",
+      "-addext",
+      "keyUsage=critical,keyCertSign,cRLSign",
+      "-keyout",
+      "$WORK/pki-authority/ca.key.pem",
+      "-out",
+      "$WORK/pki-authority/ca.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/ca.pem",
+      "-noout",
+      "-subject",
+      "-fingerprint",
+      "-sha256"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=router.haldir.invalid",
+      "-keyout",
+      "$WORK/pki-authority/router.key.pem",
+      "-out",
+      "$WORK/pki-authority/router.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/router.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/router.ext",
+      "-out",
+      "$WORK/pki-authority/router.cert.pem",
+      "-CAcreateserial"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslserver",
+      "-verify_hostname",
+      "router.haldir.invalid",
+      "$WORK/pki-authority/router.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/router.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/router.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/router.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-admission-authority.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/admission-authority.key.pem",
+      "-out",
+      "$WORK/pki-authority/admission-authority.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/admission-authority.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/admission-authority.ext",
+      "-out",
+      "$WORK/pki-authority/admission-authority.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/admission-authority.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/admission-authority.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/admission-authority.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/admission-authority.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-controller-a.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/controller-a.key.pem",
+      "-out",
+      "$WORK/pki-authority/controller-a.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/controller-a.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/controller-a.ext",
+      "-out",
+      "$WORK/pki-authority/controller-a.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/controller-a.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/controller-a.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/controller-a.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/controller-a.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-controller-b.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/controller-b.key.pem",
+      "-out",
+      "$WORK/pki-authority/controller-b.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/controller-b.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/controller-b.ext",
+      "-out",
+      "$WORK/pki-authority/controller-b.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/controller-b.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/controller-b.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/controller-b.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/controller-b.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-gate.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/gate.key.pem",
+      "-out",
+      "$WORK/pki-authority/gate.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/gate.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/gate.ext",
+      "-out",
+      "$WORK/pki-authority/gate.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/gate.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/gate.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/gate.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/gate.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-lifecycle.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/lifecycle.key.pem",
+      "-out",
+      "$WORK/pki-authority/lifecycle.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/lifecycle.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/lifecycle.ext",
+      "-out",
+      "$WORK/pki-authority/lifecycle.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/lifecycle.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/lifecycle.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/lifecycle.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/lifecycle.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-mission-authority.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/mission-authority.key.pem",
+      "-out",
+      "$WORK/pki-authority/mission-authority.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/mission-authority.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/mission-authority.ext",
+      "-out",
+      "$WORK/pki-authority/mission-authority.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/mission-authority.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/mission-authority.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/mission-authority.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/mission-authority.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-observer.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/observer.key.pem",
+      "-out",
+      "$WORK/pki-authority/observer.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/observer.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/observer.ext",
+      "-out",
+      "$WORK/pki-authority/observer.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/observer.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/observer.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/observer.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/observer.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "req",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-sha256",
+      "-subj",
+      "/CN=haldir-robot-crebain.secure-reference-v1",
+      "-keyout",
+      "$WORK/pki-authority/robot-crebain.key.pem",
+      "-out",
+      "$WORK/pki-authority/robot-crebain.csr.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-req",
+      "-in",
+      "$WORK/pki-authority/robot-crebain.csr.pem",
+      "-CA",
+      "$WORK/pki-authority/ca.pem",
+      "-CAkey",
+      "$WORK/pki-authority/ca.key.pem",
+      "-sha256",
+      "-days",
+      "1",
+      "-extfile",
+      "$WORK/pki-authority/robot-crebain.ext",
+      "-out",
+      "$WORK/pki-authority/robot-crebain.cert.pem",
+      "-CAserial",
+      "$WORK/pki-authority/ca.srl"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "verify",
+      "-CAfile",
+      "$WORK/pki-authority/ca.pem",
+      "-purpose",
+      "sslclient",
+      "$WORK/pki-authority/robot-crebain.cert.pem"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/robot-crebain.cert.pem",
+      "-checkend",
+      "3600",
+      "-noout"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/robot-crebain.cert.pem",
+      "-noout",
+      "-subject",
+      "-issuer",
+      "-fingerprint",
+      "-sha256",
+      "-dates"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "openssl",
+      "x509",
+      "-in",
+      "$WORK/pki-authority/robot-crebain.cert.pem",
+      "-noout",
+      "-ext",
+      "subjectAltName,extendedKeyUsage"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "network",
+      "create",
+      "--internal",
+      "haldir-gate-smoke-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "run",
+      "--detach",
+      "--name",
+      "haldir-gate-router-485e3516d4fd",
+      "--network",
+      "haldir-gate-smoke-485e3516d4fd",
+      "--network-alias",
+      "router.haldir.invalid",
+      "--read-only",
+      "--cap-drop=ALL",
+      "--security-opt=no-new-privileges",
+      "--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=16m",
+      "--mount",
+      "type=bind,src=$WORK/rendered,dst=/etc/haldir-secure-reference-v1,readonly",
+      "--mount",
+      "type=bind,src=$WORK/router-secrets,dst=/run/secrets/haldir-secure-reference-v1,readonly",
+      "--env",
+      "RUST_LOG=zenoh_link_tls=debug,zenohd=info",
+      "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+      "--config",
+      "/etc/haldir-secure-reference-v1/router.json5",
+      "--adminspace-permissions",
+      "none",
+      "--cfg=adminspace/enabled:false",
+      "--cfg=plugins_loading/enabled:false"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "inspect",
+      "--format",
+      "{{.State.Running}}",
+      "haldir-gate-router-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "inspect",
+      "--format",
+      "{{.State.Running}}",
+      "haldir-gate-router-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "run",
+      "--detach",
+      "--name",
+      "haldir-gate-bind-485e3516d4fd",
+      "--network",
+      "haldir-gate-smoke-485e3516d4fd",
+      "--read-only",
+      "--user",
+      "501:20",
+      "--cap-drop=ALL",
+      "--security-opt=no-new-privileges",
+      "--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=501,gid=20",
+      "--tmpfs=/run:rw,noexec,nosuid,nodev,size=1m,mode=0700,uid=501,gid=20",
+      "--mount",
+      "type=bind,src=$WORK/provisioned/gate,dst=/fixture",
+      "--mount",
+      "type=bind,src=$WORK/rendered/clients/gate.json,dst=/etc/haldir-live-gate/gate.json,readonly",
+      "--mount",
+      "type=bind,src=$WORK/gate-secrets,dst=/run/secrets/haldir-secure-reference-v1,readonly",
+      "--tmpfs=/evidence:rw,noexec,nosuid,nodev,size=1m,mode=0700,uid=501,gid=20",
+      "--entrypoint",
+      "/bin/sh",
+      "sha256:1ae37a1cfc60dbb283c6e542c9d872d5eca8e431d0c721db4e31d09da39ef5ef",
+      "-c",
+      "set +e\n/usr/local/bin/live_gate_dev_bind_shutdown /fixture /etc/haldir-live-gate/gate.json /evidence/bind-result.json\nstatus=$?\nprintf '%s\\n' \"$status\" > /run/haldir-bind-exit\nwhile :; do sleep 3600; done"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "exec",
+      "haldir-gate-bind-485e3516d4fd",
+      "cat",
+      "/run/haldir-bind-exit"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 1
+  },
+  {
+    "argv": [
+      "docker",
+      "inspect",
+      "--format",
+      "{{.State.Running}}",
+      "haldir-gate-bind-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "exec",
+      "haldir-gate-bind-485e3516d4fd",
+      "cat",
+      "/run/haldir-bind-exit"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "logs",
+      "haldir-gate-bind-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "logs",
+      "haldir-gate-router-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "exec",
+      "haldir-gate-bind-485e3516d4fd",
+      "tar",
+      "-C",
+      "/evidence",
+      "-cf",
+      "-",
+      "bind-result.json"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "stop",
+      "--time",
+      "1",
+      "haldir-gate-bind-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "image",
+      "inspect",
+      "docker.io/library/rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "version",
+      "--format",
+      "{{json .}}"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "container",
+      "inspect",
+      "haldir-gate-bind-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "container",
+      "inspect",
+      "haldir-gate-inspect-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "container",
+      "inspect",
+      "haldir-gate-provision-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "container",
+      "inspect",
+      "haldir-gate-router-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "image",
+      "inspect",
+      "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "image",
+      "inspect",
+      "sha256:1ae37a1cfc60dbb283c6e542c9d872d5eca8e431d0c721db4e31d09da39ef5ef"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "git",
+      "status",
+      "--porcelain=v1"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "rm",
+      "--force",
+      "haldir-gate-bind-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "rm",
+      "--force",
+      "haldir-gate-provision-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "rm",
+      "--force",
+      "haldir-gate-router-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "rm",
+      "--force",
+      "haldir-gate-inspect-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "network",
+      "rm",
+      "haldir-gate-smoke-485e3516d4fd"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  },
+  {
+    "argv": [
+      "docker",
+      "image",
+      "rm",
+      "--force",
+      "sha256:1ae37a1cfc60dbb283c6e542c9d872d5eca8e431d0c721db4e31d09da39ef5ef"
+    ],
+    "cwd": "$REPO",
+    "exit_code": 0
+  }
+]

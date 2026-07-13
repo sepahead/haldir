@@ -131,9 +131,10 @@ must restrict clones and exclusively use the shutdown-aware method. Offline fake
 Zenoh invocation. The feature-gated development examples now hard-select `DeclaredLiveZenoh` and
 exact v0.8 for a separately provisioned disposable fixture; the networked target opens an external
 strict-client configuration, constructs the aggregate, and immediately shuts it down without
-processing. No retained live run proves those concrete calls yet, and no authenticated production
-package protects the session/credentials or makes the selection mandatory
-(`CL-LIVE-GATE-DEV-BIND-01`).
+processing. The retained development campaign proves those concrete local calls and returns for
+one fresh disposable fixture with zero intents processed and zero commands published
+(`CL-LIVE-GATE-DEV-BIND-01`). No authenticated production package protects the
+session/credentials, authenticates ongoing controls, or makes the selection mandatory.
 The runtime-profile value is a cooperative caller declaration, not authenticated package data
 or a durable anti-downgrade state; public `GateConfig` and direct `VehicleActor` construction
 bypasses template startup and remains outside this capability chain. Production declared-live
@@ -145,7 +146,8 @@ Called/result fault tests still use test-only publisher seams. Neither test path
 session or invokes the concrete publisher, or establishes credential/handle exclusivity.
 The retained synthetic campaign proves the exact final-command/controller-intent ACL subset
 using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not the service
-binding or application. Even a local Zenoh success would not prove delivery or application.
+binding or application. The separately retained local Zenoh success does not prove delivery or
+application (`CL-LIVE-GATE-DEV-BIND-01`).
 
 ## Deferred upstream capabilities (increment 1)
 

@@ -36,10 +36,13 @@ development-only examples: one offline provisioner for a disposable local state/
 and one `OpenExisting`-only target that locally activates the fresh boot, opens a caller-supplied
 strict client configuration, binds the concrete aggregate, and immediately invokes explicit
 local shutdown under a separate outer lock. The target processes zero intents and invokes zero
-command publications. It has not yet been exercised in a retained clean-source live campaign,
-and it is not an authenticated package, control plane, worker, or supervisor. It has no protected
-credential loader and proves no credential custody, handle exclusivity, or remote cleanup. Successful
-declared-live startup mints the private move-only capability required by the live coordinator;
+command publications. A retained clean-source synthetic campaign now proves those concrete local
+calls and returns against the pinned router and fresh ephemeral Gate PKI for one disposable fixture
+(`CL-LIVE-GATE-DEV-BIND-01`; `evidence/12-live-gate-dev-smoke`, source commit
+`3a75c039c3e73b999a74741b5633ee43a0a69e97`). It is not an authenticated package, control
+plane, worker, or supervisor. It has no protected credential loader and proves no peer identity,
+credential custody, handle exclusivity, delivery, or remote cleanup. Successful declared-live
+startup mints the private move-only capability required by the live coordinator;
 exact reference and copied-report paths cannot reach its concrete publisher method. Crebain is
 intended to remain the sole owner of final command application and vehicle-specific safe action;
 that integration is also still unproven.
@@ -82,9 +85,10 @@ says they mean.
   supplied session wrapper. Its shutdown-aware consuming method preserves the owner when a local
   request wins at an idle boundary and never request-cancels an already-selected event. The
   request remains cooperative rather than enforced. The separate development smoke target can
-  open and immediately close the aggregate from an existing disposable fixture, but no
-  authenticated package provides ongoing control/state delivery, protected credential custody,
-  a processing loop, or supervision, and no retained live run yet proves that target's calls.
+  open and immediately close the aggregate from an existing disposable fixture; the retained
+  development campaign proves those local calls while processing zero intents and publishing zero
+  commands. No authenticated package provides ongoing control/state delivery, protected credential
+  custody, a processing loop, or supervision.
   Exact selection is also exercised through durable startup and the actor Called boundary.
 
 ### What is implemented and tested locally (the P0 pure core)
@@ -200,9 +204,10 @@ controller-intent ACL subset for its ephemeral test PKI. A public no-network act
 single-owner live service kernel plus an aggregate-local session/ingress owner exist, but their
 initial state/challenge delivery remains caller-supplied. The aggregate has a stop-only local
 safe-boundary request handle. A development-only example opens an externally configured session,
-binds, and immediately shuts down from a disposable local fixture, but it has no retained live
-evidence and does not select an authenticated ongoing `DeclaredLiveZenoh` control path. Certificate
-lifecycle/reconnect, bypass, application, and credential custody remain unproved.
+binds, and immediately shuts down from a disposable local fixture; retained evidence proves only
+those local returns with zero processing/publication and does not select an authenticated ongoing
+`DeclaredLiveZenoh` control path. Certificate lifecycle/reconnect, bypass, delivery, remote session
+retirement, application, and credential custody remain unproved.
 NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends
 (Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated; no
 application, complete-mediation, production-security, or hardware claim is made.
