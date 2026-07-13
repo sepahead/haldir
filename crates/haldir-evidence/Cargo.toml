@@ -14,5 +14,7 @@ workspace = true
 
 [dependencies]
 haldir-contracts.workspace = true
+haldir-crypto.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]

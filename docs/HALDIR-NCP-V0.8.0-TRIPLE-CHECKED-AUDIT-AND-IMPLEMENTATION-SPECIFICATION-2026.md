@@ -2279,21 +2279,25 @@ Under the per-vehicle state lock:
 2. verify protected COSE headers and mission-authority signature;
 3. verify issuer role and revocation state;
 4. require exact Gate ID, boot ID, challenge nonce, realm, vehicle, session pair, and Gate output epoch;
-5. require the challenge to be pending, unexpired, and unused;
-6. require the policy digest to equal the currently loaded approved snapshot;
-7. resolve the admission by ID and digest and require it active;
-8. require controller ID, signing key, bundle digest, and backend profile digest to match that admission;
-9. require the exact controller intent key to match the configured ACL/profile;
+5. require the policy digest to equal the currently loaded approved snapshot;
+6. resolve the admission by ID and digest and require it active;
+7. require controller ID, signing key, bundle digest, and backend profile digest to match that admission;
+8. require the exact controller intent key to match the configured ACL/profile;
+9. validate every numeric limit against local maximums and checked arithmetic;
 10. compare `lease_term` to the durable anti-rollback high-water for the issuer/scope;
-11. validate every numeric limit against local maximums and checked arithmetic;
-12. consume the challenge nonce;
-13. durably advance the accepted term high-water before exposing the lease as active;
+11. require the challenge to remain pending, unexpired, and unused without consuming it;
+12. durably advance the accepted term high-water before exposing the lease as active;
+13. consume the challenge nonce only after the durable term commit succeeds;
 14. anchor `accepted_at_mono` to the current Gate monotonic time;
 15. calculate `expires_at_mono = accepted_at_mono + min(max_active_duration, local_cap)` using checked arithmetic;
 16. create an empty controller replay state; and
 17. emit a lease-activation evidence event.
 
-A failure at any step leaves no active lease and does not consume a challenge unless the implementation has already committed a higher term as an anti-replay safety measure. Specify and test that edge case.
+A failure at any step leaves no active lease. A failed durable commit leaves the
+challenge pending; if snapshot installation succeeded before an external-anchor
+failure, recovery may conservatively complete and spend the higher term. An
+unexpected challenge-consume failure after a successful term commit likewise spends
+the term without activating the lease. Specify and test both edges.
 
 ### `AuthorityRevocationV1`
 

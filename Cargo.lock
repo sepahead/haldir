@@ -206,6 +206,8 @@ name = "haldir-evidence"
 version = "0.1.0-experimental"
 dependencies = [
  "haldir-contracts",
+ "haldir-crypto",
+ "sha2",
 ]
 
 [[package]]

@@ -66,6 +66,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   enforcement and public process state as `FAULT_LATCHED`. P0 receives a supplied
   `MonoInstant`; real clock-read failure handling belongs to the future runtime.
 - `[x]` **B14** Evidence outage never turns DENY into ALLOW (direction test).
+  A bounded signed-segment/tail-recovery primitive is also unit tested, but the
+  Gate does not select it and no runtime crash/disk-full campaign exists
+  (`CL-EVIDENCE-SEGMENT-PRIMITIVE-01`, `CL-DURABLE-01`).
 - `[x]` **B15** Reference plant has exactly one command ingress; zero application from any
   non-Gate principal; safe action is plant-owned (Gate only requests).
 

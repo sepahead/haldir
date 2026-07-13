@@ -46,14 +46,15 @@ bounded authority/session/stream/replay state machines with restart semantics, a
 fixed-point deterministic policy engine, a deterministic reference plant with staged
 evidence, the Gate-owned NCP v0.8.0 modeled output adapter plus an opt-in exact
 upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
-spool that holds the Gate-signed decision receipts, and authenticated snapshot/
+spool that holds the Gate-signed decision receipts, a unit-tested bounded Unix
+signed-segment/recovery primitive (`CL-EVIDENCE-SEGMENT-PRIMITIVE-01`), and authenticated snapshot/
 external-anchor primitives with commit-before-mutation anti-rollback tests,
 Unix atomic-file mechanics, and Gate-bound durable boot-ID mechanisms
 (`CL-DURABLE-PRIMITIVE-01`). The actor can consume the non-cloneable booted-store
 capability returned only after a fresh matching boot commit, and faults if a term
 commit is unavailable.
-No runnable service provisions that path or a deployed external anchor, and the
-spool remains lossy on overflow, so crash durability remains out of P0
+No runnable service provisions those durable paths or a deployed external anchor,
+and the actor still selects the lossy in-process spool, so crash durability remains out of P0
 (`CL-DURABLE-01`). The composed Gate runtime has its 13-stage decision pipeline,
 and a deterministic adversarial range + end-to-end
 acceptance campaign.

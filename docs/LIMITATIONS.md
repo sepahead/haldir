@@ -79,6 +79,19 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   safe path-based standard-library APIs, and does not claim macOS `F_FULLFSYNC`,
   power-loss, network/FAT/overlay filesystem, or adversarial directory-rewind
   guarantees. A same-filesystem anchor cannot close `CL-DURABLE-01`.
+- **Durable evidence segment primitive is not the Gate journal.**
+  `haldir-evidence::journal` unit-tests a bounded Unix segment format with
+  CRC32C-framed opaque records, Gate/boot/key/sequence/previous-digest headers,
+  checked genesis/successor construction, signed segment-content digests,
+  Ed25519 footers, strict completed-corruption rejection,
+  and truncation of only an insufficient final record/footer tail
+  (`CL-EVIDENCE-SEGMENT-PRIMITIVE-01`). It assumes one writer and a trusted local
+  parent directory. Directory discovery, cross-file chain recovery, global retention,
+  locking, and trust-store resolution of the header KID/public key require the
+  manager layer. The actor still uses its in-process spool; it does not select,
+  rotate, reserve capacity within, or emit recovery/loss-summary events through
+  this file primitive, and no child-process crash/disk-full campaign exists.
+  Therefore evidence crash durability remains unproven under `CL-DURABLE-01`.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,
   key binding, and any future NCP lease's session/output epoch (`CL-CONFIG-01`).
