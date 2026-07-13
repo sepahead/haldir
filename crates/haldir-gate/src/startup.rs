@@ -233,11 +233,12 @@ pub struct RunningGate {
 /// A durable-started Gate fused with the exact journal manager and publication
 /// replay produced during the same bounded open operation.
 ///
-/// Mutable actor and journal access is intentionally withheld until recovery
-/// Unknown emission and lifecycle capacity reservation are coordinated.
+/// Restart Unknown emission is completed before construction. Mutable actor and
+/// journal access remains withheld until the live lifecycle coordinator exists.
 pub struct JournalBoundRunningGate {
     journal: RecoveredGateJournal,
     gate: RunningGate,
+    recovery_unknown_events: usize,
 }
 
 /// Identity-free bounds and paths for one Gate publication-journal startup.
@@ -406,11 +407,11 @@ impl RunningGate {
             created_mono_ns,
             limits,
         );
-        let journal = {
+        let (journal, recovery_unknown_events) = {
             let signer = self.actor.journal_signer();
             let tail_signer = recovered_tail_signer.or(Some(&signer));
             let verifier = self.actor.journal_verifier(max_envelope_bytes);
-            RecoveredGateJournal::open_existing(
+            RecoveredGateJournal::open_existing_with_recovery_unknowns(
                 directory,
                 options,
                 &signer,
@@ -420,12 +421,20 @@ impl RunningGate {
                 max_traces,
             )?
         };
-        self.bind_publication_journal(journal)
+        self.bind_publication_journal_with_recovery_count(journal, recovery_unknown_events)
     }
 
     fn bind_publication_journal(
         self,
         journal: RecoveredGateJournal,
+    ) -> Result<JournalBoundRunningGate, JournalBindingError> {
+        self.bind_publication_journal_with_recovery_count(journal, 0)
+    }
+
+    fn bind_publication_journal_with_recovery_count(
+        self,
+        journal: RecoveredGateJournal,
+        recovery_unknown_events: usize,
     ) -> Result<JournalBoundRunningGate, JournalBindingError> {
         let active = journal
             .active_identity()
@@ -455,12 +464,20 @@ impl RunningGate {
                 .ok_or(JournalBindingError::SequenceMismatch)?,
             None => NonZeroU64::new(1).ok_or(JournalBindingError::SequenceMismatch)?,
         };
-        if active.segment_sequence != expected_sequence {
+        let maximum_startup_rotations = recovery_unknown_events.saturating_sub(1);
+        let maximum_sequence = expected_sequence
+            .get()
+            .checked_add(u64::try_from(maximum_startup_rotations).unwrap_or(u64::MAX))
+            .ok_or(JournalBindingError::SequenceMismatch)?;
+        if active.segment_sequence.get() < expected_sequence.get()
+            || active.segment_sequence.get() > maximum_sequence
+        {
             return Err(JournalBindingError::SequenceMismatch);
         }
         Ok(JournalBoundRunningGate {
             journal,
             gate: self,
+            recovery_unknown_events,
         })
     }
 }
@@ -491,10 +508,18 @@ impl JournalBoundRunningGate {
         self.journal.publication()
     }
 
-    /// Material journal recovery actions and current-tail status.
+    /// Material journal recovery actions and current-tail status at completion
+    /// of the fused startup transaction.
     #[must_use]
     pub const fn journal_recovery_report(&self) -> JournalRecoveryReport {
         self.journal.recovery_report()
+    }
+
+    /// Number of dangling prior-boot calls closed durably as
+    /// `UnknownAfterPublish` before this runtime became observable.
+    #[must_use]
+    pub const fn recovery_unknown_events(&self) -> usize {
+        self.recovery_unknown_events
     }
 }
 
@@ -791,16 +816,26 @@ fn prepare_local_directory(
 
 #[cfg(test)]
 mod tests {
+    use core::num::NonZeroU32;
     use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::{Arc, Mutex};
 
+    use haldir_contracts::cbor::CanonicalMessage;
     use haldir_contracts::digest::DigestDomain;
-    use haldir_contracts::ids::PrincipalId;
+    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, PrincipalId};
+    use haldir_contracts::publication::PublicationStageEventV1;
+    use haldir_contracts::receipt::{
+        DecisionOutcomeV1, DecisionReasonCodeV1, DecisionReceiptV1, PublishStageV1,
+        TransformationRelationV1,
+    };
+    use haldir_contracts::scalar::BoundedVec;
+    use haldir_contracts::session::NcpStreamPositionV1;
     use haldir_contracts::status::{AclExclusiveEvidenceV1, PlantPublicationUnavailableReasonV1};
-    use haldir_crypto::{KeyClass, KeyRecord, KeyRole};
+    use haldir_crypto::{KeyClass, KeyRecord, KeyRole, sign_message};
     use haldir_durable::{Anchor, DurableError};
     use haldir_evidence::journal::JournalBounds;
-    use haldir_evidence::manager::JournalManagerError;
+    use haldir_evidence::manager::{EvidenceJournalManager, JournalManagerError};
+    use haldir_evidence::publication::PublicationTraceState;
     use haldir_policy_native::GeofenceBoxV1;
 
     use super::*;
@@ -1012,6 +1047,67 @@ mod tests {
         .unwrap()
     }
 
+    fn prepared_receipt(gate_boot_id: GateBootId) -> DecisionReceiptV1 {
+        DecisionReceiptV1 {
+            decision_id: DecisionId::new([0x44; 16]),
+            gate_id: GateId::new("gate-1").unwrap(),
+            gate_boot_id,
+            vehicle_id: VehicleId::new("uav-1").unwrap(),
+            mission_id: None,
+            ncp_session: NcpSessionIdentityV1 {
+                session_id: AsciiId::new("session-1").unwrap(),
+                generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+            },
+            received_key_digest: digest(b"key"),
+            raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, b"intent"),
+            payload_digest: None,
+            semantic_intent_digest: None,
+            controller_id: None,
+            controller_intent_position: None,
+            mission_lease_id: None,
+            admission_digest: None,
+            source: None,
+            state_snapshot_digest: None,
+            policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
+            decision: DecisionOutcomeV1::Allow,
+            reason_codes: BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPrepared]).unwrap(),
+            effective_validity_ms: Some(10),
+            gate_output_stream: Some(NcpStreamPositionV1 {
+                epoch: GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([5; 16])),
+                seq: OutputSeq::new(NonZeroU64::new(1).unwrap()),
+            }),
+            output_frame_digest: Some(DigestV1::compute(DigestDomain::OutputFrame, b"frame")),
+            transformation_relation: Some(TransformationRelationV1::FixedPointToNcpFloatV1),
+            received_mono_ns: 10,
+            decided_mono_ns: 11,
+            publish_stage: PublishStageV1::OutputPrepared,
+        }
+    }
+
+    fn called_event(
+        receipt: &DecisionReceiptV1,
+        prepared_envelope: &[u8],
+    ) -> PublicationStageEventV1 {
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, prepared_envelope);
+        PublicationStageEventV1 {
+            schema_major: PublicationStageEventV1::SCHEMA_MAJOR,
+            schema_minor: 0,
+            decision_id: receipt.decision_id,
+            gate_id: receipt.gate_id.clone(),
+            decision_gate_boot_id: receipt.gate_boot_id,
+            producer_gate_boot_id: receipt.gate_boot_id,
+            vehicle_id: receipt.vehicle_id.clone(),
+            ncp_session: receipt.ncp_session.clone(),
+            gate_output_stream: receipt.gate_output_stream.clone().unwrap(),
+            output_frame_digest: receipt.output_frame_digest.unwrap(),
+            effective_validity_ms: NonZeroU32::new(receipt.effective_validity_ms.unwrap()).unwrap(),
+            prepared_receipt_envelope_digest: prepared_digest,
+            predecessor_envelope_digest: prepared_digest,
+            stage: PublishStageV1::PublishCalled,
+            observed_mono_ns: 12,
+        }
+    }
+
     #[test]
     fn open_existing_never_provisions_missing_state() {
         let directory = TestDirectory::new();
@@ -1206,6 +1302,94 @@ mod tests {
         );
         assert!(second.journal_recovery_report().closed_active_tail);
         assert_eq!(second.journal_recovery_report().discovered_segments, 1);
+        assert_eq!(second.recovery_unknown_events(), 0);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restart_closes_dangling_called_under_actual_committed_boot_before_exposure() {
+        let directory = TestDirectory::new();
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let first = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        let first_boot = first.report().gate_boot_id;
+        let receipt = prepared_receipt(first_boot);
+        let signing_kid = KeyId::new(vec![3]).unwrap();
+        let signing_key = SigningKey::from_seed([3; 32]);
+        let receipt_envelope = sign_message(
+            &receipt,
+            DecisionReceiptV1::KIND,
+            DecisionReceiptV1::SCHEMA_MAJOR,
+            &signing_kid,
+            &signing_key,
+        );
+        let called = called_event(&receipt, &receipt_envelope);
+        let called_envelope = sign_message(
+            &called,
+            PublicationStageEventV1::KIND,
+            PublicationStageEventV1::SCHEMA_MAJOR,
+            &signing_kid,
+            &signing_key,
+        );
+        let journal_path = directory.0.join("journal");
+        let (mut journal, _) = {
+            let signer = first.actor.journal_signer();
+            EvidenceJournalManager::provision_new(
+                &journal_path,
+                JournalOpenOptions::new(
+                    first.actor.gate_id().clone(),
+                    first_boot,
+                    10,
+                    journal_limits(),
+                ),
+                &signer,
+                first
+                    .actor
+                    .journal_verifier(NonZeroUsize::new(32 * 1024).unwrap()),
+            )
+            .unwrap()
+        };
+        {
+            let signer = first.actor.journal_signer();
+            journal.append(&receipt_envelope, 11, &signer).unwrap();
+            journal.append(&called_envelope, 12, &signer).unwrap();
+        }
+        drop(journal);
+        drop(first);
+
+        let second = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::OpenExisting),
+            storage,
+            anchor,
+            key(),
+            &mut DeterministicEntropy::new(91),
+        )
+        .unwrap();
+        let second_boot = second.report().gate_boot_id;
+        let bound = second
+            .open_publication_journal(journal_config(&journal_path, 20, journal_limits()), None)
+            .unwrap();
+
+        assert_eq!(bound.recovery_unknown_events(), 1);
+        assert_eq!(
+            bound
+                .recovered_publication()
+                .state(first_boot, receipt.decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+        assert_eq!(
+            bound.active_journal_identity().unwrap().gate_boot_id,
+            second_boot
+        );
     }
 
     #[cfg(unix)]

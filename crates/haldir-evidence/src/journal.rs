@@ -36,6 +36,7 @@ const SEGMENT_MAGIC: &[u8; 8] = b"HLDRJNL1";
 const RECORD_MAGIC: &[u8; 4] = b"EVR1";
 const FOOTER_MAGIC: &[u8; 8] = b"HLDRFTR1";
 const FORMAT_VERSION: u16 = 1;
+const MAX_HEADER_LEN: usize = 244;
 const RECORD_PREFIX_LEN: usize = 10;
 const RECORD_SUFFIX_LEN: usize = 4;
 const FOOTER_LEN: usize = 8 + 2 + 8 + 32 + 32 + 64 + 4;
@@ -133,6 +134,18 @@ impl JournalBounds {
     #[must_use]
     pub const fn max_segment_bytes(self) -> usize {
         self.max_segment_bytes
+    }
+
+    /// Maximum complete records retained by one segment.
+    #[must_use]
+    pub(crate) const fn max_records(self) -> u64 {
+        self.max_records
+    }
+
+    /// Maximum exact opaque bytes admitted for one record.
+    #[must_use]
+    pub(crate) const fn max_record_bytes(self) -> usize {
+        self.max_record_bytes
     }
 }
 
@@ -267,6 +280,11 @@ struct RecoveredContent<'a> {
 }
 
 impl ActiveEvidenceSegment {
+    /// Maximum encoded header size admitted by the bounded identity types.
+    pub(crate) const fn maximum_header_bytes() -> usize {
+        MAX_HEADER_LEN
+    }
+
     /// Minimum complete on-disk size for a segment with this identity.
     ///
     /// This is useful to reserve footer capacity before a directory manager
@@ -779,6 +797,9 @@ fn encode_header(identity: &SegmentIdentity) -> Result<Vec<u8>, JournalError> {
         .and_then(|n| n.checked_add(32))
         .and_then(|n| n.checked_add(4))
         .ok_or(JournalError::Bounds)?;
+    if header_len > MAX_HEADER_LEN {
+        return Err(JournalError::Bounds);
+    }
     let header_len_u16 = u16::try_from(header_len).map_err(|_| JournalError::Bounds)?;
     let gate_len = u16::try_from(gate.len()).map_err(|_| JournalError::Bounds)?;
     let kid_len = u16::try_from(kid.len()).map_err(|_| JournalError::Bounds)?;
@@ -1287,6 +1308,21 @@ mod tests {
     #[test]
     fn crc32c_matches_the_standard_check_vector() {
         assert_eq!(crc32c(b"123456789"), 0xe306_9283);
+    }
+
+    #[test]
+    fn maximum_header_bound_matches_longest_gate_and_key_identifiers() {
+        let mut longest = identity();
+        longest.gate_id = GateId::new(&"g".repeat(64)).unwrap();
+        longest.signer_kid = KeyId::new(vec![7; KeyId::MAX]).unwrap();
+
+        assert_eq!(
+            (
+                encode_header(&longest).unwrap().len(),
+                ActiveEvidenceSegment::maximum_header_bytes(),
+            ),
+            (244, 244)
+        );
     }
 
     #[test]

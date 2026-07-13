@@ -6,9 +6,12 @@ Publication is never atomic with a receipt, so evidence uses stages, not a false
 `executed` flag. `PublishStageV1` (in `haldir-contracts`) defines the vocabulary,
 including `UNKNOWN_AFTER_PUBLISH` for a crash between publish and acknowledgement.
 The canonical linked stage payload and a retained-state-bounded pure reducer now exist
-(`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), but the P0 actor/manager/startup do not yet
-sign, append, replay, or recover those transitions. The runtime therefore cannot yet
-emit a crash-tail stage; the tested reducer is a prerequisite, not evidence of wiring.
+(`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`). The staged durable-startup path now replays
+those records and emits a signed, linked successor-boot `UnknownAfterPublish` for every
+recovered dangling `PublishCalled` before returning the bound runtime
+(`CL-GATE-JOURNAL-BINDING-01`). The live actor path still does not append the initial
+prepared/called/return sequence, so this closes already-durable ambiguity at startup;
+it is not yet a complete live publication pipeline.
 
 ## Each producer signs only what it observed
 
@@ -43,6 +46,10 @@ manager requires candidate verifier implementations to be deterministic and
 side-effect-free because calls can precede new append capacity and commit; semantic
 reduction happens only after a confirmed append or over a successfully returned
 recovery snapshot used to rebuild fresh state exactly once.
+It can also issue opaque manager-affine logical reservations. Each conservative unit
+protects a future segment slot and the maximum header, maximum record frame, and footer
+from ordinary appends/rotations. This isolates configured quota only; it does not
+preallocate filesystem blocks or guarantee that a later write/sync succeeds.
 
 The assurance-only Gate adapter closes that semantic gap offline for the two-record
 publication journal profile. It binds footer and record KIDs to the same unrevoked
@@ -50,21 +57,26 @@ Gate-application assurance key/subject, dispatches only protected receipt/stage
 content types, enforces the current Gate receipt shape and segment Gate/producer boot,
 and consumes one ordered recovery snapshot to build fresh publication state. Empty
 segments participate in boot chronology; boot resurrection and same-boot segment or
-record time regression fail closed. This still does not authenticate the newly created
-current tail as a durably committed Gate boot or append any recovery event.
+record time regression fail closed. Standalone replay still does not authenticate the
+newly created current tail as a durably committed Gate boot; that authority comes only
+from the consuming Gate startup boundary below.
 
 A staged Gate startup boundary now fuses directory open, bounded capture, and semantic
-replay under one verifier snapshot, then consumes the actual `RunningGate` to bind the
-manager-created current segment to its private Gate identity, committed boot, and
-validated signer. Replay succeeds before prior-tail closure/current-segment creation;
-semantic rejection therefore cannot burn successor segments. Insufficient-tail
+replay under one verifier snapshot and derives the recovery producer from the actual
+`RunningGate`'s private Gate identity, committed boot, and validated signer. It plans
+every dangling call's exact linked `UnknownAfterPublish`, verifies and semantic-previews
+the signed batch, checks future capture bounds and conservative journal quota, then
+closes the prior tail, creates the current segment, and appends the batch before returning
+the bound runtime. Semantic/current-boot-freshness rejection never closes the old tail;
+for a nonempty Unknown batch, capture/logical-capacity rejection also cannot close it or
+burn a successor. An empty batch keeps ordinary recovery/quiescence semantics. Insufficient-tail
 truncation or pending-artifact removal can occur earlier. Its action is reported on a
 successful open or semantic-replay rejection; another later recovery failure can return
 without an exact action report. The
 manager and replay state cannot be extracted separately, and the bound aggregate
 withholds mutable actor/journal access. This prevents report/raw-ID authority
-substitution, but it is not yet the runnable service path and does not append recovery
-Unknown events.
+substitution. It remains a startup ambiguity-closure path, not a runnable service or a
+live receipt/Called/return coordinator.
 
 ## Honesty rules
 
@@ -72,6 +84,7 @@ Unknown events.
   `accepted` / `applied`.
 - `applied` and `observed response` are reference-plant model values in P0.
 - A signed receipt does not prove physical actuation.
-- A future durable reducer must represent ambiguous crash tails as
-  `UNKNOWN_AFTER_PUBLISH`, not guess; the current in-memory actor fault-latches an
-  explicitly reported error/timeout but cannot recover a process-crash tail.
+- A durable restart represents a recovered dangling `PUBLISH_CALLED` as
+  `UNKNOWN_AFTER_PUBLISH`, never as success, failure, or non-delivery. The current
+  in-memory actor still lacks the live durable record sequence needed to create that
+  dangling evidence through the bound runtime itself.

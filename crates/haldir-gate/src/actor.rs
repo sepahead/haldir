@@ -197,6 +197,24 @@ impl PreparedPublication {
     }
 }
 
+/// Opaque, non-cloneable proof that a prepared publication passed the initial
+/// call-boundary checks without exposing its frame.
+///
+/// The journal coordinator owns this token while it durably records the
+/// `PublishCalled` write-ahead event. Only the crate-private commit step can
+/// consume it and reveal the existing public called-publication capability.
+#[derive(Debug)]
+#[must_use = "a validated publication call must be committed or retained"]
+pub(crate) struct ValidatedPublicationCall {
+    prepared: PreparedPublication,
+}
+
+impl ValidatedPublicationCall {
+    pub(crate) const fn decision_id(&self) -> DecisionId {
+        self.prepared.decision_id
+    }
+}
+
 /// Opaque, non-cloneable proof that the publication side effect may be invoked.
 ///
 /// The exact frame is accessible only in this state. After the transport call,
@@ -752,6 +770,16 @@ impl VehicleActor {
         prepared: PreparedPublication,
         called_at: MonoInstant,
     ) -> Result<PublishCalledPublication, PublicationError> {
+        let validated = self.validate_publish_call(prepared, called_at)?;
+        self.commit_publish_call(validated, called_at)
+    }
+
+    /// Validate a prepared call without exposing bytes or advancing its slot.
+    pub(crate) fn validate_publish_call(
+        &mut self,
+        prepared: PreparedPublication,
+        validation_at: MonoInstant,
+    ) -> Result<ValidatedPublicationCall, PublicationError> {
         let expected_state = PublicationState::Prepared {
             decision_id: prepared.decision_id,
         };
@@ -761,56 +789,90 @@ impl VehicleActor {
             return Err(PublicationError::StateMismatch);
         }
 
-        let reject = |actor: &mut Self, error| {
-            actor.publication_state = PublicationState::Idle;
-            Err(error)
+        if let Err(error) = self.recheck_publication_context(&prepared, validation_at) {
+            self.publication_state = PublicationState::Idle;
+            return Err(error);
+        }
+
+        Ok(ValidatedPublicationCall { prepared })
+    }
+
+    /// Commit a durably confirmed call boundary and reveal the exact frame.
+    ///
+    /// The state advances before the post-sync checks. If fsync delay made the
+    /// prepared authority stale, the durable `PublishCalled` boundary remains
+    /// represented conservatively and the actor fault-latches without exposing
+    /// bytes.
+    pub(crate) fn commit_publish_call(
+        &mut self,
+        validated: ValidatedPublicationCall,
+        exposure_at: MonoInstant,
+    ) -> Result<PublishCalledPublication, PublicationError> {
+        let decision_id = validated.decision_id();
+        let prepared = validated.prepared;
+        let expected_state = PublicationState::Prepared { decision_id };
+        if !Arc::ptr_eq(&self.publication_owner, &prepared.owner) {
+            return Err(PublicationError::StateMismatch);
+        }
+        if self.publication_state != expected_state {
+            self.publication_state = PublicationState::PublishCalled { decision_id };
+            self.latch_fault("POST_SYNC_PUBLICATION_STATE_MISMATCH");
+            return Err(PublicationError::StateMismatch);
+        }
+
+        self.publication_state = PublicationState::PublishCalled { decision_id };
+        let active_until = match self.recheck_publication_context(&prepared, exposure_at) {
+            Ok(active_until) => active_until,
+            Err(error) => {
+                self.latch_fault("POST_SYNC_PUBLICATION_REVALIDATION_FAILED");
+                return Err(error);
+            }
         };
 
-        if self.fault.is_latched() || !self.mono_ok(called_at) {
-            return reject(self, PublicationError::Faulted);
-        }
-        if self.revision.get() != prepared.captured_revision {
-            return reject(self, PublicationError::AuthorizationChanged);
-        }
-        if !self.process.is_active() {
-            return reject(self, PublicationError::AuthorizationChanged);
-        }
-        if !self.publication.authorizes_acl_only_publication() {
-            return reject(self, PublicationError::PublicationAuthorityLost);
-        }
-        let Some(state) = &self.trusted_state else {
-            return reject(self, PublicationError::CausalStateChanged);
-        };
-        if state.canonical_digest() != prepared.state_snapshot_digest {
-            return reject(self, PublicationError::CausalStateChanged);
-        }
-        if called_at > prepared.latest_call_at {
-            return reject(self, PublicationError::DeadlineElapsed);
-        }
-        let Some(lease) = &self.lease else {
-            return reject(self, PublicationError::AuthorizationChanged);
-        };
-        if lease.remaining_ms(called_at) < u64::from(prepared.effective_validity_ms) {
-            return reject(self, PublicationError::DeadlineElapsed);
-        }
-        let active_until =
-            match checked_publication_horizon(called_at, prepared.effective_validity_ms) {
-                Ok(end) => end,
-                Err(error) => return reject(self, error),
-            };
-
-        self.publication_state = PublicationState::PublishCalled {
-            decision_id: prepared.decision_id,
-        };
         Ok(PublishCalledPublication {
             owner: prepared.owner,
-            decision_id: prepared.decision_id,
+            decision_id,
             frame: prepared.frame,
             plant_command: prepared.plant_command,
             plant_action: prepared.plant_action,
-            called_at,
+            called_at: exposure_at,
             active_until,
         })
+    }
+
+    fn recheck_publication_context(
+        &mut self,
+        prepared: &PreparedPublication,
+        observed_at: MonoInstant,
+    ) -> Result<MonoInstant, PublicationError> {
+        if self.fault.is_latched() || !self.mono_ok(observed_at) {
+            return Err(PublicationError::Faulted);
+        }
+        if self.revision.get() != prepared.captured_revision {
+            return Err(PublicationError::AuthorizationChanged);
+        }
+        if !self.process.is_active() {
+            return Err(PublicationError::AuthorizationChanged);
+        }
+        if !self.publication.authorizes_acl_only_publication() {
+            return Err(PublicationError::PublicationAuthorityLost);
+        }
+        let Some(state) = &self.trusted_state else {
+            return Err(PublicationError::CausalStateChanged);
+        };
+        if state.canonical_digest() != prepared.state_snapshot_digest {
+            return Err(PublicationError::CausalStateChanged);
+        }
+        if observed_at > prepared.latest_call_at {
+            return Err(PublicationError::DeadlineElapsed);
+        }
+        let Some(lease) = &self.lease else {
+            return Err(PublicationError::AuthorizationChanged);
+        };
+        if lease.remaining_ms(observed_at) < u64::from(prepared.effective_validity_ms) {
+            return Err(PublicationError::DeadlineElapsed);
+        }
+        checked_publication_horizon(observed_at, prepared.effective_validity_ms)
     }
 
     /// Resolve a called reference publication as locally successful.
@@ -951,6 +1013,19 @@ impl VehicleActor {
     #[cfg(test)]
     pub(crate) fn force_next_decision_for_test(&mut self, v: u64) {
         self.next_decision = v;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_publication_state_for_test(&mut self, state: PublicationState) {
+        self.publication_state = state;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_publication_authority_for_test(
+        &mut self,
+        publication: PlantPublicationAuthorityStateV1,
+    ) {
+        self.publication = publication;
     }
 
     /// Register a pending challenge nonce (issued out of band by the orchestrator).

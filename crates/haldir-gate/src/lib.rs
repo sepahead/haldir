@@ -875,6 +875,291 @@ mod e2e {
     }
 
     #[test]
+    fn validated_publish_call_keeps_the_slot_prepared_and_frame_opaque() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let decision_id = prepared.decision_id();
+
+        let validated = f
+            .actor
+            .validate_publish_call(prepared, f.now)
+            .expect("initial publication checks pass");
+
+        assert_eq!(validated.decision_id(), decision_id);
+        assert_eq!(
+            f.actor.publication_state(),
+            PublicationState::Prepared { decision_id }
+        );
+        let debug = format!("{validated:?}");
+        assert!(!debug.contains("frame"));
+        assert!(!debug.contains("plant_command"));
+
+        let called = f
+            .actor
+            .commit_publish_call(validated, f.now)
+            .expect("durable-call confirmation reveals output");
+        f.actor
+            .mark_publish_returned_ok(called, f.now)
+            .expect("test publication resolves");
+    }
+
+    #[test]
+    fn validated_publish_call_is_rejected_by_the_wrong_actor() {
+        let rec = admission_record();
+        let mut first = setup();
+        let mut second = setup();
+        let first_env = sign_intent(
+            &first.ctrl_sk,
+            &build_intent(first.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let first_prepared = first
+            .actor
+            .decide_intent(&first_env, INTENT_KEY, first.now)
+            .into_prepared_publication()
+            .expect("first actor prepared output");
+        let validated = first
+            .actor
+            .validate_publish_call(first_prepared, first.now)
+            .expect("first actor validates its token");
+        let second_env = sign_intent(
+            &second.ctrl_sk,
+            &build_intent(second.admission_digest, &rec, 1, velocity(1, 800)),
+        );
+        let second_prepared = second
+            .actor
+            .decide_intent(&second_env, INTENT_KEY, second.now)
+            .into_prepared_publication()
+            .expect("second actor prepared output");
+
+        let result = second.actor.commit_publish_call(validated, second.now);
+
+        assert!(matches!(result, Err(PublicationError::StateMismatch)));
+        assert!(matches!(
+            second.actor.publication_state(),
+            PublicationState::Prepared { .. }
+        ));
+        second
+            .actor
+            .cancel_prepared_publication(second_prepared)
+            .expect("second actor still owns its slot");
+    }
+
+    #[test]
+    fn validated_publish_call_is_rejected_when_the_actor_slot_changed() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let validated = f
+            .actor
+            .validate_publish_call(prepared, f.now)
+            .expect("initial publication checks pass");
+        f.actor
+            .force_publication_state_for_test(PublicationState::Idle);
+
+        let result = f.actor.commit_publish_call(validated, f.now);
+
+        assert!(matches!(result, Err(PublicationError::StateMismatch)));
+        assert!(matches!(
+            f.actor.publication_state(),
+            PublicationState::PublishCalled { .. }
+        ));
+        assert_eq!(f.actor.process_state(), GateProcessStateV1::FaultLatched);
+    }
+
+    #[test]
+    fn post_sync_deadline_failure_faults_and_retains_called_state() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let decision_id = prepared.decision_id();
+        let validated = f
+            .actor
+            .validate_publish_call(prepared, f.now)
+            .expect("initial publication checks pass");
+        let exposure_at = MonoInstant::from_nanos(
+            f.now
+                .as_nanos()
+                .checked_add(20_000_001)
+                .expect("fixture deadline is representable"),
+        );
+
+        let result = f.actor.commit_publish_call(validated, exposure_at);
+
+        assert!(matches!(result, Err(PublicationError::DeadlineElapsed)));
+        assert_eq!(
+            f.actor.publication_state(),
+            PublicationState::PublishCalled { decision_id }
+        );
+        assert_eq!(f.actor.process_state(), GateProcessStateV1::FaultLatched);
+    }
+
+    #[test]
+    fn post_sync_causal_change_faults_and_retains_called_state() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let decision_id = prepared.decision_id();
+        let validated = f
+            .actor
+            .validate_publish_call(prepared, f.now)
+            .expect("initial publication checks pass");
+        let exposure_at = f
+            .now
+            .checked_add_ms(1)
+            .expect("fixture time is representable");
+        f.actor
+            .set_trusted_state(trusted_state(exposure_at))
+            .expect("causal state advances during fsync");
+
+        let result = f.actor.commit_publish_call(validated, exposure_at);
+
+        assert!(matches!(result, Err(PublicationError::CausalStateChanged)));
+        assert_eq!(
+            f.actor.publication_state(),
+            PublicationState::PublishCalled { decision_id }
+        );
+        assert_eq!(f.actor.process_state(), GateProcessStateV1::FaultLatched);
+    }
+
+    #[test]
+    fn post_sync_revision_change_faults_and_retains_called_state() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let decision_id = prepared.decision_id();
+        let validated = f
+            .actor
+            .validate_publish_call(prepared, f.now)
+            .expect("initial publication checks pass");
+        f.actor.revoke_active_lease();
+
+        let result = f.actor.commit_publish_call(validated, f.now);
+
+        assert!(matches!(
+            result,
+            Err(PublicationError::AuthorizationChanged)
+        ));
+        assert_eq!(
+            f.actor.publication_state(),
+            PublicationState::PublishCalled { decision_id }
+        );
+        assert_eq!(f.actor.process_state(), GateProcessStateV1::FaultLatched);
+    }
+
+    #[test]
+    fn post_sync_monotonic_regression_faults_and_retains_called_state() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let decision_id = prepared.decision_id();
+        let validated = f
+            .actor
+            .validate_publish_call(prepared, f.now)
+            .expect("initial publication checks pass");
+        let regressed = MonoInstant::from_nanos(
+            f.now
+                .as_nanos()
+                .checked_sub(1)
+                .expect("fixture time is nonzero"),
+        );
+
+        let result = f.actor.commit_publish_call(validated, regressed);
+
+        assert!(matches!(result, Err(PublicationError::Faulted)));
+        assert_eq!(
+            f.actor.publication_state(),
+            PublicationState::PublishCalled { decision_id }
+        );
+        assert_eq!(f.actor.process_state(), GateProcessStateV1::FaultLatched);
+    }
+
+    #[test]
+    fn post_sync_publication_authority_loss_faults_and_retains_called_state() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let decision_id = prepared.decision_id();
+        let validated = f
+            .actor
+            .validate_publish_call(prepared, f.now)
+            .expect("initial publication checks pass");
+        f.actor
+            .force_publication_authority_for_test(ncp_publication(
+                sess(),
+                GateOutputEpoch::new(uuid(5)),
+            ));
+
+        let result = f.actor.commit_publish_call(validated, f.now);
+
+        assert!(matches!(
+            result,
+            Err(PublicationError::PublicationAuthorityLost)
+        ));
+        assert_eq!(
+            f.actor.publication_state(),
+            PublicationState::PublishCalled { decision_id }
+        );
+        assert_eq!(f.actor.process_state(), GateProcessStateV1::FaultLatched);
+    }
+
+    #[test]
     fn unresolved_publication_blocks_lease_replacement() {
         let mut f = setup();
         let rec = admission_record();

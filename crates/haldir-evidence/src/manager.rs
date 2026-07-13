@@ -16,6 +16,7 @@ use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions, TryLockError};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
@@ -136,6 +137,13 @@ pub enum JournalManagerError {
     TailSignerUnavailable,
     /// The configured global journal limit has quiesced further appends.
     Quiesced,
+    /// The requested reservation or ordinary append would consume logical
+    /// capacity retained for another reservation.
+    ReservationUnavailable,
+    /// A reservation token belongs to another manager instance.
+    ReservationMismatch,
+    /// A reservation token has no remaining record units.
+    ReservationExhausted,
     /// A commit-ambiguous operation requires full recovery before reuse.
     Poisoned,
     /// The exact record bytes already exist in the retained journal.
@@ -222,6 +230,19 @@ pub struct JournalSigner<'key> {
     key: &'key SigningKey,
 }
 
+/// Move-only logical capacity for future maximum-sized record appends.
+///
+/// A token is bound to the manager that issued it. It does not reserve or
+/// preallocate filesystem space, and a write may still fail or become
+/// commit-ambiguous.
+#[must_use = "dropping a live reservation intentionally strands its quota until manager recovery"]
+pub struct JournalReservation {
+    owner: Arc<ReservationOwner>,
+    remaining_records: usize,
+    bytes_per_record: u64,
+    remaining_bytes: u64,
+}
+
 /// Identity, time, and bounds for opening the journal for one Gate boot.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JournalOpenOptions {
@@ -247,6 +268,18 @@ impl JournalOpenOptions {
             limits,
         }
     }
+
+    /// Current boot selected by the higher-level fused adapter.
+    #[must_use]
+    pub(crate) const fn gate_boot_id(&self) -> GateBootId {
+        self.gate_boot_id
+    }
+
+    /// Monotonic creation/observation time for the planned current segment.
+    #[must_use]
+    pub(crate) const fn created_mono_ns(&self) -> u64 {
+        self.created_mono_ns
+    }
 }
 
 impl<'key> JournalSigner<'key> {
@@ -254,6 +287,16 @@ impl<'key> JournalSigner<'key> {
     #[must_use]
     pub const fn new(kid: &'key KeyId, key: &'key SigningKey) -> Self {
         Self { kid, key }
+    }
+
+    #[must_use]
+    pub(crate) const fn kid(&self) -> &KeyId {
+        self.kid
+    }
+
+    #[must_use]
+    pub(crate) const fn key(&self) -> &SigningKey {
+        self.key
     }
 }
 
@@ -307,6 +350,13 @@ impl RecoveryCaptureLimits {
     pub const fn max_records(self) -> u64 {
         self.max_records
     }
+
+    /// Maximum aggregate exact opaque record bytes admitted into one recovery
+    /// snapshot.
+    #[must_use]
+    pub const fn max_total_record_bytes(self) -> u64 {
+        self.max_total_record_bytes
+    }
 }
 
 /// One authenticated journal segment and its verifier-accepted opaque records.
@@ -347,6 +397,28 @@ pub struct JournalRecovery {
     report: JournalRecoveryReport,
     segments: Vec<RecoveredJournalSegment>,
     record_bytes: u64,
+}
+
+/// Internal records accepted by a fused semantic recovery consumer for append
+/// under the newly created current-boot segment before open returns.
+pub(crate) struct RecoveryPrecommitPlan {
+    records: Vec<Vec<u8>>,
+}
+
+impl RecoveryPrecommitPlan {
+    /// Accept recovery without current-boot startup records.
+    #[must_use]
+    pub(crate) const fn empty() -> Self {
+        Self {
+            records: Vec::new(),
+        }
+    }
+
+    /// Append this complete bounded record batch before returning the manager.
+    #[must_use]
+    pub(crate) const fn with_records(records: Vec<Vec<u8>>) -> Self {
+        Self { records }
+    }
 }
 
 impl JournalRecovery {
@@ -396,8 +468,36 @@ pub struct EvidenceJournalManager<V> {
     segment_count: usize,
     total_bytes: u64,
     record_digests: BTreeSet<EvidenceRecordDigest>,
+    reservation_owner: Arc<ReservationOwner>,
+    reserved_segment_slots: usize,
+    reserved_bytes: u64,
     poisoned: bool,
     quiesced: bool,
+}
+
+struct ReservationOwner;
+
+#[derive(Clone, Copy)]
+struct AppendCapacity {
+    reserved_segment_slots_after_append: usize,
+    reserved_bytes_after_append: u64,
+    consumes_reservation: bool,
+}
+
+impl AppendCapacity {
+    const fn ordinary(reserved_segment_slots: usize, reserved_bytes: u64) -> Self {
+        Self {
+            reserved_segment_slots_after_append: reserved_segment_slots,
+            reserved_bytes_after_append: reserved_bytes,
+            consumes_reservation: false,
+        }
+    }
+}
+
+struct PreparedReservationConsumption {
+    capacity: AppendCapacity,
+    token_remaining_records: usize,
+    token_remaining_bytes: u64,
 }
 
 impl<V: JournalVerifier> EvidenceJournalManager<V> {
@@ -524,7 +624,9 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         signer: &JournalSigner<'_>,
         capture_limits: RecoveryCaptureLimits,
         verifier: V,
-        precommit: &mut dyn FnMut(&JournalRecovery) -> Result<(), JournalManagerError>,
+        precommit: &mut dyn FnMut(
+            &JournalRecovery,
+        ) -> Result<RecoveryPrecommitPlan, JournalManagerError>,
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
         let (manager, report, _) = Self::open_inner(
             directory.into(),
@@ -551,7 +653,9 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         recovered_tail_signer: Option<&JournalSigner<'_>>,
         capture_limits: RecoveryCaptureLimits,
         verifier: V,
-        precommit: &mut dyn FnMut(&JournalRecovery) -> Result<(), JournalManagerError>,
+        precommit: &mut dyn FnMut(
+            &JournalRecovery,
+        ) -> Result<RecoveryPrecommitPlan, JournalManagerError>,
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
         let (manager, report, _) = Self::open_inner(
             directory.into(),
@@ -752,6 +856,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         }
 
         let mut precommitted_recovery = None;
+        let mut precommit_records = Vec::new();
         if let Some(precommit) = recovery_precommit.as_mut() {
             let preview_report = JournalRecoveryReport {
                 discovered_segments,
@@ -768,7 +873,17 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                 .take()
                 .ok_or(JournalManagerError::RecoveryCaptureAllocation)?
                 .finish(preview_report);
-            precommit(&recovery)?;
+            let plan = precommit(&recovery)?;
+            preflight_recovery_records(
+                &limits,
+                discovered_segments,
+                total_bytes,
+                recovered_active.is_some(),
+                expected_sequence,
+                &record_digests,
+                &plan.records,
+            )?;
+            precommit_records = plan.records;
             precommitted_recovery = Some(recovery);
         }
 
@@ -785,10 +900,6 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             total_bytes = total_bytes
                 .checked_sub(active_bytes)
                 .and_then(|bytes| bytes.checked_add(closed.segment_bytes()))
-                .ok_or(JournalManagerError::Quiesced)?;
-            completed_digests.insert(closed.segment_digest());
-            completed_segments = completed_segments
-                .checked_add(1)
                 .ok_or(JournalManagerError::Quiesced)?;
             last_completed = Some(closed);
             closed_active_tail = true;
@@ -808,14 +919,26 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             segment_count: discovered_segments,
             total_bytes,
             record_digests,
+            reservation_owner: Arc::new(ReservationOwner),
+            reserved_segment_slots: 0,
+            reserved_bytes: 0,
             poisoned: false,
             quiesced: false,
         };
-        manager.start_next_segment(created_mono_ns, None)?;
+        manager.start_next_segment(created_mono_ns, None, AppendCapacity::ordinary(0, 0))?;
+        if !precommit_records.is_empty() {
+            let mut reservation = manager.reserve_append_capacity(precommit_records.len())?;
+            for record in &precommit_records {
+                manager.append_reserved(&mut reservation, record, created_mono_ns, signer)?;
+            }
+        }
         let active_sequence = manager
             .active
             .as_ref()
             .map(|segment| segment.identity().segment_sequence);
+        let completed_segments = manager
+            .segment_count
+            .saturating_sub(usize::from(manager.active.is_some()));
         let report = JournalRecoveryReport {
             discovered_segments,
             completed_segments,
@@ -836,6 +959,182 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         Ok((manager, report, recovery))
     }
 
+    /// Reserve conservative logical capacity for future maximum-sized records.
+    ///
+    /// Each unit retains one dedicated future segment slot and the complete
+    /// bytes for that segment's header, maximum-sized record frame, and footer.
+    /// The reservation is logical only: it does not allocate filesystem blocks
+    /// or make a durability claim.
+    ///
+    /// # Errors
+    /// Returns on poison/quiescence, unusable maximum-record bounds, sequence
+    /// exhaustion, or insufficient unreserved global byte/segment capacity.
+    pub fn reserve_append_capacity(
+        &mut self,
+        record_count: usize,
+    ) -> Result<JournalReservation, JournalManagerError> {
+        if self.poisoned {
+            return Err(JournalManagerError::Poisoned);
+        }
+        if self.quiesced {
+            return Err(JournalManagerError::Quiesced);
+        }
+        if record_count == 0 {
+            return Err(JournalManagerError::ReservationExhausted);
+        }
+        let active = self.active.as_ref().ok_or(JournalManagerError::Quiesced)?;
+        let bounds = self.limits.segment;
+        let maximum_record_bytes = self.max_record_bytes();
+        if u32::try_from(maximum_record_bytes).is_err() {
+            return Err(JournalManagerError::Journal(JournalError::RecordTooLarge));
+        }
+        let maximum_frame_bytes = ActiveEvidenceSegment::framed_record_bytes(maximum_record_bytes)?;
+        let bytes_per_record = ActiveEvidenceSegment::maximum_header_bytes()
+            .checked_add(ActiveEvidenceSegment::footer_bytes())
+            .and_then(|bytes| bytes.checked_add(maximum_frame_bytes))
+            .ok_or(JournalManagerError::ReservationUnavailable)?;
+        if bytes_per_record > bounds.max_segment_bytes() {
+            return Err(JournalManagerError::Journal(
+                JournalError::RecordCannotFitSegment,
+            ));
+        }
+
+        let requested_segment_slots = record_count;
+        let reserved_segment_slots = self
+            .reserved_segment_slots
+            .checked_add(requested_segment_slots)
+            .ok_or(JournalManagerError::ReservationUnavailable)?;
+        let projected_segment_count = self
+            .segment_count
+            .checked_add(reserved_segment_slots)
+            .ok_or(JournalManagerError::ReservationUnavailable)?;
+        if projected_segment_count > self.limits.max_segments {
+            return Err(JournalManagerError::ReservationUnavailable);
+        }
+        let reserved_sequence_span = u64::try_from(reserved_segment_slots)
+            .map_err(|_| JournalManagerError::SequenceExhausted)?;
+        let _ = active
+            .identity()
+            .segment_sequence
+            .get()
+            .checked_add(reserved_sequence_span)
+            .ok_or(JournalManagerError::SequenceExhausted)?;
+
+        let bytes_per_record = u64::try_from(bytes_per_record)
+            .map_err(|_| JournalManagerError::ReservationUnavailable)?;
+        let requested_records = u64::try_from(requested_segment_slots)
+            .map_err(|_| JournalManagerError::ReservationUnavailable)?;
+        let requested_bytes = bytes_per_record
+            .checked_mul(requested_records)
+            .ok_or(JournalManagerError::ReservationUnavailable)?;
+        let reserved_bytes = self
+            .reserved_bytes
+            .checked_add(requested_bytes)
+            .ok_or(JournalManagerError::ReservationUnavailable)?;
+        if !fits_total_with_logical_reservation(
+            self.total_bytes,
+            0,
+            ActiveEvidenceSegment::footer_bytes(),
+            reserved_bytes,
+            self.limits.max_total_bytes,
+        ) {
+            return Err(JournalManagerError::ReservationUnavailable);
+        }
+
+        self.reserved_segment_slots = reserved_segment_slots;
+        self.reserved_bytes = reserved_bytes;
+        Ok(JournalReservation {
+            owner: Arc::clone(&self.reservation_owner),
+            remaining_records: requested_segment_slots,
+            bytes_per_record,
+            remaining_bytes: requested_bytes,
+        })
+    }
+
+    /// Release every unused unit in a reservation after publication is
+    /// cancelled before the corresponding durable call evidence.
+    ///
+    /// # Errors
+    /// Returns on poison/quiescence, a token from another manager, or an
+    /// inconsistent internal reservation state. No capacity is released on
+    /// error.
+    pub fn release_reservation(
+        &mut self,
+        reservation: &mut JournalReservation,
+    ) -> Result<(), JournalManagerError> {
+        if self.poisoned {
+            return Err(JournalManagerError::Poisoned);
+        }
+        if self.quiesced {
+            return Err(JournalManagerError::Quiesced);
+        }
+        if !Arc::ptr_eq(&self.reservation_owner, &reservation.owner) {
+            return Err(JournalManagerError::ReservationMismatch);
+        }
+        let Ok(remaining_records) = u64::try_from(reservation.remaining_records) else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Some(expected_remaining_bytes) =
+            reservation.bytes_per_record.checked_mul(remaining_records)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Some(reserved_segment_slots) = self
+            .reserved_segment_slots
+            .checked_sub(reservation.remaining_records)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Some(reserved_bytes) = self.reserved_bytes.checked_sub(reservation.remaining_bytes)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        if expected_remaining_bytes != reservation.remaining_bytes {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        }
+        self.reserved_segment_slots = reserved_segment_slots;
+        self.reserved_bytes = reserved_bytes;
+        reservation.remaining_records = 0;
+        reservation.remaining_bytes = 0;
+        Ok(())
+    }
+
+    /// Whether an opaque reservation was issued by this exact manager instance.
+    #[must_use]
+    pub(crate) fn owns_reservation(&self, reservation: &JournalReservation) -> bool {
+        Arc::ptr_eq(&self.reservation_owner, &reservation.owner)
+    }
+
+    /// Append one record against a manager-owned reservation.
+    ///
+    /// One reservation unit is consumed only after the append is durably
+    /// confirmed by the segment primitive. Every error retains the unit; an
+    /// ambiguous append poisons the manager and requires recovery.
+    ///
+    /// # Errors
+    /// Returns the errors documented by [`Self::append`], plus reservation
+    /// mismatch or exhaustion.
+    pub fn append_reserved(
+        &mut self,
+        reservation: &mut JournalReservation,
+        record: &[u8],
+        rotation_created_mono_ns: u64,
+        signer: &JournalSigner<'_>,
+    ) -> Result<(), JournalManagerError> {
+        let prepared = self.prepare_reservation_consumption(reservation)?;
+        self.append_inner(record, rotation_created_mono_ns, signer, prepared.capacity)?;
+        self.reserved_segment_slots = prepared.capacity.reserved_segment_slots_after_append;
+        self.reserved_bytes = prepared.capacity.reserved_bytes_after_append;
+        reservation.remaining_records = prepared.token_remaining_records;
+        reservation.remaining_bytes = prepared.token_remaining_bytes;
+        Ok(())
+    }
+
     /// Append exactly once, rotating first only after the segment reports that a
     /// fresh segment can accommodate the record.
     ///
@@ -854,6 +1153,17 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         record: &[u8],
         rotation_created_mono_ns: u64,
         signer: &JournalSigner<'_>,
+    ) -> Result<(), JournalManagerError> {
+        let capacity = AppendCapacity::ordinary(self.reserved_segment_slots, self.reserved_bytes);
+        self.append_inner(record, rotation_created_mono_ns, signer, capacity)
+    }
+
+    fn append_inner(
+        &mut self,
+        record: &[u8],
+        rotation_created_mono_ns: u64,
+        signer: &JournalSigner<'_>,
+        capacity: AppendCapacity,
     ) -> Result<(), JournalManagerError> {
         if self.poisoned {
             return Err(JournalManagerError::Poisoned);
@@ -878,25 +1188,33 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         };
         match classification {
             Ok(frame_bytes) => {
-                if !fits_total(
+                if !fits_total_with_logical_reservation(
                     self.total_bytes,
                     frame_bytes,
                     ActiveEvidenceSegment::footer_bytes(),
+                    capacity.reserved_bytes_after_append,
                     self.limits.max_total_bytes,
                 ) {
+                    if capacity.consumes_reservation {
+                        self.poisoned = true;
+                        return Err(JournalManagerError::Poisoned);
+                    }
+                    if self.has_reservations() {
+                        return Err(JournalManagerError::ReservationUnavailable);
+                    }
                     self.quiesce(signer)?;
                     return Err(JournalManagerError::Quiesced);
                 }
+                let confirmed_total_bytes = self
+                    .total_bytes
+                    .checked_add(
+                        u64::try_from(frame_bytes).map_err(|_| JournalManagerError::Quiesced)?,
+                    )
+                    .ok_or(JournalManagerError::Quiesced)?;
                 let active = self.active.as_mut().ok_or(JournalManagerError::Quiesced)?;
                 match active.append(record) {
                     Ok(()) => {
-                        self.total_bytes = self
-                            .total_bytes
-                            .checked_add(
-                                u64::try_from(frame_bytes)
-                                    .map_err(|_| JournalManagerError::Quiesced)?,
-                            )
-                            .ok_or(JournalManagerError::Quiesced)?;
+                        self.total_bytes = confirmed_total_bytes;
                         self.record_digests.insert(record_digest);
                         Ok(())
                     }
@@ -904,17 +1222,31 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                         self.poisoned = true;
                         Err(JournalManagerError::AppendCommitAmbiguous { record_digest })
                     }
+                    Err(JournalError::Poisoned) => {
+                        self.poisoned = true;
+                        Err(JournalManagerError::Poisoned)
+                    }
                     Err(error) => Err(error.into()),
                 }
             }
             Err(JournalError::RotationRequired) => {
                 let frame_bytes = ActiveEvidenceSegment::framed_record_bytes(record.len())?;
+                if !self.rotation_fits_logical_capacity(frame_bytes, capacity)? {
+                    if capacity.consumes_reservation {
+                        self.poisoned = true;
+                        return Err(JournalManagerError::Poisoned);
+                    }
+                    if self.has_reservations() {
+                        return Err(JournalManagerError::ReservationUnavailable);
+                    }
+                }
                 self.rotate_and_append(
                     record,
                     record_digest,
                     rotation_created_mono_ns,
                     frame_bytes,
                     signer,
+                    capacity,
                 )
             }
             Err(JournalError::CommitAmbiguous | JournalError::Poisoned) => {
@@ -923,6 +1255,233 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             }
             Err(error) => Err(error.into()),
         }
+    }
+
+    fn prepare_reservation_consumption(
+        &mut self,
+        reservation: &JournalReservation,
+    ) -> Result<PreparedReservationConsumption, JournalManagerError> {
+        if self.poisoned {
+            return Err(JournalManagerError::Poisoned);
+        }
+        if self.quiesced {
+            return Err(JournalManagerError::Quiesced);
+        }
+        if !Arc::ptr_eq(&self.reservation_owner, &reservation.owner) {
+            return Err(JournalManagerError::ReservationMismatch);
+        }
+        let Some(token_remaining_records) = reservation.remaining_records.checked_sub(1) else {
+            return Err(JournalManagerError::ReservationExhausted);
+        };
+        let Some(token_remaining_bytes) = reservation
+            .remaining_bytes
+            .checked_sub(reservation.bytes_per_record)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Some(reserved_segment_slots_after_append) = self.reserved_segment_slots.checked_sub(1)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Some(reserved_bytes_after_append) = self
+            .reserved_bytes
+            .checked_sub(reservation.bytes_per_record)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Ok(remaining_records) = u64::try_from(reservation.remaining_records) else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Some(expected_token_bytes) =
+            reservation.bytes_per_record.checked_mul(remaining_records)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        if expected_token_bytes != reservation.remaining_bytes {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        }
+        Ok(PreparedReservationConsumption {
+            capacity: AppendCapacity {
+                reserved_segment_slots_after_append,
+                reserved_bytes_after_append,
+                consumes_reservation: true,
+            },
+            token_remaining_records,
+            token_remaining_bytes,
+        })
+    }
+
+    const fn has_reservations(&self) -> bool {
+        self.reserved_segment_slots != 0 || self.reserved_bytes != 0
+    }
+
+    fn rotation_fits_logical_capacity(
+        &self,
+        frame_bytes: usize,
+        capacity: AppendCapacity,
+    ) -> Result<bool, JournalManagerError> {
+        let active = self.active.as_ref().ok_or(JournalManagerError::Quiesced)?;
+        let next_sequence = active
+            .identity()
+            .segment_sequence
+            .get()
+            .checked_add(1)
+            .ok_or(JournalManagerError::SequenceExhausted)?;
+        let reserved_sequence_span = u64::try_from(capacity.reserved_segment_slots_after_append)
+            .map_err(|_| JournalManagerError::SequenceExhausted)?;
+        let _ = next_sequence
+            .checked_add(reserved_sequence_span)
+            .ok_or(JournalManagerError::SequenceExhausted)?;
+        let projected_segments = self
+            .segment_count
+            .checked_add(1)
+            .and_then(|count| count.checked_add(capacity.reserved_segment_slots_after_append));
+        let added_bytes = ActiveEvidenceSegment::footer_bytes()
+            .checked_add(ActiveEvidenceSegment::minimum_complete_bytes(
+                active.identity(),
+            )?)
+            .and_then(|bytes| bytes.checked_add(frame_bytes));
+        Ok(
+            projected_segments.is_some_and(|count| count <= self.limits.max_segments)
+                && added_bytes.is_some_and(|bytes| {
+                    fits_total_with_logical_reservation(
+                        self.total_bytes,
+                        bytes,
+                        0,
+                        capacity.reserved_bytes_after_append,
+                        self.limits.max_total_bytes,
+                    )
+                }),
+        )
+    }
+
+    /// Preflight one uninterrupted batch against the configured logical journal
+    /// bounds without issuing I/O or changing manager state.
+    ///
+    /// The simulation includes record framing, every required footer/header,
+    /// per-segment record and byte bounds, the segment-count namespace, and the
+    /// whole-journal byte cap. An exclusive higher-level owner can keep this
+    /// capacity available by permitting no intervening append before it submits
+    /// the batch. This is not a filesystem-space reservation: a later write can
+    /// still fail or become commit-ambiguous.
+    ///
+    /// # Errors
+    /// Returns the same permanent record-bound, checked sequence, poison, or
+    /// logical-capacity errors that an append in the simulated batch would reach.
+    pub fn preflight_append_batch(
+        &self,
+        record_lengths: &[usize],
+    ) -> Result<(), JournalManagerError> {
+        if self.poisoned {
+            return Err(JournalManagerError::Poisoned);
+        }
+        if self.quiesced {
+            return Err(JournalManagerError::Quiesced);
+        }
+        if record_lengths.is_empty() {
+            return Ok(());
+        }
+
+        let active = self.active.as_ref().ok_or(JournalManagerError::Quiesced)?;
+        let bounds = self.limits.segment;
+        let footer_bytes = ActiveEvidenceSegment::footer_bytes();
+        let minimum_segment_bytes =
+            ActiveEvidenceSegment::minimum_complete_bytes(active.identity())?;
+        let header_bytes = minimum_segment_bytes
+            .checked_sub(footer_bytes)
+            .ok_or(JournalManagerError::Journal(JournalError::Bounds))?;
+        let mut sequence = active.identity().segment_sequence.get();
+        let mut segment_count = self.segment_count;
+        let mut segment_bytes = active.segment_bytes();
+        let mut record_count = active.record_count();
+        let mut total_bytes = self.total_bytes;
+
+        for &record_len in record_lengths {
+            if record_len > bounds.max_record_bytes() || u32::try_from(record_len).is_err() {
+                return Err(JournalManagerError::Journal(JournalError::RecordTooLarge));
+            }
+            let frame_bytes = ActiveEvidenceSegment::framed_record_bytes(record_len)?;
+            if minimum_segment_bytes
+                .checked_add(frame_bytes)
+                .is_none_or(|required| required > bounds.max_segment_bytes())
+            {
+                return Err(JournalManagerError::Journal(
+                    JournalError::RecordCannotFitSegment,
+                ));
+            }
+
+            let fits_current = record_count < bounds.max_records()
+                && segment_bytes
+                    .checked_add(frame_bytes)
+                    .and_then(|bytes| bytes.checked_add(footer_bytes))
+                    .is_some_and(|complete| complete <= bounds.max_segment_bytes());
+            if !fits_current {
+                sequence = sequence
+                    .checked_add(1)
+                    .ok_or(JournalManagerError::SequenceExhausted)?;
+                let _ = NonZeroU64::new(sequence).ok_or(JournalManagerError::SequenceExhausted)?;
+                let reserved_sequence_span = u64::try_from(self.reserved_segment_slots)
+                    .map_err(|_| JournalManagerError::SequenceExhausted)?;
+                let _ = sequence
+                    .checked_add(reserved_sequence_span)
+                    .ok_or(JournalManagerError::SequenceExhausted)?;
+                let projected_segment_count = segment_count
+                    .checked_add(1)
+                    .and_then(|count| count.checked_add(self.reserved_segment_slots));
+                if projected_segment_count.is_none_or(|count| count > self.limits.max_segments) {
+                    return Err(if self.has_reservations() {
+                        JournalManagerError::ReservationUnavailable
+                    } else {
+                        JournalManagerError::Quiesced
+                    });
+                }
+                total_bytes = total_bytes
+                    .checked_add(
+                        u64::try_from(footer_bytes).map_err(|_| JournalManagerError::Quiesced)?,
+                    )
+                    .and_then(|bytes| {
+                        u64::try_from(header_bytes)
+                            .ok()
+                            .and_then(|header| bytes.checked_add(header))
+                    })
+                    .ok_or(JournalManagerError::Quiesced)?;
+                segment_count = segment_count
+                    .checked_add(1)
+                    .ok_or(JournalManagerError::Quiesced)?;
+                segment_bytes = header_bytes;
+                record_count = 0;
+            }
+
+            if !fits_total_with_logical_reservation(
+                total_bytes,
+                frame_bytes,
+                footer_bytes,
+                self.reserved_bytes,
+                self.limits.max_total_bytes,
+            ) {
+                return Err(if self.has_reservations() {
+                    JournalManagerError::ReservationUnavailable
+                } else {
+                    JournalManagerError::Quiesced
+                });
+            }
+            total_bytes = total_bytes
+                .checked_add(u64::try_from(frame_bytes).map_err(|_| JournalManagerError::Quiesced)?)
+                .ok_or(JournalManagerError::Quiesced)?;
+            segment_bytes = segment_bytes
+                .checked_add(frame_bytes)
+                .ok_or(JournalManagerError::Quiesced)?;
+            record_count = record_count
+                .checked_add(1)
+                .ok_or(JournalManagerError::Quiesced)?;
+        }
+        Ok(())
     }
 
     /// Whether global capacity has quiesced further appends.
@@ -949,6 +1508,11 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             return None;
         }
         self.active.as_ref().map(ActiveEvidenceSegment::identity)
+    }
+
+    #[must_use]
+    pub(crate) const fn max_record_bytes(&self) -> usize {
+        self.limits.segment.max_record_bytes()
     }
 
     /// Whether recovery or this confirmed manager instance contains the exact
@@ -1002,6 +1566,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         created_mono_ns: u64,
         frame_bytes: usize,
         signer: &JournalSigner<'_>,
+        capacity: AppendCapacity,
     ) -> Result<(), JournalManagerError> {
         let active = self.active.take().ok_or(JournalManagerError::Quiesced)?;
         let active_bytes =
@@ -1012,16 +1577,24 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                 self.poisoned = true;
                 return Err(JournalManagerError::AppendCommitAmbiguous { record_digest });
             }
-            Err(error) => return Err(error.into()),
+            Err(error) => {
+                self.poisoned = true;
+                return Err(error.into());
+            }
         };
-        self.total_bytes = self
+        let Some(total_bytes) = self
             .total_bytes
             .checked_sub(active_bytes)
             .and_then(|bytes| bytes.checked_add(completed.segment_bytes()))
-            .ok_or(JournalManagerError::Quiesced)?;
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        self.total_bytes = total_bytes;
         self.last_completed = Some(completed);
 
-        if let Err(error) = self.start_next_segment(created_mono_ns, Some(frame_bytes)) {
+        if let Err(error) = self.start_next_segment(created_mono_ns, Some(frame_bytes), capacity) {
+            self.poisoned = true;
             return Err(if error == JournalManagerError::Poisoned {
                 JournalManagerError::AppendCommitAmbiguous { record_digest }
             } else {
@@ -1031,16 +1604,31 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         if self.quiesced {
             return Err(JournalManagerError::Quiesced);
         }
-        let active = self.active.as_mut().ok_or(JournalManagerError::Quiesced)?;
-        self.verifier.validate_record(active.identity(), record)?;
+        let validation = {
+            let active = self.active.as_ref().ok_or(JournalManagerError::Quiesced)?;
+            self.verifier.validate_record(active.identity(), record)
+        };
+        if let Err(error) = validation {
+            self.poisoned = true;
+            return Err(error.into());
+        }
+        let Some(confirmed_total_bytes) =
+            self.total_bytes
+                .checked_add(u64::try_from(frame_bytes).map_err(|_| {
+                    self.poisoned = true;
+                    JournalManagerError::Poisoned
+                })?)
+        else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
+        let Some(active) = self.active.as_mut() else {
+            self.poisoned = true;
+            return Err(JournalManagerError::Poisoned);
+        };
         match active.append(record) {
             Ok(()) => {
-                self.total_bytes = self
-                    .total_bytes
-                    .checked_add(
-                        u64::try_from(frame_bytes).map_err(|_| JournalManagerError::Quiesced)?,
-                    )
-                    .ok_or(JournalManagerError::Quiesced)?;
+                self.total_bytes = confirmed_total_bytes;
                 self.record_digests.insert(record_digest);
                 Ok(())
             }
@@ -1048,7 +1636,10 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                 self.poisoned = true;
                 Err(JournalManagerError::AppendCommitAmbiguous { record_digest })
             }
-            Err(error) => Err(error.into()),
+            Err(error) => {
+                self.poisoned = true;
+                Err(error.into())
+            }
         }
     }
 
@@ -1056,6 +1647,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         &mut self,
         created_mono_ns: u64,
         pending_frame_bytes: Option<usize>,
+        capacity: AppendCapacity,
     ) -> Result<(), JournalManagerError> {
         let sequence = match &self.last_completed {
             Some(previous) => previous
@@ -1090,9 +1682,24 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         let required = minimum
             .checked_add(pending_frame_bytes.unwrap_or(0))
             .ok_or(JournalManagerError::Quiesced)?;
-        if self.segment_count >= self.limits.max_segments
-            || !fits_total(self.total_bytes, required, 0, self.limits.max_total_bytes)
-        {
+        let projected_segment_count = self
+            .segment_count
+            .checked_add(1)
+            .and_then(|count| count.checked_add(capacity.reserved_segment_slots_after_append));
+        let has_capacity = projected_segment_count
+            .is_some_and(|count| count <= self.limits.max_segments)
+            && fits_total_with_logical_reservation(
+                self.total_bytes,
+                required,
+                0,
+                capacity.reserved_bytes_after_append,
+                self.limits.max_total_bytes,
+            );
+        if !has_capacity {
+            if capacity.consumes_reservation || self.has_reservations() {
+                self.poisoned = true;
+                return Err(JournalManagerError::Poisoned);
+            }
             self.quiesced = true;
             return Ok(());
         }
@@ -1167,8 +1774,11 @@ enum OpenMode {
     OpenExisting,
 }
 
-type RecoveryPrecommit<'callback> =
-    Option<&'callback mut dyn FnMut(&JournalRecovery) -> Result<(), JournalManagerError>>;
+type RecoveryPrecommit<'callback> = Option<
+    &'callback mut dyn FnMut(
+        &JournalRecovery,
+    ) -> Result<RecoveryPrecommitPlan, JournalManagerError>,
+>;
 
 struct OpenBehavior<'callback> {
     mode: OpenMode,
@@ -1488,15 +2098,108 @@ fn ensure_matching_signer<V: JournalVerifier>(
 }
 
 fn fits_total(current: u64, add: usize, reserve: usize, maximum: u64) -> bool {
+    fits_total_with_logical_reservation(current, add, reserve, 0, maximum)
+}
+
+fn preflight_recovery_records(
+    limits: &JournalLimits,
+    discovered_segments: usize,
+    total_bytes: u64,
+    closes_active_tail: bool,
+    current_sequence: u64,
+    recovered_record_digests: &BTreeSet<EvidenceRecordDigest>,
+    records: &[Vec<u8>],
+) -> Result<(), JournalManagerError> {
+    if records.is_empty() {
+        return Ok(());
+    }
+    let bounds = limits.segment;
+    if u32::try_from(bounds.max_record_bytes()).is_err() {
+        return Err(JournalManagerError::Journal(JournalError::RecordTooLarge));
+    }
+    let mut planned_digests = BTreeSet::new();
+    for record in records {
+        if record.len() > bounds.max_record_bytes() || u32::try_from(record.len()).is_err() {
+            return Err(JournalManagerError::Journal(JournalError::RecordTooLarge));
+        }
+        let digest = EvidenceRecordDigest::compute(record);
+        if recovered_record_digests.contains(&digest) || !planned_digests.insert(digest) {
+            return Err(JournalManagerError::DuplicateRecord);
+        }
+    }
+
+    let maximum_frame_bytes =
+        ActiveEvidenceSegment::framed_record_bytes(bounds.max_record_bytes())?;
+    let maximum_complete_record_segment = ActiveEvidenceSegment::maximum_header_bytes()
+        .checked_add(ActiveEvidenceSegment::footer_bytes())
+        .and_then(|bytes| bytes.checked_add(maximum_frame_bytes))
+        .ok_or(JournalManagerError::ReservationUnavailable)?;
+    if maximum_complete_record_segment > bounds.max_segment_bytes() {
+        return Err(JournalManagerError::Journal(
+            JournalError::RecordCannotFitSegment,
+        ));
+    }
+
+    let record_count = records.len();
+    let projected_segment_count = discovered_segments
+        .checked_add(1)
+        .and_then(|count| count.checked_add(record_count))
+        .ok_or(JournalManagerError::ReservationUnavailable)?;
+    if projected_segment_count > limits.max_segments {
+        return Err(JournalManagerError::ReservationUnavailable);
+    }
+    let reserved_sequence_span =
+        u64::try_from(record_count).map_err(|_| JournalManagerError::SequenceExhausted)?;
+    let _ = NonZeroU64::new(current_sequence)
+        .and_then(|sequence| sequence.get().checked_add(reserved_sequence_span))
+        .ok_or(JournalManagerError::SequenceExhausted)?;
+
+    let old_footer_bytes = if closes_active_tail {
+        u64::try_from(ActiveEvidenceSegment::footer_bytes())
+            .map_err(|_| JournalManagerError::ReservationUnavailable)?
+    } else {
+        0
+    };
+    let current_header_bytes = u64::try_from(ActiveEvidenceSegment::maximum_header_bytes())
+        .map_err(|_| JournalManagerError::ReservationUnavailable)?;
+    let current_footer_bytes = u64::try_from(ActiveEvidenceSegment::footer_bytes())
+        .map_err(|_| JournalManagerError::ReservationUnavailable)?;
+    let reserved_unit_bytes = u64::try_from(maximum_complete_record_segment)
+        .map_err(|_| JournalManagerError::ReservationUnavailable)?;
+    let reserved_records_bytes = reserved_unit_bytes
+        .checked_mul(
+            u64::try_from(record_count).map_err(|_| JournalManagerError::ReservationUnavailable)?,
+        )
+        .ok_or(JournalManagerError::ReservationUnavailable)?;
+    let projected_total = total_bytes
+        .checked_add(old_footer_bytes)
+        .and_then(|bytes| bytes.checked_add(current_header_bytes))
+        .and_then(|bytes| bytes.checked_add(current_footer_bytes))
+        .and_then(|bytes| bytes.checked_add(reserved_records_bytes))
+        .ok_or(JournalManagerError::ReservationUnavailable)?;
+    if projected_total > limits.max_total_bytes {
+        return Err(JournalManagerError::ReservationUnavailable);
+    }
+    Ok(())
+}
+
+fn fits_total_with_logical_reservation(
+    current: u64,
+    add: usize,
+    footer_reserve: usize,
+    logical_reservation: u64,
+    maximum: u64,
+) -> bool {
     let Ok(add) = u64::try_from(add) else {
         return false;
     };
-    let Ok(reserve) = u64::try_from(reserve) else {
+    let Ok(footer_reserve) = u64::try_from(footer_reserve) else {
         return false;
     };
     current
         .checked_add(add)
-        .and_then(|bytes| bytes.checked_add(reserve))
+        .and_then(|bytes| bytes.checked_add(footer_reserve))
+        .and_then(|bytes| bytes.checked_add(logical_reservation))
         .is_some_and(|bytes| bytes <= maximum)
 }
 
@@ -1654,6 +2357,38 @@ mod tests {
             JournalBounds::new(4096, max_records, 1024).unwrap(),
             max_segments,
             64 * 1024,
+        )
+        .unwrap()
+    }
+
+    fn reservation_limits(
+        max_records: u64,
+        max_segments: usize,
+        max_record_bytes: usize,
+        max_total_bytes: u64,
+    ) -> JournalLimits {
+        let maximum_single_record_segment = ActiveEvidenceSegment::maximum_header_bytes()
+            + ActiveEvidenceSegment::footer_bytes()
+            + ActiveEvidenceSegment::framed_record_bytes(max_record_bytes).unwrap();
+        JournalLimits::new(
+            JournalBounds::new(maximum_single_record_segment, max_records, max_record_bytes)
+                .unwrap(),
+            max_segments,
+            max_total_bytes,
+        )
+        .unwrap()
+    }
+
+    fn exact_reservation_total_bytes(max_record_bytes: usize, record_count: usize) -> u64 {
+        let key = SigningKey::from_seed([3; 32]);
+        let current_header =
+            ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key)).unwrap()
+                - ActiveEvidenceSegment::footer_bytes();
+        let reserved_unit = ActiveEvidenceSegment::maximum_header_bytes()
+            + ActiveEvidenceSegment::footer_bytes()
+            + ActiveEvidenceSegment::framed_record_bytes(max_record_bytes).unwrap();
+        u64::try_from(
+            current_header + ActiveEvidenceSegment::footer_bytes() + reserved_unit * record_count,
         )
         .unwrap()
     }
@@ -1868,6 +2603,172 @@ mod tests {
         assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(1));
         assert!(!manager.is_quiesced());
         manager.append(b"two", 2, &signer()).unwrap();
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    #[test]
+    fn batch_preflight_reserves_logical_rotation_capacity_without_mutation() {
+        let directory = TestDirectory::new();
+        let (mut manager, _) = open(&directory.journal(), 1, limits(1, 2)).unwrap();
+
+        manager.preflight_append_batch(&[3, 3]).unwrap();
+        assert_eq!(
+            manager.preflight_append_batch(&[3, 3, 3]),
+            Err(JournalManagerError::Quiesced)
+        );
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(1));
+        assert!(!manager.is_quiesced());
+
+        manager.append(b"one", 1, &signer()).unwrap();
+        manager.append(b"two", 2, &signer()).unwrap();
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(2));
+        assert!(!manager.is_quiesced());
+    }
+
+    #[test]
+    fn batch_preflight_rejects_permanent_record_bounds_without_quiescing() {
+        let directory = TestDirectory::new();
+        let (mut manager, _) = open(&directory.journal(), 1, limits(4, 2)).unwrap();
+
+        assert_eq!(
+            manager.preflight_append_batch(&[1025]),
+            Err(JournalManagerError::Journal(JournalError::RecordTooLarge))
+        );
+        assert!(!manager.is_quiesced());
+        manager.append(b"fits", 1, &signer()).unwrap();
+    }
+
+    #[test]
+    fn reservation_accepts_the_exact_maximum_header_frame_and_footer_bound() {
+        let directory = TestDirectory::new();
+        let maximum_record_bytes = 8;
+        let maximum = exact_reservation_total_bytes(maximum_record_bytes, 1);
+        let configured = reservation_limits(4, 2, maximum_record_bytes, maximum);
+        let (mut manager, _) = open(&directory.journal(), 1, configured).unwrap();
+
+        let reservation = manager.reserve_append_capacity(1);
+
+        assert!(reservation.is_ok(), "exact logical bound was rejected");
+    }
+
+    #[test]
+    fn reservation_rejects_one_byte_below_the_maximum_header_bound() {
+        let directory = TestDirectory::new();
+        let maximum_record_bytes = 8;
+        let maximum = exact_reservation_total_bytes(maximum_record_bytes, 1) - 1;
+        let configured = reservation_limits(4, 2, maximum_record_bytes, maximum);
+        let (mut manager, _) = open(&directory.journal(), 1, configured).unwrap();
+
+        assert!(matches!(
+            manager.reserve_append_capacity(1),
+            Err(JournalManagerError::ReservationUnavailable)
+        ));
+    }
+
+    #[test]
+    fn ordinary_append_cannot_consume_reserved_byte_capacity() {
+        let directory = TestDirectory::new();
+        let maximum_record_bytes = 8;
+        let maximum = exact_reservation_total_bytes(maximum_record_bytes, 1);
+        let configured = reservation_limits(4, 2, maximum_record_bytes, maximum);
+        let (mut manager, _) = open(&directory.journal(), 1, configured).unwrap();
+        let mut reservation = manager.reserve_append_capacity(1).unwrap();
+
+        assert_eq!(
+            manager.append(b"x", 1, &signer()),
+            Err(JournalManagerError::ReservationUnavailable)
+        );
+        manager
+            .append_reserved(&mut reservation, b"x", 1, &signer())
+            .unwrap();
+        assert_eq!(
+            manager.append_reserved(&mut reservation, b"y", 1, &signer()),
+            Err(JournalManagerError::ReservationExhausted)
+        );
+    }
+
+    #[test]
+    fn releasing_a_cancelled_reservation_restores_ordinary_capacity() {
+        let directory = TestDirectory::new();
+        let maximum_record_bytes = 8;
+        let maximum = exact_reservation_total_bytes(maximum_record_bytes, 1);
+        let configured = reservation_limits(4, 2, maximum_record_bytes, maximum);
+        let (mut manager, _) = open(&directory.journal(), 1, configured).unwrap();
+        let mut reservation = manager.reserve_append_capacity(1).unwrap();
+
+        manager.release_reservation(&mut reservation).unwrap();
+
+        manager.append(b"x", 1, &signer()).unwrap();
+    }
+
+    #[test]
+    fn reservation_from_another_manager_is_rejected_without_consumption() {
+        let first_directory = TestDirectory::new();
+        let second_directory = TestDirectory::new();
+        let (mut first, _) = open(&first_directory.journal(), 1, limits(4, 3)).unwrap();
+        let (mut second, _) = open(&second_directory.journal(), 1, limits(4, 3)).unwrap();
+        let mut reservation = first.reserve_append_capacity(1).unwrap();
+
+        assert_eq!(
+            second.append_reserved(&mut reservation, b"record", 1, &signer()),
+            Err(JournalManagerError::ReservationMismatch)
+        );
+        first
+            .append_reserved(&mut reservation, b"record", 1, &signer())
+            .unwrap();
+    }
+
+    #[test]
+    fn foreign_release_rejection_preserves_the_issuing_manager_token() {
+        let first_directory = TestDirectory::new();
+        let second_directory = TestDirectory::new();
+        let (mut first, _) = open(&first_directory.journal(), 1, limits(4, 3)).unwrap();
+        let (mut second, _) = open(&second_directory.journal(), 1, limits(4, 3)).unwrap();
+        let mut reservation = first.reserve_append_capacity(1).unwrap();
+
+        assert_eq!(
+            second.release_reservation(&mut reservation),
+            Err(JournalManagerError::ReservationMismatch)
+        );
+        first.release_reservation(&mut reservation).unwrap();
+        first.append(b"record", 1, &signer()).unwrap();
+    }
+
+    #[test]
+    fn failed_reserved_append_does_not_consume_a_unit() {
+        let directory = TestDirectory::new();
+        let (mut manager, _) = open(&directory.journal(), 1, limits(4, 2)).unwrap();
+        let mut reservation = manager.reserve_append_capacity(1).unwrap();
+        let wrong_key = SigningKey::from_seed([4; 32]);
+        let expected_kid = kid();
+        let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
+
+        assert_eq!(
+            manager.append_reserved(&mut reservation, b"record", 1, &wrong_signer),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner
+            ))
+        );
+        manager
+            .append_reserved(&mut reservation, b"record", 1, &signer())
+            .unwrap();
+    }
+
+    #[test]
+    fn reserved_append_can_consume_its_dedicated_rotation_slot() {
+        let directory = TestDirectory::new();
+        let (mut manager, _) = open(&directory.journal(), 1, limits(1, 2)).unwrap();
+        manager.append(b"seed", 1, &signer()).unwrap();
+        let mut reservation = manager.reserve_append_capacity(1).unwrap();
+
+        assert_eq!(
+            manager.append(b"ordinary", 2, &signer()),
+            Err(JournalManagerError::ReservationUnavailable)
+        );
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(1));
+        manager
+            .append_reserved(&mut reservation, b"reserved", 2, &signer())
+            .unwrap();
         assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(2));
     }
 

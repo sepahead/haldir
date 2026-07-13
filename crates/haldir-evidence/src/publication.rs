@@ -88,6 +88,7 @@ struct PublicationTrace {
 /// `max_traces` limits all retained decisions over the replay lifetime, not only
 /// currently nonterminal decisions. Terminal traces are deliberately not evicted,
 /// so callers must size the bound for every retained prepared receipt.
+#[derive(Clone)]
 pub struct PublicationStageReducer {
     gate_id: Option<GateId>,
     traces: BTreeMap<(GateBootId, DecisionId), PublicationTrace>,

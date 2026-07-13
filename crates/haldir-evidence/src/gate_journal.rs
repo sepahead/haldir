@@ -8,13 +8,14 @@
 
 use crate::journal::SegmentIdentity;
 use crate::manager::{
-    EvidenceJournalManager, JournalManagerError, JournalOpenOptions, JournalRecovery,
-    JournalRecoveryReport, JournalSigner, JournalVerificationError, JournalVerifier,
-    RecoveryCaptureLimits,
+    EvidenceJournalManager, EvidenceRecordDigest, JournalManagerError, JournalOpenOptions,
+    JournalRecovery, JournalRecoveryReport, JournalReservation, JournalSigner,
+    JournalVerificationError, JournalVerifier, RecoveryCaptureDimension, RecoveryCaptureLimits,
+    RecoveryPrecommitPlan,
 };
 use crate::publication::{PublicationReductionError, PublicationStageReducer};
 use core::num::{NonZeroU64, NonZeroUsize};
-use haldir_contracts::cbor::{Limits, from_canonical_bytes};
+use haldir_contracts::cbor::{CanonicalMessage, Limits, from_canonical_bytes};
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::ids::{DecisionId, GateBootId, GateId};
 use haldir_contracts::publication::PublicationStageEventV1;
@@ -23,7 +24,7 @@ use haldir_contracts::receipt::{
 };
 use haldir_crypto::{
     ExpectedContext, KeyClass, KeyRole, RevocationSnapshot, TrustStore, VerifyingKey,
-    content_type_for, verify_sign1_dispatched,
+    content_type_for, sign_message, verify_sign1_dispatched,
 };
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -92,6 +93,33 @@ pub enum GateJournalOpenError {
     },
 }
 
+/// Transactional live/recovery append failure.
+///
+/// A single-record operation installs no candidate reducer state until its
+/// append returns confirmed success. Consuming batch operations never return a
+/// partially updated aggregate after failure; callers must recover before
+/// making another decision.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum GateJournalMutationError {
+    /// Logical journal bounds, storage, signer, duplicate, or commit ambiguity.
+    Journal(JournalManagerError),
+    /// The typed record batch would make ordered replay fail.
+    Semantic(PublicationRecoveryError),
+}
+
+impl From<JournalManagerError> for GateJournalMutationError {
+    fn from(error: JournalManagerError) -> Self {
+        Self::Journal(error)
+    }
+}
+
+impl From<PublicationRecoveryError> for GateJournalMutationError {
+    fn from(error: PublicationRecoveryError) -> Self {
+        Self::Semantic(error)
+    }
+}
+
 impl From<JournalManagerError> for GateJournalOpenError {
     fn from(error: JournalManagerError) -> Self {
         Self::Journal(error)
@@ -153,6 +181,8 @@ pub struct RecoveredPublicationState {
     replayed_records: u64,
     recovered_boots: BTreeSet<GateBootId>,
     last_recovered_segment_sequence: Option<NonZeroU64>,
+    decision_receipts: BTreeSet<(GateBootId, DecisionId)>,
+    current_boot_record_high_water: Option<u64>,
 }
 
 /// One manager fused with the fresh publication state rebuilt from its exact
@@ -163,8 +193,32 @@ pub struct RecoveredPublicationState {
 /// between replay and a later runtime binding.
 pub struct RecoveredGateJournal {
     manager: EvidenceJournalManager<GateJournalVerifier>,
+    verifier: GateJournalVerifier,
     publication: RecoveredPublicationState,
     recovery: JournalRecoveryReport,
+    capture_limits: RecoveryCaptureLimits,
+    captured_records: u64,
+    captured_record_bytes: u64,
+    reserved_capture_records: u64,
+    reserved_capture_bytes: u64,
+}
+
+/// Move-only Gate-journal reservation coupled to future recovery-capture
+/// capacity and the underlying manager's conservative logical storage quota.
+#[must_use = "dropping a live reservation intentionally strands its quota until journal recovery"]
+pub struct GateJournalReservation {
+    manager: JournalReservation,
+    remaining_records: u64,
+    bytes_per_record: u64,
+    remaining_bytes: u64,
+}
+
+struct PreparedGateJournalMutation {
+    reducer: PublicationStageReducer,
+    decision_receipts: BTreeSet<(GateBootId, DecisionId)>,
+    current_boot_record_high_water: Option<u64>,
+    captured_records: u64,
+    captured_record_bytes: u64,
 }
 
 impl RecoveredGateJournal {
@@ -185,6 +239,7 @@ impl RecoveredGateJournal {
     ) -> Result<Self, GateJournalOpenError> {
         preflight_trace_bound(capture_limits, max_traces)?;
         let mut publication = None;
+        let mut capture_usage = None;
         let mut replay_failure = None;
         let mut replay_report = None;
         let mut precommit = |recovery: &JournalRecovery| match verifier
@@ -192,7 +247,9 @@ impl RecoveredGateJournal {
         {
             Ok(state) => {
                 publication = Some(state);
-                Ok(())
+                capture_usage =
+                    Some((recovery.report().recovered_records, recovery.record_bytes()));
+                Ok(RecoveryPrecommitPlan::empty())
             }
             Err(error) => {
                 replay_report = Some(recovery.report());
@@ -218,10 +275,19 @@ impl RecoveredGateJournal {
         let publication = publication.ok_or(GateJournalOpenError::Journal(
             JournalManagerError::RecoveryConsumerRejected,
         ))?;
+        let (captured_records, captured_record_bytes) = capture_usage.ok_or(
+            GateJournalOpenError::Journal(JournalManagerError::RecoveryCaptureAllocation),
+        )?;
         Ok(Self {
             manager,
+            verifier,
             publication,
             recovery,
+            capture_limits,
+            captured_records,
+            captured_record_bytes,
+            reserved_capture_records: 0,
+            reserved_capture_bytes: 0,
         })
     }
 
@@ -243,6 +309,7 @@ impl RecoveredGateJournal {
     ) -> Result<Self, GateJournalOpenError> {
         preflight_trace_bound(capture_limits, max_traces)?;
         let mut publication = None;
+        let mut capture_usage = None;
         let mut replay_failure = None;
         let mut replay_report = None;
         let mut precommit = |recovery: &JournalRecovery| match verifier
@@ -250,7 +317,9 @@ impl RecoveredGateJournal {
         {
             Ok(state) => {
                 publication = Some(state);
-                Ok(())
+                capture_usage =
+                    Some((recovery.report().recovered_records, recovery.record_bytes()));
+                Ok(RecoveryPrecommitPlan::empty())
             }
             Err(error) => {
                 replay_report = Some(recovery.report());
@@ -277,11 +346,198 @@ impl RecoveredGateJournal {
         let publication = publication.ok_or(GateJournalOpenError::Journal(
             JournalManagerError::RecoveryConsumerRejected,
         ))?;
+        let (captured_records, captured_record_bytes) = capture_usage.ok_or(
+            GateJournalOpenError::Journal(JournalManagerError::RecoveryCaptureAllocation),
+        )?;
         Ok(Self {
             manager,
+            verifier,
             publication,
             recovery,
+            capture_limits,
+            captured_records,
+            captured_record_bytes,
+            reserved_capture_records: 0,
+            reserved_capture_bytes: 0,
         })
+    }
+
+    /// Open/replay an existing journal and append every required current-boot
+    /// `UnknownAfterPublish` record inside the same recovery transaction.
+    ///
+    /// The complete signed batch is capture- and semantic-preflighted, and its
+    /// conservative logical quota is checked before the old active tail is closed
+    /// or the current segment is published. The manager then issues the reservation
+    /// before the first append. The returned aggregate has already reduced every
+    /// confirmed startup record; no live mutation boundary is exposed between
+    /// replay and ambiguity closure.
+    ///
+    /// # Errors
+    /// Returns on the errors documented by [`Self::open_existing`], recovery
+    /// event planning/verification, future capture exhaustion, conservative
+    /// logical reservation failure, or an append ambiguity.
+    pub fn open_existing_with_recovery_unknowns(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: &JournalSigner<'_>,
+        recovered_tail_signer: Option<&JournalSigner<'_>>,
+        capture_limits: RecoveryCaptureLimits,
+        verifier: GateJournalVerifier,
+        max_traces: NonZeroUsize,
+    ) -> Result<(Self, usize), GateJournalOpenError> {
+        preflight_trace_bound(capture_limits, max_traces)?;
+        let recovery_boot_id = options.gate_boot_id();
+        let observed_mono_ns = options.created_mono_ns();
+        let prospective_identity = SegmentIdentity {
+            gate_id: verifier.gate_id().clone(),
+            gate_boot_id: recovery_boot_id,
+            segment_sequence: NonZeroU64::new(1).ok_or(GateJournalOpenError::Journal(
+                JournalManagerError::SequenceExhausted,
+            ))?,
+            previous_completed_digest: [0; 32],
+            created_mono_ns: observed_mono_ns,
+            signer_kid: signer.kid().clone(),
+            signer_public_key: signer.key().verifying_key().to_bytes(),
+        };
+        let mut publication = None;
+        let mut capture_usage = None;
+        let mut appended_unknowns = 0usize;
+        let mut replay_failure = None;
+        let mut replay_report = None;
+        let mut precommit = |recovery: &JournalRecovery| {
+            let mut state = match verifier.rebuild_publication_state_ref(recovery, max_traces.get())
+            {
+                Ok(state) => state,
+                Err(error) => {
+                    replay_report = Some(recovery.report());
+                    replay_failure = Some(error);
+                    return Err(JournalManagerError::RecoveryConsumerRejected);
+                }
+            };
+            if state.contains_recovered_boot(recovery_boot_id) {
+                replay_report = Some(recovery.report());
+                replay_failure = Some(PublicationRecoveryError::Reduction(
+                    PublicationReductionError::RecoveryBootAlreadyObserved,
+                ));
+                return Err(JournalManagerError::RecoveryConsumerRejected);
+            }
+            let events = match state
+                .reducer
+                .unknown_after_publish_events(recovery_boot_id, observed_mono_ns)
+            {
+                Ok(events) => events,
+                Err(error) => {
+                    replay_report = Some(recovery.report());
+                    replay_failure = Some(PublicationRecoveryError::Reduction(error));
+                    return Err(JournalManagerError::RecoveryConsumerRejected);
+                }
+            };
+            let envelopes = events
+                .iter()
+                .map(|event| {
+                    sign_message(
+                        event,
+                        PublicationStageEventV1::KIND,
+                        PublicationStageEventV1::SCHEMA_MAJOR,
+                        signer.kid(),
+                        signer.key(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let required_records = recovery
+                .report()
+                .recovered_records
+                .saturating_add(u64::try_from(envelopes.len()).unwrap_or(u64::MAX));
+            if required_records > capture_limits.max_records() {
+                return Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                    dimension: RecoveryCaptureDimension::RecordCount,
+                    maximum: capture_limits.max_records(),
+                    required: required_records,
+                });
+            }
+            let appended_bytes = envelopes.iter().fold(0u64, |bytes, envelope| {
+                bytes.saturating_add(u64::try_from(envelope.len()).unwrap_or(u64::MAX))
+            });
+            let required_bytes = recovery.record_bytes().saturating_add(appended_bytes);
+            if required_bytes > capture_limits.max_total_record_bytes() {
+                return Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                    dimension: RecoveryCaptureDimension::RecordBytes,
+                    maximum: capture_limits.max_total_record_bytes(),
+                    required: required_bytes,
+                });
+            }
+
+            let mut candidate = state.reducer.clone();
+            for (event, envelope) in events.iter().zip(&envelopes) {
+                let verified = match verifier.verify_record(&prospective_identity, envelope) {
+                    Ok(verified) => verified,
+                    Err(error) => {
+                        replay_report = Some(recovery.report());
+                        replay_failure = Some(PublicationRecoveryError::Verification(error));
+                        return Err(JournalManagerError::RecoveryConsumerRejected);
+                    }
+                };
+                if !matches!(
+                    verified.value(),
+                    VerifiedGateRecordRef::PublicationStage(decoded) if decoded == event
+                ) {
+                    replay_report = Some(recovery.report());
+                    replay_failure = Some(PublicationRecoveryError::Verification(
+                        GateJournalVerificationError::InvalidEnvelope,
+                    ));
+                    return Err(JournalManagerError::RecoveryConsumerRejected);
+                }
+                if let Err(error) = candidate.apply_event(event, envelope) {
+                    replay_report = Some(recovery.report());
+                    replay_failure = Some(PublicationRecoveryError::Reduction(error));
+                    return Err(JournalManagerError::RecoveryConsumerRejected);
+                }
+            }
+            state.reducer = candidate;
+            if !envelopes.is_empty() {
+                state.current_boot_record_high_water = Some(observed_mono_ns);
+            }
+            appended_unknowns = envelopes.len();
+            capture_usage = Some((required_records, required_bytes));
+            publication = Some(state);
+            Ok(RecoveryPrecommitPlan::with_records(envelopes))
+        };
+        let (manager, recovery) =
+            match EvidenceJournalManager::open_existing_with_recovery_precommit(
+                directory,
+                options,
+                signer,
+                recovered_tail_signer,
+                capture_limits,
+                verifier.clone(),
+                &mut precommit,
+            ) {
+                Ok(result) => result,
+                Err(JournalManagerError::RecoveryConsumerRejected) => {
+                    return Err(replay_open_error(replay_failure, replay_report));
+                }
+                Err(error) => return Err(error.into()),
+            };
+        let publication = publication.ok_or(GateJournalOpenError::Journal(
+            JournalManagerError::RecoveryConsumerRejected,
+        ))?;
+        let (captured_records, captured_record_bytes) = capture_usage.ok_or(
+            GateJournalOpenError::Journal(JournalManagerError::RecoveryCaptureAllocation),
+        )?;
+        Ok((
+            Self {
+                manager,
+                verifier,
+                publication,
+                recovery,
+                capture_limits,
+                captured_records,
+                captured_record_bytes,
+                reserved_capture_records: 0,
+                reserved_capture_bytes: 0,
+            },
+            appended_unknowns,
+        ))
     }
 
     /// Manager-created and trust-resolved current active identity. The open tail
@@ -299,10 +555,330 @@ impl RecoveredGateJournal {
         &self.publication
     }
 
-    /// Material journal recovery actions and final current-tail status.
+    /// Material recovery actions and current-tail status when fused open
+    /// completed. Later explicit mutation does not rewrite this open report.
     #[must_use]
     pub const fn recovery_report(&self) -> JournalRecoveryReport {
         self.recovery
+    }
+
+    /// Reserve conservative manager storage and future recovery-capture capacity
+    /// for `record_count` maximum-sized envelopes.
+    ///
+    /// # Errors
+    /// Returns before changing reservation state when count/byte capture bounds,
+    /// segment/byte quota, or the checked segment sequence cannot retain the
+    /// requested units.
+    pub fn reserve_append_capacity(
+        &mut self,
+        record_count: usize,
+    ) -> Result<GateJournalReservation, GateJournalMutationError> {
+        let additional_records = u64::try_from(record_count).unwrap_or(u64::MAX);
+        let reserved_capture_records = self
+            .reserved_capture_records
+            .saturating_add(additional_records);
+        let required_records = self
+            .captured_records
+            .saturating_add(reserved_capture_records);
+        if required_records > self.capture_limits.max_records() {
+            return Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordCount,
+                maximum: self.capture_limits.max_records(),
+                required: required_records,
+            }
+            .into());
+        }
+        let bytes_per_record = u64::try_from(self.manager.max_record_bytes()).unwrap_or(u64::MAX);
+        let additional_bytes = bytes_per_record.saturating_mul(additional_records);
+        let reserved_capture_bytes = self.reserved_capture_bytes.saturating_add(additional_bytes);
+        let required_bytes = self
+            .captured_record_bytes
+            .saturating_add(reserved_capture_bytes);
+        if required_bytes > self.capture_limits.max_total_record_bytes() {
+            return Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordBytes,
+                maximum: self.capture_limits.max_total_record_bytes(),
+                required: required_bytes,
+            }
+            .into());
+        }
+
+        let manager = self.manager.reserve_append_capacity(record_count)?;
+        self.reserved_capture_records = reserved_capture_records;
+        self.reserved_capture_bytes = reserved_capture_bytes;
+        Ok(GateJournalReservation {
+            manager,
+            remaining_records: additional_records,
+            bytes_per_record,
+            remaining_bytes: additional_bytes,
+        })
+    }
+
+    /// Release unused reservation units before any corresponding durable
+    /// publication-call boundary has committed.
+    ///
+    /// # Errors
+    /// Returns on a foreign/corrupt reservation or unusable manager. No capture
+    /// accounting is released unless the manager accepts the token.
+    pub fn release_reservation(
+        &mut self,
+        reservation: &mut GateJournalReservation,
+    ) -> Result<(), GateJournalMutationError> {
+        if !self.manager.owns_reservation(&reservation.manager) {
+            return Err(JournalManagerError::ReservationMismatch.into());
+        }
+        let reserved_capture_records = self
+            .reserved_capture_records
+            .checked_sub(reservation.remaining_records)
+            .ok_or(JournalManagerError::Poisoned)?;
+        let reserved_capture_bytes = self
+            .reserved_capture_bytes
+            .checked_sub(reservation.remaining_bytes)
+            .ok_or(JournalManagerError::Poisoned)?;
+        self.manager.release_reservation(&mut reservation.manager)?;
+        self.reserved_capture_records = reserved_capture_records;
+        self.reserved_capture_bytes = reserved_capture_bytes;
+        reservation.remaining_records = 0;
+        reservation.remaining_bytes = 0;
+        Ok(())
+    }
+
+    /// Verify and semantic-preview one closed-vocabulary Gate envelope, append
+    /// it against a retained reservation, and install the candidate publication
+    /// state only after confirmed durability.
+    ///
+    /// # Errors
+    /// Returns without reducer mutation on trust/schema/order/capture or manager
+    /// failure. A commit ambiguity poisons the underlying manager; the caller
+    /// must discard this fused object and recover before retrying.
+    pub fn append_reserved_verified(
+        &mut self,
+        reservation: &mut GateJournalReservation,
+        envelope: &[u8],
+        rotation_created_mono_ns: u64,
+        signer: &JournalSigner<'_>,
+    ) -> Result<(), GateJournalMutationError> {
+        if !self.manager.owns_reservation(&reservation.manager) {
+            return Err(JournalManagerError::ReservationMismatch.into());
+        }
+        let active_created_mono_ns = self
+            .manager
+            .active_identity()
+            .ok_or(JournalManagerError::Quiesced)?
+            .created_mono_ns;
+        if rotation_created_mono_ns < active_created_mono_ns {
+            return Err(PublicationRecoveryError::SegmentTimeRegression.into());
+        }
+        let prepared = self.preview_mutation(&[envelope])?;
+        if prepared
+            .current_boot_record_high_water
+            .is_some_and(|record_time| rotation_created_mono_ns < record_time)
+        {
+            return Err(PublicationRecoveryError::SegmentTimeRegression.into());
+        }
+        if reservation.remaining_records == 0 {
+            return Err(JournalManagerError::ReservationExhausted.into());
+        }
+        let remaining_records = reservation
+            .remaining_records
+            .checked_sub(1)
+            .ok_or(JournalManagerError::ReservationExhausted)?;
+        let remaining_bytes = reservation
+            .remaining_bytes
+            .checked_sub(reservation.bytes_per_record)
+            .ok_or(JournalManagerError::Poisoned)?;
+        let reserved_capture_records = self
+            .reserved_capture_records
+            .checked_sub(1)
+            .ok_or(JournalManagerError::Poisoned)?;
+        let reserved_capture_bytes = self
+            .reserved_capture_bytes
+            .checked_sub(reservation.bytes_per_record)
+            .ok_or(JournalManagerError::Poisoned)?;
+        self.manager.append_reserved(
+            &mut reservation.manager,
+            envelope,
+            rotation_created_mono_ns,
+            signer,
+        )?;
+        self.reserved_capture_records = reserved_capture_records;
+        self.reserved_capture_bytes = reserved_capture_bytes;
+        reservation.remaining_records = remaining_records;
+        reservation.remaining_bytes = remaining_bytes;
+        self.publication.reducer = prepared.reducer;
+        self.publication.decision_receipts = prepared.decision_receipts;
+        self.publication.current_boot_record_high_water = prepared.current_boot_record_high_water;
+        self.captured_records = prepared.captured_records;
+        self.captured_record_bytes = prepared.captured_record_bytes;
+        Ok(())
+    }
+
+    /// Consume this fused journal while durably closing every recovered dangling
+    /// publication call under the manager-created current segment boot.
+    ///
+    /// The complete deterministic batch is signed, statelessly verified,
+    /// semantic-previewed on a cloned reducer, checked against future recovery
+    /// capture bounds, and logically reserved before its first append. Each append
+    /// is semantic-previewed before it is attempted. A confirmed append advances
+    /// the internal candidate; any later failure consumes the whole aggregate, so
+    /// partial batch state cannot escape and a fresh open/replay is required before
+    /// retry decisions are made.
+    ///
+    /// This lower-level API derives the producer boot from the active segment and
+    /// rejects it if that boot already appears anywhere in recovered journal
+    /// provenance, including empty or non-publication segments. The caller must
+    /// establish durable Gate-startup authority at a higher layer.
+    ///
+    /// `UnknownAfterPublish` means the prior process crossed its durable
+    /// write-ahead boundary but left no terminal local-return record. It does not
+    /// claim that transport was invoked or that any receiver accepted the bytes.
+    ///
+    /// # Errors
+    /// Returns on stale/same-boot recovery context, semantic/capture failure,
+    /// logical capacity exhaustion, signer drift, storage failure, or an
+    /// append-commit ambiguity.
+    pub fn append_recovery_unknowns(
+        mut self,
+        observed_mono_ns: u64,
+        signer: &JournalSigner<'_>,
+    ) -> Result<(Self, usize), GateJournalMutationError> {
+        let recovery_boot_id = self
+            .manager
+            .active_identity()
+            .ok_or(JournalManagerError::Quiesced)?
+            .gate_boot_id;
+        if self.publication.contains_recovered_boot(recovery_boot_id) {
+            return Err(PublicationRecoveryError::Reduction(
+                PublicationReductionError::RecoveryBootAlreadyObserved,
+            )
+            .into());
+        }
+        let events = self
+            .publication
+            .reducer
+            .unknown_after_publish_events(recovery_boot_id, observed_mono_ns)
+            .map_err(PublicationRecoveryError::Reduction)?;
+        if events.is_empty() {
+            return Ok((self, 0));
+        }
+
+        let envelopes = events
+            .iter()
+            .map(|event| {
+                sign_message(
+                    event,
+                    PublicationStageEventV1::KIND,
+                    PublicationStageEventV1::SCHEMA_MAJOR,
+                    signer.kid(),
+                    signer.key(),
+                )
+            })
+            .collect::<Vec<_>>();
+        let envelope_refs = envelopes.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        let _ = self.preview_mutation(&envelope_refs)?;
+        let mut reservation = self.reserve_append_capacity(envelopes.len())?;
+        for envelope in &envelopes {
+            self.append_reserved_verified(&mut reservation, envelope, observed_mono_ns, signer)?;
+        }
+        Ok((self, events.len()))
+    }
+
+    fn preview_mutation(
+        &self,
+        envelopes: &[&[u8]],
+    ) -> Result<PreparedGateJournalMutation, GateJournalMutationError> {
+        let identity = self
+            .manager
+            .active_identity()
+            .ok_or(JournalManagerError::Quiesced)?;
+        let mut reducer = self.publication.reducer.clone();
+        let mut decision_receipts = self.publication.decision_receipts.clone();
+        let mut current_boot_record_high_water = self.publication.current_boot_record_high_water;
+        let mut new_digests = BTreeSet::new();
+        let mut record_bytes = 0u64;
+
+        for &envelope in envelopes {
+            let digest = EvidenceRecordDigest::compute(envelope);
+            if self.manager.contains_record(digest)? || !new_digests.insert(digest) {
+                return Err(JournalManagerError::DuplicateRecord.into());
+            }
+            record_bytes = record_bytes
+                .checked_add(u64::try_from(envelope.len()).unwrap_or(u64::MAX))
+                .ok_or(JournalManagerError::RecoveryCaptureLimitExceeded {
+                    dimension: RecoveryCaptureDimension::RecordBytes,
+                    maximum: self.capture_limits.max_total_record_bytes(),
+                    required: u64::MAX,
+                })?;
+            let verified = self
+                .verifier
+                .verify_record(identity, envelope)
+                .map_err(PublicationRecoveryError::Verification)?;
+            let record_mono_ns = match verified.value() {
+                VerifiedGateRecordRef::DecisionReceipt(receipt) => receipt.decided_mono_ns,
+                VerifiedGateRecordRef::PublicationStage(event) => event.observed_mono_ns,
+            };
+            if current_boot_record_high_water.is_some_and(|previous| record_mono_ns < previous) {
+                return Err(PublicationRecoveryError::RecordTimeRegression.into());
+            }
+            match verified.value() {
+                VerifiedGateRecordRef::DecisionReceipt(receipt) => {
+                    if !decision_receipts.insert((receipt.gate_boot_id, receipt.decision_id)) {
+                        return Err(PublicationRecoveryError::DuplicateDecisionReceipt.into());
+                    }
+                    if receipt.decision == DecisionOutcomeV1::Allow {
+                        reducer
+                            .register_prepared(receipt, envelope)
+                            .map_err(PublicationRecoveryError::Reduction)?;
+                    }
+                }
+                VerifiedGateRecordRef::PublicationStage(event) => {
+                    reducer
+                        .apply_event(event, envelope)
+                        .map_err(PublicationRecoveryError::Reduction)?;
+                }
+            }
+            current_boot_record_high_water = Some(record_mono_ns);
+        }
+
+        let additional_records = u64::try_from(envelopes.len()).unwrap_or(u64::MAX);
+        let captured_records = self
+            .captured_records
+            .checked_add(additional_records)
+            .ok_or(JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordCount,
+                maximum: self.capture_limits.max_records(),
+                required: u64::MAX,
+            })?;
+        if captured_records > self.capture_limits.max_records() {
+            return Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordCount,
+                maximum: self.capture_limits.max_records(),
+                required: captured_records,
+            }
+            .into());
+        }
+        let captured_record_bytes = self.captured_record_bytes.checked_add(record_bytes).ok_or(
+            JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordBytes,
+                maximum: self.capture_limits.max_total_record_bytes(),
+                required: u64::MAX,
+            },
+        )?;
+        if captured_record_bytes > self.capture_limits.max_total_record_bytes() {
+            return Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordBytes,
+                maximum: self.capture_limits.max_total_record_bytes(),
+                required: captured_record_bytes,
+            }
+            .into());
+        }
+        Ok(PreparedGateJournalMutation {
+            reducer,
+            decision_receipts,
+            current_boot_record_high_water,
+            captured_records,
+            captured_record_bytes,
+        })
     }
 }
 
@@ -656,6 +1232,8 @@ impl GateJournalVerifier {
             replayed_records,
             recovered_boots: seen_boots,
             last_recovered_segment_sequence,
+            decision_receipts,
+            current_boot_record_high_water: None,
         })
     }
 }
@@ -728,7 +1306,7 @@ impl JournalVerifier for GateJournalVerifier {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
-    use crate::journal::JournalBounds;
+    use crate::journal::{JournalBounds, JournalError};
     use crate::manager::{
         EvidenceJournalManager, JournalLimits, JournalManagerError, JournalOpenOptions,
         JournalSigner, RecoveryCaptureLimits,
@@ -1395,6 +1973,553 @@ mod tests {
             Err(GateJournalOpenError::TraceCapacityTooSmall)
         ));
         assert!(!journal.exists());
+    }
+
+    #[test]
+    fn foreign_gate_reservation_release_preserves_the_issuer_token() {
+        let first_directory = TestDirectory::new();
+        let second_directory = TestDirectory::new();
+        let mut first = RecoveredGateJournal::provision_new(
+            first_directory.journal(),
+            options(1, 10, limits(16)),
+            &journal_signer(),
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        let mut second = RecoveredGateJournal::provision_new(
+            second_directory.journal(),
+            options(1, 10, limits(16)),
+            &journal_signer(),
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        let mut reservation = first.reserve_append_capacity(1).unwrap();
+
+        assert_eq!(
+            second.release_reservation(&mut reservation),
+            Err(GateJournalMutationError::Journal(
+                JournalManagerError::ReservationMismatch
+            ))
+        );
+        first.release_reservation(&mut reservation).unwrap();
+    }
+
+    #[test]
+    fn reserved_append_rejects_segment_creation_time_regression_without_consumption() {
+        let directory = TestDirectory::new();
+        let journal_path = directory.journal();
+        let mut journal = RecoveredGateJournal::provision_new(
+            &journal_path,
+            options(1, 100, limits(1)),
+            &journal_signer(),
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        let envelope = sign_receipt(&deny_receipt(1, 1, 100), 3);
+        let mut reservation = journal.reserve_append_capacity(1).unwrap();
+        let active_path = journal_path.join("segment-00000000000000000001");
+        let bytes_before = fs::metadata(&active_path).unwrap().len();
+
+        assert_eq!(
+            journal.append_reserved_verified(&mut reservation, &envelope, 99, &journal_signer(),),
+            Err(GateJournalMutationError::Semantic(
+                PublicationRecoveryError::SegmentTimeRegression
+            ))
+        );
+        assert_eq!(fs::metadata(&active_path).unwrap().len(), bytes_before);
+        journal
+            .append_reserved_verified(&mut reservation, &envelope, 100, &journal_signer())
+            .unwrap();
+    }
+
+    #[test]
+    fn exhausted_gate_reservation_reports_exhaustion_without_mutation() {
+        let directory = TestDirectory::new();
+        let journal_path = directory.journal();
+        let mut journal = RecoveredGateJournal::provision_new(
+            &journal_path,
+            options(1, 10, limits(16)),
+            &journal_signer(),
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        let first = sign_receipt(&deny_receipt(1, 1, 10), 3);
+        let second = sign_receipt(&deny_receipt(2, 1, 11), 3);
+        let mut reservation = journal.reserve_append_capacity(1).unwrap();
+        journal
+            .append_reserved_verified(&mut reservation, &first, 10, &journal_signer())
+            .unwrap();
+        let active_path = journal_path.join("segment-00000000000000000001");
+        let bytes_before = fs::metadata(&active_path).unwrap().len();
+
+        assert_eq!(
+            journal.append_reserved_verified(&mut reservation, &second, 11, &journal_signer()),
+            Err(GateJournalMutationError::Journal(
+                JournalManagerError::ReservationExhausted
+            ))
+        );
+        assert_eq!(fs::metadata(&active_path).unwrap().len(), bytes_before);
+    }
+
+    #[test]
+    fn fused_recovery_appends_one_current_boot_unknown_then_replays_terminal() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(16);
+        let prepared = prepared_receipt(1, 1, 11);
+        let prepared_env = sign_receipt(&prepared, 3);
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, &prepared_env);
+        let called = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            prepared_digest,
+            prepared_digest,
+            12,
+        );
+        let called_env = sign_stage(&called, 3);
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, journal_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        first.append(&prepared_env, 11, &journal_signer()).unwrap();
+        first.append(&called_env, 12, &journal_signer()).unwrap();
+        drop(first);
+
+        let recovered = RecoveredGateJournal::open_existing(
+            &journal,
+            options(2, 20, journal_limits),
+            &journal_signer(),
+            Some(&journal_signer()),
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        let (recovered, appended) = recovered
+            .append_recovery_unknowns(20, &journal_signer())
+            .unwrap();
+        assert_eq!(appended, 1);
+        assert_eq!(
+            recovered
+                .publication()
+                .state(GateBootId::new([1; 16]), prepared.decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+        drop(recovered);
+
+        let reopened = RecoveredGateJournal::open_existing(
+            &journal,
+            options(3, 30, journal_limits),
+            &journal_signer(),
+            Some(&journal_signer()),
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            reopened
+                .publication()
+                .state(GateBootId::new([1; 16]), prepared.decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+        let (_, appended) = reopened
+            .append_recovery_unknowns(30, &journal_signer())
+            .unwrap();
+        assert_eq!(appended, 0);
+    }
+
+    #[test]
+    fn raw_recovery_unknown_rejects_current_boot_seen_in_empty_recovered_segment() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(16);
+        let prepared = prepared_receipt(1, 1, 11);
+        let prepared_env = sign_receipt(&prepared, 3);
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, &prepared_env);
+        let called = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            prepared_digest,
+            prepared_digest,
+            12,
+        );
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, journal_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        first.append(&prepared_env, 11, &journal_signer()).unwrap();
+        first
+            .append(&sign_stage(&called, 3), 12, &journal_signer())
+            .unwrap();
+        drop(first);
+
+        let (empty_second, _) = EvidenceJournalManager::open_existing(
+            &journal,
+            options(2, 20, journal_limits),
+            &journal_signer(),
+            Some(&journal_signer()),
+            verifier(),
+        )
+        .unwrap();
+        drop(empty_second);
+        let recovered = RecoveredGateJournal::open_existing(
+            &journal,
+            options(2, 30, journal_limits),
+            &journal_signer(),
+            Some(&journal_signer()),
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        let current_path = journal.join("segment-00000000000000000003");
+        let bytes_before = fs::metadata(&current_path).unwrap().len();
+
+        assert!(matches!(
+            recovered.append_recovery_unknowns(30, &journal_signer()),
+            Err(GateJournalMutationError::Semantic(
+                PublicationRecoveryError::Reduction(
+                    PublicationReductionError::RecoveryBootAlreadyObserved
+                )
+            ))
+        ));
+        assert_eq!(fs::metadata(current_path).unwrap().len(), bytes_before);
+    }
+
+    #[test]
+    fn precommit_closes_multiple_dangling_calls_and_reports_rotated_tail() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let one_record_limits = limits(1);
+        let first = prepared_receipt(1, 1, 11);
+        let second = prepared_receipt(2, 1, 13);
+        let first_envelope = sign_receipt(&first, 3);
+        let second_envelope = sign_receipt(&second, 3);
+        let first_digest = DigestV1::compute(DigestDomain::RawEnvelope, &first_envelope);
+        let second_digest = DigestV1::compute(DigestDomain::RawEnvelope, &second_envelope);
+        let first_called = sign_stage(
+            &stage_event(
+                &first,
+                1,
+                PublishStageV1::PublishCalled,
+                first_digest,
+                first_digest,
+                12,
+            ),
+            3,
+        );
+        let second_called = sign_stage(
+            &stage_event(
+                &second,
+                1,
+                PublishStageV1::PublishCalled,
+                second_digest,
+                second_digest,
+                14,
+            ),
+            3,
+        );
+        let (mut manager, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, one_record_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        for (record, created) in [
+            (&first_envelope, 11),
+            (&first_called, 12),
+            (&second_envelope, 13),
+            (&second_called, 14),
+        ] {
+            manager.append(record, created, &journal_signer()).unwrap();
+        }
+        drop(manager);
+
+        let (recovered, appended) = RecoveredGateJournal::open_existing_with_recovery_unknowns(
+            &journal,
+            options(2, 20, one_record_limits),
+            &journal_signer(),
+            Some(&journal_signer()),
+            RecoveryCaptureLimits::new(8, 128 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(appended, 2);
+        assert_eq!(
+            recovered
+                .publication()
+                .state(first.gate_boot_id, first.decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+        assert_eq!(
+            recovered
+                .publication()
+                .state(second.gate_boot_id, second.decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+        assert_eq!(
+            recovered
+                .recovery_report()
+                .active_sequence
+                .map(NonZeroU64::get),
+            Some(6)
+        );
+        assert_eq!(recovered.recovery_report().completed_segments, 5);
+    }
+
+    #[test]
+    fn recovery_unknown_respects_next_open_capture_budget_before_append() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(16);
+        let prepared = prepared_receipt(1, 1, 11);
+        let prepared_env = sign_receipt(&prepared, 3);
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, &prepared_env);
+        let called = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            prepared_digest,
+            prepared_digest,
+            12,
+        );
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, journal_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        first.append(&prepared_env, 11, &journal_signer()).unwrap();
+        first
+            .append(&sign_stage(&called, 3), 12, &journal_signer())
+            .unwrap();
+        drop(first);
+
+        let recovered = RecoveredGateJournal::open_existing(
+            &journal,
+            options(2, 20, journal_limits),
+            &journal_signer(),
+            Some(&journal_signer()),
+            RecoveryCaptureLimits::new(2, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(2).unwrap(),
+        )
+        .unwrap();
+        let current_path = journal.join("segment-00000000000000000002");
+        let before = fs::metadata(&current_path).unwrap().len();
+        assert!(matches!(
+            recovered.append_recovery_unknowns(20, &journal_signer()),
+            Err(GateJournalMutationError::Journal(
+                JournalManagerError::RecoveryCaptureLimitExceeded {
+                    dimension: RecoveryCaptureDimension::RecordCount,
+                    maximum: 2,
+                    required: 3,
+                }
+            ))
+        ));
+        assert_eq!(fs::metadata(current_path).unwrap().len(), before);
+    }
+
+    #[test]
+    fn precommit_unknown_capacity_failure_never_closes_tail_or_burns_successor() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let constrained_limits = JournalLimits::new(
+            JournalBounds::new(128 * 1024, 16, 32 * 1024).unwrap(),
+            2,
+            2 * 1024 * 1024,
+        )
+        .unwrap();
+        let prepared = prepared_receipt(1, 1, 11);
+        let prepared_env = sign_receipt(&prepared, 3);
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, &prepared_env);
+        let called = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            prepared_digest,
+            prepared_digest,
+            12,
+        );
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, constrained_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        first.append(&prepared_env, 11, &journal_signer()).unwrap();
+        first
+            .append(&sign_stage(&called, 3), 12, &journal_signer())
+            .unwrap();
+        drop(first);
+        let first_path = journal.join("segment-00000000000000000001");
+        let second_path = journal.join("segment-00000000000000000002");
+        let bytes_before = fs::metadata(&first_path).unwrap().len();
+
+        for _ in 0..2 {
+            assert!(matches!(
+                RecoveredGateJournal::open_existing_with_recovery_unknowns(
+                    &journal,
+                    options(2, 20, constrained_limits),
+                    &journal_signer(),
+                    Some(&journal_signer()),
+                    RecoveryCaptureLimits::new(8, 64 * 1024),
+                    verifier(),
+                    NonZeroUsize::new(8).unwrap(),
+                ),
+                Err(GateJournalOpenError::Journal(
+                    JournalManagerError::ReservationUnavailable
+                ))
+            ));
+            assert_eq!(fs::metadata(&first_path).unwrap().len(), bytes_before);
+            assert!(!second_path.exists());
+        }
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn precommit_rejects_unframeable_configured_maximum_before_tail_close() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let seed_limits = limits(16);
+        let prepared = prepared_receipt(1, 1, 11);
+        let prepared_env = sign_receipt(&prepared, 3);
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, &prepared_env);
+        let called = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            prepared_digest,
+            prepared_digest,
+            12,
+        );
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, seed_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        first.append(&prepared_env, 11, &journal_signer()).unwrap();
+        first
+            .append(&sign_stage(&called, 3), 12, &journal_signer())
+            .unwrap();
+        drop(first);
+        let unframeable = usize::try_from(u64::from(u32::MAX) + 1).unwrap();
+        let invalid_limits = JournalLimits::new(
+            JournalBounds::new(unframeable + 1024, 16, unframeable).unwrap(),
+            16,
+            u64::MAX,
+        )
+        .unwrap();
+        let first_path = journal.join("segment-00000000000000000001");
+        let second_path = journal.join("segment-00000000000000000002");
+        let bytes_before = fs::metadata(&first_path).unwrap().len();
+
+        assert!(matches!(
+            RecoveredGateJournal::open_existing_with_recovery_unknowns(
+                &journal,
+                options(2, 20, invalid_limits),
+                &journal_signer(),
+                Some(&journal_signer()),
+                RecoveryCaptureLimits::new(8, 64 * 1024),
+                verifier(),
+                NonZeroUsize::new(8).unwrap(),
+            ),
+            Err(GateJournalOpenError::Journal(JournalManagerError::Journal(
+                JournalError::RecordTooLarge
+            )))
+        ));
+        assert_eq!(fs::metadata(first_path).unwrap().len(), bytes_before);
+        assert!(!second_path.exists());
+    }
+
+    #[test]
+    fn precommit_rejects_recovered_current_boot_before_unknown_or_tail_close() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(16);
+        let prepared = prepared_receipt(1, 1, 11);
+        let prepared_env = sign_receipt(&prepared, 3);
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, &prepared_env);
+        let called = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            prepared_digest,
+            prepared_digest,
+            12,
+        );
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, journal_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        first.append(&prepared_env, 11, &journal_signer()).unwrap();
+        first
+            .append(&sign_stage(&called, 3), 12, &journal_signer())
+            .unwrap();
+        drop(first);
+        let (second, _) = EvidenceJournalManager::open_existing(
+            &journal,
+            options(2, 20, journal_limits),
+            &journal_signer(),
+            Some(&journal_signer()),
+            verifier(),
+        )
+        .unwrap();
+        drop(second);
+        let second_path = journal.join("segment-00000000000000000002");
+        let third_path = journal.join("segment-00000000000000000003");
+        let bytes_before = fs::metadata(&second_path).unwrap().len();
+
+        assert!(matches!(
+            RecoveredGateJournal::open_existing_with_recovery_unknowns(
+                &journal,
+                options(2, 30, journal_limits),
+                &journal_signer(),
+                Some(&journal_signer()),
+                RecoveryCaptureLimits::new(8, 64 * 1024),
+                verifier(),
+                NonZeroUsize::new(8).unwrap(),
+            ),
+            Err(GateJournalOpenError::Replay {
+                error: PublicationRecoveryError::Reduction(
+                    PublicationReductionError::RecoveryBootAlreadyObserved
+                ),
+                recovery: JournalRecoveryReport {
+                    closed_active_tail: false,
+                    active_sequence: None,
+                    ..
+                }
+            })
+        ));
+        assert_eq!(fs::metadata(second_path).unwrap().len(), bytes_before);
+        assert!(!third_path.exists());
     }
 
     #[test]
