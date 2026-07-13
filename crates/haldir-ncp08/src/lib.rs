@@ -24,6 +24,7 @@ pub mod conversion;
 pub mod error;
 #[cfg(feature = "real-ncp")]
 pub mod real;
+pub mod selection;
 
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -37,6 +38,7 @@ pub use conversion::{mm_s_to_ncp_m_s, ncp_m_s_to_mm_s};
 pub use error::NcpAdapterError;
 #[cfg(feature = "real-ncp")]
 pub use real::RealNcp08Adapter;
+pub use selection::{NcpCommandWireProfile, SelectedNcpCommandAdapter};
 
 #[cfg(test)]
 mod tests {

@@ -54,16 +54,23 @@ wildcard is the reviewed pinned-NCP `{realm}/rpc/*` propagation declaration for
 `declare_queryable`; query and reply grants remain the four exact NCP RPC routes, and
 no Haldir extension route is widened.
 
-The internal lifecycle coordinator receives actor-produced `ExactNcpCommandFrame`, but
-`VehicleActor` still hardcodes `AclOnlyAdapter`. Despite the common wrapper type, those
-modeled non-JSON bytes are deliberately rejected by `FinalCommandPublisher`; its precheck
-accepts only upstream-validated NCP JSON. A runnable service therefore cannot wire the
-current actor output directly to the strict publisher. It must select or inject
-`RealNcp08Adapter` before output construction and bind one coordinator Called state to the
-actual publisher result. The retained synthetic campaign proves the exact final-command/
-controller-intent ACL subset using valid pinned-NCP JSON and remote callbacks
-(`CL-LIVE-TRANSPORT-01`), but not that runtime selection or application. Even a local Zenoh
-success would not prove delivery or application.
+`SelectedNcpCommandAdapter` is a closed forwarding adapter with no caller-defined
+implementation seam or default constructor. `GateConfigTemplate` and `GateConfig` require an
+explicit selection value: current P0 fixtures choose deterministic modeled bytes, while the
+Gate `real-ncp` forwarding feature explicitly enables upstream-validated exact JSON. Cargo
+feature unification can also compile that exact constructor, but never changes the stored
+selection. Tests exercise both forwarding paths and carry an exact-selected actor output
+through the Called boundary with its receipt digest intact. The strict
+`FinalCommandPublisher` still deliberately rejects modeled non-JSON bytes and accepts only
+upstream-validated NCP JSON.
+
+No runnable service yet requires the exact selection or binds one coordinator Called state
+to the actual publisher future/result. Any future live service profile must reject
+`ModeledP0` before durable startup or authority exposure and select
+`ExactNcpV0_8Json`; it must not rely on Cargo feature unification or a default. The retained
+synthetic campaign proves the exact final-command/controller-intent ACL subset using valid
+pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not that service binding
+or application. Even a local Zenoh success would not prove delivery or application.
 
 ## Deferred upstream capabilities (increment 1)
 

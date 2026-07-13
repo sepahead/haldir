@@ -30,10 +30,11 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   are bound in actor Stage 3, and the retained mTLS router campaign binds configured
   certificate principals to its tested route subset. No runnable Gate passes an
   authenticated transport identity into actor decisions.
-- **PARTIAL** — NCP stream/source/session semantics: the default Gate path remains
-  modeled, while the optional exact-revision adapter passes upstream validated
-  JSON, frozen-corpus, differential, and tamper tests (`CL-NCP-REAL-01`). Selecting
-  that path in a live Gate/Crebain deployment remains outstanding.
+- **PARTIAL** — NCP stream/source/session semantics: current P0 fixtures remain modeled,
+  while a closed explicit exact-revision selection passes upstream validated JSON,
+  frozen-corpus, differential, tamper, and actor-Called-boundary tests
+  (`CL-NCP-REAL-01`). Requiring that selection and binding it to a publisher in a live
+  Gate/Crebain deployment remain outstanding.
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
   coordinator orders local receipt/Called/caller-asserted terminal evidence and blocks

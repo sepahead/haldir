@@ -53,6 +53,7 @@ mod range {
         KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore, sign_message,
     };
     use haldir_gate::{DecisionRecord, GateConfig, VehicleActor};
+    use haldir_ncp08::SelectedNcpCommandAdapter;
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
     use haldir_reference_plant::{PlantConfig, ReferencePlant};
 
@@ -195,6 +196,7 @@ mod range {
                 policy: policy(),
                 policy_snapshot_digest,
                 session: sess(1),
+                ncp_adapter: SelectedNcpCommandAdapter::modeled_p0(),
                 publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(
                     AclExclusiveEvidenceV1 {
                         gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),

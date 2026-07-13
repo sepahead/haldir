@@ -23,8 +23,8 @@ fully proven; **not started** means no qualifying implementation/evidence is pre
 ## Current verdict
 
 The offline P0 reference-monitor core is implemented and its local exit gate passes.
-The full Haldir project remains incomplete: production durable recovery, selection
-of the exact NCP adapter and strict transport in a runnable Gate, certificate-lifecycle/
+The full Haldir project remains incomplete: production durable recovery, enforcement of
+the exact NCP selection and strict transport binding in a runnable Gate, certificate-lifecycle/
 reconnect and bypass proof beyond the retained synthetic ACL subset, Crebain and Engram
 integration, backend-conformance research, performance/endurance campaigns, and an
 experimental release are outstanding.
@@ -46,8 +46,8 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
-| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); valid exact JSON also traverses the synthetic live campaign, but the Gate runtime still does not select the exact frame adapter (`CL-LIVE-TRANSPORT-01`). |
-| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, post-sync-revalidated publication seam, canonical linked stages, bounded locked manager/reservations, assurance Gate replay, and fused restart Unknown emission exist. An internal consuming coordinator now requires a sealed bounded-pool permit, reserves three logical lifecycle records before actor mutation, locally append-and-`sync_data`-orders receipt/Called/caller-asserted terminal transitions, and blocks indefinitely after recovered called-or-later history pending external clearance (`CL-GATE-LIFECYCLE-01`). Positive composition remains test-only. Missing gates include production control-plane/lease/state wiring, a canonical service-wide pool and bounded async worker, actual publisher/result binding, exact-adapter/strict-transport selection, canonical journal-path binding, Prepared abandonment/retention/loss summary, coordinator append-fault injection, and child-process crash recovery (`CL-DURABLE-01`). |
+| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, closed startup selection, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); an exact-selected actor reaches Called with upstream JSON, and valid exact JSON traverses the synthetic live campaign. No runnable service yet requires exact mode or binds that Called state to the publisher (`CL-LIVE-TRANSPORT-01`). |
+| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, post-sync-revalidated publication seam, canonical linked stages, bounded locked manager/reservations, assurance Gate replay, and fused restart Unknown emission exist. An internal consuming coordinator now requires a sealed bounded-pool permit, reserves three logical lifecycle records before actor mutation, locally append-and-`sync_data`-orders receipt/Called/caller-asserted terminal transitions, and blocks indefinitely after recovered called-or-later history pending external clearance (`CL-GATE-LIFECYCLE-01`). Positive composition remains test-only. Missing gates include production control-plane/lease/state wiring, pre-durable-startup live-profile rejection of modeled output, a canonical service-wide pool and bounded async worker, actual strict-publisher/result binding, canonical journal-path binding, Prepared abandonment/retention/loss summary, coordinator append-fault injection, and child-process crash recovery (`CL-DURABLE-01`). |
 | 11 — secure Zenoh and ACL proof | Partial | Exact routes, a TLS-only Zenoh 1.9 boundary, bounded ingress, typed exact-command publication, and an immutable-image/default-deny/direction-specific ACL package are statically tested (`CL-TRANSPORT-BOUNDARY-01`). The retained ephemeral-PKI campaign receiver-observes the fixed final-command/controller-intent subset across all configured principals (`CL-LIVE-TRANSPORT-01`). Runnable Gate wiring, certificate lifecycle/reconnect, the full operation/route matrix, production credential custody, and bypass inventory remain open. |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
@@ -74,7 +74,8 @@ Those stronger properties remain explicitly unproven or out of scope under
   roadmap language telling every consumer to migrate from v0.7.1 is historical.
 - Haldir is now registered as an exact-revision NCP consumer and the optional
   adapter validates released JSON `CommandFrame` bytes against the pinned crate and
-  frozen corpus. The default in-process Gate still uses its deterministic model.
+  frozen corpus. Startup uses a closed explicit adapter selection; current P0 fixtures
+  remain modeled, while an exact-selected actor is tested through Called.
 - Haldir's static secure-reference profile now makes Gate the sole exact-command
   `put` ingress principal and confines each controller to its exact intent route.
   Because Zenoh authorizes publisher ingress and receiver egress separately, the
@@ -88,13 +89,14 @@ Those stronger properties remain explicitly unproven or out of scope under
 1. **Authority:** turn the tested startup library into a secret/package-loading service;
    add a real external anchor and make the tested durable evidence manager mandatory
    before authority can become active.
-2. **Wire/ecosystem:** select the now-tested exact-v0.8 adapter in the runnable
-   service, preserving the stable Haldir semantic contracts.
+2. **Wire/ecosystem:** require the now-tested exact-v0.8 selection in the runnable
+   live profile and bind it to the strict publisher, preserving the stable Haldir
+   semantic contracts.
 3. **Time/restart/evidence:** prove crash recovery, boot-id uniqueness, and terminal
    evidence semantics under fault injection.
 4. **Operations/security:** wire the internal coordinator into a single-owner service
-   with control-plane/lease/state ingress and one bounded publisher worker; select the
-   exact adapter, bind each Called typestate to the actual publisher result, design
+   with control-plane/lease/state ingress and one bounded publisher worker; reject the
+   modeled adapter there, bind each Called typestate to the actual publisher result, design
    authenticated restart clearance covering transport/session retirement and recovered
    policy history, then test timeout/panic/cancellation, append ambiguity, reconnect,
    crash, the remaining operation/route matrix, and bypass inventory.

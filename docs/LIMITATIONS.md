@@ -45,13 +45,15 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   compatibility label and now has the narrow synthetic ACL evidence above. It is still
   not established for a packaged Gate/Crebain deployment, production credentials, or a
   complete actuator/bypass inventory.
-- **Exact NCP adapter is not the selected live Gate path.** The off-by-default
+- **Exact NCP adapter selection is not a live Gate path.** The off-by-default
   `real-ncp` feature compiles the exact pinned `ncp-core` v0.8.0 revision and its
-  frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). The in-process Gate
-  still hardcodes the dependency-light modeled adapter. Its modeled bytes are not the
-  pinned-NCP JSON accepted by the strict Zenoh publisher, and no Zenoh transport is wired
-  to the actor or plant. Exact wire conformance therefore does not prove runtime
-  publication, acceptance, application, or ACL exclusivity.
+  frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). Gate startup now carries a
+  closed explicit selection, and an exact-selected actor is tested through its Called
+  boundary. Current P0 fixtures deliberately choose the dependency-light model, whose bytes
+  are not the pinned-NCP JSON accepted by the strict Zenoh publisher. No service requires
+  exact mode or wires Zenoh to the actor/coordinator/plant. Exact selection therefore does
+  not prove runtime publication, acceptance, application, or ACL exclusivity; a future live
+  profile must reject modeled selection before durable startup or authority exposure.
 - **Publication lifecycle coordination is internal and caller-asserted.** The actor keeps
   one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
   non-cloneable; exact bytes become accessible only after the actor rechecks authority,

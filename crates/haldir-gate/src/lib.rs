@@ -290,6 +290,18 @@ mod e2e {
         setup_with_publication(acl_publication())
     }
 
+    #[cfg(feature = "real-ncp")]
+    fn setup_with_adapter(ncp_adapter: haldir_ncp08::SelectedNcpCommandAdapter) -> Fixture {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let (mut cfg, rec, admission_digest) =
+            gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        cfg.ncp_adapter = ncp_adapter;
+        activate_fixture(cfg, rec, admission_digest, ctrl_sk, mission_sk, now)
+    }
+
     fn gate_config(
         publication: PlantPublicationAuthorityStateV1,
         ctrl_sk: &SigningKey,
@@ -344,6 +356,7 @@ mod e2e {
             policy: policy(),
             policy_snapshot_digest,
             session: sess(),
+            ncp_adapter: haldir_ncp08::SelectedNcpCommandAdapter::modeled_p0(),
             publication,
             output_epoch: GateOutputEpoch::new(uuid(5)),
             local_cap_ms: 30_000,
@@ -641,6 +654,17 @@ mod e2e {
         let gate_sk = SigningKey::from_seed([3; 32]);
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (cfg, rec, admission_digest) = gate_config(publication, &ctrl_sk, &mission_sk, gate_sk);
+        activate_fixture(cfg, rec, admission_digest, ctrl_sk, mission_sk, now)
+    }
+
+    fn activate_fixture(
+        cfg: GateConfig,
+        rec: AdmissionRecordV1,
+        admission_digest: DigestV1,
+        ctrl_sk: SigningKey,
+        mission_sk: SigningKey,
+        now: MonoInstant,
+    ) -> Fixture {
         let mut actor = VehicleActor::new(cfg).expect("valid Gate configuration");
         actor.register_challenge(
             ChallengeNonce::new([7; 32]),
@@ -1357,6 +1381,40 @@ mod e2e {
         assert_send::<DecideError<SharedClock>>();
         assert_send::<OutputCapacityPermit>();
         assert_send::<OutputCapacityPool>();
+    }
+
+    #[cfg(feature = "real-ncp")]
+    #[test]
+    fn explicitly_selected_exact_adapter_reaches_the_called_boundary_as_ncp_json() {
+        let mut fixture =
+            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json());
+        assert_eq!(
+            fixture.actor.ncp_command_wire_profile(),
+            haldir_ncp08::NcpCommandWireProfile::ExactNcpV0_8Json
+        );
+
+        let record = admission_record();
+        let intent = build_intent(fixture.admission_digest, &record, 1, velocity(1, 400));
+        let envelope = sign_intent(&fixture.ctrl_sk, &intent);
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
+        let receipt_digest = decision.receipt.output_frame_digest.unwrap();
+        let prepared = decision.into_prepared_publication().unwrap();
+        let called = fixture
+            .actor
+            .mark_publish_called(prepared, fixture.now)
+            .unwrap();
+
+        assert_eq!(called.frame().digest(), receipt_digest);
+        let exact_json = std::str::from_utf8(called.frame().bytes()).unwrap();
+        assert!(exact_json.starts_with('{'));
+        assert!(exact_json.contains("\"kind\":\"command_frame\""));
+        fixture
+            .actor
+            .mark_publish_returned_ok(called, fixture.now)
+            .unwrap();
     }
 
     #[test]

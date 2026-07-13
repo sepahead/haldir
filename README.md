@@ -15,9 +15,9 @@ bounded deterministic policy against trusted state, and — only on ALLOW — pr
 plant-facing NCP command under Gate's own stream. The static secure-reference profile reserves
 final-route publication to Gate, and a retained synthetic mTLS campaign has shown that only
 Gate among all eight configured certificate principals reached the allowed remote receivers on
-that route. No runnable service yet proves runtime selection or credential custody. Crebain is
-intended to remain the sole owner of final command application and vehicle-specific safe action;
-that integration is also still unproven.
+that route. No runnable service yet enforces exact mode, binds it to strict transport, or
+proves credential custody. Crebain is intended to remain the sole owner of final command
+application and vehicle-specific safe action; that integration is also still unproven.
 
 > A controller signs a typed Haldir action request. Gate independently validates the
 > controller deployment, mission lease, current NCP session, source/state evidence, and
@@ -41,7 +41,10 @@ says they mean.
   no live network, no neural runtime, no physical hardware.
 - **NCP baseline pinned:** tag `v0.8.0`, commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`,
   wire `0.8`, contract hash `d1b50a2d8a265276`; the optional `real-ncp`
-  conformance adapter compiles that exact revision and replays its frozen corpus.
+  conformance adapter compiles that exact revision and replays its frozen corpus. Gate
+  startup carries a closed explicit modeled/exact selection; current P0 fixtures choose the
+  model, while the exact selection is exercised through durable startup and the actor Called
+  boundary.
 
 ### What is implemented and tested locally (the P0 pure core)
 
@@ -52,7 +55,7 @@ fixed-point deterministic policy engine, a deterministic reference plant with st
 evidence, an opaque single-slot prepare/call typestate that gates first command access
 on actor revalidation and charges history only on caller-asserted modeled returned-ok
 (`CL-PUBLICATION-STATE-01`), the Gate-owned NCP v0.8.0 modeled output adapter plus an
-opt-in exact upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
+opt-in, explicitly selectable exact upstream adapter (`CL-NCP-REAL-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts, a bounded locked Unix
 signed-segment manager with opt-in bounded ordered recovery snapshots
 and manager-affine conservative logical capacity reservations

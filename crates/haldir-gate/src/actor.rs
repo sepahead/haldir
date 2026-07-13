@@ -32,7 +32,8 @@ use haldir_crypto::{
 use haldir_durable::{GenerationAnchor, SnapshotStorage};
 use haldir_evidence::{EvidenceSpool, gate_journal::GateJournalVerifier, manager::JournalSigner};
 use haldir_ncp08::{
-    AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter,
+    ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter, NcpCommandWireProfile,
+    SelectedNcpCommandAdapter,
 };
 use haldir_policy_native::{BoundedActionHistory, NativePolicySnapshot, PolicyInput, decide};
 use haldir_reference_plant::{PlantAction, PlantCommand};
@@ -339,6 +340,9 @@ pub struct GateConfig {
     pub policy_snapshot_digest: DigestV1,
     /// Current NCP session.
     pub session: NcpSessionIdentityV1,
+    /// Closed selection of modeled or exact pinned NCP command construction.
+    /// This core accepts either profile; selection alone makes no live-service claim.
+    pub ncp_adapter: SelectedNcpCommandAdapter,
     /// Plant-publication authority state.
     pub publication: PlantPublicationAuthorityStateV1,
     /// Gate output epoch.
@@ -421,7 +425,7 @@ pub struct VehicleActor {
     gate_boot_id: GateBootId,
     realm: AsciiId<64>,
     vehicle_id: VehicleId,
-    adapter: AclOnlyAdapter,
+    adapter: SelectedNcpCommandAdapter,
     trust: TrustStore,
     revocations: RevocationSnapshot,
     admission: AdmissionSnapshot,
@@ -600,6 +604,12 @@ impl ReceiptDraft {
 }
 
 impl VehicleActor {
+    /// Selected command-wire construction profile for this runtime.
+    #[must_use]
+    pub const fn ncp_command_wire_profile(&self) -> NcpCommandWireProfile {
+        self.adapter.wire_profile()
+    }
+
     /// Validate configuration and construct a session-bound actor.
     ///
     /// # Errors
@@ -666,7 +676,7 @@ impl VehicleActor {
             gate_boot_id: cfg.gate_boot_id,
             realm: cfg.realm,
             vehicle_id: cfg.vehicle_id,
-            adapter: AclOnlyAdapter::new(),
+            adapter: cfg.ncp_adapter,
             trust: cfg.trust,
             revocations: cfg.revocations,
             admission: cfg.admission,

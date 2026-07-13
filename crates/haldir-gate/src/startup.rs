@@ -31,6 +31,7 @@ use haldir_evidence::journal::SegmentIdentity;
 use haldir_evidence::manager::{
     JournalLimits, JournalOpenOptions, JournalRecoveryReport, JournalSigner, RecoveryCaptureLimits,
 };
+use haldir_ncp08::SelectedNcpCommandAdapter;
 use haldir_policy_native::NativePolicySnapshot;
 use haldir_state::{DurableAntiRollbackError, DurableAntiRollbackStore};
 
@@ -73,6 +74,9 @@ pub struct GateConfigTemplate {
     pub policy_snapshot_digest: DigestV1,
     /// Current NCP session.
     pub session: NcpSessionIdentityV1,
+    /// Closed selection of modeled or exact pinned NCP command construction.
+    /// A future live profile must reject modeled selection before calling startup.
+    pub ncp_adapter: SelectedNcpCommandAdapter,
     /// Current ACL-only plant-publication authority evidence.
     pub publication: PlantPublicationAuthorityStateV1,
     /// Local cap on lease active duration (ms).
@@ -120,6 +124,7 @@ impl GateConfigTemplate {
             policy: self.policy,
             policy_snapshot_digest: self.policy_snapshot_digest,
             session: self.session,
+            ncp_adapter: self.ncp_adapter,
             publication: self.publication,
             output_epoch,
             local_cap_ms: self.local_cap_ms,
@@ -1032,6 +1037,7 @@ mod tests {
                 session_id: AsciiId::new("session-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
             },
+            ncp_adapter: SelectedNcpCommandAdapter::modeled_p0(),
             publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
                 gate_transport_principal: PrincipalId::new("gate-transport").unwrap(),
                 final_route_digest: digest(b"route"),
@@ -1169,6 +1175,30 @@ mod tests {
         assert!(storage.0.lock().unwrap().is_none());
         assert!(anchor.head.lock().unwrap().is_none());
         assert_eq!(entropy.calls, 1);
+    }
+
+    #[cfg(feature = "real-ncp")]
+    #[test]
+    fn explicit_exact_adapter_selection_survives_durable_startup() {
+        let directory = TestDirectory::new();
+        let mut configured = template();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let running = start_with_backends(
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut entropy,
+        )
+        .unwrap();
+
+        assert_eq!(
+            running.actor().ncp_command_wire_profile(),
+            haldir_ncp08::NcpCommandWireProfile::ExactNcpV0_8Json
+        );
     }
 
     #[test]

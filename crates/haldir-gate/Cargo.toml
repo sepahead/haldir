@@ -12,6 +12,10 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+real-ncp = ["haldir-ncp08/real-ncp"]
+
 [[bin]]
 name = "haldir-gate"
 path = "src/main.rs"
