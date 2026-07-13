@@ -39,13 +39,15 @@ pub use startup::{
 #[cfg(test)]
 mod e2e {
     use super::*;
-    #[cfg(feature = "live-zenoh")]
-    use crate::startup::publication_coordinator::StrictPublisherCallError;
     use crate::startup::publication_coordinator::{
         CallTransition, CoordinatorFatal, DecideError, DecisionTransition, DecisionUnavailable,
-        DurableCalledPublication, DurablePreparedPublication, JournaledReturnedError,
-        JournaledReturnedOk, OutputCapacityPermit, OutputCapacityPool, PublicationCoordinator,
-        PublishOnceError, ReadyDecision, TestTerminalAppendFault,
+        DurableCalledPublication, DurablePreparedPublication, InProcessReferencePublication,
+        JournaledReturnedError, JournaledReturnedOk, OutputCapacityPermit, OutputCapacityPool,
+        PublicationCoordinator, PublishOnceError, ReadyDecision, TestTerminalAppendFault,
+    };
+    #[cfg(feature = "live-zenoh")]
+    use crate::startup::publication_coordinator::{
+        DeclaredLiveZenohPublication, StrictPublisherCallError,
     };
     use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
@@ -829,13 +831,22 @@ mod e2e {
         }
     }
 
-    struct CoordinatorFixture {
-        coordinator: PublicationCoordinator<SharedClock>,
+    struct CoordinatorFixture<P = InProcessReferencePublication> {
+        coordinator: PublicationCoordinator<SharedClock, P>,
         clock: SharedClock,
         output_pool: OutputCapacityPool,
         ctrl_sk: SigningKey,
         admission_digest: DigestV1,
         _directory: CoordinatorTestDirectory,
+    }
+
+    struct JournalBoundFixture {
+        bound: JournalBoundRunningGate,
+        clock: SharedClock,
+        output_pool: OutputCapacityPool,
+        ctrl_sk: SigningKey,
+        admission_digest: DigestV1,
+        directory: CoordinatorTestDirectory,
     }
 
     fn coordinator_journal_limits() -> JournalLimits {
@@ -855,7 +866,53 @@ mod e2e {
         max_recovery_records: u64,
         next_decision: Option<u64>,
     ) -> CoordinatorFixture {
-        let mut fixture = setup();
+        let parts = journal_bound_fixture(
+            max_recovery_records,
+            next_decision,
+            setup(),
+            GateRuntimeProfile::InProcessReference,
+        );
+        let coordinator =
+            PublicationCoordinator::new_reference_for_test(parts.bound, parts.clock.clone())
+                .unwrap();
+        CoordinatorFixture {
+            coordinator,
+            clock: parts.clock,
+            output_pool: parts.output_pool,
+            ctrl_sk: parts.ctrl_sk,
+            admission_digest: parts.admission_digest,
+            _directory: parts.directory,
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    fn declared_live_coordinator_fixture(
+        max_recovery_records: u64,
+    ) -> CoordinatorFixture<DeclaredLiveZenohPublication> {
+        let parts = journal_bound_fixture(
+            max_recovery_records,
+            None,
+            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
+            GateRuntimeProfile::DeclaredLiveZenoh,
+        );
+        let coordinator =
+            PublicationCoordinator::new_declared_live(parts.bound, parts.clock.clone()).unwrap();
+        CoordinatorFixture {
+            coordinator,
+            clock: parts.clock,
+            output_pool: parts.output_pool,
+            ctrl_sk: parts.ctrl_sk,
+            admission_digest: parts.admission_digest,
+            _directory: parts.directory,
+        }
+    }
+
+    fn journal_bound_fixture(
+        max_recovery_records: u64,
+        next_decision: Option<u64>,
+        mut fixture: Fixture,
+        runtime_profile: GateRuntimeProfile,
+    ) -> JournalBoundFixture {
         if let Some(next_decision) = next_decision {
             fixture.actor.force_next_decision_for_test(next_decision);
         }
@@ -896,27 +953,24 @@ mod e2e {
             journal,
             0,
             GateOutputEpoch::new(uuid(5)),
+            runtime_profile,
             lock,
         )
         .unwrap();
-        assert_eq!(
-            bound.report().runtime_profile,
-            GateRuntimeProfile::InProcessReference
-        );
+        assert_eq!(bound.report().runtime_profile, runtime_profile);
         let clock = SharedClock::new(fixture.now);
-        let coordinator = PublicationCoordinator::new(bound, clock.clone()).unwrap();
         let output_pool = OutputCapacityPool::new(NonZeroUsize::new(1).unwrap());
-        CoordinatorFixture {
-            coordinator,
+        JournalBoundFixture {
+            bound,
             clock,
             output_pool,
             ctrl_sk: fixture.ctrl_sk,
             admission_digest: fixture.admission_digest,
-            _directory: directory,
+            directory,
         }
     }
 
-    fn signed_coordinator_intent(fixture: &CoordinatorFixture, sequence: u64) -> Vec<u8> {
+    fn signed_coordinator_intent<P>(fixture: &CoordinatorFixture<P>, sequence: u64) -> Vec<u8> {
         let record = admission_record();
         let intent = build_intent(
             fixture.admission_digest,
@@ -927,7 +981,7 @@ mod e2e {
         sign_intent(&fixture.ctrl_sk, &intent)
     }
 
-    fn output_permit(fixture: &CoordinatorFixture) -> OutputCapacityPermit {
+    fn output_permit<P>(fixture: &CoordinatorFixture<P>) -> OutputCapacityPermit {
         fixture.output_pool.try_reserve().unwrap()
     }
 
@@ -1036,6 +1090,7 @@ mod e2e {
             journal,
             recovery_unknown_events,
             GateOutputEpoch::new(uuid(6)),
+            GateRuntimeProfile::InProcessReference,
             lock,
         )
         .unwrap();
@@ -1094,7 +1149,8 @@ mod e2e {
             .effective_validity_ms
             .max(fixture.bound.actor().duty_history_window_ms());
         let coordinator =
-            PublicationCoordinator::new(fixture.bound, fixture.clock.clone()).unwrap();
+            PublicationCoordinator::new_reference_for_test(fixture.bound, fixture.clock.clone())
+                .unwrap();
         let current_policy_diagnostic_not_before =
             MonoInstant::from_nanos(start_ns + u64::from(diagnostic_offset_ms) * 1_000_000);
         assert_eq!(
@@ -1156,7 +1212,7 @@ mod e2e {
         let fixture = restarted_bound_after_dropped_call();
         fixture.clock.set_ns(u64::MAX);
         assert!(matches!(
-            PublicationCoordinator::new(fixture.bound, fixture.clock),
+            PublicationCoordinator::new_reference_for_test(fixture.bound, fixture.clock),
             Err(crate::startup::publication_coordinator::CoordinatorFatal::RestartDiagnosticHorizonOverflow)
         ));
     }
@@ -1551,7 +1607,7 @@ mod e2e {
     #[cfg(feature = "live-zenoh")]
     #[test]
     fn wrong_publisher_route_is_terminally_rejected_before_invocation() {
-        let fixture = coordinator_fixture(64);
+        let fixture = declared_live_coordinator_fixture(64);
         let envelope = signed_coordinator_intent(&fixture, 1);
         let output_pool = fixture.output_pool.clone();
         let permit = output_permit(&fixture);
@@ -1859,6 +1915,52 @@ mod e2e {
         assert_eq!(output_pool.available(), 1);
     }
 
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn journaled_test_success_preserves_the_declared_live_typestate() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        let route = called.expected_final_command_route().to_owned();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish =
+            Box::pin(
+                called.publish_once_with_test_route(publisher, &route, move |_frame| {
+                    observed_calls.fetch_add(1, Ordering::SeqCst);
+                    std::future::ready(Ok::<(), haldir_transport_zenoh::SecureZenohError>(()))
+                }),
+            );
+        let (returned, publisher) = match poll_once(publish.as_mut()) {
+            Poll::Ready(Ok(returned)) => returned,
+            _ => panic!("matched test publisher must return synchronously"),
+        };
+        let (coordinator, _, _, permit) = returned.into_parts();
+        fn assert_live(_: &PublicationCoordinator<SharedClock, DeclaredLiveZenohPublication>) {}
+        assert_live(&coordinator);
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 0);
+        assert_eq!(output_pool.available(), 0);
+        drop(publisher);
+        drop(permit);
+        drop(coordinator);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+    }
+
     #[test]
     fn expired_pre_call_validation_exposes_no_frame_and_returns_ready() {
         let fixture = coordinator_fixture(64);
@@ -2046,7 +2148,7 @@ mod e2e {
     fn concrete_strict_publish_future_is_send() {
         fn assert_send<T: Send>(_: T) {}
         fn check(
-            called: DurableCalledPublication<SharedClock>,
+            called: DurableCalledPublication<SharedClock, DeclaredLiveZenohPublication>,
             publisher: haldir_transport_zenoh::FinalCommandPublisher,
         ) {
             assert_send(called.publish_once(publisher));
@@ -2054,7 +2156,7 @@ mod e2e {
 
         assert_send::<
             fn(
-                DurableCalledPublication<SharedClock>,
+                DurableCalledPublication<SharedClock, DeclaredLiveZenohPublication>,
                 haldir_transport_zenoh::FinalCommandPublisher,
             ),
         >(check);

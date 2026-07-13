@@ -282,7 +282,17 @@ pub struct StartupReport {
 pub struct RunningGate {
     actor: VehicleActor,
     report: StartupReport,
+    #[cfg(feature = "live-zenoh")]
+    declared_live_zenoh: Option<ValidatedDeclaredLiveZenohStartup>,
     _instance_lock: File,
+}
+
+/// Non-cloneable process-local proof that this exact [`RunningGate`] descended
+/// from a successfully validated declared-live startup. The public report is
+/// observability data; concrete coordinator authority consumes this private value.
+#[cfg(feature = "live-zenoh")]
+pub(super) struct ValidatedDeclaredLiveZenohStartup {
+    _private: (),
 }
 
 /// A durable-started Gate fused with the exact journal manager and publication
@@ -377,19 +387,33 @@ impl From<GateJournalOpenError> for JournalBindingError {
 }
 
 impl RunningGate {
+    /// Construct an already-activated journal fixture. Under `live-zenoh`, a
+    /// declared/exact fixture deliberately mints the private startup capability;
+    /// this bypass exists only in test builds and is not a production constructor.
     #[cfg(test)]
     pub(crate) fn bind_publication_journal_for_test(
         actor: VehicleActor,
         journal: RecoveredGateJournal,
         recovery_unknown_events: usize,
         output_epoch: GateOutputEpoch,
+        runtime_profile: GateRuntimeProfile,
         instance_lock: File,
     ) -> Result<JournalBoundRunningGate, JournalBindingError> {
         let gate_boot_id = actor.gate_boot_id();
+        #[cfg(feature = "live-zenoh")]
+        let declared_live_zenoh = match runtime_profile {
+            GateRuntimeProfile::InProcessReference => None,
+            GateRuntimeProfile::DeclaredLiveZenoh
+                if actor.ncp_command_wire_profile() == NcpCommandWireProfile::ExactNcpV0_8Json =>
+            {
+                Some(ValidatedDeclaredLiveZenohStartup { _private: () })
+            }
+            GateRuntimeProfile::DeclaredLiveZenoh => None,
+        };
         Self {
             actor,
             report: StartupReport {
-                runtime_profile: GateRuntimeProfile::InProcessReference,
+                runtime_profile,
                 provisioned: true,
                 recovery: None,
                 boot_commit: CommitReceipt {
@@ -400,6 +424,8 @@ impl RunningGate {
                 gate_boot_id,
                 output_epoch,
             },
+            #[cfg(feature = "live-zenoh")]
+            declared_live_zenoh,
             _instance_lock: instance_lock,
         }
         .bind_publication_journal_with_recovery_count(journal, recovery_unknown_events)
@@ -605,6 +631,15 @@ impl JournalBoundRunningGate {
     #[must_use]
     pub const fn recovery_unknown_events(&self) -> usize {
         self.recovery_unknown_events
+    }
+
+    /// Consume the private successful-startup proof exactly once. Absence is a
+    /// hard coordinator binding failure, never reconstructed from report fields.
+    #[cfg(feature = "live-zenoh")]
+    pub(super) fn take_declared_live_zenoh_capability(
+        &mut self,
+    ) -> Option<ValidatedDeclaredLiveZenohStartup> {
+        self.gate.declared_live_zenoh.take()
     }
 }
 
@@ -842,6 +877,13 @@ where
     let runtime_profile = template.runtime_profile;
     let config = template.into_runtime(gate_boot_id, prepared.output_epoch);
     let actor = VehicleActor::new_recovered(config, booted)?;
+    #[cfg(feature = "live-zenoh")]
+    let declared_live_zenoh = match runtime_profile {
+        GateRuntimeProfile::InProcessReference => None,
+        GateRuntimeProfile::DeclaredLiveZenoh => {
+            Some(ValidatedDeclaredLiveZenohStartup { _private: () })
+        }
+    };
     let report = StartupReport {
         runtime_profile,
         provisioned,
@@ -855,6 +897,8 @@ where
     Ok(RunningGate {
         actor,
         report,
+        #[cfg(feature = "live-zenoh")]
+        declared_live_zenoh,
         _instance_lock: instance_lock,
     })
 }
@@ -1088,6 +1132,28 @@ mod tests {
     impl EntropySource for FailingEntropy {
         fn fill_bytes(&mut self, _destination: &mut [u8]) -> Result<(), EntropyError> {
             Err(EntropyError)
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[derive(Clone, Copy)]
+    struct FixedCoordinatorClock;
+
+    #[cfg(feature = "live-zenoh")]
+    impl haldir_core::time::MonotonicClock for FixedCoordinatorClock {
+        fn now(&self) -> haldir_core::time::MonoInstant {
+            haldir_core::time::MonoInstant::from_nanos(1_000_000_000)
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[derive(Clone, Copy)]
+    struct RejectClockSampling;
+
+    #[cfg(feature = "live-zenoh")]
+    impl haldir_core::time::MonotonicClock for RejectClockSampling {
+        fn now(&self) -> haldir_core::time::MonoInstant {
+            panic!("a rejected live capability bind must not sample its clock")
         }
     }
 
@@ -1349,7 +1415,7 @@ mod tests {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
-    fn declared_live_exact_adapter_survives_startup_and_report_retains_declaration() {
+    fn declared_live_exact_startup_capability_constructs_the_live_coordinator() {
         let directory = TestDirectory::new();
         let mut configured = template();
         configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
@@ -1373,6 +1439,144 @@ mod tests {
         assert_eq!(
             running.report().runtime_profile,
             GateRuntimeProfile::DeclaredLiveZenoh
+        );
+        assert!(running.declared_live_zenoh.is_some());
+
+        let bound = running
+            .provision_publication_journal(journal_config(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+            ))
+            .unwrap();
+        let coordinator = publication_coordinator::PublicationCoordinator::<
+            _,
+            publication_coordinator::DeclaredLiveZenohPublication,
+        >::new_declared_live(bound, FixedCoordinatorClock)
+        .unwrap();
+        assert_eq!(
+            coordinator.actor().ncp_command_wire_profile(),
+            NcpCommandWireProfile::ExactNcpV0_8Json
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn exact_reference_startup_cannot_construct_the_live_coordinator() {
+        let directory = TestDirectory::new();
+        let mut configured = template();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let running = start_with_backends(
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        assert!(running.declared_live_zenoh.is_none());
+        let bound = running
+            .provision_publication_journal(journal_config(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+            ))
+            .unwrap();
+
+        let error = match publication_coordinator::PublicationCoordinator::<
+            _,
+            publication_coordinator::DeclaredLiveZenohPublication,
+        >::new_declared_live(bound, RejectClockSampling)
+        {
+            Err(error) => error,
+            Ok(_) => panic!("an exact reference startup minted a live coordinator"),
+        };
+        assert_eq!(
+            error,
+            publication_coordinator::CoordinatorFatal::RuntimeProfileMismatch {
+                required: GateRuntimeProfile::DeclaredLiveZenoh,
+                actual: GateRuntimeProfile::InProcessReference,
+            }
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn copied_report_value_cannot_manufacture_the_live_startup_capability() {
+        let directory = TestDirectory::new();
+        let mut configured = template();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let mut running = start_with_backends(
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        assert!(running.declared_live_zenoh.is_none());
+        running.report.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        let bound = running
+            .provision_publication_journal(journal_config(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+            ))
+            .unwrap();
+
+        let error = match publication_coordinator::PublicationCoordinator::<
+            _,
+            publication_coordinator::DeclaredLiveZenohPublication,
+        >::new_declared_live(bound, RejectClockSampling)
+        {
+            Err(error) => error,
+            Ok(_) => panic!("forged observability data minted a live coordinator"),
+        };
+        assert_eq!(
+            error,
+            publication_coordinator::CoordinatorFatal::DeclaredLiveStartupCapabilityUnavailable
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn forged_declared_report_with_modeled_actor_fails_the_wire_cross_check() {
+        let directory = TestDirectory::new();
+        let mut running = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        assert!(running.declared_live_zenoh.is_none());
+        running.report.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        let bound = running
+            .provision_publication_journal(journal_config(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+            ))
+            .unwrap();
+
+        let error = match publication_coordinator::PublicationCoordinator::<
+            _,
+            publication_coordinator::DeclaredLiveZenohPublication,
+        >::new_declared_live(bound, RejectClockSampling)
+        {
+            Err(error) => error,
+            Ok(_) => panic!("a modeled actor minted a live coordinator"),
+        };
+        assert_eq!(
+            error,
+            publication_coordinator::CoordinatorFatal::NcpWireProfileMismatch {
+                required: NcpCommandWireProfile::ExactNcpV0_8Json,
+                actual: NcpCommandWireProfile::ModeledP0,
+            }
         );
     }
 

@@ -53,15 +53,21 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   unless `live-zenoh` was compiled and `ExactNcpV0_8Json` was selected; that rejection occurs
   before startup-owned backend-trait calls, entropy, locks, or local-directory access. A
   successful `StartupReport` retains the declaration only as observable process-local data.
+  Successful declared-live startup separately mints a private, non-cloneable capability. The
+  live coordinator constructor consumes it and cross-checks both the retained declaration and
+  exact actor wire profile before clock sampling. Its marker is carried through every
+  runtime-returning coordinator state; error and fatal paths destroy it. The concrete
+  strict-publisher method exists only on the live Called type. Exact `InProcessReference`,
+  copied-report, and modeled-actor paths cannot construct that type.
 
   The declaration is supplied cooperatively by the caller. It is not authenticated, signed,
   loaded from a protected package, or committed into durable state, and it does not prevent
   downgrade on restart. Public `GateConfig` and direct `VehicleActor` construction bypass the
-  template-startup check. The crate-private coordinator also does not consume or require the
-  retained declaration, so future internal code could pair an `InProcessReference` startup
-  that selected the exact adapter with that binding. No runnable binary or service selects
-  `DeclaredLiveZenoh`, opens a live session from it, or binds it to the journal coordinator,
-  strict publisher, or plant.
+  template-startup check and remain outside the internal capability chain. The process-local
+  capability is also not authenticated or durable and does not prevent a service from selecting
+  `InProcessReference` after restart. No runnable binary or service selects
+  `DeclaredLiveZenoh`, opens a live session from it, or supplies the resulting live coordinator
+  with a session-backed strict publisher or plant binding.
   It therefore proves neither transport invocation nor publication, delivery, acceptance,
   application, credential custody, bypass closure, or ACL exclusivity.
 - **Publication lifecycle coordination is internal; its strict binding is not runnable.** The actor keeps
@@ -78,9 +84,10 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   fused startup/journal aggregate, requires a sealed permit issued by a bounded pool,
   reserves three logical journal units before decision mutation, and locally
   `sync_data`-orders the receipt, linked Called, and terminal record
-  (`CL-GATE-LIFECYCLE-01`). Under its off-by-default `live-zenoh` feature, production
-  coordinator code derives the exact pinned command route from the actor realm/session,
-  terminally rejects a mismatched publisher before frame access or invocation, lends the
+  (`CL-GATE-LIFECYCLE-01`). Under its off-by-default `live-zenoh` feature, only a coordinator
+  descended from the private declared-live startup capability exposes the concrete method.
+  Production coordinator code derives the exact pinned command route from the actor
+  realm/session, terminally rejects a mismatched publisher before frame access or invocation, lends the
   frame only to one awaited call on a matched concrete strict publisher, returns that
   capability only after local `Ok` plus terminal journal success, and returns neither
   runtime nor publisher after error. Test-only future cases cover dropping the consuming
@@ -91,8 +98,10 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   publisher error or definite Gate rejection can record ReturnedError. These are not live
   Zenoh tests.
 
-  The pool is not authenticated as one canonical service queue, positive composition uses
-  a test-only binder around an already-active actor, and no production control plane,
+  The pool is not authenticated as one canonical service queue. A test composes production
+  declared-live startup code with injected in-memory backends and the actual journal manager
+  through live coordinator construction, while activated decision/Called and publisher-result
+  composition uses a test-only binder around an already-active actor. No production control plane,
   queue, worker, or runnable service selects the coordinator. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.
   Lower-level actor frame access, the copyable frame type, the reusable publisher API, and

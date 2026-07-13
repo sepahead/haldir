@@ -62,8 +62,9 @@ plugin-free client feature.
 - **No async runtime, Zenoh, Python/PyO3, or neural runtime in the default pure core.**
   Tokio/Zenoh implementation remains in `haldir-transport-zenoh`'s off-by-default
   `live-zenoh` feature. Gate's off-by-default feature forwards it and contains only the
-  consuming concrete publisher/result binding. The always-on transport route builder uses
-  only pinned `ncp-core`; Gate policy/state/contracts remain independent of both.
+  startup-capability-marked consuming concrete publisher/result binding. The always-on
+  transport route builder uses only pinned `ncp-core`; Gate policy/state/contracts remain
+  independent of both.
 - **No floating point in signed authority/policy/replay/action contracts.** Floats
   appear only at the modeled/exact NCP wire boundary, with an error-bounded
   conversion.

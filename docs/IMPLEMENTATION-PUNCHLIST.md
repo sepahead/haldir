@@ -57,8 +57,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   validates static and anchor profiles plus an explicit `GateRuntimeProfile`: a
   `DeclaredLiveZenoh` template requires exact NCP selection and the compiled `live-zenoh`
   feature before startup-owned backend calls, entropy, locks, or directories. It retains
-  the declaration in `StartupReport`, holds the instance lock, and explicitly provisions or
-  opens development-local state. **Still absent:** an authenticated or durably bound runtime
+  the declaration in `StartupReport` and separately mints a private move-only capability
+  consumed by the live coordinator typestate, holds the instance lock, and explicitly
+  provisions or opens development-local state. Exact reference and copied-report paths
+  cannot mint the capability. **Still absent:** an authenticated or durably bound runtime
   declaration, a service package that selects it, and a deployed external non-rewindable
   anchor, so end-to-end cross-restart protection is not established (see
   `docs/LIMITATIONS.md`). Direct actor construction bypasses template startup.
@@ -100,7 +102,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   hard denies first; short-circuit yields identical outcome+reasons.
 - `[x]` **H7** Slew reference = last **published** command, updated only after the
   direct modeled actor caller asserts publication returned-ok. The internal coordinator's
-  off-by-default live binding instead rejects a publisher outside the actor's exact
+  off-by-default concrete method exists only on a Called typestate descended from the
+  startup-minted declared-live capability. It rejects a publisher outside the actor's exact
   realm/session route before invocation, consumes a matched strict publisher around one
   await, and journals the observed local result. Test-only futures also cover cold drop,
   pending timeout-as-drop, and panic unwind without converting an unobserved result to
@@ -141,8 +144,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[~]` **G2** The exact-route/strict-client/bounded-ingress/typed-publisher
   boundary and deterministic direction-specific ACL package now exist. Template startup
   also rejects an inexact or feature-disabled `DeclaredLiveZenoh` declaration before its
-  listed backend calls, entropy, locks, or directory access, but that caller-supplied
-  declaration is neither authenticated nor durable and no service selects it. The retained
+  listed backend calls, entropy, locks, or directory access, and its private process-local
+  capability now gates concrete coordinator publication. The caller-supplied declaration
+  is neither authenticated nor durable and no service selects it. The retained
   synthetic campaign proves the fixed
   final-command/controller-intent subset across all configured principals, but certificate
   lifecycle/reconnect, service wiring, the full matrix, and bypass inventory remain open;

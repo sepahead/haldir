@@ -35,16 +35,19 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   frozen-corpus, differential, tamper, and actor-Called-boundary tests
   (`CL-NCP-REAL-01`). Template startup's explicit `DeclaredLiveZenoh` profile now requires
   that exact selection and the compiled `live-zenoh` feature before startup-owned backend
-  calls, entropy, locks, or directories. The declaration is cooperative, process-local, and
-  bypassed by direct actor construction; no runnable Gate selects it or binds it to a
-  publisher or Crebain deployment.
+  calls, entropy, locks, or directories. Successful declared-live startup separately mints
+  the private move-only capability required by the live coordinator; exact reference and
+  forged-report paths cannot mint it. The declaration remains cooperative, process-local,
+  and bypassed by direct actor construction; no runnable Gate selects the coordinator,
+  session-backed publisher, or Crebain deployment.
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
   coordinator orders local receipt/Called/terminal evidence and blocks replacement after
-  ambiguity. Its off-by-default binding rejects a concrete publisher whose exact route
-  differs from the actor realm/session before frame access or invocation, then consumes a
-  matched publisher around one awaited call and returns that capability only after local
-  `Ok` plus terminal journal success. Result, cold-drop, pending timeout-as-drop,
+  ambiguity. Its off-by-default live typestate is reachable only through the startup-minted
+  capability and is the only Called type exposing the concrete method. It rejects a concrete
+  publisher whose exact route differs from the actor realm/session before frame access or
+  invocation, then consumes a matched publisher around one awaited call and returns that
+  capability only after local `Ok` plus terminal journal success. Result, cold-drop, pending timeout-as-drop,
   panic-unwind, and synthetic terminal-fault tests use test-only seams rather than a live
   session. No runnable worker selects it, the frame remains copyable through lower-level
   APIs, and exactly-once submission is not enforced.
@@ -79,8 +82,10 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   confirms publication stages, and startup reduces a recovered dangling Called trace to
   linked Unknown. Its test-only matrix covers cold drop, pending timeout-as-drop, panic
   unwind, definite pre-terminal-append failure, and synthetic ambiguity after a real
-  terminal append/sync. Positive composition and fault injection remain test-only;
-  mandatory service selection, Prepared abandonment/reclamation, OS-level append/write/
+  terminal append/sync. Production declared-live startup code with injected in-memory
+  backends plus the actual journal manager is composed through live coordinator construction;
+  activated decision/Called, result, and fault composition remains test-only. Mandatory
+  service selection, Prepared abandonment/reclamation, OS-level append/write/
   `sync_data` or disk-full fault injection, live-session faults, panic-abort/supervisor handling, child-process
   crash, and power-loss behavior remain absent.
 - **YES** — Evidence storage bounded; tamper/chain-break detected; full-spool drop

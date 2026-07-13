@@ -2,8 +2,9 @@
 //!
 //! The state types consume one another so no usable bound runtime can escape an
 //! ambiguous journal append, a post-sync validation failure, or a dropped
-//! called typestate. The called state owns the exact output bytes, and the optional
-//! live binding lends them only to the concrete strict publisher. "Durable" state
+//! called typestate. The called state owns the exact output bytes, and only a
+//! startup-capability-marked live Called type lends them to the concrete strict
+//! publisher. "Durable" state
 //! names below mean a local append whose `sync_data` returned successfully; they do
 //! not claim power-loss survival, delivery, acceptance, or application.
 
@@ -23,7 +24,10 @@ use haldir_evidence::journal::JournalError;
 #[cfg(test)]
 use haldir_evidence::manager::{EvidenceRecordDigest, JournalManagerError};
 use haldir_evidence::publication::PublicationTraceState;
+#[cfg(any(test, feature = "live-zenoh"))]
 use haldir_ncp08::ExactNcpCommandFrame;
+#[cfg(feature = "live-zenoh")]
+use haldir_ncp08::NcpCommandWireProfile;
 #[cfg(feature = "live-zenoh")]
 use haldir_transport_zenoh::{FinalCommandPublisher, HaldirKeyError, HaldirKeys, SecureZenohError};
 use std::sync::Arc;
@@ -34,6 +38,8 @@ use crate::actor::{
     ValidatedPublicationCall, VehicleActor,
 };
 use crate::startup::JournalBoundRunningGate;
+#[cfg(feature = "live-zenoh")]
+use crate::startup::{GateRuntimeProfile, ValidatedDeclaredLiveZenohStartup};
 
 const LIFECYCLE_RECORD_RESERVATION: usize = 3;
 
@@ -110,7 +116,32 @@ pub(crate) enum CoordinatorFatal {
     ClockRegression,
     RestartDiagnosticHorizonOverflow,
     #[cfg(feature = "live-zenoh")]
+    RuntimeProfileMismatch {
+        required: GateRuntimeProfile,
+        actual: GateRuntimeProfile,
+    },
+    #[cfg(feature = "live-zenoh")]
+    NcpWireProfileMismatch {
+        required: NcpCommandWireProfile,
+        actual: NcpCommandWireProfile,
+    },
+    #[cfg(feature = "live-zenoh")]
+    DeclaredLiveStartupCapabilityUnavailable,
+    #[cfg(feature = "live-zenoh")]
     InvalidFinalCommandRoute(HaldirKeyError),
+}
+
+/// Marker for the in-process reference lifecycle. Its private field prevents
+/// sibling modules from manufacturing coordinator profile states.
+pub(crate) struct InProcessReferencePublication {
+    _private: (),
+}
+
+/// Capability marker minted only after a bound durable startup is rechecked as
+/// the declared-live, exact-NCP profile.
+#[cfg(feature = "live-zenoh")]
+pub(crate) struct DeclaredLiveZenohPublication {
+    _startup: ValidatedDeclaredLiveZenohStartup,
 }
 
 /// A pre-decision refusal that returns the coordinator without actor, journal,
@@ -129,21 +160,21 @@ pub(crate) enum DecisionUnavailable {
 /// A pre-decision refusal retains both the runtime and the caller's capacity
 /// permit because no actor, journal, decision, or output-sequence mutation occurred.
 /// The coordinator's sampled clock high-water is retained.
-pub(crate) enum DecideError<C> {
+pub(crate) enum DecideError<C, P = InProcessReferencePublication> {
     Unavailable {
-        coordinator: PublicationCoordinator<C>,
+        coordinator: PublicationCoordinator<C, P>,
         output_permit: OutputCapacityPermit,
         reason: DecisionUnavailable,
     },
     Fatal(CoordinatorFatal),
 }
 
-impl<C> DecideError<C> {
+impl<C, P> DecideError<C, P> {
     pub(crate) fn into_unavailable(
         self,
     ) -> Result<
         (
-            PublicationCoordinator<C>,
+            PublicationCoordinator<C, P>,
             OutputCapacityPermit,
             DecisionUnavailable,
         ),
@@ -160,16 +191,17 @@ impl<C> DecideError<C> {
     }
 }
 
-struct CoordinatorCore<C> {
+struct CoordinatorCore<C, P> {
     bound: JournalBoundRunningGate,
     clock: C,
+    profile: P,
     last_observed: MonoInstant,
     restart_clearance_diagnostic_not_before: Option<MonoInstant>,
     #[cfg(feature = "live-zenoh")]
     expected_final_command_route: String,
 }
 
-impl<C: MonotonicClock> CoordinatorCore<C> {
+impl<C: MonotonicClock, P> CoordinatorCore<C, P> {
     fn sample_now(&mut self) -> Result<MonoInstant, CoordinatorFatal> {
         let observed = self.clock.now();
         if observed < self.last_observed {
@@ -182,19 +214,19 @@ impl<C: MonotonicClock> CoordinatorCore<C> {
 
 /// Ready state. It owns the fused actor, journal, process lock, and clock.
 #[must_use = "dropping the coordinator stops the bound Gate runtime"]
-pub(crate) struct PublicationCoordinator<C> {
-    core: Box<CoordinatorCore<C>>,
+pub(crate) struct PublicationCoordinator<C, P = InProcessReferencePublication> {
+    core: Box<CoordinatorCore<C, P>>,
 }
 
 /// A completed or cancelled decision that returns a ready coordinator and the
 /// still-reserved output-capacity permit for explicit reuse or release.
-pub(crate) struct ReadyDecision<C> {
-    coordinator: PublicationCoordinator<C>,
+pub(crate) struct ReadyDecision<C, P = InProcessReferencePublication> {
+    coordinator: PublicationCoordinator<C, P>,
     decision: DecisionRecord,
     output_permit: OutputCapacityPermit,
 }
 
-impl<C> ReadyDecision<C> {
+impl<C, P> ReadyDecision<C, P> {
     pub(crate) fn decision(&self) -> &DecisionRecord {
         &self.decision
     }
@@ -202,7 +234,7 @@ impl<C> ReadyDecision<C> {
     pub(crate) fn into_parts(
         self,
     ) -> (
-        PublicationCoordinator<C>,
+        PublicationCoordinator<C, P>,
         DecisionRecord,
         OutputCapacityPermit,
     ) {
@@ -211,17 +243,17 @@ impl<C> ReadyDecision<C> {
 }
 
 /// Result of locally sync-confirming one new decision receipt.
-pub(crate) enum DecisionTransition<C> {
-    NoPublication(Box<ReadyDecision<C>>),
-    Prepared(Box<DurablePreparedPublication<C>>),
+pub(crate) enum DecisionTransition<C, P = InProcessReferencePublication> {
+    NoPublication(Box<ReadyDecision<C, P>>),
+    Prepared(Box<DurablePreparedPublication<C, P>>),
 }
 
 /// A prepared output whose exact receipt append is locally sync-confirmed but
 /// whose bytes remain inaccessible. The retained permit and two journal units
 /// cover call + return.
 #[must_use = "a locally synced prepared publication must be cancelled or advanced"]
-pub(crate) struct DurablePreparedPublication<C> {
-    core: Box<CoordinatorCore<C>>,
+pub(crate) struct DurablePreparedPublication<C, P = InProcessReferencePublication> {
+    core: Box<CoordinatorCore<C, P>>,
     decision: DecisionRecord,
     prepared: Box<PreparedPublication>,
     reservation: GateJournalReservation,
@@ -230,10 +262,10 @@ pub(crate) struct DurablePreparedPublication<C> {
 }
 
 /// Result of attempting the pre-exposure Called boundary.
-pub(crate) enum CallTransition<C> {
-    Called(Box<DurableCalledPublication<C>>),
+pub(crate) enum CallTransition<C, P = InProcessReferencePublication> {
+    Called(Box<DurableCalledPublication<C, P>>),
     Rejected {
-        ready: Box<ReadyDecision<C>>,
+        ready: Box<ReadyDecision<C, P>>,
         reason: PublicationError,
     },
 }
@@ -252,8 +284,8 @@ pub(crate) enum TestTerminalAppendFault {
 /// to the feature-gated concrete publisher binding. Dropping it drops the whole
 /// bound runtime; it cannot return to Ready silently.
 #[must_use = "dropping a called publication abandons the bound runtime for restart recovery"]
-pub(crate) struct DurableCalledPublication<C> {
-    core: Box<CoordinatorCore<C>>,
+pub(crate) struct DurableCalledPublication<C, P = InProcessReferencePublication> {
+    core: Box<CoordinatorCore<C, P>>,
     decision: DecisionRecord,
     called: Box<PublishCalledPublication>,
     reservation: GateJournalReservation,
@@ -265,18 +297,18 @@ pub(crate) struct DurableCalledPublication<C> {
 }
 
 /// A locally sync-confirmed successful local publisher return.
-pub(crate) struct JournaledReturnedOk<C> {
-    coordinator: PublicationCoordinator<C>,
+pub(crate) struct JournaledReturnedOk<C, P = InProcessReferencePublication> {
+    coordinator: PublicationCoordinator<C, P>,
     decision: DecisionRecord,
     terminal_envelope_digest: DigestV1,
     output_permit: OutputCapacityPermit,
 }
 
-impl<C> JournaledReturnedOk<C> {
+impl<C, P> JournaledReturnedOk<C, P> {
     pub(crate) fn into_parts(
         self,
     ) -> (
-        PublicationCoordinator<C>,
+        PublicationCoordinator<C, P>,
         DecisionRecord,
         DigestV1,
         OutputCapacityPermit,
@@ -413,8 +445,63 @@ impl PublicationBinding {
     }
 }
 
-impl<C: MonotonicClock> PublicationCoordinator<C> {
-    pub(crate) fn new(bound: JournalBoundRunningGate, clock: C) -> Result<Self, CoordinatorFatal> {
+impl<C: MonotonicClock> PublicationCoordinator<C, InProcessReferencePublication> {
+    /// Construct the reference lifecycle only for tests. Production coordinator
+    /// construction must select a checked concrete integration profile.
+    #[cfg(test)]
+    pub(crate) fn new_reference_for_test(
+        bound: JournalBoundRunningGate,
+        clock: C,
+    ) -> Result<Self, CoordinatorFatal> {
+        Self::new_with_profile(bound, clock, InProcessReferencePublication { _private: () })
+    }
+}
+
+#[cfg(feature = "live-zenoh")]
+impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> {
+    /// Consume a durable journal-bound runtime and mint the sole concrete-live
+    /// coordinator profile after rechecking its retained startup declaration and
+    /// exact NCP wire selection. Checks precede route derivation and clock access.
+    pub(crate) fn new_declared_live(
+        mut bound: JournalBoundRunningGate,
+        clock: C,
+    ) -> Result<Self, CoordinatorFatal> {
+        let required_runtime = GateRuntimeProfile::DeclaredLiveZenoh;
+        let actual_runtime = bound.report().runtime_profile;
+        if actual_runtime != required_runtime {
+            return Err(CoordinatorFatal::RuntimeProfileMismatch {
+                required: required_runtime,
+                actual: actual_runtime,
+            });
+        }
+
+        let required_wire = NcpCommandWireProfile::ExactNcpV0_8Json;
+        let actual_wire = bound.actor().ncp_command_wire_profile();
+        if actual_wire != required_wire {
+            return Err(CoordinatorFatal::NcpWireProfileMismatch {
+                required: required_wire,
+                actual: actual_wire,
+            });
+        }
+
+        let startup = bound
+            .take_declared_live_zenoh_capability()
+            .ok_or(CoordinatorFatal::DeclaredLiveStartupCapabilityUnavailable)?;
+
+        Self::new_with_profile(
+            bound,
+            clock,
+            DeclaredLiveZenohPublication { _startup: startup },
+        )
+    }
+}
+
+impl<C: MonotonicClock, P> PublicationCoordinator<C, P> {
+    fn new_with_profile(
+        bound: JournalBoundRunningGate,
+        clock: C,
+        profile: P,
+    ) -> Result<Self, CoordinatorFatal> {
         let startup_now = clock.now();
         #[cfg(feature = "live-zenoh")]
         let expected_final_command_route = HaldirKeys::try_new(
@@ -442,6 +529,7 @@ impl<C: MonotonicClock> PublicationCoordinator<C> {
             core: Box::new(CoordinatorCore {
                 bound,
                 clock,
+                profile,
                 last_observed: startup_now,
                 restart_clearance_diagnostic_not_before,
                 #[cfg(feature = "live-zenoh")]
@@ -477,7 +565,7 @@ impl<C: MonotonicClock> PublicationCoordinator<C> {
         output_permit: OutputCapacityPermit,
         envelope: &[u8],
         actual_key: &str,
-    ) -> Result<DecisionTransition<C>, DecideError<C>> {
+    ) -> Result<DecisionTransition<C, P>, DecideError<C, P>> {
         let now = match self.core.sample_now() {
             Ok(now) => now,
             Err(reason) => return Err(DecideError::Fatal(reason)),
@@ -553,7 +641,7 @@ impl<C: MonotonicClock> PublicationCoordinator<C> {
     }
 }
 
-impl<C: MonotonicClock> DurablePreparedPublication<C> {
+impl<C: MonotonicClock, P> DurablePreparedPublication<C, P> {
     pub(crate) fn decision(&self) -> &DecisionRecord {
         &self.decision
     }
@@ -565,7 +653,7 @@ impl<C: MonotonicClock> DurablePreparedPublication<C> {
             .state(self.binding.decision_gate_boot_id, self.binding.decision_id)
     }
 
-    pub(crate) fn cancel(self) -> Result<ReadyDecision<C>, CoordinatorFatal> {
+    pub(crate) fn cancel(self) -> Result<ReadyDecision<C, P>, CoordinatorFatal> {
         let Self {
             mut core,
             decision,
@@ -586,7 +674,7 @@ impl<C: MonotonicClock> DurablePreparedPublication<C> {
         })
     }
 
-    pub(crate) fn enter_called_boundary(self) -> Result<CallTransition<C>, CoordinatorFatal> {
+    pub(crate) fn enter_called_boundary(self) -> Result<CallTransition<C, P>, CoordinatorFatal> {
         let Self {
             mut core,
             decision,
@@ -648,8 +736,9 @@ impl<C: MonotonicClock> DurablePreparedPublication<C> {
     }
 }
 
-impl<C: MonotonicClock> DurableCalledPublication<C> {
-    const fn frame(&self) -> &ExactNcpCommandFrame {
+impl<C: MonotonicClock, P> DurableCalledPublication<C, P> {
+    #[cfg(test)]
+    const fn frame_for_test(&self) -> &ExactNcpCommandFrame {
         self.called.frame()
     }
 
@@ -674,37 +763,6 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
         self
     }
 
-    /// Invoke a route-matched concrete strict publisher once for this consumed Called state.
-    ///
-    /// A publisher bound to another exact realm/session route is rejected and
-    /// terminally recorded before frame access or invocation. A matched publisher
-    /// is returned for a later distinct output only after its local call returned
-    /// `Ok` and the linked terminal record was sync-confirmed. A publisher error
-    /// or terminal-record failure drops the publisher capability.
-    /// Cancellation while awaiting drops this Called state without inventing a
-    /// returned-error record; restart recovery must classify the synced Called tail.
-    /// Local `Ok` is not delivery, receiver acceptance, application, or an ACK.
-    #[cfg(feature = "live-zenoh")]
-    pub(crate) async fn publish_once(
-        self,
-        publisher: FinalCommandPublisher,
-    ) -> Result<
-        (JournaledReturnedOk<C>, FinalCommandPublisher),
-        PublishOnceError<StrictPublisherCallError>,
-    > {
-        if !self.publisher_route_matches(publisher.route()) {
-            return self.finish_publish_once(
-                publisher,
-                Err(StrictPublisherCallError::PublisherRouteMismatch),
-            );
-        }
-        let publisher_result = publisher
-            .publish(self.frame())
-            .await
-            .map_err(StrictPublisherCallError::Publisher);
-        self.finish_publish_once(publisher, publisher_result)
-    }
-
     #[cfg(feature = "live-zenoh")]
     fn publisher_route_matches(&self, publisher_route: &str) -> bool {
         publisher_route == self.core.expected_final_command_route
@@ -717,12 +775,12 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
 
     /// Exercise route rejection without constructing a live Zenoh session.
     #[cfg(all(test, feature = "live-zenoh"))]
-    pub(crate) async fn publish_once_with_test_route<P, F, Fut>(
+    pub(crate) async fn publish_once_with_test_route<Publisher, F, Fut>(
         self,
-        publisher: P,
+        publisher: Publisher,
         publisher_route: &str,
         invoke: F,
-    ) -> Result<(JournaledReturnedOk<C>, P), PublishOnceError<StrictPublisherCallError>>
+    ) -> Result<(JournaledReturnedOk<C, P>, Publisher), PublishOnceError<StrictPublisherCallError>>
     where
         F: FnOnce(&ExactNcpCommandFrame) -> Fut,
         Fut: core::future::Future<Output = Result<(), SecureZenohError>>,
@@ -733,7 +791,7 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
                 Err(StrictPublisherCallError::PublisherRouteMismatch),
             );
         }
-        let publisher_result = invoke(self.frame())
+        let publisher_result = invoke(self.frame_for_test())
             .await
             .map_err(StrictPublisherCallError::Publisher);
         self.finish_publish_once(publisher, publisher_result)
@@ -741,25 +799,25 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
 
     /// Exercise the same ownership and terminal-ordering path without a live session.
     #[cfg(test)]
-    pub(crate) async fn publish_once_with_test_future<P, E, F, Fut>(
+    pub(crate) async fn publish_once_with_test_future<Publisher, E, F, Fut>(
         self,
-        publisher: P,
+        publisher: Publisher,
         invoke: F,
-    ) -> Result<(JournaledReturnedOk<C>, P), PublishOnceError<E>>
+    ) -> Result<(JournaledReturnedOk<C, P>, Publisher), PublishOnceError<E>>
     where
         F: FnOnce(&ExactNcpCommandFrame) -> Fut,
         Fut: core::future::Future<Output = Result<(), E>>,
     {
-        let publisher_result = invoke(self.frame()).await;
+        let publisher_result = invoke(self.frame_for_test()).await;
         self.finish_publish_once(publisher, publisher_result)
     }
 
     #[cfg(any(test, feature = "live-zenoh"))]
-    fn finish_publish_once<P, E>(
+    fn finish_publish_once<Publisher, E>(
         self,
-        publisher: P,
+        publisher: Publisher,
         publisher_result: Result<(), E>,
-    ) -> Result<(JournaledReturnedOk<C>, P), PublishOnceError<E>> {
+    ) -> Result<(JournaledReturnedOk<C, P>, Publisher), PublishOnceError<E>> {
         match publisher_result {
             Ok(()) => match self.record_returned_ok() {
                 Ok(journaled) => Ok((journaled, publisher)),
@@ -791,7 +849,7 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
     }
 
     #[cfg(any(test, feature = "live-zenoh"))]
-    fn record_returned_ok(self) -> Result<JournaledReturnedOk<C>, CoordinatorFatal> {
+    fn record_returned_ok(self) -> Result<JournaledReturnedOk<C, P>, CoordinatorFatal> {
         let Self {
             mut core,
             decision,
@@ -868,8 +926,49 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
     }
 }
 
-fn release_reservation<C>(
-    core: &mut CoordinatorCore<C>,
+#[cfg(feature = "live-zenoh")]
+impl<C: MonotonicClock> DurableCalledPublication<C, DeclaredLiveZenohPublication> {
+    const fn frame(&self) -> &ExactNcpCommandFrame {
+        self.called.frame()
+    }
+
+    /// Invoke a route-matched concrete strict publisher once for a Called state
+    /// descended from this runtime's checked declared-live startup capability.
+    ///
+    /// A publisher bound to another exact realm/session route is rejected and
+    /// terminally recorded before frame access or invocation. A matched publisher
+    /// is returned for a later distinct output only after its local call returned
+    /// `Ok` and the linked terminal record was sync-confirmed. A publisher error
+    /// or terminal-record failure drops the publisher capability.
+    /// Cancellation while awaiting drops this Called state without inventing a
+    /// returned-error record; restart recovery must classify the synced Called tail.
+    /// Local `Ok` is not delivery, receiver acceptance, application, or an ACK.
+    pub(crate) async fn publish_once(
+        self,
+        publisher: FinalCommandPublisher,
+    ) -> Result<
+        (
+            JournaledReturnedOk<C, DeclaredLiveZenohPublication>,
+            FinalCommandPublisher,
+        ),
+        PublishOnceError<StrictPublisherCallError>,
+    > {
+        if !self.publisher_route_matches(publisher.route()) {
+            return self.finish_publish_once(
+                publisher,
+                Err(StrictPublisherCallError::PublisherRouteMismatch),
+            );
+        }
+        let publisher_result = publisher
+            .publish(self.frame())
+            .await
+            .map_err(StrictPublisherCallError::Publisher);
+        self.finish_publish_once(publisher, publisher_result)
+    }
+}
+
+fn release_reservation<C, P>(
+    core: &mut CoordinatorCore<C, P>,
     reservation: &mut GateJournalReservation,
 ) -> Result<(), CoordinatorFatal> {
     let (_, journal) = live_parts_mut(&mut core.bound);
@@ -878,8 +977,8 @@ fn release_reservation<C>(
         .map_err(CoordinatorFatal::Journal)
 }
 
-fn append_verified<C>(
-    core: &mut CoordinatorCore<C>,
+fn append_verified<C, P>(
+    core: &mut CoordinatorCore<C, P>,
     reservation: &mut GateJournalReservation,
     envelope: &[u8],
     observed_at: MonoInstant,
@@ -891,8 +990,8 @@ fn append_verified<C>(
         .map_err(CoordinatorFatal::Journal)
 }
 
-fn sign_and_append_stage<C>(
-    core: &mut CoordinatorCore<C>,
+fn sign_and_append_stage<C, P>(
+    core: &mut CoordinatorCore<C, P>,
     reservation: &mut GateJournalReservation,
     event: &PublicationStageEventV1,
     observed_at: MonoInstant,
@@ -905,8 +1004,8 @@ fn sign_and_append_stage<C>(
     Ok(DigestV1::compute(DigestDomain::RawEnvelope, &envelope))
 }
 
-fn sign_and_append_terminal_stage<C>(
-    core: &mut CoordinatorCore<C>,
+fn sign_and_append_terminal_stage<C, P>(
+    core: &mut CoordinatorCore<C, P>,
     reservation: &mut GateJournalReservation,
     event: &PublicationStageEventV1,
     observed_at: MonoInstant,
@@ -934,8 +1033,8 @@ fn sign_and_append_terminal_stage<C>(
     Ok(DigestV1::compute(DigestDomain::RawEnvelope, &envelope))
 }
 
-fn commit_called<C>(
-    core: &mut CoordinatorCore<C>,
+fn commit_called<C, P>(
+    core: &mut CoordinatorCore<C, P>,
     validated: ValidatedPublicationCall,
     exposure_at: MonoInstant,
 ) -> Result<PublishCalledPublication, CoordinatorFatal> {

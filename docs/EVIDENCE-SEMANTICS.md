@@ -13,8 +13,11 @@ recovered dangling `PublishCalled` before returning the bound runtime
 bound runtime and one monotonic clock through an exact receipt -> `PublishCalled` ->
 local-return lifecycle (`CL-GATE-LIFECYCLE-01`). It reserves all three maximum-sized
 journal units and requires a non-cloneable slot minted by a bounded permit pool before
-the actor can allocate a decision/output sequence. Only the called typestate exposes frame
-bytes, after the linked Called append was locally `sync_data`-confirmed and post-sync actor
+the actor can allocate a decision/output sequence. Successful declared-live startup also
+mints a separate move-only capability that the live coordinator consumes and carries through
+each runtime-returning state; error and fatal paths destroy it. The concrete production
+publisher path borrows the frame only from the resulting live Called type, after the linked
+Called append was locally `sync_data`-confirmed and post-sync actor
 checks pass. This remains an internal tested mechanism, not a selected queue, service,
 publisher worker, transport pipeline, or coordinator-bound singleton pool.
 
@@ -84,10 +87,14 @@ substitution. The internal consuming coordinator retains the whole aggregate acr
 future in-crate caller's possession of the called typestate; any journal error, clock
 regression, state mismatch, or post-sync ambiguity returns no usable runtime. It appends a
 terminal local-return record before resolving actor history/state. With Gate's
-off-by-default `live-zenoh` feature, production coordinator code can borrow the frame only
-after the concrete strict publisher's exact route matches the route derived from the actor
-realm/session; mismatch is terminally recorded before frame access or invocation. For a
-match, the frame is borrowed for one awaited invocation. `returned_ok` means that publisher
+off-by-default `live-zenoh` feature, the concrete method exists only on a Called state
+descended from a live coordinator that consumed the private startup capability and
+cross-checked the retained declared-live profile plus exact wire selection before clock
+sampling. Exact reference, copied-report, and modeled-actor paths cannot create that type.
+The concrete production publisher path borrows the frame only after the strict publisher's
+exact route matches the route derived from the actor realm/session; mismatch is terminally
+recorded before frame access or invocation. For a match, the frame is borrowed for one awaited
+invocation. `returned_ok` means that publisher
 returned local `Ok` and the terminal append synced; it is not delivery.
 `returned_error` covers both definite strict-publisher preflight rejection and a
 delivery-ambiguous local transport error, and yields neither a replacement runtime nor the
@@ -106,8 +113,11 @@ publisher, then reopen closes the remaining Called tail as Unknown. A synthetic
 `AppendCommitAmbiguous` returned only after the real terminal append and sync also consumes
 them, but reopen finds the exact ReturnedOk or ReturnedError record and emits no Unknown.
 The original publisher error, when one existed, is retained only in the immediate diagnostic;
-the recovered journal remains authoritative. No runnable service or live invocation selects
-the concrete method. Lower-level actor/frame and publisher constructors still permit copying
+the recovered journal remains authoritative. A test composes production declared-live
+startup code with injected in-memory backends and the actual journal manager through live
+coordinator construction; activated lifecycle/result cases still use a test-only binder. No
+runnable service or live invocation selects the concrete
+method. Lower-level actor/frame and publisher constructors still permit copying
 or resubmission outside this coordinator binding.
 
 On reopen, dangling Called tails become linked Unknown records. If replay contains any

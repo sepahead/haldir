@@ -71,15 +71,25 @@ model and exact-conformance paths. `DeclaredLiveZenoh` requires both
 `real-ncp` makes the exact constructor available but cannot satisfy the declared-live feature
 requirement by itself. A mismatch is rejected before startup-owned backend-trait calls,
 entropy, locks, or local-directory access, and a successful `StartupReport` retains the
-declaration for process-local observation.
+declaration for process-local observation. Only a successful validated declared-live startup
+also retains a distinct private, move-only capability; it is not reconstructed from the
+copyable report.
 
 Gate's off-by-default `live-zenoh` feature now provides a crate-private consuming binding
 from one durable coordinator Called state to one awaited invocation of the concrete
-`FinalCommandPublisher`. Coordinator construction derives the exact pinned command route
+`FinalCommandPublisher`. The live coordinator constructor consumes the private startup
+capability and cross-checks the retained declaration and exact actor wire profile before
+clock sampling. The resulting marker is carried through every runtime-returning coordinator
+state; error and fatal paths destroy it. The concrete publisher method exists only on the
+marked live Called type. Exact
+`InProcessReference`, forged-report, and modeled-actor paths cannot construct it.
+Coordinator construction derives the exact pinned command route
 from its actor realm/session; a publisher for any other route is terminally rejected before
 frame access or invocation. A matched publisher capability is returned only after local
 publisher `Ok` and linked terminal journal success; a publisher error is journaled
-conservatively and does not return the capability. Dropping the future while it is pending
+conservatively when terminal append and sync succeed and does not return the capability.
+Terminal-record failure instead returns an immediate diagnostic and no capabilities.
+Dropping the future while it is pending
 leaves locally sync-confirmed Called, which the tested restart path closes as
 `UnknownAfterPublish`. Tests exercise the
 result and fault ordering through test-only seams. Dropping the consuming future before its
@@ -96,11 +106,12 @@ method, enforce a real deadline, or inject an OS-I/O fault.
 No runnable binary or service selects `DeclaredLiveZenoh` or the coordinator/publisher
 binding. The runtime-profile value is a cooperative caller declaration, not authenticated
 package data or a durable anti-downgrade state; public `GateConfig` and direct
-`VehicleActor` construction bypass it. The crate-private coordinator does not require the
-retained declaration, so a future internal caller could pair it with an
-`InProcessReference` runtime that selected the exact adapter. Validation does not open a
-Zenoh session, construct or select the coordinator, invoke the concrete publisher, or
-establish credential custody.
+`VehicleActor` construction bypasses template startup and remains outside this capability
+chain. One test composes production declared-live startup code with injected in-memory
+backends and the actual journal manager into the marked coordinator, while activated
+Called/route tests use a test-only binder. Nothing in this coordinator composition opens a
+Zenoh session, selects a runnable coordinator, invokes the concrete publisher, or establishes
+credential custody.
 The retained synthetic campaign proves the exact final-command/controller-intent ACL subset
 using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not the service
 binding or application. Even a local Zenoh success would not prove delivery or application.

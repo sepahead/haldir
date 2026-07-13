@@ -18,9 +18,11 @@ Gate among all eight configured certificate principals reached the allowed remot
 that route. The startup library rejects a `DeclaredLiveZenoh` template unless the exact adapter
 is selected and the `live-zenoh` feature is compiled, before startup-owned backend calls,
 entropy, locks, or directories. No runnable service selects that declaration, binds it to
-strict transport, or proves credential custody. Crebain is intended to remain the sole owner
-of final command application and vehicle-specific safe action; that integration is also still
-unproven.
+strict transport, or proves credential custody. Successful declared-live startup does now
+mint the private move-only capability required by the live coordinator; exact reference and
+copied-report paths cannot reach its concrete publisher method. Crebain is intended to remain
+the sole owner of final command application and vehicle-specific safe action; that integration
+is also still unproven.
 
 > A controller signs a typed Haldir action request. Gate independently validates the
 > controller deployment, mission lease, current NCP session, source/state evidence, and
@@ -48,10 +50,12 @@ says they mean.
   startup carries both a closed modeled/exact adapter selection and an explicit
   `GateRuntimeProfile` declaration. `InProcessReference` retains the P0 paths;
   `DeclaredLiveZenoh` requires `ExactNcpV0_8Json` plus the compiled `live-zenoh` feature before
-  the listed startup-owned backend calls, entropy, locks, or directory access. The latter
-  remains only a caller-supplied process-local declaration; current P0 fixtures choose the
-  reference profile, while the exact selection is exercised through durable startup and the
-  actor Called boundary.
+  the listed startup-owned backend calls, entropy, locks, or directory access. Successful
+  declared-live startup separately retains a private move-only capability required by the
+  live coordinator typestate; `StartupReport` remains observation only. The declaration and
+  profile choice remain caller-supplied; startup internally derives the unauthenticated,
+  process-local capability. No runnable service selects either path.
+  Exact selection is also exercised through durable startup and the actor Called boundary.
 
 ### What is implemented and tested locally (the P0 pure core)
 
@@ -74,11 +78,16 @@ binding that closes recovered dangling calls with signed successor-boot
 requires a non-cloneable slot from a bounded permit pool, reserves three logical journal
 units before decision/output allocation, locally sync-orders the exact receipt,
 `PublishCalled`, and local-return record, and keeps a restarted Gate fail-closed when any
-called-or-later history needs external clearance. Its off-by-default `live-zenoh` binding
-consumes one Called state and one concrete strict publisher, rejects a publisher whose
-exact route differs from the coordinator's actor realm/session before frame access or
-invocation, awaits a matched publisher once, and returns it only after local `Ok` plus
-terminal journal success
+called-or-later history needs external clearance. A successful `DeclaredLiveZenoh` plus
+exact-NCP startup privately mints a move-only process-local capability. The live coordinator
+constructor consumes that capability, cross-checks the retained profile and actor selection
+before clock sampling, and carries a private marker through every runtime-returning state;
+error and fatal paths destroy it. The off-by-default concrete publisher method exists only on
+the resulting live Called type. It
+consumes one Called state and one concrete strict publisher, rejects a publisher whose exact
+route differs from the coordinator's actor realm/session before frame access or invocation,
+awaits a matched publisher once, and returns it only after local `Ok` plus terminal journal
+success
 (`CL-GATE-LIFECYCLE-01`), canonical linked publication-stage
 payload/reduction primitives (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), and
 authenticated snapshot/generation-anchor primitives with commit-before-mutation
@@ -87,18 +96,23 @@ Unix atomic-file mechanics, classified local-development recovery, and Gate-boun
 durable startup/boot-ID mechanisms (`CL-DURABLE-PRIMITIVE-01`,
 `CL-DURABLE-STARTUP-DEV-01`). Template startup validates `DeclaredLiveZenoh` against the
 compiled feature and exact adapter before its backend traits, entropy source, lock, or local
-directory can be touched, and the startup report retains the validated declaration for
-observation. That declaration is cooperative, unauthenticated, and not durably committed;
-public `GateConfig`/direct `VehicleActor` construction bypasses it. The actor can consume the
-non-cloneable booted-store capability returned only after a fresh matching boot commit, and
-faults if a term commit is unavailable.
+directory can be touched. The startup report retains the validated declaration for
+observation, while the separate private capability—not the copyable report—authorizes live
+coordinator construction. An exact `InProcessReference` startup and a forged report value are
+both rejected before coordinator clock access. The declaration is cooperative,
+unauthenticated, and not durably committed; public `GateConfig`/direct `VehicleActor`
+construction bypasses template startup and cannot mint this coordinator capability. The actor
+can consume the non-cloneable booted-store capability returned only after a fresh matching boot
+commit, and faults if a term commit is unavailable.
 The startup library explicitly provisions or opens those paths, but no service package
 loads protected secrets or a deployed external non-rewindable anchor. The direct
 `VehicleActor` profile still selects the lossy in-process spool, while the new bound type
 remains externally read-only and no runnable service selects its internal coordinator.
-Positive coordinator composition currently uses a test-only binder around a preactivated
-actor. The concrete permit pool is a bounded slot primitive, but no canonical service-wide
-pool, queue, publisher worker, or runnable transport binding is selected. Publisher-result
+One test composes the production declared-live startup code with injected in-memory backends
+and the actual journal manager through live coordinator construction; activated
+decision/Called and route-result composition still uses a clearly test-only binder around a
+preactivated actor. The concrete permit pool is a bounded slot primitive, but no canonical
+service-wide pool, queue, publisher worker, or runnable transport binding is selected. Publisher-result
 ordering, cold drop before first poll, pending timeout-as-drop, panic unwind, and synthetic
 terminal-record faults use test-only seams; no live Zenoh session executes the concrete
 coordinator method in tests. The consuming future exists only after Called is locally
