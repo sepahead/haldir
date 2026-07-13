@@ -140,9 +140,9 @@ mod tests {
             result.clone().into_os_string(),
         ]);
         let run = match arguments {
-            Ok(arguments) => match tokio::runtime::Builder::new_current_thread().build() {
+            Ok(arguments) => match support::development_runtime() {
                 Ok(runtime) => runtime.block_on(support::bind_and_shutdown(arguments)),
-                Err(_) => Err(support::SmokeError::runtime_creation()),
+                Err(error) => Err(error),
             },
             Err(error) => Err(error),
         };

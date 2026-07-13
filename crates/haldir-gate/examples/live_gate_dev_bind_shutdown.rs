@@ -24,11 +24,9 @@ fn main() -> ExitCode {
         Ok(args) => args,
         Err(error) => return report_failure(error),
     };
-    let runtime = match tokio::runtime::Builder::new_current_thread().build() {
+    let runtime = match support::development_runtime() {
         Ok(runtime) => runtime,
-        Err(_) => {
-            return report_failure(support::SmokeError::runtime_creation());
-        }
+        Err(error) => return report_failure(error),
     };
     match runtime.block_on(support::bind_and_shutdown(args)) {
         Ok(()) => {
@@ -125,8 +123,18 @@ mod tests {
             result.as_os_str().to_owned(),
         ])
         .ok()?;
-        let runtime = tokio::runtime::Builder::new_current_thread().build().ok()?;
+        let runtime = support::development_runtime().ok()?;
         Some(runtime.block_on(support::bind_and_shutdown(arguments)))
+    }
+
+    #[test]
+    fn live_runtime_uses_the_zenoh_compatible_scheduler() -> Result<(), &'static str> {
+        let runtime = support::development_runtime().map_err(|_| "runtime creation failed")?;
+        assert_eq!(
+            runtime.handle().runtime_flavor(),
+            tokio::runtime::RuntimeFlavor::MultiThread
+        );
+        Ok(())
     }
 
     fn durable_fingerprint(root: &Path) -> Option<Vec<(PathBuf, Vec<u8>)>> {

@@ -21,7 +21,7 @@ live-zenoh = [
     "dep:tokio",
     "haldir-transport-zenoh/live-zenoh",
 ]
-live-gate-dev-smoke = ["live-zenoh", "dep:serde_json", "tokio/rt"]
+live-gate-dev-smoke = ["live-zenoh", "dep:serde_json", "tokio/rt-multi-thread"]
 
 [[bin]]
 name = "haldir-gate"

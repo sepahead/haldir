@@ -150,6 +150,14 @@ impl fmt::Display for SmokeError {
 
 impl std::error::Error for SmokeError {}
 
+/// Construct the one-worker multi-thread executor required by Zenoh's runtime.
+pub fn development_runtime() -> Result<tokio::runtime::Runtime, SmokeError> {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
+        .build()
+        .map_err(|_| SmokeError::runtime_creation())
+}
+
 type SmokeResult<T> = Result<T, SmokeError>;
 
 /// Exact arguments for the offline disposable-fixture provisioner.
