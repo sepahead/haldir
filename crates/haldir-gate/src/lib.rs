@@ -42,10 +42,10 @@ mod e2e {
     #[cfg(feature = "live-zenoh")]
     use crate::startup::publication_coordinator::StrictPublisherCallError;
     use crate::startup::publication_coordinator::{
-        CallTransition, DecideError, DecisionTransition, DecisionUnavailable,
+        CallTransition, CoordinatorFatal, DecideError, DecisionTransition, DecisionUnavailable,
         DurableCalledPublication, DurablePreparedPublication, JournaledReturnedError,
         JournaledReturnedOk, OutputCapacityPermit, OutputCapacityPool, PublicationCoordinator,
-        PublishOnceError, ReadyDecision,
+        PublishOnceError, ReadyDecision, TestTerminalAppendFault,
     };
     use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
@@ -79,9 +79,11 @@ mod e2e {
         Anchor, AnchorProtection, DurableError, GenerationAnchor, SnapshotBinding, SnapshotStorage,
         StorageMacKey, StoreId,
     };
-    use haldir_evidence::gate_journal::RecoveredGateJournal;
-    use haldir_evidence::journal::JournalBounds;
-    use haldir_evidence::manager::{JournalLimits, JournalOpenOptions, RecoveryCaptureLimits};
+    use haldir_evidence::gate_journal::{GateJournalMutationError, RecoveredGateJournal};
+    use haldir_evidence::journal::{JournalBounds, JournalError};
+    use haldir_evidence::manager::{
+        JournalLimits, JournalManagerError, JournalOpenOptions, RecoveryCaptureLimits,
+    };
     use haldir_evidence::publication::PublicationTraceState;
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
     use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
@@ -123,6 +125,21 @@ mod e2e {
         fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
             self.get_mut().polls.fetch_add(1, Ordering::SeqCst);
             Poll::Pending
+        }
+    }
+
+    #[cfg(panic = "unwind")]
+    struct PanickingPublish {
+        polls: Arc<AtomicUsize>,
+    }
+
+    #[cfg(panic = "unwind")]
+    impl Future for PanickingPublish {
+        type Output = Result<(), TestPublishError>;
+
+        fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
+            self.get_mut().polls.fetch_add(1, Ordering::SeqCst);
+            panic!("injected publisher-future panic");
         }
     }
 
@@ -910,6 +927,59 @@ mod e2e {
         fixture.output_pool.try_reserve().unwrap()
     }
 
+    struct CalledCoordinatorFixture {
+        called: Box<DurableCalledPublication<SharedClock>>,
+        output_pool: OutputCapacityPool,
+        decision_boot: GateBootId,
+        decision_id: DecisionId,
+        effective_validity_ms: u32,
+        directory: CoordinatorTestDirectory,
+    }
+
+    fn called_coordinator_fixture() -> CalledCoordinatorFixture {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        CalledCoordinatorFixture {
+            called,
+            output_pool,
+            decision_boot,
+            decision_id,
+            effective_validity_ms,
+            directory: fixture._directory,
+        }
+    }
+
+    fn is_before_terminal_append_fault(source: &CoordinatorFatal) -> bool {
+        matches!(
+            source,
+            CoordinatorFatal::Journal(GateJournalMutationError::Journal(
+                JournalManagerError::Journal(JournalError::Storage)
+            ))
+        )
+    }
+
+    fn is_after_terminal_sync_ambiguity(source: &CoordinatorFatal) -> bool {
+        matches!(
+            source,
+            CoordinatorFatal::Journal(GateJournalMutationError::Journal(
+                JournalManagerError::AppendCommitAmbiguous { .. }
+            ))
+        )
+    }
+
     struct RestartedCoordinatorFixture {
         bound: JournalBoundRunningGate,
         clock: SharedClock,
@@ -1246,6 +1316,234 @@ mod e2e {
         );
     }
 
+    #[test]
+    fn publisher_ok_before_terminal_append_fault_recovers_called_as_unknown() {
+        let CalledCoordinatorFixture {
+            called,
+            output_pool,
+            decision_boot,
+            decision_id,
+            effective_validity_ms,
+            directory,
+        } = called_coordinator_fixture();
+        let called = called.with_test_terminal_append_fault(TestTerminalAppendFault::BeforeAppend);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(called.publish_once_with_test_future(
+            publisher,
+            move |_frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            },
+        ));
+
+        let source = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+                publisher_error: None,
+                source,
+            })) => source,
+            _ => panic!("pre-append fault must consume publisher Ok as terminal failure"),
+        };
+        assert!(is_before_terminal_append_fault(&source));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+        drop(publish);
+
+        let restarted = reopen_publication_directory(
+            directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::UnknownAfterPublish,
+            1,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+    }
+
+    #[test]
+    fn publisher_error_before_terminal_append_fault_recovers_called_as_unknown() {
+        let CalledCoordinatorFixture {
+            called,
+            output_pool,
+            decision_boot,
+            decision_id,
+            effective_validity_ms,
+            directory,
+        } = called_coordinator_fixture();
+        let called = called.with_test_terminal_append_fault(TestTerminalAppendFault::BeforeAppend);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(called.publish_once_with_test_future(
+            publisher,
+            move |_frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Err::<(), TestPublishError>(TestPublishError))
+            },
+        ));
+
+        let source = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+                publisher_error: Some(error),
+                source,
+            })) => {
+                assert_eq!(error, TestPublishError);
+                source
+            }
+            _ => panic!("pre-append fault must retain the original publisher error"),
+        };
+        assert!(is_before_terminal_append_fault(&source));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+        drop(publish);
+
+        let restarted = reopen_publication_directory(
+            directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::UnknownAfterPublish,
+            1,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+    }
+
+    #[test]
+    fn publisher_ok_after_terminal_sync_ambiguity_recovers_returned_ok() {
+        let CalledCoordinatorFixture {
+            called,
+            output_pool,
+            decision_boot,
+            decision_id,
+            effective_validity_ms,
+            directory,
+        } = called_coordinator_fixture();
+        let called =
+            called.with_test_terminal_append_fault(TestTerminalAppendFault::AfterSyncAmbiguous);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(called.publish_once_with_test_future(
+            publisher,
+            move |_frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            },
+        ));
+
+        let source = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+                publisher_error: None,
+                source,
+            })) => source,
+            _ => panic!("post-sync ambiguity must consume publisher Ok as terminal failure"),
+        };
+        assert!(is_after_terminal_sync_ambiguity(&source));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+        drop(publish);
+
+        let restarted = reopen_publication_directory(
+            directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::PublishReturnedOk,
+            0,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::PublishReturnedOk)
+        );
+    }
+
+    #[test]
+    fn publisher_error_after_terminal_sync_ambiguity_recovers_returned_error() {
+        let CalledCoordinatorFixture {
+            called,
+            output_pool,
+            decision_boot,
+            decision_id,
+            effective_validity_ms,
+            directory,
+        } = called_coordinator_fixture();
+        let called =
+            called.with_test_terminal_append_fault(TestTerminalAppendFault::AfterSyncAmbiguous);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(called.publish_once_with_test_future(
+            publisher,
+            move |_frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Err::<(), TestPublishError>(TestPublishError))
+            },
+        ));
+
+        let source = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+                publisher_error: Some(error),
+                source,
+            })) => {
+                assert_eq!(error, TestPublishError);
+                source
+            }
+            _ => panic!("post-sync ambiguity must retain the original publisher error"),
+        };
+        assert!(is_after_terminal_sync_ambiguity(&source));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+        drop(publish);
+
+        let restarted = reopen_publication_directory(
+            directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::PublishReturnedError,
+            0,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::PublishReturnedError)
+        );
+    }
+
     #[cfg(feature = "live-zenoh")]
     #[test]
     fn wrong_publisher_route_is_terminally_rejected_before_invocation() {
@@ -1323,7 +1621,68 @@ mod e2e {
     }
 
     #[test]
-    fn cancelling_pending_publish_recovers_called_as_unknown() {
+    fn dropping_publish_before_first_poll_never_invokes_and_recovers_called_as_unknown() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let expected_frame_digest = prepared.decision().receipt.output_frame_digest.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        assert_eq!(
+            called.publication_trace_state(),
+            Some(PublicationTraceState::PublishCalled)
+        );
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let publish = Box::pin(
+            called.publish_once_with_test_future(publisher, move |frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                assert_eq!(frame.digest(), expected_frame_digest);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            }),
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(drops.load(Ordering::SeqCst), 0);
+        assert_eq!(output_pool.available(), 0);
+
+        drop(publish);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+        let restarted = reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::UnknownAfterPublish,
+            1,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+    }
+
+    #[test]
+    fn dropping_pending_publish_models_external_timeout_and_recovers_called_as_unknown() {
         let fixture = coordinator_fixture(64);
         let envelope = signed_coordinator_intent(&fixture, 1);
         let output_pool = fixture.output_pool.clone();
@@ -1368,9 +1727,79 @@ mod e2e {
         assert_eq!(drops.load(Ordering::SeqCst), 0);
         assert_eq!(output_pool.available(), 0);
 
+        // Model a future worker's external deadline by dropping this still-pending
+        // future; this test does not implement a timer or a publisher timeout result.
         drop(publish);
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
         assert_eq!(drops.load(Ordering::SeqCst), 1);
         assert_eq!(output_pool.available(), 1);
+        let restarted = reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::UnknownAfterPublish,
+            1,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+    }
+
+    #[cfg(panic = "unwind")]
+    #[test]
+    fn panicking_publisher_poll_unwinds_to_called_unknown() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let expected_frame_digest = prepared.decision().receipt.output_frame_digest.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let polls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let observed_polls = Arc::clone(&polls);
+        let mut publish = Box::pin(
+            called.publish_once_with_test_future(publisher, move |frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                assert_eq!(frame.digest(), expected_frame_digest);
+                PanickingPublish {
+                    polls: observed_polls,
+                }
+            }),
+        );
+
+        let caught =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| poll_once(publish.as_mut())));
+        assert!(caught.is_err());
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+
+        // A future which unwound must only be dropped, never polled again.
+        drop(publish);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
         let restarted = reopen_publication_directory(
             fixture._directory,
             effective_validity_ms,

@@ -88,10 +88,16 @@ remains externally read-only and no runnable service selects its internal coordi
 Positive coordinator composition currently uses a test-only binder around a preactivated
 actor. The concrete permit pool is a bounded slot primitive, but no canonical service-wide
 pool, queue, publisher worker, or runnable transport binding is selected. Publisher-result
-ordering and pending-future cancellation use a test-only future seam; no live Zenoh session
-executes the concrete coordinator method in tests. Cancellation leaves durable Called for
-restart classification, while rejection/cancellation before Called leaves unreclaimed
-Prepared evidence. End-to-end crash durability remains out of P0 (`CL-DURABLE-01`). The composed
+ordering, cold drop before first poll, pending timeout-as-drop, panic unwind, and synthetic
+terminal-record faults use test-only seams; no live Zenoh session executes the concrete
+coordinator method in tests. The consuming future exists only after Called is locally
+sync-confirmed, so cold drop, pending drop, and unwind all leave Called for restart
+classification as `UnknownAfterPublish`; cold drop is not rejection before Called. A definite
+synthetic terminal failure before append likewise reopens as Unknown, while synthetic
+ambiguity injected after an actual terminal append and sync replays that terminal record.
+Prepared cancellation or pre-call rejection still leaves unreclaimed Prepared evidence.
+Actual OS-I/O, child-process, and power-loss faults remain untested, and end-to-end crash
+durability remains out of P0 (`CL-DURABLE-01`). The composed
 Gate runtime has its 13-stage decision pipeline,
 and a deterministic adversarial range + end-to-end
 acceptance campaign.

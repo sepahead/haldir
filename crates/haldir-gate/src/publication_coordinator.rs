@@ -18,6 +18,10 @@ use haldir_core::time::{MonoInstant, MonotonicClock};
 use haldir_evidence::gate_journal::{
     GateJournalMutationError, GateJournalReservation, RecoveredGateJournal,
 };
+#[cfg(test)]
+use haldir_evidence::journal::JournalError;
+#[cfg(test)]
+use haldir_evidence::manager::{EvidenceRecordDigest, JournalManagerError};
 use haldir_evidence::publication::PublicationTraceState;
 use haldir_ncp08::ExactNcpCommandFrame;
 #[cfg(feature = "live-zenoh")]
@@ -234,6 +238,16 @@ pub(crate) enum CallTransition<C> {
     },
 }
 
+/// Test-only terminal append outcomes injected at the coordinator boundary.
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TestTerminalAppendFault {
+    /// Return a definite storage failure before terminal bytes reach the journal.
+    BeforeAppend,
+    /// Return ambiguity after the real terminal append and local sync succeed.
+    AfterSyncAmbiguous,
+}
+
 /// A locally sync-confirmed Called output. Production code can lend its bytes only
 /// to the feature-gated concrete publisher binding. Dropping it drops the whole
 /// bound runtime; it cannot return to Ready silently.
@@ -246,6 +260,8 @@ pub(crate) struct DurableCalledPublication<C> {
     binding: PublicationBinding,
     called_envelope_digest: DigestV1,
     output_permit: OutputCapacityPermit,
+    #[cfg(test)]
+    terminal_append_fault: Option<TestTerminalAppendFault>,
 }
 
 /// A locally sync-confirmed successful local publisher return.
@@ -626,6 +642,8 @@ impl<C: MonotonicClock> DurablePreparedPublication<C> {
             binding,
             called_envelope_digest,
             output_permit,
+            #[cfg(test)]
+            terminal_append_fault: None,
         })))
     }
 }
@@ -644,6 +662,16 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
             .bound
             .recovered_publication()
             .state(self.binding.decision_gate_boot_id, self.binding.decision_id)
+    }
+
+    /// Select one terminal append fault for a consuming coordinator test.
+    #[cfg(test)]
+    pub(crate) fn with_test_terminal_append_fault(
+        mut self,
+        fault: TestTerminalAppendFault,
+    ) -> Self {
+        self.terminal_append_fault = Some(fault);
+        self
     }
 
     /// Invoke a route-matched concrete strict publisher once for this consumed Called state.
@@ -772,6 +800,8 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
             binding,
             called_envelope_digest,
             output_permit,
+            #[cfg(test)]
+            terminal_append_fault,
         } = self;
         let returned_at = core.sample_now()?;
         let event = binding.event(
@@ -779,8 +809,14 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
             called_envelope_digest,
             returned_at,
         );
-        let terminal_envelope_digest =
-            sign_and_append_stage(core.as_mut(), &mut reservation, &event, returned_at)?;
+        let terminal_envelope_digest = sign_and_append_terminal_stage(
+            core.as_mut(),
+            &mut reservation,
+            &event,
+            returned_at,
+            #[cfg(test)]
+            terminal_append_fault,
+        )?;
         let (actor, _) = live_parts_mut(&mut core.bound);
         actor
             .mark_publish_returned_ok(*called, returned_at)
@@ -803,6 +839,8 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
             binding,
             called_envelope_digest,
             output_permit,
+            #[cfg(test)]
+            terminal_append_fault,
         } = self;
         let returned_at = core.sample_now()?;
         let event = binding.event(
@@ -810,8 +848,14 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
             called_envelope_digest,
             returned_at,
         );
-        let terminal_envelope_digest =
-            sign_and_append_stage(core.as_mut(), &mut reservation, &event, returned_at)?;
+        let terminal_envelope_digest = sign_and_append_terminal_stage(
+            core.as_mut(),
+            &mut reservation,
+            &event,
+            returned_at,
+            #[cfg(test)]
+            terminal_append_fault,
+        )?;
         let (actor, _) = live_parts_mut(&mut core.bound);
         actor
             .mark_publish_returned_error(*called)
@@ -858,6 +902,35 @@ fn sign_and_append_stage<C>(
         actor.sign_publication_stage(event)
     };
     append_verified(core, reservation, &envelope, observed_at)?;
+    Ok(DigestV1::compute(DigestDomain::RawEnvelope, &envelope))
+}
+
+fn sign_and_append_terminal_stage<C>(
+    core: &mut CoordinatorCore<C>,
+    reservation: &mut GateJournalReservation,
+    event: &PublicationStageEventV1,
+    observed_at: MonoInstant,
+    #[cfg(test)] fault: Option<TestTerminalAppendFault>,
+) -> Result<DigestV1, CoordinatorFatal> {
+    let envelope = {
+        let (actor, _) = live_parts_mut(&mut core.bound);
+        actor.sign_publication_stage(event)
+    };
+    #[cfg(test)]
+    if fault == Some(TestTerminalAppendFault::BeforeAppend) {
+        return Err(CoordinatorFatal::Journal(
+            GateJournalMutationError::Journal(JournalManagerError::Journal(JournalError::Storage)),
+        ));
+    }
+    append_verified(core, reservation, &envelope, observed_at)?;
+    #[cfg(test)]
+    if fault == Some(TestTerminalAppendFault::AfterSyncAmbiguous) {
+        return Err(CoordinatorFatal::Journal(
+            GateJournalMutationError::Journal(JournalManagerError::AppendCommitAmbiguous {
+                record_digest: EvidenceRecordDigest::compute(&envelope),
+            }),
+        ));
+    }
     Ok(DigestV1::compute(DigestDomain::RawEnvelope, &envelope))
 }
 

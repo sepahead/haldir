@@ -70,10 +70,19 @@ from one durable coordinator Called state to one awaited invocation of the concr
 from its actor realm/session; a publisher for any other route is terminally rejected before
 frame access or invocation. A matched publisher capability is returned only after local
 publisher `Ok` and linked terminal journal success; a publisher error is journaled
-conservatively and does not return the capability. Dropping the future while it is pending leaves durable
-Called, which the tested restart path closes as `UnknownAfterPublish`. Tests exercise the
-result and cancellation ordering through a test-only future seam; they do not open a live
-Zenoh session or execute the concrete method.
+conservatively and does not return the capability. Dropping the future while it is pending
+leaves locally sync-confirmed Called, which the tested restart path closes as
+`UnknownAfterPublish`. Tests exercise the
+result and fault ordering through test-only seams. Dropping the consuming future before its
+first poll invokes no test publisher code but is already after locally sync-confirmed Called;
+dropping it after a `Pending` poll models an external timeout, and an unwind from a test
+publisher-future panic has the same restart classification. None invents ReturnedError; only
+an explicit local publisher error or definite Gate rejection can record that stage.
+Synthetic terminal-record faults cover definite failure before append and an
+`AppendCommitAmbiguous` result injected
+after the real terminal append and sync, with reopen respectively producing Unknown or the
+exact terminal state. These tests do not open a live Zenoh session, execute the concrete
+method, enforce a real deadline, or inject an OS-I/O fault.
 
 No runnable service yet selects that binding or requires exact mode. A future live service
 profile must reject `ModeledP0` before durable startup or authority exposure and select

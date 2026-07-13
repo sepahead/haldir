@@ -71,9 +71,12 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   `MonoInstant`; real clock-read failure handling belongs to the future runtime.
 - `[x]` **B14** Evidence outage never turns DENY into ALLOW (direction test).
   A bounded, locked signed-segment directory manager is also unit tested and the private
-  bound coordinator selects it for ordered lifecycle mutation. Direct actors and runnable
-  services do not make that path mandatory, and no coordinator append-fault, disk-full,
-  or child-process crash campaign exists (`CL-GATE-LIFECYCLE-01`, `CL-DURABLE-01`).
+  bound coordinator selects it for ordered lifecycle mutation. A test-only coordinator
+  seam covers definite pre-terminal-append failure and synthetic ambiguity returned after
+  actual terminal append/sync for both publisher result branches. Direct actors and
+  runnable services do not make that path mandatory, and no OS-level append/write/
+  `sync_data` fault-injection, disk-full, child-process crash, or power-loss campaign exists
+  (`CL-GATE-LIFECYCLE-01`, `CL-DURABLE-01`).
 - `[x]` **B15** Reference plant has exactly one command ingress; zero application from any
   non-Gate principal; safe action is plant-owned (Gate only requests).
 
@@ -95,9 +98,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   direct modeled actor caller asserts publication returned-ok. The internal coordinator's
   off-by-default live binding instead rejects a publisher outside the actor's exact
   realm/session route before invocation, consumes a matched strict publisher around one
-  await, and journals the observed local result; tests substitute a test-only future and no
-  runnable service selects it. Preparation/output allocation alone does not mutate history;
-  duty under clock rollback → fault/ERROR, never wraparound.
+  await, and journals the observed local result. Test-only futures also cover cold drop,
+  pending timeout-as-drop, and panic unwind without converting an unobserved result to
+  ReturnedError; no runnable service selects the binding. Preparation/output allocation
+  alone does not mutate history; duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.
 - `[x]` **H9** COSE content-type ⇔ payload kind ⇔ external-AAD domain all agree; negatives for

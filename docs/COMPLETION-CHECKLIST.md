@@ -41,9 +41,10 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   ambiguity. Its off-by-default binding rejects a concrete publisher whose exact route
   differs from the actor realm/session before frame access or invocation, then consumes a
   matched publisher around one awaited call and returns that capability only after local
-  `Ok` plus terminal journal success; result/cancellation tests use a fake future rather than a live session. No
-  runnable worker selects it, the frame remains copyable through lower-level APIs, and
-  exactly-once submission is not enforced.
+  `Ok` plus terminal journal success. Result, cold-drop, pending timeout-as-drop,
+  panic-unwind, and synthetic terminal-fault tests use test-only seams rather than a live
+  session. No runnable worker selects it, the frame remains copyable through lower-level
+  APIs, and exactly-once submission is not enforced.
 
 ## Policy
 
@@ -73,9 +74,12 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **PARTIAL** — Decisions are reconstructable from bounded Gate-signed receipts and
   digest-separated domains. The internal coordinator locally append-and-`sync_data`-
   confirms publication stages, and startup reduces a recovered dangling Called trace to
-  linked Unknown. Positive composition is test-only; mandatory service selection,
-  Prepared abandonment/reclamation, coordinator fault injection, child-process crash,
-  and power-loss behavior remain absent.
+  linked Unknown. Its test-only matrix covers cold drop, pending timeout-as-drop, panic
+  unwind, definite pre-terminal-append failure, and synthetic ambiguity after a real
+  terminal append/sync. Positive composition and fault injection remain test-only;
+  mandatory service selection, Prepared abandonment/reclamation, OS-level append/write/
+  `sync_data` or disk-full fault injection, live-session faults, panic-abort/supervisor handling, child-process
+  crash, and power-loss behavior remain absent.
 - **YES** — Evidence storage bounded; tamper/chain-break detected; full-spool drop
   never flips a decision.
 - **PARTIAL** — The retained live mTLS/ACL campaign proves only the pinned synthetic

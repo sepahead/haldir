@@ -92,10 +92,23 @@ returned local `Ok` and the terminal append synced; it is not delivery.
 `returned_error` covers both definite strict-publisher preflight rejection and a
 delivery-ambiguous local transport error, and yields neither a replacement runtime nor the
 publisher capability. If the await is cancelled, no return result was observed, so the
-already-synced Called tail remains for restart classification. The ordering tests use a
-test-only future seam, and no runnable service or live invocation selects the concrete
-method. Lower-level actor/frame and publisher constructors still permit copying or
-resubmission outside this coordinator binding.
+already-synced Called tail remains for restart classification. The test-only future seam
+exercises three such no-result paths: dropping the consuming future before its first poll
+without invoking test publisher code, dropping it after `Pending` to model an external
+timeout, and catching an unwind from a panic while polling the test publisher future. Each
+drops the bound runtime, publisher, and permit and reopens as one linked Unknown; none is a
+ReturnedError. An explicit local publisher error or definite Gate rejection can take that
+terminal path.
+
+Test-only terminal-record fault injection also covers both observed publisher `Ok` and
+`Err`. A definite failure before terminal bytes are appended consumes the runtime and
+publisher, then reopen closes the remaining Called tail as Unknown. A synthetic
+`AppendCommitAmbiguous` returned only after the real terminal append and sync also consumes
+them, but reopen finds the exact ReturnedOk or ReturnedError record and emits no Unknown.
+The original publisher error, when one existed, is retained only in the immediate diagnostic;
+the recovered journal remains authoritative. No runnable service or live invocation selects
+the concrete method. Lower-level actor/frame and publisher constructors still permit copying
+or resubmission outside this coordinator binding.
 
 On reopen, dangling Called tails become linked Unknown records. If replay contains any
 Called/ReturnedOk/ReturnedError/Unknown trace, the coordinator refuses every new decision
@@ -107,10 +120,13 @@ refusal, and a common trustworthy clock origin across startup, journal events, a
 coordinator is not established. Prepared cancellation or pre-call rejection releases unused
 journal reservation and returns the still-reserved permit but leaves the already-journaled
 Prepared trace, so retained trace capacity is not reclaimed and no abandonment/loss-summary
-event is emitted. Pending-future cancellation through the test seam is covered;
-coordinator-level OS terminal-append ambiguity, child-process crash, live-session
-cancellation/timeout, panic, queue-worker, and transport tests remain absent. Lower journal
-layers test their own append ambiguity and reopen behavior. This is not transport
+event is emitted. Cold drop, pending timeout-as-drop, panic unwind, and the two synthetic
+terminal-fault endpoints are covered only through test seams. Coordinator-level OS partial
+write/`sync_data` failure, disk-full behavior, real append-commit ambiguity on either
+recovery side,
+panic-abort or service-supervisor behavior, child-process crash, live-session
+cancellation/timeout/panic, queue-worker, and transport tests remain absent. Lower journal
+layers test their own narrower append ambiguity and reopen behavior. This is not transport
 invocation, delivery, receiver inactivity, or application evidence
 (`CL-GATE-LIFECYCLE-01`).
 

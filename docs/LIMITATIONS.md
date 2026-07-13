@@ -73,9 +73,13 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   terminally rejects a mismatched publisher before frame access or invocation, lends the
   frame only to one awaited call on a matched concrete strict publisher, returns that
   capability only after local `Ok` plus terminal journal success, and returns neither
-  runtime nor publisher after error. Pending-future cancellation is
-  tested to leave durable Called for restart recovery rather than inventing ReturnedError.
-  Result/cancellation tests use a test-only future seam, not a live Zenoh session.
+  runtime nor publisher after error. Test-only future cases cover dropping the consuming
+  future before its first poll without invoking test publisher code, dropping it after
+  `Pending` as an external-timeout model, and catching an unwind from a panic while polling
+  the test publisher future. All occur after locally sync-confirmed Called and therefore
+  reopen as `UnknownAfterPublish` rather than inventing ReturnedError. An explicit local
+  publisher error or definite Gate rejection can record ReturnedError. These are not live
+  Zenoh tests.
 
   The pool is not authenticated as one canonical service queue, positive composition uses
   a test-only binder around an already-active actor, and no production control plane,
@@ -92,9 +96,15 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   timestamp, not an authoritative reconstruction of prior policy/history; elapsed time does
   not clear it. Cancellation/pre-call rejection leaves a locally sync-confirmed Prepared
   trace, so retained trace/journal bounds can eventually quiesce without an
-  abandonment or loss-summary record. Coordinator-level append-fault, live-session
-  cancellation/timeout, panic, child-process crash, shared clock-origin, and power-loss
-  tests are absent. The concrete
+  abandonment or loss-summary record. Test-only terminal injection covers publisher `Ok`
+  and `Err` for a definite failure before terminal append and a synthetic
+  `AppendCommitAmbiguous` returned after the real terminal append and sync. Reopen finds
+  Unknown in the first case and the exact terminal state in the second; neither the consumed
+  bound runtime nor supplied publisher capability is returned after either failure. This does
+  not test OS partial writes or sync failures,
+  disk-full behavior, real append-commit ambiguity on either recovery side, panic-abort or service
+  supervision, live-session cancellation/timeout/panic, child-process crash, a shared
+  clock origin, or power loss. The concrete
   method is compile-tested but not live-invoked; this is not a publication,
   receiver-inactivity, delivery, or application claim.
 - **NEST / Engram controllers.** No neural runtime is present. Admission checks
@@ -207,9 +217,11 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   Direct `VehicleActor` construction and the in-process spool remain available, and no
   runnable service selects the bound path. The private coordinator can create a locally
   sync-confirmed receipt/Called/publisher-result sequence through its test-only future seam,
-  while startup can
-  emit recovery Unknown records; neither path emits an abandonment/loss-summary event, and
-  no coordinator-level append-fault, child-process crash, or disk-full campaign exists.
+  and its test-only cold-drop, pending timeout-as-drop, panic-unwind, and synthetic
+  terminal-fault matrix can drive reopen to the journal-supported Unknown or terminal state;
+  startup emits the required recovery Unknown records. Neither path emits an
+  abandonment/loss-summary event, and no OS-level append/write/`sync_data` fault-injection,
+  disk-full, child-process crash, or power-loss campaign exists.
   A canonical Gate publication-stage payload and retained-state-bounded pure
   identity/link/transition reducer are now tested
   (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), including construction
