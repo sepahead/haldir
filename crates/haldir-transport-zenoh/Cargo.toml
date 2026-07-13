@@ -31,3 +31,7 @@ zenoh = { workspace = true, optional = true }
 
 [dev-dependencies]
 haldir-contracts.workspace = true
+
+[[example]]
+name = "live_secure_acl_campaign"
+required-features = ["live-zenoh"]
