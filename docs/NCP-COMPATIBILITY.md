@@ -120,17 +120,21 @@ terminal-boundary-failure paths return no service/publisher capability. Marked-l
 tests use a fake publisher seam; the
 production concrete signature compiles but is not invoked. The activation inputs are locally
 caller-supplied rather than authenticated control/state ingress, and no refresh/revocation loop
-exists. No runnable binary/package selects `DeclaredLiveZenoh`, opens/owns the session or ingress,
-or constructs the concrete service.
+exists. A separate `DeclaredLiveGateZenohService` consumes the route capability, one supplied
+session wrapper, and bounded limits; it derives the matched publisher and exact accepted-controller-
+route ingress internally from that same session lineage, then exposes only consuming receive/process/
+shutdown paths. Offline fake tests prove the composition and ownership ordering, not concrete
+Zenoh invocation. No runnable Gate binary/service package selects `DeclaredLiveZenoh`, constructs
+the concrete aggregate, or opens/authenticates its session or credentials.
 The runtime-profile value is a cooperative caller declaration, not authenticated package data
 or a durable anti-downgrade state; public `GateConfig` and direct `VehicleActor` construction
 bypasses template startup and remains outside this capability chain. Production declared-live
 startup with injected in-memory backends is tested through marked coordinator construction.
 Separately, a test-minted marked capability wraps an initially inactive actor and
 the actual journal manager, then exercises bounded local activation, canonical intent-route
-binding, and fake-publisher service binding. Called/result fault tests still use test-only
-publisher seams. Neither test path opens a Zenoh session or invokes the concrete publisher,
-or establishes credential custody.
+binding, fake-publisher service binding, and fake session/ingress aggregate orchestration.
+Called/result fault tests still use test-only publisher seams. Neither test path opens a Zenoh
+session or invokes the concrete publisher, or establishes credential/handle exclusivity.
 The retained synthetic campaign proves the exact final-command/controller-intent ACL subset
 using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not the service
 binding or application. Even a local Zenoh success would not prove delivery or application.

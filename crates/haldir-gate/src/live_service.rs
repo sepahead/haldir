@@ -3,8 +3,10 @@
 //! This module closes the public service-local ownership boundary around the
 //! startup-marked coordinator, one locally primed canonical intent binding, one
 //! concrete strict publisher, and one output-capacity slot. Activation performs
-//! no network activity. This module deliberately does not open a session, own
-//! intent ingress, spawn a worker, or provide supervision and reconnect policy.
+//! no network activity. The outer Zenoh aggregate can additionally retain one
+//! caller-opened session wrapper and an internally declared ingress. This module
+//! deliberately does not load credentials, spawn a worker, or provide supervision
+//! and reconnect policy.
 
 use core::fmt;
 use core::num::NonZeroUsize;
@@ -18,8 +20,9 @@ use haldir_core::time::{MonoInstant, MonotonicClock};
 use haldir_evidence::gate_journal::GateJournalMutationError;
 use haldir_ncp08::NcpCommandWireProfile;
 use haldir_transport_zenoh::{
-    FinalCommandPublisher, HARD_MAX_INTENT_BYTES, HaldirKeyError, IntentIngressEvent,
-    MAX_HALDIR_ROUTE_BYTES, SecureZenohError,
+    FinalCommandPublisher, HARD_MAX_INTENT_BYTES, HaldirKeyError, HaldirKeys, IngressCounters,
+    IngressCountersSnapshot, IngressLimits, IntentIngress, IntentIngressEvent,
+    MAX_HALDIR_ROUTE_BYTES, SecureZenohError, SecureZenohSession,
 };
 
 use crate::actor::{DecisionRecord, GateError, PublicationError};
@@ -69,6 +72,78 @@ impl fmt::Display for LiveServiceBindError {
 }
 
 impl std::error::Error for LiveServiceBindError {}
+
+/// Primary failure while binding the route capability to one owned Zenoh I/O aggregate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum LiveZenohServiceBindFailure {
+    /// Re-deriving the accepted controller's exact intent route failed.
+    IntentRoute(HaldirKeyError),
+    /// The re-derived route differed from the accepted lease binding.
+    IntentRouteMismatch,
+    /// The internally derived final-command publisher did not match the runtime.
+    Publisher(LiveServiceBindError),
+    /// Declaring the exact bounded intent ingress failed.
+    Ingress(SecureZenohError),
+}
+
+impl fmt::Display for LiveZenohServiceBindFailure {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::IntentRoute(error) => {
+                write!(formatter, "intent-route derivation failed: {error}")
+            }
+            Self::IntentRouteMismatch => {
+                formatter.write_str("accepted intent route failed its binding cross-check")
+            }
+            Self::Publisher(error) => write!(formatter, "publisher binding failed: {error}"),
+            Self::Ingress(error) => write!(formatter, "intent-ingress declaration failed: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for LiveZenohServiceBindFailure {}
+
+/// Fail-stop Zenoh I/O binding error, including attempted session-close status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LiveZenohServiceBindError {
+    failure: LiveZenohServiceBindFailure,
+    session_close_error: Option<SecureZenohError>,
+}
+
+impl LiveZenohServiceBindError {
+    /// Primary binding failure.
+    #[must_use]
+    pub const fn failure(&self) -> LiveZenohServiceBindFailure {
+        self.failure
+    }
+
+    /// Explicit close failure after the primary binding failure, if any.
+    #[must_use]
+    pub const fn session_close_error(&self) -> Option<SecureZenohError> {
+        self.session_close_error
+    }
+}
+
+impl fmt::Display for LiveZenohServiceBindError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "Zenoh Gate service binding failed: {}",
+            self.failure
+        )?;
+        if let Some(error) = self.session_close_error {
+            write!(formatter, "; explicit session cleanup also failed: {error}")?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for LiveZenohServiceBindError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.failure)
+    }
+}
 
 /// Hard maximum for one caller-supplied signed mission-lease envelope during
 /// declared-live local activation.
@@ -563,6 +638,18 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
         })
     }
 
+    /// Verified and admission-bound controller selected by the accepted lease.
+    #[must_use]
+    pub const fn controller_id(&self) -> &ControllerId {
+        self.intent_binding.controller_id()
+    }
+
+    /// Canonical exact intent route retained from the accepted lease.
+    #[must_use]
+    pub fn intent_route(&self) -> &str {
+        self.intent_binding.intent_route()
+    }
+
     /// Consume one caller-supplied raw intent event through service hard bounds, decision,
     /// Called, and at most one concrete strict publisher invocation.
     ///
@@ -642,6 +729,365 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
             },
         }
     }
+}
+
+/// Terminal result of the owned Zenoh receive/process path.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum LiveZenohServiceStop {
+    /// The owned bounded ingress receiver closed; no service owner is returned.
+    IngressClosed,
+    /// The owned ingress/service topology produced an otherwise unreachable refusal.
+    OwnedIoInvariant(LiveDecisionUnavailable),
+    /// The inner decision/publication service stopped fail-closed.
+    Gate(LiveServiceStop),
+}
+
+/// Result of receiving and processing one event through the owned Zenoh ingress.
+#[must_use = "the returned Zenoh service is required to receive another event through this owner"]
+pub enum LiveZenohServiceTransition<C> {
+    /// The aggregate may receive another event only through the returned owner.
+    Continue {
+        /// Same single-owner aggregate after a safe continuation path.
+        service: DeclaredLiveGateZenohService<C>,
+        /// Decision/publication outcome.
+        outcome: LiveServiceOutcome,
+    },
+    /// A journal-capacity or restart-clearance refusal retained the exact event privately.
+    Unavailable {
+        /// Same single-owner aggregate with one private pending event.
+        service: DeclaredLiveGateZenohService<C>,
+        /// Ownership-preserving journal-capacity or restart-clearance refusal.
+        reason: LiveDecisionUnavailable,
+    },
+    /// The aggregate is deliberately unavailable until restart/recovery.
+    Stopped(LiveZenohServiceStop),
+}
+
+/// Local successful-return report for explicit Zenoh Gate aggregate shutdown.
+///
+/// This reports local undeclare/drain and session-close returns, not confirmed
+/// router-remote cleanup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LiveZenohShutdownReport {
+    discarded_events: usize,
+    ingress_counters: IngressCountersSnapshot,
+}
+
+impl LiveZenohShutdownReport {
+    /// Number of privately pending and queued events discarded during shutdown.
+    #[must_use]
+    pub const fn discarded_events(&self) -> usize {
+        self.discarded_events
+    }
+
+    /// Final bounded-label ingress counter snapshot after successful undeclaration.
+    #[must_use]
+    pub const fn ingress_counters(&self) -> IngressCountersSnapshot {
+        self.ingress_counters
+    }
+}
+
+/// Failure during explicit `undeclare-and-drain` then session-close shutdown.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum LiveZenohShutdownError {
+    /// Ingress undeclare/quiescence cleanup failed; session close still returned `Ok`.
+    Ingress(SecureZenohError),
+    /// Ingress undeclare/quiescence cleanup succeeded, but session close failed.
+    Session(SecureZenohError),
+    /// Both ingress undeclare/quiescence cleanup and the subsequent session close failed.
+    IngressAndSession {
+        /// Ingress undeclare/quiescence cleanup failure.
+        ingress: SecureZenohError,
+        /// Session cleanup failure.
+        session: SecureZenohError,
+    },
+}
+
+impl fmt::Display for LiveZenohShutdownError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ingress(error) => write!(formatter, "intent-ingress shutdown failed: {error}"),
+            Self::Session(error) => write!(formatter, "Zenoh session shutdown failed: {error}"),
+            Self::IngressAndSession { ingress, session } => write!(
+                formatter,
+                "intent-ingress shutdown failed: {ingress}; Zenoh session shutdown also failed: {session}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for LiveZenohShutdownError {}
+
+/// Single-owner Gate I/O aggregate over one supplied Zenoh session lineage.
+///
+/// Binding consumes an accepted-lease-derived route capability, constructs the
+/// strict publisher and exact bounded ingress internally from the same supplied
+/// session wrapper, and retains all of them behind [`Self::process_next`]. No
+/// public method accepts or returns a raw [`IntentIngressEvent`]. An ownership-preserving
+/// journal-capacity or restart-clearance refusal is retained privately and retried
+/// byte-for-byte before receiving a newer event. Input/key/output-capacity refusals
+/// are unreachable through this owned topology and stop as an invariant violation.
+///
+/// The move-only wrapper is the aggregate's sole close handle, but the transport
+/// crate's public borrowing constructors can have minted other typed handles
+/// before binding. This therefore establishes same-session lineage and local
+/// ownership, not exclusive credential/session/handle custody, peer identity,
+/// delivery, acceptance, application, supervision, or complete mediation.
+///
+/// ```compile_fail
+/// fn requires_clone<T: Clone>() {}
+/// requires_clone::<haldir_gate::DeclaredLiveGateZenohService<()>>();
+/// ```
+#[must_use = "dropping the aggregate stops the bound Gate runtime and drops its Zenoh handles"]
+pub struct DeclaredLiveGateZenohService<C> {
+    service: DeclaredLiveGateService<C>,
+    ingress: IntentIngress,
+    session: SecureZenohSession,
+    pending_event: Option<IntentIngressEvent>,
+}
+
+struct PreparedLiveZenohBinding<C> {
+    route_bound: LiveIntentRouteBoundGate<C>,
+    keys: HaldirKeys,
+    controller_id: ControllerId,
+}
+
+fn prepare_live_zenoh_binding<C: MonotonicClock>(
+    route_bound: LiveIntentRouteBoundGate<C>,
+) -> Result<PreparedLiveZenohBinding<C>, LiveZenohServiceBindFailure> {
+    let keys = route_bound.coordinator.haldir_keys().clone();
+    let controller_id = route_bound.intent_binding.controller_id().clone();
+    let expected_intent_route = keys
+        .intent(controller_id.as_str())
+        .map_err(LiveZenohServiceBindFailure::IntentRoute)?;
+    if expected_intent_route != route_bound.intent_binding.intent_route() {
+        return Err(LiveZenohServiceBindFailure::IntentRouteMismatch);
+    }
+    Ok(PreparedLiveZenohBinding {
+        route_bound,
+        keys,
+        controller_id,
+    })
+}
+
+impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
+    /// Consume one route-bound Gate and caller-opened session, then internally
+    /// construct the matched publisher and exact accepted-controller-route ingress.
+    ///
+    /// The canonical intent route is re-derived and cross-checked before any
+    /// subscriber declaration. The publisher is locally bound before declaring
+    /// ingress, leaving no fallible local binding step after subscription succeeds.
+    /// Every failure returns no Gate, session, publisher, or ingress owner and
+    /// attempts an explicit session close. Cancellation is fail-stop but cannot
+    /// confirm remote declaration cleanup.
+    ///
+    /// # Errors
+    /// Returns on intent-route derivation/cross-check, publisher binding, or
+    /// ingress declaration. Any subsequent explicit session-close failure is
+    /// recorded alongside that primary failure.
+    pub async fn bind(
+        route_bound: LiveIntentRouteBoundGate<C>,
+        session: SecureZenohSession,
+        limits: IngressLimits,
+    ) -> Result<Self, LiveZenohServiceBindError> {
+        let PreparedLiveZenohBinding {
+            route_bound,
+            keys,
+            controller_id,
+        } = match prepare_live_zenoh_binding(route_bound) {
+            Ok(binding) => binding,
+            Err(failure) => {
+                return Err(close_failed_zenoh_binding(session, failure).await);
+            }
+        };
+
+        let publisher = FinalCommandPublisher::new(&session, &keys);
+        let service = match DeclaredLiveGateService::bind(route_bound, publisher) {
+            Ok(service) => service,
+            Err(error) => {
+                return Err(close_failed_zenoh_binding(
+                    session,
+                    LiveZenohServiceBindFailure::Publisher(error),
+                )
+                .await);
+            }
+        };
+        let ingress =
+            match IntentIngress::declare(&session, &keys, controller_id.as_str(), limits).await {
+                Ok(ingress) => ingress,
+                Err(error) => {
+                    drop(service);
+                    return Err(close_failed_zenoh_binding(
+                        session,
+                        LiveZenohServiceBindFailure::Ingress(error),
+                    )
+                    .await);
+                }
+            };
+
+        Ok(Self {
+            service,
+            session,
+            ingress,
+            pending_event: None,
+        })
+    }
+
+    /// Verified controller selected by the accepted lease.
+    #[must_use]
+    pub const fn controller_id(&self) -> &ControllerId {
+        self.service.controller_id()
+    }
+
+    /// Canonical exact route declared by the owned intent ingress.
+    #[must_use]
+    pub fn intent_route(&self) -> &str {
+        self.service.intent_route()
+    }
+
+    /// Operational Zenoh identifier; never an authorization principal.
+    #[must_use]
+    pub fn zid(&self) -> String {
+        self.session.zid()
+    }
+
+    /// Shared bounded-label ingress counters.
+    #[must_use]
+    pub fn ingress_counters(&self) -> IngressCounters {
+        self.ingress.counters()
+    }
+
+    /// Receive internally and consume one event through the Gate hard boundary.
+    ///
+    /// A private pending event always precedes a newer receive. Cancellation while
+    /// awaiting ingress or publication drops every aggregate-local capability; if
+    /// Called was already confirmed, restart recovery classifies that ambiguity.
+    pub async fn process_next(mut self) -> LiveZenohServiceTransition<C> {
+        let event = match self.pending_event.take() {
+            Some(event) => event,
+            None => match self.ingress.recv().await {
+                Some(event) => event,
+                None => {
+                    return LiveZenohServiceTransition::Stopped(
+                        LiveZenohServiceStop::IngressClosed,
+                    );
+                }
+            },
+        };
+        let Self {
+            service,
+            session,
+            ingress,
+            pending_event,
+        } = self;
+        debug_assert!(pending_event.is_none());
+        drop(pending_event);
+
+        match service.process_one(event).await {
+            LiveServiceTransition::Continue { service, outcome } => {
+                LiveZenohServiceTransition::Continue {
+                    service: Self {
+                        service,
+                        session,
+                        ingress,
+                        pending_event: None,
+                    },
+                    outcome,
+                }
+            }
+            LiveServiceTransition::Unavailable {
+                service,
+                event,
+                reason,
+            } => {
+                if unavailable_is_owned_io_invariant(&reason) {
+                    drop((service, event, ingress, session));
+                    LiveZenohServiceTransition::Stopped(LiveZenohServiceStop::OwnedIoInvariant(
+                        reason,
+                    ))
+                } else {
+                    LiveZenohServiceTransition::Unavailable {
+                        service: Self {
+                            service,
+                            session,
+                            ingress,
+                            pending_event: Some(event),
+                        },
+                        reason,
+                    }
+                }
+            }
+            LiveServiceTransition::Stopped(stop) => {
+                drop(ingress);
+                drop(session);
+                LiveZenohServiceTransition::Stopped(LiveZenohServiceStop::Gate(stop))
+            }
+        }
+    }
+
+    /// Explicitly undeclare/drain ingress, drop the publisher-owning Gate service,
+    /// and then close the retained session. Cleanup continues after undeclare error.
+    ///
+    /// # Errors
+    /// Returns either or both explicit transport cleanup failures. Cancellation
+    /// drops remaining handles but does not confirm remote cleanup.
+    pub async fn shutdown(self) -> Result<LiveZenohShutdownReport, LiveZenohShutdownError> {
+        let Self {
+            service,
+            session,
+            ingress,
+            pending_event,
+        } = self;
+        let pending_count = usize::from(pending_event.is_some());
+        let ingress_result = ingress.undeclare_and_drain().await;
+        drop(pending_event);
+        drop(service);
+        let session_result = session.close().await;
+        finish_zenoh_shutdown(
+            ingress_result.map(|(events, counters)| (events.len(), counters)),
+            session_result,
+            pending_count,
+        )
+    }
+}
+
+async fn close_failed_zenoh_binding(
+    session: SecureZenohSession,
+    failure: LiveZenohServiceBindFailure,
+) -> LiveZenohServiceBindError {
+    LiveZenohServiceBindError {
+        failure,
+        session_close_error: session.close().await.err(),
+    }
+}
+
+pub(crate) fn finish_zenoh_shutdown(
+    ingress_result: Result<(usize, IngressCountersSnapshot), SecureZenohError>,
+    session_result: Result<(), SecureZenohError>,
+    pending_count: usize,
+) -> Result<LiveZenohShutdownReport, LiveZenohShutdownError> {
+    match (ingress_result, session_result) {
+        (Ok((drained_count, ingress_counters)), Ok(())) => Ok(LiveZenohShutdownReport {
+            discarded_events: drained_count.saturating_add(pending_count),
+            ingress_counters,
+        }),
+        (Err(ingress), Ok(())) => Err(LiveZenohShutdownError::Ingress(ingress)),
+        (Ok(_), Err(session)) => Err(LiveZenohShutdownError::Session(session)),
+        (Err(ingress), Err(session)) => {
+            Err(LiveZenohShutdownError::IngressAndSession { ingress, session })
+        }
+    }
+}
+
+pub(crate) const fn unavailable_is_owned_io_invariant(reason: &LiveDecisionUnavailable) -> bool {
+    matches!(
+        reason,
+        LiveDecisionUnavailable::IntentEnvelopeTooLarge { .. }
+            | LiveDecisionUnavailable::ActualKeyTooLong { .. }
+            | LiveDecisionUnavailable::OutputCapacityUnavailable
+    )
 }
 
 fn bind_publisher_core<C: MonotonicClock, P>(
@@ -951,5 +1397,213 @@ impl<C: MonotonicClock, P> TestDeclaredLiveGateService<C, P> {
                 }
             }
         }
+    }
+}
+
+/// Fake-only facade for testing aggregate orchestration without a Zenoh router.
+#[cfg(test)]
+pub(crate) struct TestDeclaredLiveGateZenohService<C, P, S, I> {
+    service: TestDeclaredLiveGateService<C, P>,
+    ingress: I,
+    session: S,
+    pending_event: Option<IntentIngressEvent>,
+    controller_id: ControllerId,
+    intent_route: String,
+}
+
+#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "the fake aggregate mirrors all production terminal variants; lower lifecycle tests cover the unselected branches"
+)]
+pub(crate) enum TestLiveZenohServiceTransition<C, P, S, I, E> {
+    Continue {
+        service: TestDeclaredLiveGateZenohService<C, P, S, I>,
+        outcome: LiveServiceOutcome,
+    },
+    Unavailable {
+        service: TestDeclaredLiveGateZenohService<C, P, S, I>,
+        reason: LiveDecisionUnavailable,
+    },
+    IngressClosed,
+    OwnedIoInvariant(LiveDecisionUnavailable),
+    Fatal(LiveServiceFatal),
+    PublisherReturned {
+        error: E,
+        decision: Box<DecisionRecord>,
+        terminal_envelope_digest: DigestV1,
+    },
+    TerminalBoundaryFailed {
+        publisher_error: Option<E>,
+        source: LiveServiceFatal,
+    },
+}
+
+#[cfg(test)]
+impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
+    pub(crate) async fn bind_with_test_factory<F, Fut>(
+        route_bound: LiveIntentRouteBoundGate<C>,
+        session: S,
+        limits: IngressLimits,
+        factory: F,
+    ) -> Result<Self, LiveZenohServiceBindFailure>
+    where
+        F: FnOnce(S, HaldirKeys, ControllerId, IngressLimits) -> Fut,
+        Fut: core::future::Future<Output = Result<(S, P, I, String), SecureZenohError>>,
+    {
+        let PreparedLiveZenohBinding {
+            route_bound,
+            keys,
+            controller_id,
+        } = prepare_live_zenoh_binding(route_bound)?;
+        let intent_route = keys
+            .intent(controller_id.as_str())
+            .map_err(LiveZenohServiceBindFailure::IntentRoute)?;
+        let (session, publisher, ingress, publisher_route) =
+            factory(session, keys, controller_id.clone(), limits)
+                .await
+                .map_err(LiveZenohServiceBindFailure::Ingress)?;
+        let service =
+            TestDeclaredLiveGateService::bind_route_bound(route_bound, publisher, &publisher_route)
+                .map_err(LiveZenohServiceBindFailure::Publisher)?;
+        Ok(Self {
+            service,
+            session,
+            ingress,
+            pending_event: None,
+            controller_id,
+            intent_route,
+        })
+    }
+
+    pub(crate) const fn controller_id(&self) -> &ControllerId {
+        &self.controller_id
+    }
+
+    pub(crate) fn intent_route(&self) -> &str {
+        &self.intent_route
+    }
+
+    pub(crate) const fn session(&self) -> &S {
+        &self.session
+    }
+
+    pub(crate) const fn ingress(&self) -> &I {
+        &self.ingress
+    }
+
+    pub(crate) const fn has_pending_event(&self) -> bool {
+        self.pending_event.is_some()
+    }
+
+    pub(crate) async fn process_next_with_test_future<E, F, Fut>(
+        mut self,
+        invoke: F,
+    ) -> TestLiveZenohServiceTransition<C, P, S, I, E>
+    where
+        I: Iterator<Item = IntentIngressEvent>,
+        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        Fut: core::future::Future<Output = Result<(), E>>,
+    {
+        let event = match self.pending_event.take() {
+            Some(event) => event,
+            None => match self.ingress.next() {
+                Some(event) => event,
+                None => return TestLiveZenohServiceTransition::IngressClosed,
+            },
+        };
+        let Self {
+            service,
+            session,
+            ingress,
+            pending_event,
+            controller_id,
+            intent_route,
+        } = self;
+        debug_assert!(pending_event.is_none());
+        drop(pending_event);
+        match service.process_one_with_test_future(event, invoke).await {
+            TestLiveServiceTransition::Continue { service, outcome } => {
+                TestLiveZenohServiceTransition::Continue {
+                    service: Self {
+                        service,
+                        session,
+                        ingress,
+                        pending_event: None,
+                        controller_id,
+                        intent_route,
+                    },
+                    outcome,
+                }
+            }
+            TestLiveServiceTransition::Unavailable {
+                service,
+                event,
+                reason,
+            } => {
+                if unavailable_is_owned_io_invariant(&reason) {
+                    drop((service, event, ingress, session));
+                    TestLiveZenohServiceTransition::OwnedIoInvariant(reason)
+                } else {
+                    TestLiveZenohServiceTransition::Unavailable {
+                        service: Self {
+                            service,
+                            session,
+                            ingress,
+                            pending_event: Some(event),
+                            controller_id,
+                            intent_route,
+                        },
+                        reason,
+                    }
+                }
+            }
+            TestLiveServiceTransition::Fatal(error) => TestLiveZenohServiceTransition::Fatal(error),
+            TestLiveServiceTransition::PublisherReturned {
+                error,
+                decision,
+                terminal_envelope_digest,
+            } => TestLiveZenohServiceTransition::PublisherReturned {
+                error,
+                decision,
+                terminal_envelope_digest,
+            },
+            TestLiveServiceTransition::TerminalBoundaryFailed {
+                publisher_error,
+                source,
+            } => TestLiveZenohServiceTransition::TerminalBoundaryFailed {
+                publisher_error,
+                source,
+            },
+        }
+    }
+
+    pub(crate) async fn shutdown_with_test_futures<UF, UFut, CF, CFut>(
+        self,
+        undeclare: UF,
+        close: CF,
+    ) -> Result<LiveZenohShutdownReport, LiveZenohShutdownError>
+    where
+        UF: FnOnce(I) -> UFut,
+        UFut: core::future::Future<
+                Output = Result<(usize, IngressCountersSnapshot), SecureZenohError>,
+            >,
+        CF: FnOnce(S) -> CFut,
+        CFut: core::future::Future<Output = Result<(), SecureZenohError>>,
+    {
+        let Self {
+            service,
+            session,
+            ingress,
+            pending_event,
+            controller_id: _,
+            intent_route: _,
+        } = self;
+        let pending_count = usize::from(pending_event.is_some());
+        let ingress_result = undeclare(ingress).await;
+        drop(pending_event);
+        drop(service);
+        let session_result = close(session).await;
+        finish_zenoh_shutdown(ingress_result, session_result, pending_count)
     }
 }

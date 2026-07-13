@@ -4,11 +4,14 @@ use haldir_contracts::ids::{ChallengeNonce, ControllerId};
 use haldir_core::snapshot::TrustedStateSnapshotV1;
 use haldir_core::{MonoInstant, MonotonicClock};
 use haldir_gate::{
-    DeclaredLiveGateKernel, DeclaredLiveGateService, JournalBoundRunningGate,
-    LiveIntentActivationError, LiveIntentActivationInput, LiveIntentActivationInputError,
-    LiveIntentRouteBoundGate, LiveKernelStartError, LiveServiceBindError, LiveServiceTransition,
+    DeclaredLiveGateKernel, DeclaredLiveGateService, DeclaredLiveGateZenohService,
+    JournalBoundRunningGate, LiveIntentActivationError, LiveIntentActivationInput,
+    LiveIntentActivationInputError, LiveIntentRouteBoundGate, LiveKernelStartError,
+    LiveServiceBindError, LiveServiceTransition, LiveZenohServiceBindError,
+    LiveZenohServiceBindFailure, LiveZenohServiceStop, LiveZenohServiceTransition,
+    LiveZenohShutdownError, LiveZenohShutdownReport,
 };
-use haldir_transport_zenoh::FinalCommandPublisher;
+use haldir_transport_zenoh::{FinalCommandPublisher, IngressLimits, SecureZenohSession};
 
 #[derive(Clone, Copy)]
 struct ExternalClock;
@@ -21,7 +24,7 @@ impl MonotonicClock for ExternalClock {
 
 #[test]
 fn public_live_service_surface_is_root_exported_consuming_and_send() {
-    fn assert_send<T: Send>() {}
+    fn assert_type_send<T: Send>() {}
     type Start = fn(
         JournalBoundRunningGate,
         ExternalClock,
@@ -51,13 +54,49 @@ fn public_live_service_surface_is_root_exported_consuming_and_send() {
     let _: Bind = DeclaredLiveGateService::<ExternalClock>::bind;
     let _: ControllerAccessor = LiveIntentRouteBoundGate::<ExternalClock>::controller_id;
     let _: RouteAccessor = LiveIntentRouteBoundGate::<ExternalClock>::intent_route;
-    assert_send::<DeclaredLiveGateKernel<ExternalClock>>();
-    assert_send::<LiveIntentActivationInput>();
-    assert_send::<LiveIntentActivationInputError>();
-    assert_send::<LiveIntentActivationError>();
-    assert_send::<LiveIntentRouteBoundGate<ExternalClock>>();
-    assert_send::<LiveKernelStartError>();
-    assert_send::<LiveServiceBindError>();
-    assert_send::<DeclaredLiveGateService<ExternalClock>>();
-    assert_send::<LiveServiceTransition<ExternalClock>>();
+
+    fn check_zenoh_bind(
+        route_bound: LiveIntentRouteBoundGate<ExternalClock>,
+        session: SecureZenohSession,
+        limits: IngressLimits,
+    ) {
+        assert_send(DeclaredLiveGateZenohService::bind(
+            route_bound,
+            session,
+            limits,
+        ));
+    }
+    fn check_zenoh_process(service: DeclaredLiveGateZenohService<ExternalClock>) {
+        assert_send(service.process_next());
+    }
+    fn check_zenoh_shutdown(service: DeclaredLiveGateZenohService<ExternalClock>) {
+        assert_send(service.shutdown());
+    }
+    fn assert_send<T: Send>(_: T) {}
+
+    let _: fn(LiveIntentRouteBoundGate<ExternalClock>, SecureZenohSession, IngressLimits) =
+        check_zenoh_bind;
+    let _: fn(DeclaredLiveGateZenohService<ExternalClock>) = check_zenoh_process;
+    let _: fn(DeclaredLiveGateZenohService<ExternalClock>) = check_zenoh_shutdown;
+
+    assert_type_send::<DeclaredLiveGateKernel<ExternalClock>>();
+    assert_type_send::<LiveIntentActivationInput>();
+    assert_type_send::<LiveIntentActivationInputError>();
+    assert_type_send::<LiveIntentActivationError>();
+    assert_type_send::<LiveIntentRouteBoundGate<ExternalClock>>();
+    assert_type_send::<LiveKernelStartError>();
+    assert_type_send::<LiveServiceBindError>();
+    assert_type_send::<DeclaredLiveGateService<ExternalClock>>();
+    assert_type_send::<LiveServiceTransition<ExternalClock>>();
+    assert_type_send::<LiveZenohServiceBindFailure>();
+    assert_type_send::<LiveZenohServiceBindError>();
+    assert_type_send::<DeclaredLiveGateZenohService<ExternalClock>>();
+    assert_type_send::<LiveZenohServiceStop>();
+    assert_type_send::<LiveZenohServiceTransition<ExternalClock>>();
+    assert_type_send::<LiveZenohShutdownError>();
+    assert_type_send::<LiveZenohShutdownReport>();
+    assert_type_send::<
+        fn(LiveIntentRouteBoundGate<ExternalClock>, SecureZenohSession, IngressLimits),
+    >();
+    assert_type_send::<fn(DeclaredLiveGateZenohService<ExternalClock>)>();
 }

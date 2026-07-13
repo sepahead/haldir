@@ -41,9 +41,11 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   and bypassed by direct actor construction. A public no-network kernel can consume the marked
   coordinator plus one bounded caller-supplied initial state/challenge/signed lease, and it
   validates the signed intent route against the canonical verified-controller route before the
-  lease becomes active. The public service can consume only that route-bound result plus a
-  preconstructed matched publisher. No runnable Gate package authenticates/refreshes those
-  control inputs or selects/opens the session, ingress, credentials, or Crebain deployment.
+  lease becomes active. The lower public service can consume only that route-bound result plus a
+  preconstructed matched publisher. The outer aggregate instead consumes that result and one
+  supplied session wrapper, internally deriving the publisher and exact ingress from the same
+  lineage. No runnable Gate package authenticates/refreshes those control inputs or
+  selects/opens the session, credentials, or Crebain deployment.
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
   coordinator orders local receipt/Called/terminal evidence and blocks replacement after
@@ -54,11 +56,13 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   capability only after local `Ok` plus terminal journal success. A public non-cloneable
   service kernel adds an internal capacity-one pool and returns itself only on safe
   continuation. An initially inactive marked actor is tested through local state/challenge/lease
-  activation, canonical intent-route binding, and fake-publisher service binding. Service result,
-  cold/pending-drop, rejection, and terminal-fault tests still use a fake publisher rather than a
-  live session. No runnable control loop/worker/session owner
-  selects it, the frame remains copyable through lower-level APIs, and exactly-once submission
-  is not enforced.
+  activation, canonical intent-route binding, and fake-publisher service binding. A separate
+  fake session/ingress facade tests the outer aggregate's derivation, journal-capacity
+  retention/retry, closure,
+  drops, and shutdown ordering. Service result, cold/pending-drop, rejection, and terminal-fault
+  tests still use a fake publisher rather than a live session. No runnable Gate credential-opening
+  package, control loop, or publisher worker selects it; lower APIs remain bypasses, the frame
+  remains copyable there, and exactly-once submission is not enforced.
 
 ## Policy
 
@@ -94,8 +98,8 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   plus the actual journal manager is tested through live coordinator construction only.
   Separately, a test-minted marked capability around an initially inactive actor and the actual
   journal manager exercises bounded local activation, canonical route capability, and fake-
-  publisher service binding; decision/Called result and fault composition remains publisher-
-  seam-only. An
+  publisher service binding; fake session/ingress tests exercise only aggregate orchestration,
+  while decision/Called result and fault composition remains publisher-seam-only. An
   executable authenticated service package, Prepared abandonment/reclamation, OS-level append/write/
   `sync_data` or disk-full fault injection, live-session faults, panic-abort/supervisor handling, child-process
   crash, and power-loss behavior remain absent.

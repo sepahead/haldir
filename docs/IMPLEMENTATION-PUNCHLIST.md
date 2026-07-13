@@ -110,9 +110,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   pending timeout-as-drop, and panic unwind without converting an unobserved result to
   ReturnedError. A public no-network activation kernel first validates one bounded caller-supplied
   initial state/challenge/signed lease and mints a canonical route capability only from the
-  verified controller. The consuming service encloses that marked route-bound coordinator,
-  preconstructed matched publisher, and one private slot, while no runnable executable/control/
-  session owner selects it. Preparation/output allocation
+  verified controller. The lower consuming service encloses that marked route-bound coordinator,
+  preconstructed matched publisher, and one private slot. The outer aggregate can instead retain
+  one supplied session wrapper plus internally derived publisher/ingress handles, while no runnable
+  Gate credential-opening executable/control package selects it. Preparation/output allocation
   alone does not mutate history; duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.
@@ -141,7 +142,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   single-thread actor denies allocation failure before frame construction. The internal
   coordinator requires a sealed bounded-pool permit and three logical journal units before
   actor mutation. The public service binds it to one canonical process-local capacity slot,
-  but no actual queue/worker exists and no overload loss-summary evidence is emitted.
+  and the outer aggregate can retain the transport's bounded intent queue. No separate bounded
+  publisher queue/worker exists and no overload loss-summary evidence is emitted.
 - `[x]` **H17** 1:1 Haldir-UUID `gate_output_epoch` ↔ wire `stream.epoch`; conversion labeled
   `FIXED_POINT_TO_NCP_FLOAT_V1` with sampled monotonicity/finiteness/bounds/round-trip
   property tests plus an explicitly ignored exhaustive full-i32 sweep. NCP's JSON-safe
@@ -156,9 +158,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   listed backend calls, entropy, locks, or directory access, and its private process-local
   capability now gates concrete coordinator publication. A public no-network activation
   typestate requires bounded initial state/challenge/signed-lease input and derives the intent
-  route from the verified controller; the service can consume only that route-bound result.
+  route from the verified controller; the outer aggregate can consume that route-bound result
+  plus one supplied session wrapper and derive its publisher/exact ingress internally.
   The declaration and activation delivery are neither authenticated nor durable, and no
-  authenticated executable/package, ongoing control loop, or session owner selects them. The retained
+  authenticated credential-opening executable/package or ongoing control loop selects them. The retained
   synthetic campaign proves the fixed
   final-command/controller-intent subset across all configured principals, but certificate
   lifecycle/reconnect, service wiring, the full matrix, and bypass inventory remain open;

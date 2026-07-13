@@ -446,6 +446,7 @@ fn assert_intent_ingress_counters(
     counters: IngressCountersSnapshot,
 ) -> CampaignResult<()> {
     if counters.accepted != 2
+        || counters.unexpected_key_dropped != 0
         || counters.oversize_dropped != 0
         || counters.queue_full_dropped != 0
         || counters.non_put_dropped != 0

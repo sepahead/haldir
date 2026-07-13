@@ -52,15 +52,20 @@ mod live_service;
 
 #[cfg(feature = "live-zenoh")]
 pub use live_service::{
-    DeclaredLiveGateKernel, DeclaredLiveGateService, LiveDecisionUnavailable,
-    LiveIntentActivationError, LiveIntentActivationInput, LiveIntentActivationInputError,
-    LiveIntentRouteBoundGate, LiveKernelStartError, LivePublisherError, LiveServiceBindError,
-    LiveServiceFatal, LiveServiceOutcome, LiveServiceStop, LiveServiceTransition,
-    MAX_LIVE_LEASE_ENVELOPE_BYTES,
+    DeclaredLiveGateKernel, DeclaredLiveGateService, DeclaredLiveGateZenohService,
+    LiveDecisionUnavailable, LiveIntentActivationError, LiveIntentActivationInput,
+    LiveIntentActivationInputError, LiveIntentRouteBoundGate, LiveKernelStartError,
+    LivePublisherError, LiveServiceBindError, LiveServiceFatal, LiveServiceOutcome,
+    LiveServiceStop, LiveServiceTransition, LiveZenohServiceBindError, LiveZenohServiceBindFailure,
+    LiveZenohServiceStop, LiveZenohServiceTransition, LiveZenohShutdownError,
+    LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 
 #[cfg(all(test, feature = "live-zenoh"))]
-pub(crate) use live_service::{TestDeclaredLiveGateService, TestLiveServiceTransition};
+pub(crate) use live_service::{
+    TestDeclaredLiveGateService, TestDeclaredLiveGateZenohService, TestLiveServiceTransition,
+    TestLiveZenohServiceTransition, finish_zenoh_shutdown, unavailable_is_owned_io_invariant,
+};
 
 const ENTROPY_BYTES: usize = 48;
 const BOOT_ENTROPY_BYTES: usize = 32;

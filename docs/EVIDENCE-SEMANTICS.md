@@ -24,9 +24,12 @@ intent route from the verified, admission-bound controller before lease-term/cha
 returns a move-only route-bound capability. The service kernel consumes only that capability plus
 one preconstructed route-matched concrete publisher and creates one internal capacity slot. Its
 consuming one-event API returns the sole owner only on safe continuation paths. This is a
-process-local ownership boundary with static local priming, not authenticated state/control
-provenance, a selected startup/session/ingress package, queue, publisher worker, supervisor, or
-runnable transport pipeline.
+lower process-local ownership boundary. The outer `DeclaredLiveGateZenohService` instead consumes
+the route capability, one caller-opened session wrapper, and bounded ingress limits; it internally
+derives the publisher and exact accepted-controller-route ingress from the same session lineage and
+exposes a consuming receive/process API. This remains static local priming and code-shape ownership,
+not authenticated state/control provenance, a selected credential-opening package, publisher
+worker, supervisor, or runnable transport pipeline (`CL-LIVE-INGRESS-BINDING-01`).
 
 ## Each producer signs only what it observed
 
@@ -139,6 +142,18 @@ caller-held session can still create other publishers or close the session. The 
 not authenticate package/control choice or stop lower-level public publisher/session APIs
 elsewhere.
 
+`DeclaredLiveGateZenohService::bind` is the narrower owned-I/O composition. It accepts no caller
+controller, route, keys, publisher, or event; re-derives the retained accepted-controller route
+before declaration; and builds both typed handles from one supplied session wrapper. Its
+`process_next` receives only from its owned ingress and retains a journal-capacity or
+restart-clearance event privately before newer receive; otherwise-unreachable input/key/output-
+capacity refusals stop the aggregate as invariant violations. Explicit shutdown orders
+undeclare/drain before dropping the lower service
+and closing the wrapper. Public transport borrowing constructors may already have minted other
+handles, however, and the lower raw-event service remains public. Fake-only tests establish this
+orchestration without a broker; they do not establish concrete session/subscriber invocation,
+credentials, transport principal, ACL delivery, remote cleanup, or complete mediation.
+
 Test-only terminal-record fault injection also covers both observed publisher `Ok` and
 `Err`. A definite failure before terminal bytes are appended consumes the runtime and
 publisher, then reopen closes the remaining Called tail as Unknown. A synthetic
@@ -149,9 +164,11 @@ the recovered journal remains authoritative. Production declared-live startup wi
 backends is tested through marked coordinator construction. Separately, a test-minted marked
 capability around an initially inactive actor and the actual journal manager exercises caller-
 supplied local activation, canonical route validation, and the shared fake-publisher binding core;
-lifecycle/result fault cases still use a test-only publisher. No live invocation exercises the
-concrete method. No executable/package constructs the public service kernel, authenticates or
-refreshes its state/lease controls, opens its session, or drives an ingress loop. Lower-level actor/frame and
+lifecycle/result fault cases still use a test-only publisher. Fake session/ingress tests separately
+exercise the outer aggregate's binding, journal-capacity retry, closure, and shutdown ownership. No live invocation
+exercises the concrete method. No runnable Gate executable/service package selects the public
+aggregate, authenticates or refreshes its state/lease controls, or opens its session/credentials.
+Lower-level actor/frame and
 publisher/session constructors still permit copying
 or resubmission outside this coordinator binding.
 
@@ -184,5 +201,5 @@ invocation, delivery, receiver inactivity, or application evidence
 - A durable restart represents a recovered dangling `PUBLISH_CALLED` as
   `UNKNOWN_AFTER_PUBLISH`, never as success, failure, or non-delivery. The current
   crate-private coordinator can create and recover that locally sync-confirmed
-  sequence, and the public service kernel selects it in code; no executable/package makes
+  sequence, and the public service kernel selects it in code; no runnable Gate executable/package makes
   the path mandatory or proves a real publisher call.

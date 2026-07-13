@@ -537,6 +537,10 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
         publisher_route == self.core.haldir_keys.final_command()
     }
 
+    pub(crate) const fn haldir_keys(&self) -> &HaldirKeys {
+        &self.core.haldir_keys
+    }
+
     /// Prime the otherwise inactive startup actor with one caller-supplied state,
     /// challenge, and signed lease while keeping the coordinator capability sealed.
     /// The canonical intent route is checked after signature/admission validation

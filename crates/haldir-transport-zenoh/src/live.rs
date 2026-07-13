@@ -11,11 +11,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use haldir_ncp08::ExactNcpCommandFrame;
 use serde_json::Value;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use zenoh::bytes::Encoding;
 use zenoh::config::EndPoint;
+use zenoh::handlers::CallbackDrop;
 use zenoh::qos::{CongestionControl, Priority};
-use zenoh::sample::{Locality, SampleKind};
+use zenoh::sample::{Locality, Sample, SampleKind};
 use zenoh::{Config, Session};
 
 use crate::HaldirKeys;
@@ -269,6 +270,7 @@ pub struct IntentIngressEvent {
 #[derive(Debug, Default)]
 struct CounterInner {
     accepted: AtomicU64,
+    unexpected_key_dropped: AtomicU64,
     oversize_dropped: AtomicU64,
     queue_full_dropped: AtomicU64,
     non_put_dropped: AtomicU64,
@@ -285,6 +287,7 @@ impl IngressCounters {
     pub fn snapshot(&self) -> IngressCountersSnapshot {
         IngressCountersSnapshot {
             accepted: self.0.accepted.load(Ordering::Relaxed),
+            unexpected_key_dropped: self.0.unexpected_key_dropped.load(Ordering::Relaxed),
             oversize_dropped: self.0.oversize_dropped.load(Ordering::Relaxed),
             queue_full_dropped: self.0.queue_full_dropped.load(Ordering::Relaxed),
             non_put_dropped: self.0.non_put_dropped.load(Ordering::Relaxed),
@@ -298,6 +301,8 @@ impl IngressCounters {
 pub struct IngressCountersSnapshot {
     /// Samples accepted into the bounded Gate queue.
     pub accepted: u64,
+    /// Samples whose observed key differed from the exact declared intent route.
+    pub unexpected_key_dropped: u64,
     /// Samples rejected before payload copying because their raw payload was too large.
     pub oversize_dropped: u64,
     /// Samples rejected because the bounded Gate queue had no capacity.
@@ -310,16 +315,18 @@ pub struct IngressCountersSnapshot {
 
 /// One exact-route subscription and its bounded Gate handoff queue.
 pub struct IntentIngress {
+    _subscriber: zenoh::pubsub::Subscriber<()>,
+    callback_quiesced: oneshot::Receiver<()>,
     receiver: mpsc::Receiver<IntentIngressEvent>,
     counters: IngressCounters,
-    _subscriber: zenoh::pubsub::Subscriber<()>,
 }
 
 impl IntentIngress {
     /// Declare one exact controller intent subscription.
     ///
-    /// The callback performs only kind/size checks, one bounded copy, and
-    /// `try_send`; it never blocks a Zenoh receive task or performs signature work.
+    /// The callback performs only kind/exact-key/size checks, one bounded copy,
+    /// and `try_reserve` plus permit-send; it never blocks a Zenoh receive task or
+    /// performs signature work.
     ///
     /// # Errors
     /// Returns for invalid route input or subscriber declaration failure.
@@ -332,7 +339,10 @@ impl IntentIngress {
         let intent_key = keys
             .intent(controller_id)
             .map_err(|_| SecureZenohError::IntentRoute)?;
+        let expected_intent_key = intent_key.clone();
         let (sender, receiver) = mpsc::channel(limits.queue_capacity);
+        let (callback_quiesced_sender, callback_quiesced) = oneshot::channel();
+        let mut callback_quiesced_sender = Some(callback_quiesced_sender);
         let counters = IngressCounters::default();
         let callback_counters = counters.clone();
         let subscriber = session
@@ -341,34 +351,45 @@ impl IntentIngress {
             // Router ACLs do not mediate same-session loopback delivery. Gate
             // intents must therefore originate on a remote transport session.
             .allowed_origin(Locality::Remote)
-            .callback(move |sample| {
-                if sample.kind() != SampleKind::Put {
-                    bump(&callback_counters.0.non_put_dropped);
-                    return;
-                }
-                if !precheck_payload_size(
-                    &callback_counters,
-                    sample.payload().len(),
-                    limits.max_intent_bytes,
-                ) {
-                    return;
-                }
-                let Some(permit) = reserve_ingress(&sender, &callback_counters) else {
-                    return;
-                };
-                let actual_key = sample.key_expr().as_str();
-                let bytes = sample.payload().to_bytes();
-                permit.send(IntentIngressEvent {
-                    actual_key: actual_key.to_owned(),
-                    bytes: bytes.to_vec(),
-                });
-                bump(&callback_counters.0.accepted);
+            .with(CallbackDrop {
+                callback: move |sample: Sample| {
+                    if sample.kind() != SampleKind::Put {
+                        bump(&callback_counters.0.non_put_dropped);
+                        return;
+                    }
+                    let actual_key = sample.key_expr().as_str();
+                    if !precheck_actual_key(&callback_counters, actual_key, &expected_intent_key) {
+                        return;
+                    }
+                    if !precheck_payload_size(
+                        &callback_counters,
+                        sample.payload().len(),
+                        limits.max_intent_bytes,
+                    ) {
+                        return;
+                    }
+                    let Some(permit) = reserve_ingress(&sender, &callback_counters) else {
+                        return;
+                    };
+                    let bytes = sample.payload().to_bytes();
+                    permit.send(IntentIngressEvent {
+                        actual_key: actual_key.to_owned(),
+                        bytes: bytes.to_vec(),
+                    });
+                    bump(&callback_counters.0.accepted);
+                },
+                drop: move || {
+                    if let Some(sender) = callback_quiesced_sender.take() {
+                        let _ = sender.send(());
+                    }
+                },
             })
             .await
             .map_err(|_| SecureZenohError::Subscribe)?;
         Ok(Self {
             receiver,
             counters,
+            callback_quiesced,
             _subscriber: subscriber,
         })
     }
@@ -395,31 +416,53 @@ impl IntentIngress {
     /// Undeclare the transport callback, then drain every event already in the
     /// bounded handoff queue.
     ///
-    /// Awaiting undeclaration drops the Zenoh callback before the drain starts,
-    /// so the returned vector is a quiescent snapshot. Its length cannot exceed
-    /// the configured queue capacity (which is itself hard-capped).
+    /// After successful undeclaration, the receiver closes to new reservations and
+    /// Zenoh's documented `CallbackDrop` barrier waits for every already-running callback
+    /// to end before the bounded queue is drained. The returned vector and counters
+    /// are therefore a locally quiescent snapshot. Its length cannot exceed the
+    /// configured queue capacity (which is itself hard-capped). This does not prove
+    /// router-remote cleanup.
     ///
     /// # Errors
-    /// Returns when Zenoh cannot explicitly undeclare the subscriber.
+    /// Returns when Zenoh cannot explicitly undeclare the subscriber or the
+    /// callback-drop barrier cannot confirm local quiescence.
     pub async fn undeclare_and_drain(
         self,
     ) -> Result<(Vec<IntentIngressEvent>, IngressCountersSnapshot), SecureZenohError> {
         let Self {
-            mut receiver,
+            receiver,
             counters,
+            callback_quiesced,
             _subscriber,
         } = self;
         _subscriber
             .undeclare()
             .await
             .map_err(|_| SecureZenohError::Subscribe)?;
-        receiver.close();
-        let mut events = Vec::with_capacity(receiver.len());
-        while let Some(event) = receiver.recv().await {
-            events.push(event);
-        }
+        let events = quiesce_and_drain_ingress(receiver, callback_quiesced).await?;
         Ok((events, counters.snapshot()))
     }
+}
+
+async fn quiesce_and_drain_ingress(
+    mut receiver: mpsc::Receiver<IntentIngressEvent>,
+    callback_quiesced: oneshot::Receiver<()>,
+) -> Result<Vec<IntentIngressEvent>, SecureZenohError> {
+    receiver.close();
+    callback_quiesced
+        .await
+        .map_err(|_| SecureZenohError::Subscribe)?;
+    Ok(drain_ingress_queue(receiver).await)
+}
+
+async fn drain_ingress_queue(
+    mut receiver: mpsc::Receiver<IntentIngressEvent>,
+) -> Vec<IntentIngressEvent> {
+    let mut events = Vec::with_capacity(receiver.len());
+    while let Some(event) = receiver.recv().await {
+        events.push(event);
+    }
+    events
 }
 
 /// Typed publisher permanently bound to one standard NCP base command route.
@@ -654,6 +697,15 @@ fn precheck_payload_size(
     }
 }
 
+fn precheck_actual_key(counters: &IngressCounters, actual_key: &str, expected_key: &str) -> bool {
+    if actual_key == expected_key {
+        true
+    } else {
+        bump(&counters.0.unexpected_key_dropped);
+        false
+    }
+}
+
 fn bump(counter: &AtomicU64) {
     let _ = counter.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
         Some(value.saturating_add(1))
@@ -662,10 +714,13 @@ fn bump(counter: &AtomicU64) {
 
 #[cfg(test)]
 mod tests {
+    use core::future::Future;
     use core::num::{NonZeroU32, NonZeroU64};
+    use core::pin::Pin;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::task::{Context, Poll, Waker};
 
     use haldir_contracts::action::RequestedActionV1;
     use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
@@ -678,6 +733,10 @@ mod tests {
     use super::*;
 
     static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    fn poll_once<F: Future>(future: Pin<&mut F>) -> Poll<F::Output> {
+        future.poll(&mut Context::from_waker(Waker::noop()))
+    }
 
     struct TestFile(PathBuf);
 
@@ -936,6 +995,7 @@ mod tests {
             counters.snapshot(),
             IngressCountersSnapshot {
                 accepted: 1,
+                unexpected_key_dropped: 0,
                 oversize_dropped: 0,
                 queue_full_dropped: 1,
                 non_put_dropped: 0,
@@ -963,6 +1023,52 @@ mod tests {
         assert!(!precheck_payload_size(&counters, 5, 4));
         assert!(precheck_payload_size(&counters, 4, 4));
         assert_eq!(counters.snapshot().oversize_dropped, 1);
+    }
+
+    #[test]
+    fn unexpected_observed_key_is_rejected_without_an_untrusted_counter_label() {
+        let counters = IngressCounters::default();
+
+        assert!(!precheck_actual_key(
+            &counters,
+            "realm/session/sess-1/haldir/intent/other",
+            "realm/session/sess-1/haldir/intent/controller"
+        ));
+        assert!(precheck_actual_key(
+            &counters,
+            "realm/session/sess-1/haldir/intent/controller",
+            "realm/session/sess-1/haldir/intent/controller"
+        ));
+        assert_eq!(counters.snapshot().unexpected_key_dropped, 1);
+        assert_eq!(counters.snapshot().accepted, 0);
+    }
+
+    #[test]
+    fn shutdown_barrier_closes_new_reservations_and_drains_one_in_flight_permit() {
+        let (sender, receiver) = mpsc::channel(1);
+        let permit = sender.try_reserve().unwrap();
+        let (callback_quiesced_sender, callback_quiesced) = oneshot::channel();
+        let mut drain = Box::pin(quiesce_and_drain_ingress(receiver, callback_quiesced));
+
+        assert!(matches!(poll_once(drain.as_mut()), Poll::Pending));
+        assert!(matches!(
+            sender.try_send(IntentIngressEvent {
+                actual_key: "realm/intent/controller".to_owned(),
+                bytes: b"too-late".to_vec(),
+            }),
+            Err(mpsc::error::TrySendError::Closed(_))
+        ));
+        permit.send(IntentIngressEvent {
+            actual_key: "realm/intent/controller".to_owned(),
+            bytes: b"in-flight".to_vec(),
+        });
+        callback_quiesced_sender.send(()).unwrap();
+        let events = match poll_once(drain.as_mut()) {
+            Poll::Ready(Ok(events)) => events,
+            _ => panic!("callback quiescence must complete the bounded drain"),
+        };
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].bytes, b"in-flight");
     }
 
     #[test]

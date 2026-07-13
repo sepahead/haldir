@@ -7,9 +7,9 @@
 //! staged evidence. This is the P0
 //! `assurance-reference-v1` profile: in-process, deterministic, no live transport,
 //! no neural runtime, no physical hardware (see `docs/LIMITATIONS.md`). The
-//! off-by-default `live-zenoh` feature additionally exposes a single-owner service
-//! kernel around a startup-marked coordinator and preconstructed strict publisher;
-//! no executable/session/ingress owner is selected here.
+//! off-by-default `live-zenoh` feature additionally exposes single-owner local
+//! kernels and an optional caller-session-backed ingress aggregate; no executable
+//! or supervised runnable package selects that aggregate here.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -34,11 +34,13 @@ pub use actor::{
 };
 #[cfg(feature = "live-zenoh")]
 pub use startup::{
-    DeclaredLiveGateKernel, DeclaredLiveGateService, LiveDecisionUnavailable,
-    LiveIntentActivationError, LiveIntentActivationInput, LiveIntentActivationInputError,
-    LiveIntentRouteBoundGate, LiveKernelStartError, LivePublisherError, LiveServiceBindError,
-    LiveServiceFatal, LiveServiceOutcome, LiveServiceStop, LiveServiceTransition,
-    MAX_LIVE_LEASE_ENVELOPE_BYTES,
+    DeclaredLiveGateKernel, DeclaredLiveGateService, DeclaredLiveGateZenohService,
+    LiveDecisionUnavailable, LiveIntentActivationError, LiveIntentActivationInput,
+    LiveIntentActivationInputError, LiveIntentRouteBoundGate, LiveKernelStartError,
+    LivePublisherError, LiveServiceBindError, LiveServiceFatal, LiveServiceOutcome,
+    LiveServiceStop, LiveServiceTransition, LiveZenohServiceBindError, LiveZenohServiceBindFailure,
+    LiveZenohServiceStop, LiveZenohServiceTransition, LiveZenohShutdownError,
+    LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 pub use startup::{
     DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, GateRuntimeProfile,
@@ -61,7 +63,10 @@ mod e2e {
         DeclaredLiveZenohPublication, StrictPublisherCallError,
     };
     #[cfg(feature = "live-zenoh")]
-    use crate::startup::{TestDeclaredLiveGateService, TestLiveServiceTransition};
+    use crate::startup::{
+        TestDeclaredLiveGateService, TestDeclaredLiveGateZenohService, TestLiveServiceTransition,
+        TestLiveZenohServiceTransition, finish_zenoh_shutdown, unavailable_is_owned_io_invariant,
+    };
     use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
     use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
@@ -105,9 +110,10 @@ mod e2e {
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
     #[cfg(feature = "live-zenoh")]
     use haldir_transport_zenoh::{
-        HARD_MAX_INTENT_BYTES, HaldirKeys, IntentIngressEvent, MAX_HALDIR_ROUTE_BYTES,
+        HARD_MAX_INTENT_BYTES, HaldirKeys, IngressCountersSnapshot, IngressLimits,
+        IntentIngressEvent, MAX_HALDIR_ROUTE_BYTES, SecureZenohError,
     };
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, VecDeque};
     use std::future::Future;
     use std::pin::Pin;
     use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -131,6 +137,86 @@ mod e2e {
     impl Drop for TestPublisher {
         fn drop(&mut self) {
             self.drops.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    struct IoTestSession {
+        lineage: u64,
+        drops: Arc<AtomicUsize>,
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    impl Drop for IoTestSession {
+        fn drop(&mut self) {
+            self.drops.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    struct IoTestPublisher {
+        lineage: u64,
+        drops: Arc<AtomicUsize>,
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    impl Drop for IoTestPublisher {
+        fn drop(&mut self) {
+            self.drops.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    struct IoTestIngress {
+        lineage: u64,
+        events: VecDeque<IntentIngressEvent>,
+        next_calls: Arc<AtomicUsize>,
+        drops: Arc<AtomicUsize>,
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    impl Iterator for IoTestIngress {
+        type Item = IntentIngressEvent;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            self.next_calls.fetch_add(1, Ordering::SeqCst);
+            self.events.pop_front()
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    impl Drop for IoTestIngress {
+        fn drop(&mut self) {
+            self.drops.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    struct PendingIoTestBind {
+        _session: IoTestSession,
+        polls: Arc<AtomicUsize>,
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    impl Future for PendingIoTestBind {
+        type Output =
+            Result<(IoTestSession, IoTestPublisher, IoTestIngress, String), SecureZenohError>;
+
+        fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
+            self.get_mut().polls.fetch_add(1, Ordering::SeqCst);
+            Poll::Pending
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    const fn zero_ingress_counters() -> IngressCountersSnapshot {
+        IngressCountersSnapshot {
+            accepted: 0,
+            unexpected_key_dropped: 0,
+            oversize_dropped: 0,
+            queue_full_dropped: 0,
+            non_put_dropped: 0,
+            receiver_closed_dropped: 0,
         }
     }
 
@@ -974,6 +1060,7 @@ mod e2e {
     struct UnactivatedLiveFixture {
         bound: JournalBoundRunningGate,
         clock: SharedClock,
+        ctrl_sk: SigningKey,
         mission_sk: SigningKey,
         admission_record: AdmissionRecordV1,
         admission_digest: DigestV1,
@@ -983,6 +1070,13 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     fn unactivated_live_fixture() -> UnactivatedLiveFixture {
+        unactivated_live_fixture_with_recovery_records(64)
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    fn unactivated_live_fixture_with_recovery_records(
+        max_recovery_records: u64,
+    ) -> UnactivatedLiveFixture {
         let ctrl_sk = SigningKey::from_seed([1; 32]);
         let mission_sk = SigningKey::from_seed([2; 32]);
         let gate_sk = SigningKey::from_seed([3; 32]);
@@ -992,7 +1086,7 @@ mod e2e {
         cfg.ncp_adapter = haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
         let actor = VehicleActor::new(cfg).expect("valid inactive Gate configuration");
         let parts = journal_bound_fixture(
-            64,
+            max_recovery_records,
             None,
             Fixture {
                 actor,
@@ -1005,6 +1099,7 @@ mod e2e {
         UnactivatedLiveFixture {
             bound: parts.bound,
             clock: parts.clock,
+            ctrl_sk: parts.ctrl_sk,
             mission_sk,
             admission_record,
             admission_digest,
@@ -2474,6 +2569,559 @@ mod e2e {
             Err(LiveServiceBindError::PublisherRouteMismatch)
         ));
         assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_binding_uses_accepted_controller_and_one_fake_session_lineage() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let limits = IngressLimits::new(4096, 7).unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let next_calls = Arc::new(AtomicUsize::new(0));
+        let observed = Arc::new(Mutex::new(None));
+        let observed_factory = Arc::clone(&observed);
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let factory_next_calls = Arc::clone(&next_calls);
+        let session = IoTestSession {
+            lineage: 41,
+            drops: Arc::clone(&session_drops),
+        };
+
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            session,
+            limits,
+            move |session, keys, controller_id, observed_limits| async move {
+                let intent_route = keys.intent(controller_id.as_str()).unwrap();
+                let final_route = keys.final_command().to_owned();
+                *observed_factory.lock().unwrap() = Some((
+                    keys.realm().to_owned(),
+                    keys.session_id().to_owned(),
+                    controller_id.as_str().to_owned(),
+                    intent_route,
+                    observed_limits,
+                ));
+                let publisher = IoTestPublisher {
+                    lineage: session.lineage,
+                    drops: factory_publisher_drops,
+                };
+                let ingress = IoTestIngress {
+                    lineage: session.lineage,
+                    events: VecDeque::new(),
+                    next_calls: factory_next_calls,
+                    drops: factory_ingress_drops,
+                };
+                assert_eq!(publisher.lineage, session.lineage);
+                assert_eq!(ingress.lineage, session.lineage);
+                Ok::<_, SecureZenohError>((session, publisher, ingress, final_route))
+            },
+        ));
+        let service = match poll_once(bind.as_mut()) {
+            Poll::Ready(Ok(service)) => service,
+            _ => panic!("ready fake transport factory must bind synchronously"),
+        };
+
+        assert_eq!(service.controller_id().as_str(), "survey-v1");
+        assert_eq!(service.intent_route(), INTENT_KEY);
+        assert_eq!(service.session().lineage, 41);
+        assert_eq!(service.ingress().lineage, 41);
+        assert_eq!(
+            observed.lock().unwrap().as_ref(),
+            Some(&(
+                "range-a".to_owned(),
+                "sess-1".to_owned(),
+                "survey-v1".to_owned(),
+                INTENT_KEY.to_owned(),
+                limits,
+            ))
+        );
+        assert_eq!(session_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
+        drop(service);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_fake_bind_mismatch_drops_every_constructed_capability() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 17,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(1024, 1).unwrap(),
+            move |session, _keys, _controller_id, _limits| async move {
+                let lineage = session.lineage;
+                Ok::<_, SecureZenohError>((
+                    session,
+                    IoTestPublisher {
+                        lineage,
+                        drops: factory_publisher_drops,
+                    },
+                    IoTestIngress {
+                        lineage,
+                        events: VecDeque::new(),
+                        next_calls: Arc::new(AtomicUsize::new(0)),
+                        drops: factory_ingress_drops,
+                    },
+                    "other/session/route/command".to_owned(),
+                ))
+            },
+        ));
+        let failure = match poll_once(bind.as_mut()) {
+            Poll::Ready(Err(failure)) => failure,
+            _ => panic!("route mismatch must fail synchronously"),
+        };
+
+        assert_eq!(
+            failure,
+            LiveZenohServiceBindFailure::Publisher(LiveServiceBindError::PublisherRouteMismatch)
+        );
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_pending_bind_cancellation_returns_no_fake_owner() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let polls = Arc::new(AtomicUsize::new(0));
+        let pending_polls = Arc::clone(&polls);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 23,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(1024, 1).unwrap(),
+            move |session, _keys, _controller_id, _limits| PendingIoTestBind {
+                _session: session,
+                polls: pending_polls,
+            },
+        ));
+
+        assert!(matches!(poll_once(bind.as_mut()), Poll::Pending));
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 0);
+        drop(bind);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_continue_then_pending_process_drop_destroys_every_owner() {
+        let fixture = unactivated_live_fixture();
+        let valid_intent = build_intent(
+            fixture.admission_digest,
+            &fixture.admission_record,
+            1,
+            velocity(1, 400),
+        );
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let next_calls = Arc::new(AtomicUsize::new(0));
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let factory_next_calls = Arc::clone(&next_calls);
+        let events = VecDeque::from([
+            IntentIngressEvent {
+                actual_key: INTENT_KEY.to_owned(),
+                bytes: b"not-a-signed-intent".to_vec(),
+            },
+            IntentIngressEvent {
+                actual_key: INTENT_KEY.to_owned(),
+                bytes: sign_intent(&fixture.ctrl_sk, &valid_intent),
+            },
+        ]);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 27,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(HARD_MAX_INTENT_BYTES, 2).unwrap(),
+            move |session, keys, _controller_id, _limits| async move {
+                let lineage = session.lineage;
+                Ok::<_, SecureZenohError>((
+                    session,
+                    IoTestPublisher {
+                        lineage,
+                        drops: factory_publisher_drops,
+                    },
+                    IoTestIngress {
+                        lineage,
+                        events,
+                        next_calls: factory_next_calls,
+                        drops: factory_ingress_drops,
+                    },
+                    keys.final_command().to_owned(),
+                ))
+            },
+        ));
+        let service = match poll_once(bind.as_mut()) {
+            Poll::Ready(Ok(service)) => service,
+            _ => panic!("ready fake transport factory must bind synchronously"),
+        };
+        let mut first =
+            Box::pin(service.process_next_with_test_future(|_| {
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            }));
+        let service = match poll_once(first.as_mut()) {
+            Poll::Ready(TestLiveZenohServiceTransition::Continue {
+                service,
+                outcome: LiveServiceOutcome::NoPublication(decision),
+            }) => {
+                assert_ne!(decision.outcome, DecisionOutcomeV1::Allow);
+                service
+            }
+            _ => panic!("malformed owned-ingress event must safely return the aggregate"),
+        };
+        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
+
+        let publisher_polls = Arc::new(AtomicUsize::new(0));
+        let observed_polls = Arc::clone(&publisher_polls);
+        let mut second = Box::pin(
+            service.process_next_with_test_future(move |_| PendingPublish {
+                polls: observed_polls,
+            }),
+        );
+        assert!(matches!(poll_once(second.as_mut()), Poll::Pending));
+        assert_eq!(next_calls.load(Ordering::SeqCst), 2);
+        assert_eq!(publisher_polls.load(Ordering::SeqCst), 1);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
+        drop(second);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_shutdown_classifier_preserves_both_local_errors() {
+        let counters = zero_ingress_counters();
+        let success = finish_zenoh_shutdown(Ok((2, counters)), Ok(()), 1).unwrap();
+        assert_eq!(success.discarded_events(), 3);
+        assert_eq!(success.ingress_counters(), counters);
+        assert_eq!(
+            finish_zenoh_shutdown(Err(SecureZenohError::Subscribe), Ok(()), 0,),
+            Err(LiveZenohShutdownError::Ingress(SecureZenohError::Subscribe))
+        );
+        assert_eq!(
+            finish_zenoh_shutdown(Ok((0, counters)), Err(SecureZenohError::SessionClose), 0,),
+            Err(LiveZenohShutdownError::Session(
+                SecureZenohError::SessionClose
+            ))
+        );
+        assert_eq!(
+            finish_zenoh_shutdown(
+                Err(SecureZenohError::Subscribe),
+                Err(SecureZenohError::SessionClose),
+                0,
+            ),
+            Err(LiveZenohShutdownError::IngressAndSession {
+                ingress: SecureZenohError::Subscribe,
+                session: SecureZenohError::SessionClose,
+            })
+        );
+
+        assert!(unavailable_is_owned_io_invariant(
+            &LiveDecisionUnavailable::IntentEnvelopeTooLarge {
+                maximum_bytes: HARD_MAX_INTENT_BYTES,
+                actual_bytes: HARD_MAX_INTENT_BYTES + 1,
+            }
+        ));
+        assert!(unavailable_is_owned_io_invariant(
+            &LiveDecisionUnavailable::ActualKeyTooLong {
+                maximum_bytes: MAX_HALDIR_ROUTE_BYTES,
+                actual_bytes: MAX_HALDIR_ROUTE_BYTES + 1,
+            }
+        ));
+        assert!(unavailable_is_owned_io_invariant(
+            &LiveDecisionUnavailable::OutputCapacityUnavailable
+        ));
+        assert!(!unavailable_is_owned_io_invariant(
+            &LiveDecisionUnavailable::RestartClearanceRequired {
+                observed_at: MonoInstant::from_nanos(1),
+                current_policy_diagnostic_not_before: MonoInstant::from_nanos(2),
+            }
+        ));
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_private_retry_precedes_new_receive_and_shutdown_is_ordered() {
+        let fixture = unactivated_live_fixture_with_recovery_records(2);
+        let intent = build_intent(
+            fixture.admission_digest,
+            &fixture.admission_record,
+            1,
+            velocity(1, 400),
+        );
+        let capacity_refused = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: sign_intent(&fixture.ctrl_sk, &intent),
+        };
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let next_calls = Arc::new(AtomicUsize::new(0));
+        let queued_later = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: b"later".to_vec(),
+        };
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let factory_next_calls = Arc::clone(&next_calls);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 29,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(HARD_MAX_INTENT_BYTES, 2).unwrap(),
+            move |session, keys, _controller_id, _limits| async move {
+                let lineage = session.lineage;
+                Ok::<_, SecureZenohError>((
+                    session,
+                    IoTestPublisher {
+                        lineage,
+                        drops: factory_publisher_drops,
+                    },
+                    IoTestIngress {
+                        lineage,
+                        events: VecDeque::from([capacity_refused, queued_later]),
+                        next_calls: factory_next_calls,
+                        drops: factory_ingress_drops,
+                    },
+                    keys.final_command().to_owned(),
+                ))
+            },
+        ));
+        let service = match poll_once(bind.as_mut()) {
+            Poll::Ready(Ok(service)) => service,
+            _ => panic!("ready fake transport factory must bind synchronously"),
+        };
+
+        let mut process =
+            Box::pin(service.process_next_with_test_future(|_| {
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            }));
+        let service = match poll_once(process.as_mut()) {
+            Poll::Ready(TestLiveZenohServiceTransition::Unavailable {
+                service,
+                reason: LiveDecisionUnavailable::JournalCapacity(_),
+            }) => service,
+            _ => panic!("journal-capacity refusal must retain the owned-ingress event privately"),
+        };
+        assert!(service.has_pending_event());
+        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
+
+        let mut retry =
+            Box::pin(service.process_next_with_test_future(|_| {
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            }));
+        let service = match poll_once(retry.as_mut()) {
+            Poll::Ready(TestLiveZenohServiceTransition::Unavailable { service, .. }) => service,
+            _ => panic!("private refused event must retry before a newer receive"),
+        };
+        assert!(service.has_pending_event());
+        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
+
+        let order = Arc::new(Mutex::new(Vec::new()));
+        let undeclare_order = Arc::clone(&order);
+        let close_order = Arc::clone(&order);
+        let close_publisher_drops = Arc::clone(&publisher_drops);
+        let mut shutdown = Box::pin(service.shutdown_with_test_futures(
+            move |ingress| async move {
+                undeclare_order.lock().unwrap().push("undeclare");
+                assert_eq!(ingress.lineage, 29);
+                Ok::<_, SecureZenohError>((ingress.events.len(), zero_ingress_counters()))
+            },
+            move |session| async move {
+                assert_eq!(close_publisher_drops.load(Ordering::SeqCst), 1);
+                close_order.lock().unwrap().push("close");
+                assert_eq!(session.lineage, 29);
+                Ok::<(), SecureZenohError>(())
+            },
+        ));
+        let report = match poll_once(shutdown.as_mut()) {
+            Poll::Ready(Ok(report)) => report,
+            _ => panic!("ready fake shutdown must complete synchronously"),
+        };
+        assert_eq!(report.discarded_events(), 2);
+        assert_eq!(report.ingress_counters(), zero_ingress_counters());
+        assert_eq!(order.lock().unwrap().as_slice(), ["undeclare", "close"]);
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_impossible_owned_io_refusal_is_terminal() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 30,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(HARD_MAX_INTENT_BYTES, 1).unwrap(),
+            move |session, keys, _controller_id, _limits| async move {
+                let lineage = session.lineage;
+                Ok::<_, SecureZenohError>((
+                    session,
+                    IoTestPublisher {
+                        lineage,
+                        drops: factory_publisher_drops,
+                    },
+                    IoTestIngress {
+                        lineage,
+                        events: VecDeque::from([IntentIngressEvent {
+                            actual_key: INTENT_KEY.to_owned(),
+                            bytes: vec![0; HARD_MAX_INTENT_BYTES + 1],
+                        }]),
+                        next_calls: Arc::new(AtomicUsize::new(0)),
+                        drops: factory_ingress_drops,
+                    },
+                    keys.final_command().to_owned(),
+                ))
+            },
+        ));
+        let service = match poll_once(bind.as_mut()) {
+            Poll::Ready(Ok(service)) => service,
+            _ => panic!("ready fake transport factory must bind synchronously"),
+        };
+        let mut process =
+            Box::pin(service.process_next_with_test_future(|_| {
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            }));
+
+        assert!(matches!(
+            poll_once(process.as_mut()),
+            Poll::Ready(TestLiveZenohServiceTransition::OwnedIoInvariant(
+                LiveDecisionUnavailable::IntentEnvelopeTooLarge {
+                    maximum_bytes: HARD_MAX_INTENT_BYTES,
+                    actual_bytes,
+                }
+            )) if actual_bytes == HARD_MAX_INTENT_BYTES + 1
+        ));
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_zenoh_closed_fake_ingress_is_terminal_and_drops_the_owner() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let session_drops = Arc::new(AtomicUsize::new(0));
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let ingress_drops = Arc::new(AtomicUsize::new(0));
+        let factory_publisher_drops = Arc::clone(&publisher_drops);
+        let factory_ingress_drops = Arc::clone(&ingress_drops);
+        let mut bind = Box::pin(TestDeclaredLiveGateZenohService::bind_with_test_factory(
+            route_bound,
+            IoTestSession {
+                lineage: 31,
+                drops: Arc::clone(&session_drops),
+            },
+            IngressLimits::new(1024, 1).unwrap(),
+            move |session, keys, _controller_id, _limits| async move {
+                let lineage = session.lineage;
+                Ok::<_, SecureZenohError>((
+                    session,
+                    IoTestPublisher {
+                        lineage,
+                        drops: factory_publisher_drops,
+                    },
+                    IoTestIngress {
+                        lineage,
+                        events: VecDeque::new(),
+                        next_calls: Arc::new(AtomicUsize::new(0)),
+                        drops: factory_ingress_drops,
+                    },
+                    keys.final_command().to_owned(),
+                ))
+            },
+        ));
+        let service = match poll_once(bind.as_mut()) {
+            Poll::Ready(Ok(service)) => service,
+            _ => panic!("ready fake transport factory must bind synchronously"),
+        };
+        let mut process =
+            Box::pin(service.process_next_with_test_future(|_| {
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            }));
+
+        assert!(matches!(
+            poll_once(process.as_mut()),
+            Poll::Ready(TestLiveZenohServiceTransition::IngressClosed)
+        ));
+        assert_eq!(session_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
     }
 
     #[cfg(feature = "live-zenoh")]

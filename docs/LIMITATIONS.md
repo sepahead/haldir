@@ -69,10 +69,14 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   capability plus one bounded caller-supplied trusted-state/challenge/signed-lease bundle. It
   derives the canonical intent route from the verified, admission-bound controller and rejects a
   differing signed lease route before challenge consumption, durable term commit, revision change,
-  or activation. Only the resulting move-only route-bound capability can bind the public service
-  to a preconstructed matched publisher. No runnable binary or service package authenticates or
-  continually supplies those local control/state inputs, selects the declaration, opens/owns its
-  live session or ingress, loads credentials, or supplies a plant binding.
+  or activation. Only the resulting move-only route-bound capability can bind the lower public
+  service to a preconstructed matched publisher. A separate outer
+  `DeclaredLiveGateZenohService` consumes that same capability, one caller-opened session wrapper,
+  and bounded ingress limits; it re-derives the accepted-controller route and internally constructs
+  the publisher and exact ingress from the same supplied session lineage. No runnable Gate binary
+  or service package selects this aggregate, authenticates or continually supplies those local
+  control/state inputs, opens/authenticates its session, loads/protects its credentials, or supplies
+  a plant binding.
   It therefore proves neither transport invocation nor publication, delivery, acceptance,
   application, credential custody, bypass closure, or ACL exclusivity.
 - **A public single-owner kernel exists; its deployment binding is not runnable.** The actor keeps
@@ -119,8 +123,23 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   test-minted marked-live actor, the real journal manager, canonical local activation, and the shared fake-
   publisher binding core; lifecycle/result faults still use test publisher seams. The slot is
   canonical only within that process-local service lifetime; it is not an authenticated deployment
-  queue. No production control plane, session/ingress owner, queue, worker, or runnable executable/
-  package selects the kernel. A Called record alone is a
+  queue.
+
+  The outer Zenoh aggregate accepts no controller, route, publisher, or raw-event override. It
+  retains the supplied session wrapper, an internally declared bounded remote-only exact ingress,
+  and the publisher-owning lower service; `process_next` receives from that ingress and keeps a
+  journal-capacity or restart-clearance refusal private for ordered retry. An input/key/output-
+  capacity refusal is unreachable through the owned topology and fail-stops as an invariant
+  violation. Its explicit shutdown attempts
+  undeclare/drain, then drops the publisher-owning service, then closes the retained wrapper.
+  Offline tests use an explicit fake session/ingress/publisher seam and prove only local
+  composition and ownership ordering; no test opens the concrete session, declares the concrete
+  subscriber, or invokes the concrete publisher. `SecureZenohSession` is move-only but wraps a
+  shared session, and public borrowing constructors can mint typed ingress/publisher handles before
+  the wrapper is consumed. The aggregate therefore does not prove exclusive credentials, a sole
+  global session/subscriber/publisher handle, or confirmed remote cleanup after cancellation/drop.
+  No production control plane, credential-opening package, publisher worker, supervisor, or runnable
+  executable selects it. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.
   Lower-level actor frame access, the copyable frame type, the reusable publisher API, and
   independently constructible session-backed publishers still permit resubmission outside

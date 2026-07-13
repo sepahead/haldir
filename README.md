@@ -21,10 +21,13 @@ entropy, locks, or directories. An off-by-default no-network kernel now consumes
 startup capability and one bounded caller-supplied initial state/challenge/signed-lease bundle.
 Before lease-term commit or activation, it derives the exact intent route from the verified,
 admission-bound controller and requires the signed lease route to match. Only that move-only
-route-bound capability can be paired with a preconstructed matched strict publisher to create
-the public single-owner service kernel. No executable or service package authenticates the
-provenance or delivery of the caller-supplied state and nonce, selects the declaration,
-opens/owns the session, loads credentials, or proves credential custody. Successful
+route-bound capability can create the lower publisher-bound service. A separate outer aggregate
+consumes it with one caller-opened session wrapper and bounded ingress limits, then internally
+derives the matched publisher and exact accepted-controller-route ingress from the same session lineage
+(`CL-LIVE-INGRESS-BINDING-01`). No runnable Gate executable or service package selects the
+aggregate and authenticates the provenance or
+delivery of the caller-supplied state and nonce, selects the declaration, opens/authenticates the
+session, loads credentials, or proves credential or handle exclusivity. Successful
 declared-live startup mints the private move-only capability required by the live coordinator;
 exact reference and copied-report paths cannot reach its concrete publisher method. Crebain is
 intended to remain the sole owner of final command application and vehicle-specific safe action;
@@ -63,9 +66,10 @@ says they mean.
   process-local capability. A no-network activation typestate additionally requires one
   caller-supplied initial trusted state, nonce, and signed lease, and checks the lease's intent
   route against the canonical realm/session/verified-controller route before authority commits.
-  The public live service kernel can consume only that route-bound result plus a preconstructed
-  matched publisher, but no executable/package provides authenticated ongoing control/state
-  delivery or selects this path.
+  The lower live service consumes that route-bound result plus a preconstructed matched publisher.
+  The outer Zenoh aggregate instead derives its publisher and exact ingress internally from one
+  supplied session wrapper, but no runnable Gate executable/package selects this aggregate,
+  provides authenticated ongoing control/state delivery, or opens its credentials/session.
   Exact selection is also exercised through durable startup and the actor Called boundary.
 
 ### What is implemented and tested locally (the P0 pure core)
@@ -130,16 +134,18 @@ commit, and faults if a term commit is unavailable.
 The startup library explicitly provisions or opens those paths, but no service package
 loads protected secrets or a deployed external non-rewindable anchor. The direct
 `VehicleActor` profile still selects the lossy in-process spool, while the new bound type
-remains externally read-only and no executable or package constructs the live service kernel.
+remains externally read-only and no runnable Gate executable or package constructs the live service kernel.
 Production declared-live startup with injected in-memory backends and the actual journal manager
 is tested through coordinator construction only. Separately, tests wrap an initially inactive
 actor and actual journal manager in a test-minted marked capability, then exercise local
 state/challenge/signed-lease activation, canonical intent-route validation, and the shared
 fake-publisher service-binding core. Decision/Called and publisher-result fault composition still
-uses clearly test-only publisher seams; no real session is opened. The
+uses clearly test-only publisher seams. Separate fake session/ingress tests exercise aggregate
+binding, journal-capacity retention/retry, closure, drop, and explicit shutdown ordering; no real session is opened. The
 service kernel owns one canonical capacity-one pool for its own
-process-local lifetime, but it is not a queue, separate publisher worker, session/ingress
-owner, supervisor, or runnable transport package. Publisher-result
+process-local lifetime. The outer aggregate retains one supplied session wrapper and internally
+derived ingress, but it is not a credential-opening package, exclusive handle owner, separate
+publisher worker, supervisor, or runnable transport package. Publisher-result
 ordering, cold drop before first poll, pending timeout-as-drop, panic unwind, and synthetic
 terminal-record faults use test-only seams; no live Zenoh session executes the concrete
 service/coordinator method in tests. A cold-dropped service `process_one` future never polls
@@ -170,9 +176,9 @@ See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: exact routes, an
 off-by-default strict Zenoh 1.9 mTLS boundary, and a deterministic default-deny ACL
 package now exist, and the retained synthetic campaign proves the fixed final-command/
 controller-intent ACL subset for its ephemeral test PKI. A public no-network activation and
-single-owner live service kernel exist, but their initial state/challenge delivery remains
-caller-supplied and no runnable Gate executable/package selects the `DeclaredLiveZenoh`
-startup/session/ingress/control path. Certificate
+single-owner live service kernel plus an aggregate-local session/ingress owner exist, but their
+initial state/challenge delivery remains caller-supplied and no runnable Gate executable/package
+opens credentials/session or selects the `DeclaredLiveZenoh` startup/control path. Certificate
 lifecycle/reconnect, bypass, application, and credential custody remain unproved.
 NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends
 (Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated; no
