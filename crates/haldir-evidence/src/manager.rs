@@ -68,6 +68,16 @@ pub enum JournalVerificationError {
     InvalidRecord,
 }
 
+/// Dimension that rejected an opt-in recovery capture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RecoveryCaptureDimension {
+    /// Number of complete opaque records.
+    RecordCount,
+    /// Sum of exact opaque record-envelope bytes, excluding journal framing.
+    RecordBytes,
+}
+
 /// Resolves segment signing keys and validates every opaque record.
 pub trait JournalVerifier {
     /// Resolve the header identity to its trusted verifying key.
@@ -76,7 +86,11 @@ pub trait JournalVerifier {
         identity: &SegmentIdentity,
     ) -> Result<VerifyingKey, JournalVerificationError>;
 
-    /// Validate one recovered or newly submitted opaque record.
+    /// Validate one recovered or newly submitted opaque record candidate.
+    ///
+    /// Implementations must be deterministic and side-effect-free. This method
+    /// also runs before append capacity and commit are known, so success is not a
+    /// durable-append callback and must never advance a reducer.
     fn validate_record(
         &self,
         identity: &SegmentIdentity,
@@ -132,6 +146,18 @@ pub enum JournalManagerError {
     },
     /// The checked segment-sequence namespace is exhausted.
     SequenceExhausted,
+    /// Opt-in recovered-record capture exceeded an explicit bound.
+    RecoveryCaptureLimitExceeded {
+        /// Rejected capture dimension.
+        dimension: RecoveryCaptureDimension,
+        /// Configured inclusive maximum.
+        maximum: u64,
+        /// Required value, saturating at `u64::MAX` on arithmetic overflow.
+        required: u64,
+    },
+    /// Bounded snapshot storage could not be reserved before closing a recovered
+    /// active tail.
+    RecoveryCaptureAllocation,
 }
 
 impl From<JournalError> for JournalManagerError {
@@ -245,6 +271,101 @@ pub struct JournalRecoveryReport {
     pub quiesced: bool,
 }
 
+/// Explicit memory bounds for an opt-in recovered-record snapshot.
+///
+/// `max_total_record_bytes` counts the aggregate exact opaque record-envelope
+/// bytes, excluding journal framing and per-segment identities. A zero record cap
+/// permits only empty segments; a zero byte cap may still capture zero-length
+/// records within the record-count cap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RecoveryCaptureLimits {
+    max_records: u64,
+    max_total_record_bytes: u64,
+}
+
+impl RecoveryCaptureLimits {
+    /// Construct exact count and aggregate opaque-record byte caps.
+    #[must_use]
+    pub const fn new(max_records: u64, max_total_record_bytes: u64) -> Self {
+        Self {
+            max_records,
+            max_total_record_bytes,
+        }
+    }
+}
+
+/// One authenticated journal segment and its verifier-accepted opaque records.
+///
+/// Fields are private and no byte-revealing `Debug` or accidental `Clone` is
+/// provided. Empty recovered segments are retained to preserve exact ordering and
+/// identity context.
+pub struct RecoveredJournalSegment {
+    identity: SegmentIdentity,
+    records: Vec<Vec<u8>>,
+}
+
+impl RecoveredJournalSegment {
+    /// Authenticated segment identity in recovered journal order.
+    #[must_use]
+    pub const fn identity(&self) -> &SegmentIdentity {
+        &self.identity
+    }
+
+    /// Verifier-accepted opaque records in append order.
+    pub fn records(&self) -> impl ExactSizeIterator<Item = &[u8]> + '_ {
+        self.records.iter().map(Vec::as_slice)
+    }
+
+    /// Number of records in this segment.
+    #[must_use]
+    pub fn record_count(&self) -> usize {
+        self.records.len()
+    }
+}
+
+/// Complete opt-in snapshot returned only after journal open/recovery succeeds.
+///
+/// The snapshot proves authenticated segment order and candidate-verifier
+/// acceptance of opaque bytes. It does not by itself prove COSE semantics or make
+/// a stateful verifier safe.
+pub struct JournalRecovery {
+    report: JournalRecoveryReport,
+    segments: Vec<RecoveredJournalSegment>,
+    record_bytes: u64,
+}
+
+impl JournalRecovery {
+    /// Ordinary recovery metadata for the same successful open.
+    #[must_use]
+    pub const fn report(&self) -> JournalRecoveryReport {
+        self.report
+    }
+
+    /// Recovered segments in canonical sequence order, excluding the newly
+    /// created current-boot tail.
+    #[must_use]
+    pub fn segments(&self) -> &[RecoveredJournalSegment] {
+        &self.segments
+    }
+
+    /// Flatten recovered records in exact segment then append order while
+    /// preserving each record's authenticated segment identity.
+    pub fn records(&self) -> impl Iterator<Item = (&SegmentIdentity, &[u8])> {
+        self.segments.iter().flat_map(|segment| {
+            segment
+                .records
+                .iter()
+                .map(move |record| (&segment.identity, record.as_slice()))
+        })
+    }
+
+    /// Captured exact opaque record-envelope bytes, excluding journal framing.
+    #[must_use]
+    pub const fn record_bytes(&self) -> u64 {
+        self.record_bytes
+    }
+}
+
 /// Single-writer bounded evidence journal.
 pub struct EvidenceJournalManager<V> {
     directory: PathBuf,
@@ -278,14 +399,45 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         signer: JournalSigner,
         verifier: V,
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
-        Self::open_inner(
+        let (manager, report, _) = Self::open_inner(
             directory.into(),
             OpenMode::ProvisionNew,
             options,
             signer,
             None,
+            None,
             verifier,
-        )
+        )?;
+        Ok((manager, report))
+    }
+
+    /// Explicitly provision a journal and opt in to bounded recovered-record
+    /// capture. A fresh journal returns an empty snapshot; this symmetric entry
+    /// point lets callers use one startup flow for provision and reopen.
+    ///
+    /// # Errors
+    /// Returns the errors documented by [`Self::provision_new`] plus
+    /// recovery capture limit/allocation failures.
+    pub fn provision_new_with_recovered_records(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: JournalSigner,
+        capture_limits: RecoveryCaptureLimits,
+        verifier: V,
+    ) -> Result<(Self, JournalRecovery), JournalManagerError> {
+        let (manager, _, recovery) = Self::open_inner(
+            directory.into(),
+            OpenMode::ProvisionNew,
+            options,
+            signer,
+            None,
+            Some(capture_limits),
+            verifier,
+        )?;
+        Ok((
+            manager,
+            recovery.ok_or(JournalManagerError::RecoveryCaptureAllocation)?,
+        ))
     }
 
     /// Open, verify, and recover an existing dedicated journal directory.
@@ -305,14 +457,50 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         recovered_tail_signer: Option<&JournalSigner>,
         verifier: V,
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
-        Self::open_inner(
+        let (manager, report, _) = Self::open_inner(
             directory.into(),
             OpenMode::OpenExisting,
             options,
             signer,
             recovered_tail_signer,
+            None,
             verifier,
-        )
+        )?;
+        Ok((manager, report))
+    }
+
+    /// Open and recover an existing journal while returning a bounded snapshot
+    /// of every verifier-accepted opaque record in authenticated journal order.
+    ///
+    /// The snapshot is returned only after the entire chain verifies, any old
+    /// active tail closes, and current-tail creation or quiescence succeeds. A
+    /// capture-limit failure returns no partial snapshot, though ordinary recovery
+    /// may already have removed an insufficient tail or pending creation artifact.
+    ///
+    /// # Errors
+    /// Returns the errors documented by [`Self::open_existing`] plus
+    /// recovery capture limit/allocation failures.
+    pub fn open_existing_with_recovered_records(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: JournalSigner,
+        recovered_tail_signer: Option<&JournalSigner>,
+        capture_limits: RecoveryCaptureLimits,
+        verifier: V,
+    ) -> Result<(Self, JournalRecovery), JournalManagerError> {
+        let (manager, _, recovery) = Self::open_inner(
+            directory.into(),
+            OpenMode::OpenExisting,
+            options,
+            signer,
+            recovered_tail_signer,
+            Some(capture_limits),
+            verifier,
+        )?;
+        Ok((
+            manager,
+            recovery.ok_or(JournalManagerError::RecoveryCaptureAllocation)?,
+        ))
     }
 
     fn open_inner(
@@ -321,8 +509,9 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         options: JournalOpenOptions,
         signer: JournalSigner,
         recovered_tail_signer: Option<&JournalSigner>,
+        capture_limits: Option<RecoveryCaptureLimits>,
         verifier: V,
-    ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
+    ) -> Result<(Self, JournalRecoveryReport, Option<JournalRecovery>), JournalManagerError> {
         let JournalOpenOptions {
             gate_id,
             gate_boot_id,
@@ -362,6 +551,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         let mut last_completed: Option<CompletedSegment> = None;
         let mut recovered_active: Option<(ActiveEvidenceSegment, OpenRecoveryStatus)> = None;
         let mut record_digests = BTreeSet::new();
+        let mut capture = capture_limits.map(RecoveryCapture::new);
 
         for (index, entry) in entries.iter().enumerate() {
             let identity = ActiveEvidenceSegment::inspect_identity(&entry.path, limits.segment)?;
@@ -410,7 +600,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                 &verifying_key,
             )?;
             match recovered {
-                RecoveredEvidenceSegment::Completed(completed) => {
+                RecoveredEvidenceSegment::Completed(mut completed) => {
                     validate_records(
                         &verifier,
                         completed.identity(),
@@ -427,6 +617,10 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                     completed_segments = completed_segments
                         .checked_add(1)
                         .ok_or(JournalManagerError::Quiesced)?;
+                    if let Some(capture) = capture.as_mut() {
+                        capture
+                            .push_segment(completed.identity().clone(), completed.take_records())?;
+                    }
                     last_completed = Some(completed);
                 }
                 RecoveredEvidenceSegment::Active { segment, status } => {
@@ -464,9 +658,15 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             let tail_signer =
                 recovered_tail_signer.ok_or(JournalManagerError::TailSignerUnavailable)?;
             ensure_matching_signer(&verifier, active.identity(), tail_signer)?;
+            let prepared_capture = if let Some(capture) = capture.as_mut() {
+                let identity = active.identity().clone();
+                Some((identity, capture.prepare_segment(active.records())?))
+            } else {
+                None
+            };
             let active_bytes =
                 u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
-            let closed = active
+            let mut closed = active
                 .close(&tail_signer.kid, &tail_signer.key)
                 .map_err(map_commit_error)?;
             total_bytes = total_bytes
@@ -477,6 +677,11 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             completed_segments = completed_segments
                 .checked_add(1)
                 .ok_or(JournalManagerError::Quiesced)?;
+            if let (Some(capture), Some((identity, prepared))) =
+                (capture.as_mut(), prepared_capture)
+            {
+                capture.commit_segment(identity, closed.take_records(), prepared);
+            }
             last_completed = Some(closed);
             closed_active_tail = true;
         }
@@ -513,11 +718,18 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             total_bytes: manager.total_bytes,
             quiesced: manager.quiesced,
         };
-        Ok((manager, report))
+        let recovery = capture.map(|capture| capture.finish(report));
+        Ok((manager, report, recovery))
     }
 
     /// Append exactly once, rotating first only after the segment reports that a
     /// fresh segment can accommodate the record.
+    ///
+    /// Candidate validation may succeed even when this method later returns a
+    /// capacity or commit-ambiguity error. Stateful consumers may reduce the new
+    /// record only after `Ok(())`; after ambiguity they must discard this manager,
+    /// reopen, and rebuild fresh reducer state exactly once from the successfully
+    /// returned recovery snapshot.
     ///
     /// # Errors
     /// Returns on validation, permanent record bounds, global-cap quiescence, or
@@ -802,6 +1014,113 @@ enum OpenMode {
     OpenExisting,
 }
 
+struct RecoveryCapture {
+    limits: RecoveryCaptureLimits,
+    record_count: u64,
+    record_bytes: u64,
+    segments: Vec<RecoveredJournalSegment>,
+}
+
+#[derive(Clone, Copy)]
+struct PreparedCaptureSegment {
+    record_count: u64,
+    record_bytes: u64,
+}
+
+impl RecoveryCapture {
+    const fn new(limits: RecoveryCaptureLimits) -> Self {
+        Self {
+            limits,
+            record_count: 0,
+            record_bytes: 0,
+            segments: Vec::new(),
+        }
+    }
+
+    fn push_segment(
+        &mut self,
+        identity: SegmentIdentity,
+        records: Vec<Vec<u8>>,
+    ) -> Result<(), JournalManagerError> {
+        let prepared = self.prepare_segment(&records)?;
+        self.commit_segment(identity, records, prepared);
+        Ok(())
+    }
+
+    fn prepare_segment(
+        &mut self,
+        records: &[Vec<u8>],
+    ) -> Result<PreparedCaptureSegment, JournalManagerError> {
+        let segment_records = u64::try_from(records.len())
+            .map_err(|_| self.limit_error(RecoveryCaptureDimension::RecordCount, u64::MAX))?;
+        let segment_record_bytes = records.iter().try_fold(0u64, |total, record| {
+            let bytes = u64::try_from(record.len())
+                .map_err(|_| self.limit_error(RecoveryCaptureDimension::RecordBytes, u64::MAX))?;
+            total
+                .checked_add(bytes)
+                .ok_or_else(|| self.limit_error(RecoveryCaptureDimension::RecordBytes, u64::MAX))
+        })?;
+        let record_count = self
+            .record_count
+            .checked_add(segment_records)
+            .ok_or_else(|| self.limit_error(RecoveryCaptureDimension::RecordCount, u64::MAX))?;
+        if record_count > self.limits.max_records {
+            return Err(self.limit_error(RecoveryCaptureDimension::RecordCount, record_count));
+        }
+        let record_bytes = self
+            .record_bytes
+            .checked_add(segment_record_bytes)
+            .ok_or_else(|| self.limit_error(RecoveryCaptureDimension::RecordBytes, u64::MAX))?;
+        if record_bytes > self.limits.max_total_record_bytes {
+            return Err(self.limit_error(RecoveryCaptureDimension::RecordBytes, record_bytes));
+        }
+        self.segments
+            .try_reserve(1)
+            .map_err(|_| JournalManagerError::RecoveryCaptureAllocation)?;
+        Ok(PreparedCaptureSegment {
+            record_count,
+            record_bytes,
+        })
+    }
+
+    fn commit_segment(
+        &mut self,
+        identity: SegmentIdentity,
+        records: Vec<Vec<u8>>,
+        prepared: PreparedCaptureSegment,
+    ) {
+        self.segments
+            .push(RecoveredJournalSegment { identity, records });
+        self.record_count = prepared.record_count;
+        self.record_bytes = prepared.record_bytes;
+    }
+
+    const fn limit_error(
+        &self,
+        dimension: RecoveryCaptureDimension,
+        required: u64,
+    ) -> JournalManagerError {
+        let maximum = match dimension {
+            RecoveryCaptureDimension::RecordCount => self.limits.max_records,
+            RecoveryCaptureDimension::RecordBytes => self.limits.max_total_record_bytes,
+        };
+        JournalManagerError::RecoveryCaptureLimitExceeded {
+            dimension,
+            maximum,
+            required,
+        }
+    }
+
+    fn finish(self, report: JournalRecoveryReport) -> JournalRecovery {
+        debug_assert_eq!(self.record_count, report.recovered_records);
+        JournalRecovery {
+            report,
+            segments: self.segments,
+            record_bytes: self.record_bytes,
+        }
+    }
+}
+
 fn prepare_directory(path: PathBuf, mode: OpenMode) -> Result<PathBuf, JournalManagerError> {
     match fs::symlink_metadata(&path) {
         Ok(metadata) if metadata.file_type().is_dir() => Ok(path),
@@ -1016,6 +1335,8 @@ fn map_commit_error(error: JournalError) -> JournalManagerError {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use std::sync::Arc;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -1078,6 +1399,28 @@ mod tests {
 
     struct RotatingVerifier {
         signers: Vec<(KeyId, VerifyingKey)>,
+    }
+
+    struct CountingVerifier {
+        validated: Arc<AtomicU64>,
+    }
+
+    impl JournalVerifier for CountingVerifier {
+        fn resolve_signer(
+            &self,
+            identity: &SegmentIdentity,
+        ) -> Result<VerifyingKey, JournalVerificationError> {
+            verifier().resolve_signer(identity)
+        }
+
+        fn validate_record(
+            &self,
+            _identity: &SegmentIdentity,
+            _record: &[u8],
+        ) -> Result<(), JournalVerificationError> {
+            self.validated.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
     }
 
     impl JournalVerifier for RotatingVerifier {
@@ -1156,6 +1499,33 @@ mod tests {
                 directory,
                 options(boot, limits),
                 signer(),
+                verifier(),
+            )
+        }
+    }
+
+    fn open_with_recovered_records(
+        directory: &Path,
+        boot: u8,
+        limits: JournalLimits,
+        capture_limits: RecoveryCaptureLimits,
+    ) -> Result<(EvidenceJournalManager<TestVerifier>, JournalRecovery), JournalManagerError> {
+        let recovered_tail_signer = signer();
+        if directory.exists() {
+            EvidenceJournalManager::open_existing_with_recovered_records(
+                directory,
+                options(boot, limits),
+                signer(),
+                Some(&recovered_tail_signer),
+                capture_limits,
+                verifier(),
+            )
+        } else {
+            EvidenceJournalManager::provision_new_with_recovered_records(
+                directory,
+                options(boot, limits),
+                signer(),
+                capture_limits,
                 verifier(),
             )
         }
@@ -1257,6 +1627,247 @@ mod tests {
         assert_eq!(report.completed_segments, 1);
         assert_eq!(report.recovered_records, 1);
         assert_eq!(second.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    #[test]
+    fn captured_recovery_preserves_exact_segment_and_record_order() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(2, 6);
+        let capture_limits = RecoveryCaptureLimits::new(8, 64);
+
+        let (first, initial) =
+            open_with_recovered_records(&journal, 1, journal_limits, capture_limits).unwrap();
+        assert_eq!(initial.report().discovered_segments, 0);
+        assert!(initial.segments().is_empty());
+        assert_eq!(initial.records().count(), 0);
+        assert_eq!(initial.record_bytes(), 0);
+        drop(first.finish().unwrap());
+
+        let (mut second, _) = open(&journal, 2, journal_limits).unwrap();
+        second.append(b"z-first", 2).unwrap();
+        second.append(b"a-second", 2).unwrap();
+        second.append(b"m-third", 2).unwrap();
+        drop(second);
+
+        let (third, recovered) =
+            open_with_recovered_records(&journal, 3, journal_limits, capture_limits).unwrap();
+        assert_eq!(recovered.report().discovered_segments, 3);
+        assert_eq!(recovered.report().recovered_records, 3);
+        assert_eq!(
+            recovered.report().active_sequence.map(NonZeroU64::get),
+            Some(4)
+        );
+        assert_eq!(recovered.record_bytes(), 22);
+        assert_eq!(
+            recovered
+                .segments()
+                .iter()
+                .map(|segment| segment.identity().segment_sequence.get())
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(recovered.segments()[0].record_count(), 0);
+        assert_eq!(
+            recovered
+                .records()
+                .map(|(identity, record)| { (identity.segment_sequence.get(), record.to_vec()) })
+                .collect::<Vec<_>>(),
+            vec![
+                (2, b"z-first".to_vec()),
+                (2, b"a-second".to_vec()),
+                (3, b"m-third".to_vec()),
+            ]
+        );
+        assert_eq!(third.active_sequence().map(NonZeroU64::get), Some(4));
+    }
+
+    #[test]
+    fn recovered_record_capture_fails_closed_at_exact_count_and_byte_bounds() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(4, 4);
+        let (mut first, _) = open(&journal, 1, journal_limits).unwrap();
+        first.append(b"one", 1).unwrap();
+        first.append(b"two", 1).unwrap();
+        drop(first);
+        let active_path = journal.join(segment_file_name(NonZeroU64::new(1).unwrap()));
+        let active_before = fs::read(&active_path).unwrap();
+
+        assert!(matches!(
+            open_with_recovered_records(
+                &journal,
+                2,
+                journal_limits,
+                RecoveryCaptureLimits::new(1, 64),
+            ),
+            Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordCount,
+                maximum: 1,
+                required: 2,
+            })
+        ));
+        assert_eq!(fs::read(&active_path).unwrap(), active_before);
+        assert!(matches!(
+            open_with_recovered_records(
+                &journal,
+                2,
+                journal_limits,
+                RecoveryCaptureLimits::new(2, 5),
+            ),
+            Err(JournalManagerError::RecoveryCaptureLimitExceeded {
+                dimension: RecoveryCaptureDimension::RecordBytes,
+                maximum: 5,
+                required: 6,
+            })
+        ));
+        assert_eq!(fs::read(&active_path).unwrap(), active_before);
+        assert!(
+            !journal
+                .join(segment_file_name(NonZeroU64::new(2).unwrap()))
+                .exists()
+        );
+
+        let (second, recovered) = open_with_recovered_records(
+            &journal,
+            2,
+            journal_limits,
+            RecoveryCaptureLimits::new(2, 6),
+        )
+        .unwrap();
+        assert!(recovered.report().closed_active_tail);
+        assert_eq!(recovered.report().recovered_records, 2);
+        assert_eq!(recovered.record_bytes(), 6);
+        assert_eq!(
+            recovered
+                .records()
+                .map(|(_, record)| record.to_vec())
+                .collect::<Vec<_>>(),
+            vec![b"one".to_vec(), b"two".to_vec()]
+        );
+        assert_eq!(second.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    #[test]
+    fn later_record_verification_failure_returns_no_recovery_snapshot() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(1, 4);
+        let (mut first, _) = open(&journal, 1, journal_limits).unwrap();
+        first.append(b"good", 1).unwrap();
+        first.append(b"bad", 1).unwrap();
+        drop(first.finish().unwrap());
+
+        let mut rejecting = verifier();
+        rejecting.reject = Some(b"bad".to_vec());
+        let result = EvidenceJournalManager::open_existing_with_recovered_records(
+            &journal,
+            options(2, journal_limits),
+            signer(),
+            None,
+            RecoveryCaptureLimits::new(2, 7),
+            rejecting,
+        );
+        assert!(matches!(
+            result,
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::InvalidRecord
+            ))
+        ));
+        assert!(
+            !journal
+                .join(segment_file_name(NonZeroU64::new(3).unwrap()))
+                .exists()
+        );
+    }
+
+    #[test]
+    fn captured_recovery_excludes_a_structurally_matching_partial_tail() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(4, 4);
+        let (mut first, _) = open(&journal, 1, journal_limits).unwrap();
+        first.append(b"complete", 1).unwrap();
+        drop(first);
+
+        let active_path = journal.join(segment_file_name(NonZeroU64::new(1).unwrap()));
+        OpenOptions::new()
+            .append(true)
+            .open(&active_path)
+            .unwrap()
+            .write_all(b"EVR1")
+            .unwrap();
+
+        let (second, recovered) = open_with_recovered_records(
+            &journal,
+            2,
+            journal_limits,
+            RecoveryCaptureLimits::new(1, 8),
+        )
+        .unwrap();
+        assert_eq!(recovered.report().truncated_tail_bytes, 4);
+        assert_eq!(recovered.report().discovered_segments, 1);
+        assert_eq!(recovered.segments().len(), 1);
+        assert_eq!(
+            recovered
+                .records()
+                .map(|(_, record)| record.to_vec())
+                .collect::<Vec<_>>(),
+            vec![b"complete".to_vec()]
+        );
+        assert_eq!(second.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    #[test]
+    fn candidate_validation_never_implies_ambiguous_append_recovery_state() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(1, 4);
+        let validated = Arc::new(AtomicU64::new(0));
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, journal_limits),
+            signer(),
+            CountingVerifier {
+                validated: Arc::clone(&validated),
+            },
+        )
+        .unwrap();
+        first.append(b"prepared", 1).unwrap();
+        crate::journal::inject_create_publication_commit_ambiguous_once();
+        assert_eq!(
+            first.append(b"called", 1),
+            Err(JournalManagerError::AppendCommitAmbiguous {
+                record_digest: EvidenceRecordDigest::compute(b"called"),
+            })
+        );
+        assert_eq!(validated.load(Ordering::Relaxed), 2);
+        drop(first);
+
+        let (second, recovered) = open_with_recovered_records(
+            &journal,
+            2,
+            journal_limits,
+            RecoveryCaptureLimits::new(1, 8),
+        )
+        .unwrap();
+        assert!(recovered.report().discarded_pending_creation);
+        assert_eq!(
+            recovered
+                .segments()
+                .iter()
+                .map(RecoveredJournalSegment::record_count)
+                .collect::<Vec<_>>(),
+            vec![1, 0]
+        );
+        assert_eq!(
+            recovered
+                .records()
+                .map(|(_, record)| record.to_vec())
+                .collect::<Vec<_>>(),
+            vec![b"prepared".to_vec()]
+        );
+        assert_eq!(second.active_sequence().map(NonZeroU64::get), Some(3));
     }
 
     #[test]

@@ -221,6 +221,14 @@ impl CompletedSegment {
     pub fn records(&self) -> &[Vec<u8>] {
         &self.records
     }
+
+    /// Move recovered opaque record bytes to a higher-level recovery snapshot.
+    ///
+    /// Segment identity, counts, and signed digests remain available for journal
+    /// chaining; the directory manager does not need to retain a second copy.
+    pub(crate) fn take_records(&mut self) -> Vec<Vec<u8>> {
+        core::mem::take(&mut self.records)
+    }
 }
 
 /// Result of recovering a segment path.

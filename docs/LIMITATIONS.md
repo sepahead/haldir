@@ -132,12 +132,17 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   and truncation of only an insufficient final record/footer tail
   (`CL-EVIDENCE-SEGMENT-PRIMITIVE-01`). The manager adds explicit provision/open,
   a retained checked lock, strict chain discovery, injected signer/record verification,
-  old-tail signer recovery, rotation, global caps, and exact-record retry queries
-  (`CL-EVIDENCE-MANAGER-01`). It still assumes one writer and a trusted local parent
-  directory; it has no Gate `TrustStore` policy adapter, automatic retention, OS fault-
-  injection/child-process crash proof, or power-loss claim. The actor still uses its
-  in-process spool and does not select this manager or emit recovery/loss-summary events,
-  and no child-process crash/disk-full campaign exists.
+  old-tail signer recovery, rotation, global caps, exact-record retry queries, and an
+  opt-in record-count/exact-record-byte-bounded snapshot of verifier-accepted opaque records
+  in authenticated segment/append order (`CL-EVIDENCE-MANAGER-01`). Capture is returned
+  only after complete open success and legacy open does not retain the snapshot. A
+  capture-limit error returns no partial snapshot, but ordinary recovery may already
+  have removed an insufficient tail or pending creation artifact. The manager still
+  assumes one writer and a trusted local parent directory; it has no Gate `TrustStore`
+  policy adapter, semantic COSE reducer, automatic retention, OS fault-injection/
+  child-process crash proof, or power-loss claim. The actor still uses its in-process
+  spool and does not select this manager or emit recovery/loss-summary events, and no
+  child-process crash/disk-full campaign exists.
   A canonical Gate publication-stage payload and retained-state-bounded pure
   identity/link/transition reducer are now tested
   (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), including construction

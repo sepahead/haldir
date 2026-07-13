@@ -36,6 +36,14 @@ copies and counts the loss (safety-first profile): **an evidence outage can neve
 turn a DENY into an ALLOW** (F2/B14), and command authorization never blocks on a
 remote collector. The spool is not a lossy transport plane.
 
+The Unix directory manager can opt in to a separately count/byte-bounded snapshot
+of verifier-accepted opaque records grouped by authenticated segment in exact journal
+order. It returns that snapshot only after the complete open/recovery succeeds. The
+manager requires candidate verifier implementations to be deterministic and
+side-effect-free because calls can precede new append capacity and commit; semantic
+reduction happens only after a confirmed append or over a successfully returned
+recovery snapshot used to rebuild fresh state exactly once.
+
 ## Honesty rules
 
 - A publish/prepare stage is never automatically upgraded to `received` /
