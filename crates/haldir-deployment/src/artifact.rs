@@ -38,7 +38,7 @@ impl ArtifactLimits {
 pub struct DeploymentArtifactInput {
     role: DeploymentArtifactIdV1,
     logical_id: AsciiId<64>,
-    bytes: Box<[u8]>,
+    bytes: Vec<u8>,
 }
 
 impl fmt::Debug for DeploymentArtifactInput {
@@ -59,7 +59,7 @@ impl DeploymentArtifactInput {
         Self {
             role,
             logical_id,
-            bytes: bytes.into_boxed_slice(),
+            bytes,
         }
     }
 }
@@ -101,7 +101,7 @@ impl DeploymentArtifactSet {
 
 struct ResolvedArtifact {
     logical_id: AsciiId<64>,
-    bytes: Box<[u8]>,
+    bytes: Vec<u8>,
 }
 
 /// A verified package retaining every exact verified artifact byte string.
@@ -134,7 +134,9 @@ impl ResolvedDeploymentPackage {
     /// Retained exact bytes for a required role.
     #[must_use]
     pub fn artifact(&self, role: DeploymentArtifactIdV1) -> Option<&[u8]> {
-        self.artifacts.get(&role).map(|artifact| &*artifact.bytes)
+        self.artifacts
+            .get(&role)
+            .map(|artifact| artifact.bytes.as_slice())
     }
 
     /// Signed logical identifier associated with retained bytes for a role.
@@ -147,20 +149,10 @@ impl ResolvedDeploymentPackage {
 }
 
 impl VerifiedDeploymentPackage {
-    /// Consume exact owned inputs and retain only a fully verified artifact set.
-    ///
-    /// Signed sizes are preflighted against `limits` before any supplied bytes
-    /// are inspected. Successful resolution retains the same owned byte buffers;
-    /// consumers borrow them without a path or reopen operation.
-    ///
-    /// # Errors
-    /// Returns a stable [`DeploymentError`] for bounds, missing/duplicate input,
-    /// logical identity, exact length, or digest mismatch.
-    pub fn resolve_artifacts(
-        self,
-        mut inputs: DeploymentArtifactSet,
+    pub(crate) fn preflight_artifact_limits(
+        &self,
         limits: ArtifactLimits,
-    ) -> Result<ResolvedDeploymentPackage, DeploymentError> {
+    ) -> Result<(), DeploymentError> {
         let max_artifact = u64::try_from(limits.max_artifact_bytes).unwrap_or(u64::MAX);
         let max_total = u64::try_from(limits.max_total_bytes).unwrap_or(u64::MAX);
         let mut declared_total = 0u64;
@@ -175,6 +167,24 @@ impl VerifiedDeploymentPackage {
                 return Err(DeploymentError::ArtifactTotalTooLarge);
             }
         }
+        Ok(())
+    }
+
+    /// Consume exact owned inputs and retain only a fully verified artifact set.
+    ///
+    /// Signed sizes are preflighted against `limits` before any supplied bytes
+    /// are inspected. Successful resolution retains the same owned byte buffers;
+    /// consumers borrow them without a path or reopen operation.
+    ///
+    /// # Errors
+    /// Returns a stable [`DeploymentError`] for bounds, missing/duplicate input,
+    /// logical identity, exact length, or digest mismatch.
+    pub fn resolve_artifacts(
+        self,
+        mut inputs: DeploymentArtifactSet,
+        limits: ArtifactLimits,
+    ) -> Result<ResolvedDeploymentPackage, DeploymentError> {
+        self.preflight_artifact_limits(limits)?;
 
         let mut resolved = BTreeMap::new();
         for artifact in self.package().artifacts.as_slice() {

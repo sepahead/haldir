@@ -16,5 +16,8 @@ workspace = true
 haldir-contracts.workspace = true
 haldir-crypto.workspace = true
 
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+rustix.workspace = true
+
 [dev-dependencies]
 proptest.workspace = true

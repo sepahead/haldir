@@ -55,6 +55,7 @@ zeroize = { version = "1", default-features = false }
 subtle = { version = "2", default-features = false }
 getrandom = { version = "0.2" }
 proptest = { version = "1" }
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }
 # Exact upstream NCP release implementation. Its key builder is always used by
 # the transport crate; full frame conformance remains off by default elsewhere.
 ncp-core = { version = "=0.8.0", git = "https://github.com/sepahead/NCP", rev = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e", default-features = false }

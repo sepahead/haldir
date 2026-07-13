@@ -236,9 +236,22 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   nonzero size, and deployment-artifact-domain digest for every closed required artifact role.
   Its consuming resolver preflights externally supplied per-artifact/total bounds and retains
   caller-owned verified byte buffers behind a resolved typestate, with no path or reopen API.
-  Bootstrap-policy provenance, bootstrap-revocation freshness, secure path traversal/opening,
-  semantic parsing or use of any artifact, correspondence to the running executable, and NCP
-  compatibility-record semantics remain outside that boundary. `GateConfigTemplate` is still
+  An optional Linux/macOS source consumes an already-open caller-supplied directory capability, derives
+  flat leaf names only from the signed logical IDs, rejects dot leaves, opens each leaf once with
+  no-follow/nonblocking flags, bounds the read to the signed size plus one EOF probe, and checks
+  same-descriptor regular-file/link-count/device/identity/size metadata before and after capture.
+  After complete-set capture, the same consuming call passes those owned bytes to the existing
+  digest resolver; a later root pathname replacement therefore cannot redirect it. This is not an
+  authenticated or protected root opener: the caller selects the original descriptor, and the API
+  enforces no owner, group, mode, ACL, directory-writer, locking, filesystem-locality, mount, or
+  immutability policy.
+  Same-device and link-count observations are point-in-time topology restrictions, not proof of
+  custody; special-node open effects can occur before descriptor type rejection; concurrent writes
+  can cause rejection; and byte bounds do not impose a wall-clock bound on NFS, FUSE, or stalled
+  storage. Other targets return unsupported. Bootstrap-policy provenance, bootstrap-revocation
+  freshness, protected credential opening, semantic parsing or use of any artifact, correspondence
+  to the running executable, and NCP compatibility-record semantics remain outside that boundary.
+  `GateConfigTemplate` is still
   caller-constructed, and no Gate startup consumes the resolved typestate or proves verification
   precedes its entropy, durable, secret, or network effects. The durable v3 state primitive can
   atomically bind a package revision/payload digest with a fresh boot, but its lower public method

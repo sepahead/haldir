@@ -767,6 +767,7 @@ dependencies = [
  "haldir-contracts",
  "haldir-crypto",
  "proptest",
+ "rustix",
 ]
 
 [[package]]

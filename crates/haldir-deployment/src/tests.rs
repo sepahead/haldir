@@ -1,5 +1,12 @@
 use core::num::NonZeroU64;
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::fs::{self, File};
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::path::{Path, PathBuf};
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use haldir_contracts::cbor::{Limits, from_canonical_bytes, to_canonical_bytes};
 use haldir_contracts::deployment::DeploymentRevision;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
@@ -129,6 +136,69 @@ fn artifact_inputs(package: &DeploymentPackageV1) -> DeploymentArtifactSet {
         )
     }))
     .unwrap()
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+static TEST_DIRECTORY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+struct TestArtifactDirectory(PathBuf);
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+impl TestArtifactDirectory {
+    fn new() -> Self {
+        let sequence = TEST_DIRECTORY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "haldir-deployment-source-test-{}-{sequence}",
+            std::process::id()
+        ));
+        fs::create_dir(&path).unwrap();
+        Self(path)
+    }
+
+    fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+impl Drop for TestArtifactDirectory {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn write_artifact_files(root: &Path, package: &DeploymentPackageV1) {
+    for artifact in package.artifacts.as_slice() {
+        fs::write(
+            root.join(artifact.logical_id.as_str()),
+            artifact_bytes(artifact.role),
+        )
+        .unwrap();
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn artifact_path(
+    root: &Path,
+    package: &DeploymentPackageV1,
+    role: DeploymentArtifactIdV1,
+) -> PathBuf {
+    let logical_id = package
+        .artifacts
+        .as_slice()
+        .iter()
+        .find(|artifact| artifact.role == role)
+        .unwrap()
+        .logical_id
+        .as_str();
+    root.join(logical_id)
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn artifact_source(root: &Path) -> ArtifactDirectory {
+    ArtifactDirectory::from_directory(File::open(root).unwrap()).unwrap()
 }
 
 #[test]
@@ -562,6 +632,563 @@ fn artifact_resolution_retains_exact_owned_bytes() {
             Some(artifact_logical_id(role).as_str())
         );
     }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_loads_every_signed_leaf_and_resolves_exact_bytes() {
+    let directory = TestArtifactDirectory::new();
+    let verified = verified();
+    write_artifact_files(directory.path(), verified.package());
+    let source = artifact_source(directory.path());
+
+    let resolved = verified
+        .resolve_artifacts_from_directory(source, ArtifactLimits::new(1024, 4096).unwrap())
+        .unwrap();
+
+    for role in DeploymentArtifactIdV1::ALL {
+        assert_eq!(
+            resolved.artifact(role),
+            Some(artifact_bytes(role).as_slice())
+        );
+        assert_eq!(
+            resolved.artifact_logical_id(role),
+            Some(artifact_logical_id(role).as_str())
+        );
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_capability_stays_bound_after_root_path_replacement() {
+    let outer = TestArtifactDirectory::new();
+    let original = outer.path().join("original");
+    let moved = outer.path().join("moved");
+    fs::create_dir(&original).unwrap();
+    let verified = verified();
+    write_artifact_files(&original, verified.package());
+    let source = artifact_source(&original);
+
+    fs::rename(&original, &moved).unwrap();
+    fs::create_dir(&original).unwrap();
+
+    let resolved = verified
+        .resolve_artifacts_from_directory(source, ArtifactLimits::new(1024, 4096).unwrap())
+        .unwrap();
+    assert_eq!(
+        resolved.artifact(DeploymentArtifactIdV1::GateExecutable),
+        Some(artifact_bytes(DeploymentArtifactIdV1::GateExecutable).as_slice())
+    );
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_reads_opened_leaf_after_its_name_is_replaced() {
+    let directory = TestArtifactDirectory::new();
+    let verified = verified();
+    write_artifact_files(directory.path(), verified.package());
+    let role = DeploymentArtifactIdV1::GateExecutable;
+    let leaf = artifact_path(directory.path(), verified.package(), role);
+    let renamed_leaf = directory.path().join("renamed-open-leaf");
+    let limits = ArtifactLimits::new(1024, 4096).unwrap();
+
+    let inputs = artifact_source(directory.path())
+        .load_with_after_initial_metadata(&verified, limits, |opened_role| {
+            if opened_role == role {
+                fs::rename(&leaf, &renamed_leaf).unwrap();
+                fs::write(&leaf, [0xa5u8, 0x5a]).unwrap();
+            }
+        })
+        .unwrap();
+    let resolved = verified.resolve_artifacts(inputs, limits).unwrap();
+
+    assert_eq!(
+        resolved.artifact(role),
+        Some(artifact_bytes(role).as_slice())
+    );
+    assert_eq!(fs::read(leaf).unwrap(), [0xa5, 0x5a]);
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_detects_growth_shrink_and_post_open_linking() {
+    let role = DeploymentArtifactIdV1::GateExecutable;
+    let limits = ArtifactLimits::new(1024, 4096).unwrap();
+
+    let growth_directory = TestArtifactDirectory::new();
+    let verified_growth = verified();
+    write_artifact_files(growth_directory.path(), verified_growth.package());
+    let growth_leaf = artifact_path(growth_directory.path(), verified_growth.package(), role);
+    assert!(matches!(
+        artifact_source(growth_directory.path()).load_with_after_initial_metadata(
+            &verified_growth,
+            limits,
+            |opened_role| {
+                if opened_role == role {
+                    fs::write(&growth_leaf, [1u8, 1, 1]).unwrap();
+                }
+            }
+        ),
+        Err(DeploymentError::ArtifactSourceSizeMismatch(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let shrink_directory = TestArtifactDirectory::new();
+    let verified_shrink = verified();
+    write_artifact_files(shrink_directory.path(), verified_shrink.package());
+    let shrink_leaf = artifact_path(shrink_directory.path(), verified_shrink.package(), role);
+    assert!(matches!(
+        artifact_source(shrink_directory.path()).load_with_after_initial_metadata(
+            &verified_shrink,
+            limits,
+            |opened_role| {
+                if opened_role == role {
+                    fs::write(&shrink_leaf, [1u8]).unwrap();
+                }
+            }
+        ),
+        Err(DeploymentError::ArtifactSourceSizeMismatch(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let link_directory = TestArtifactDirectory::new();
+    let verified_link = verified();
+    write_artifact_files(link_directory.path(), verified_link.package());
+    let link_leaf = artifact_path(link_directory.path(), verified_link.package(), role);
+    let alias = link_directory.path().join("post-open-alias");
+    assert!(matches!(
+        artifact_source(link_directory.path()).load_with_after_initial_metadata(
+            &verified_link,
+            limits,
+            |opened_role| {
+                if opened_role == role {
+                    fs::hard_link(&link_leaf, &alias).unwrap();
+                }
+            }
+        ),
+        Err(DeploymentError::ArtifactSourceChanged(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_same_size_post_open_mutation_reaches_digest_rejection() {
+    let directory = TestArtifactDirectory::new();
+    let verified = verified();
+    write_artifact_files(directory.path(), verified.package());
+    let role = DeploymentArtifactIdV1::GateExecutable;
+    let leaf = artifact_path(directory.path(), verified.package(), role);
+    let limits = ArtifactLimits::new(1024, 4096).unwrap();
+
+    let inputs = artifact_source(directory.path())
+        .load_with_after_initial_metadata(&verified, limits, |opened_role| {
+            if opened_role == role {
+                fs::write(&leaf, [0xa5u8, 0x5a]).unwrap();
+            }
+        })
+        .unwrap();
+
+    assert!(matches!(
+        verified.resolve_artifacts(inputs, limits),
+        Err(DeploymentError::ArtifactDigestMismatch(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_rejects_a_second_role_resolving_to_the_same_inode() {
+    let first_role = DeploymentArtifactIdV1::GateExecutable;
+    let second_role = DeploymentArtifactIdV1::GateConfiguration;
+    let mut same_bytes_package = package();
+    same_bytes_package.artifacts = BoundedVec::from_vec({
+        let mut refs = same_bytes_package.artifacts.as_slice().to_vec();
+        refs[1].digest = refs[0].digest;
+        refs[1].size_bytes = refs[0].size_bytes;
+        refs
+    })
+    .unwrap();
+    let (envelope, trust, _) = signed_with(
+        &same_bytes_package,
+        34,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        Some("deployment-authority-a"),
+    );
+    let verified_same =
+        verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
+            .unwrap();
+    let directory = TestArtifactDirectory::new();
+    write_artifact_files(directory.path(), verified_same.package());
+    let first_leaf = artifact_path(directory.path(), verified_same.package(), first_role);
+    let second_leaf = artifact_path(directory.path(), verified_same.package(), second_role);
+    fs::write(&second_leaf, artifact_bytes(first_role)).unwrap();
+
+    assert!(matches!(
+        artifact_source(directory.path()).load_with_after_initial_metadata(
+            &verified_same,
+            ArtifactLimits::new(1024, 4096).unwrap(),
+            |opened_role| {
+                if opened_role == first_role {
+                    fs::rename(&first_leaf, &second_leaf).unwrap();
+                }
+            }
+        ),
+        Err(DeploymentError::ArtifactSourceEntryRejected(
+            DeploymentArtifactIdV1::GateConfiguration
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_rejects_missing_symlink_and_hardlink_entries() {
+    use std::os::unix::fs::symlink;
+
+    let role = DeploymentArtifactIdV1::GateExecutable;
+
+    let missing_directory = TestArtifactDirectory::new();
+    let verified_missing = verified();
+    write_artifact_files(missing_directory.path(), verified_missing.package());
+    fs::remove_file(artifact_path(
+        missing_directory.path(),
+        verified_missing.package(),
+        role,
+    ))
+    .unwrap();
+    assert!(matches!(
+        verified_missing.resolve_artifacts_from_directory(
+            artifact_source(missing_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceEntryUnavailable(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let symlink_directory = TestArtifactDirectory::new();
+    let verified_symlink = verified();
+    write_artifact_files(symlink_directory.path(), verified_symlink.package());
+    let symlink_path = artifact_path(symlink_directory.path(), verified_symlink.package(), role);
+    fs::remove_file(&symlink_path).unwrap();
+    symlink(
+        artifact_path(
+            symlink_directory.path(),
+            verified_symlink.package(),
+            DeploymentArtifactIdV1::GateConfiguration,
+        ),
+        &symlink_path,
+    )
+    .unwrap();
+    assert!(matches!(
+        verified_symlink.resolve_artifacts_from_directory(
+            artifact_source(symlink_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceEntryUnavailable(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let hardlink_directory = TestArtifactDirectory::new();
+    let verified_hardlink = verified();
+    write_artifact_files(hardlink_directory.path(), verified_hardlink.package());
+    let hardlink_path = artifact_path(hardlink_directory.path(), verified_hardlink.package(), role);
+    fs::remove_file(&hardlink_path).unwrap();
+    fs::hard_link(
+        artifact_path(
+            hardlink_directory.path(),
+            verified_hardlink.package(),
+            DeploymentArtifactIdV1::GateConfiguration,
+        ),
+        &hardlink_path,
+    )
+    .unwrap();
+    assert!(matches!(
+        verified_hardlink.resolve_artifacts_from_directory(
+            artifact_source(hardlink_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceEntryRejected(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let outer = TestArtifactDirectory::new();
+    let external_root = outer.path().join("root");
+    fs::create_dir(&external_root).unwrap();
+    let verified_external = verified();
+    write_artifact_files(&external_root, verified_external.package());
+    let external_path = outer.path().join("external-artifact");
+    fs::write(&external_path, artifact_bytes(role)).unwrap();
+    let external_link = artifact_path(&external_root, verified_external.package(), role);
+    fs::remove_file(&external_link).unwrap();
+    fs::hard_link(&external_path, &external_link).unwrap();
+    assert!(matches!(
+        verified_external.resolve_artifacts_from_directory(
+            artifact_source(&external_root),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceEntryRejected(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_rejects_directory_and_socket_entries() {
+    use std::os::unix::net::UnixListener;
+
+    let role = DeploymentArtifactIdV1::GateExecutable;
+
+    let nested_directory = TestArtifactDirectory::new();
+    let verified_directory = verified();
+    write_artifact_files(nested_directory.path(), verified_directory.package());
+    let nested_path = artifact_path(nested_directory.path(), verified_directory.package(), role);
+    fs::remove_file(&nested_path).unwrap();
+    fs::create_dir(&nested_path).unwrap();
+    assert!(matches!(
+        verified_directory.resolve_artifacts_from_directory(
+            artifact_source(nested_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceEntryRejected(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let socket_directory = TestArtifactDirectory::new();
+    let verified_socket = verified();
+    write_artifact_files(socket_directory.path(), verified_socket.package());
+    let socket_path = artifact_path(socket_directory.path(), verified_socket.package(), role);
+    fs::remove_file(&socket_path).unwrap();
+    let _listener = UnixListener::bind(&socket_path).unwrap();
+    assert!(matches!(
+        verified_socket.resolve_artifacts_from_directory(
+            artifact_source(socket_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceEntryUnavailable(
+            DeploymentArtifactIdV1::GateExecutable
+        )) | Err(DeploymentError::ArtifactSourceEntryRejected(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_rejects_fifo_without_blocking_for_a_writer() {
+    use std::process::Command;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    let directory = TestArtifactDirectory::new();
+    let verified = verified();
+    write_artifact_files(directory.path(), verified.package());
+    let role = DeploymentArtifactIdV1::GateExecutable;
+    let path = artifact_path(directory.path(), verified.package(), role);
+    fs::remove_file(&path).unwrap();
+    let root = File::open(directory.path()).unwrap();
+    assert!(
+        Command::new("mkfifo")
+            .arg(&path)
+            .status()
+            .unwrap()
+            .success()
+    );
+
+    let (sender, receiver) = mpsc::channel();
+    let worker = thread::spawn(move || {
+        let result = verified.resolve_artifacts_from_directory(
+            ArtifactDirectory::from_directory(root).unwrap(),
+            ArtifactLimits::new(1024, 4096).unwrap(),
+        );
+        sender.send(result).unwrap();
+    });
+    let result = receiver
+        .recv_timeout(Duration::from_secs(2))
+        .expect("FIFO source open exceeded the nonblocking test deadline");
+    worker.join().unwrap();
+
+    assert!(matches!(
+        result,
+        Err(DeploymentError::ArtifactSourceEntryRejected(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_opens_then_rejects_a_device_entry() {
+    let mut device_package = package();
+    device_package.artifacts = BoundedVec::from_vec({
+        let mut refs = device_package.artifacts.as_slice().to_vec();
+        refs[0].logical_id = AsciiId::new("null").unwrap();
+        refs
+    })
+    .unwrap();
+    let (envelope, trust, _) = signed_with(
+        &device_package,
+        33,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        Some("deployment-authority-a"),
+    );
+    let verified_device =
+        verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
+            .unwrap();
+    let source = ArtifactDirectory::from_directory(File::open("/dev").unwrap()).unwrap();
+
+    assert!(matches!(
+        verified_device
+            .resolve_artifacts_from_directory(source, ArtifactLimits::new(1024, 4096).unwrap()),
+        Err(DeploymentError::ArtifactSourceEntryRejected(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_rejects_short_long_and_wrong_digest_bytes() {
+    let role = DeploymentArtifactIdV1::GateExecutable;
+
+    let short_directory = TestArtifactDirectory::new();
+    let verified_short = verified();
+    write_artifact_files(short_directory.path(), verified_short.package());
+    fs::write(
+        artifact_path(short_directory.path(), verified_short.package(), role),
+        [1u8],
+    )
+    .unwrap();
+    assert!(matches!(
+        verified_short.resolve_artifacts_from_directory(
+            artifact_source(short_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceSizeMismatch(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let long_directory = TestArtifactDirectory::new();
+    let verified_long = verified();
+    write_artifact_files(long_directory.path(), verified_long.package());
+    fs::write(
+        artifact_path(long_directory.path(), verified_long.package(), role),
+        [1u8, 1, 1],
+    )
+    .unwrap();
+    assert!(matches!(
+        verified_long.resolve_artifacts_from_directory(
+            artifact_source(long_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactSourceSizeMismatch(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+
+    let digest_directory = TestArtifactDirectory::new();
+    let verified_digest = verified();
+    write_artifact_files(digest_directory.path(), verified_digest.package());
+    fs::write(
+        artifact_path(digest_directory.path(), verified_digest.package(), role),
+        [0xa5u8, 0x5a],
+    )
+    .unwrap();
+    assert!(matches!(
+        verified_digest.resolve_artifacts_from_directory(
+            artifact_source(digest_directory.path()),
+            ArtifactLimits::new(1024, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactDigestMismatch(
+            DeploymentArtifactIdV1::GateExecutable
+        ))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_preflights_limits_and_flat_signed_names_before_entry_open() {
+    let empty_directory = TestArtifactDirectory::new();
+    assert!(matches!(
+        verified().resolve_artifacts_from_directory(
+            artifact_source(empty_directory.path()),
+            ArtifactLimits::new(1, 4096).unwrap()
+        ),
+        Err(DeploymentError::ArtifactDeclaredTooLarge(_))
+    ));
+    assert_eq!(
+        verified()
+            .resolve_artifacts_from_directory(
+                artifact_source(empty_directory.path()),
+                ArtifactLimits::new(14, 20).unwrap(),
+            )
+            .unwrap_err(),
+        DeploymentError::ArtifactTotalTooLarge
+    );
+
+    for (seed, invalid_name) in [(31, "."), (32, "..")] {
+        let mut invalid_package = package();
+        invalid_package.artifacts = BoundedVec::from_vec({
+            let mut refs = invalid_package.artifacts.as_slice().to_vec();
+            refs.last_mut().unwrap().logical_id = AsciiId::new(invalid_name).unwrap();
+            refs
+        })
+        .unwrap();
+        let (envelope, trust, _) = signed_with(
+            &invalid_package,
+            seed,
+            KeyRole::DeploymentAuthority,
+            KeyClass::Assurance,
+            Some("deployment-authority-a"),
+        );
+        let verified_invalid =
+            verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
+                .unwrap();
+        assert!(matches!(
+            verified_invalid.resolve_artifacts_from_directory(
+                artifact_source(empty_directory.path()),
+                ArtifactLimits::new(1024, 4096).unwrap()
+            ),
+            Err(DeploymentError::ArtifactSourceNameInvalid(
+                DeploymentArtifactIdV1::SourceLedger
+            ))
+        ));
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn directory_source_rejects_nondirectory_root_and_redacts_capability() {
+    let directory = TestArtifactDirectory::new();
+    let secret_path = directory.path().join("SECRET_ROOT_PATH");
+    fs::write(&secret_path, b"not a directory").unwrap();
+    assert_eq!(
+        ArtifactDirectory::from_directory(File::open(&secret_path).unwrap()).unwrap_err(),
+        DeploymentError::ArtifactSourceRootInvalid
+    );
+
+    let source = artifact_source(directory.path());
+    let debug = format!("{source:?}");
+    assert!(!debug.contains(directory.path().to_string_lossy().as_ref()));
+    assert!(!debug.contains("SECRET_ROOT_PATH"));
+
+    let error = verified()
+        .resolve_artifacts_from_directory(source, ArtifactLimits::new(1024, 4096).unwrap())
+        .unwrap_err();
+    assert!(!format!("{error:?}").contains(directory.path().to_string_lossy().as_ref()));
+    assert!(!error.to_string().contains("SECRET_ROOT_PATH"));
 }
 
 #[test]

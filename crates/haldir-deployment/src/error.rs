@@ -47,6 +47,26 @@ pub enum DeploymentError {
     ArtifactLengthMismatch(DeploymentArtifactIdV1),
     /// Owned bytes did not have the exact signed domain-separated digest.
     ArtifactDigestMismatch(DeploymentArtifactIdV1),
+    /// The local artifact source is unavailable on this platform.
+    ArtifactSourceUnsupported,
+    /// The caller-supplied source capability was not an open directory.
+    ArtifactSourceRootInvalid,
+    /// A signed logical identifier was not a safe flat source filename.
+    ArtifactSourceNameInvalid(DeploymentArtifactIdV1),
+    /// A required source entry could not be opened through the directory capability.
+    ArtifactSourceEntryUnavailable(DeploymentArtifactIdV1),
+    /// An opened source entry had rejected filesystem topology or file type.
+    ArtifactSourceEntryRejected(DeploymentArtifactIdV1),
+    /// A signed source size could not support a bounded sentinel read.
+    ArtifactSourceSizeUnsupported(DeploymentArtifactIdV1),
+    /// An opened source entry did not have the exact signed size.
+    ArtifactSourceSizeMismatch(DeploymentArtifactIdV1),
+    /// An opened source entry changed during capture.
+    ArtifactSourceChanged(DeploymentArtifactIdV1),
+    /// A bounded source buffer could not be allocated.
+    ArtifactSourceAllocationFailed(DeploymentArtifactIdV1),
+    /// Reading an opened source entry failed.
+    ArtifactSourceReadFailed(DeploymentArtifactIdV1),
 }
 
 impl DeploymentError {
@@ -72,6 +92,20 @@ impl DeploymentError {
             Self::ArtifactLogicalIdMismatch(_) => "DEPLOYMENT_ARTIFACT_ID_MISMATCH",
             Self::ArtifactLengthMismatch(_) => "DEPLOYMENT_ARTIFACT_LENGTH_MISMATCH",
             Self::ArtifactDigestMismatch(_) => "DEPLOYMENT_ARTIFACT_DIGEST_MISMATCH",
+            Self::ArtifactSourceUnsupported => "DEPLOYMENT_ARTIFACT_SOURCE_UNSUPPORTED",
+            Self::ArtifactSourceRootInvalid => "DEPLOYMENT_ARTIFACT_SOURCE_ROOT_INVALID",
+            Self::ArtifactSourceNameInvalid(_) => "DEPLOYMENT_ARTIFACT_SOURCE_NAME_INVALID",
+            Self::ArtifactSourceEntryUnavailable(_) => {
+                "DEPLOYMENT_ARTIFACT_SOURCE_ENTRY_UNAVAILABLE"
+            }
+            Self::ArtifactSourceEntryRejected(_) => "DEPLOYMENT_ARTIFACT_SOURCE_ENTRY_REJECTED",
+            Self::ArtifactSourceSizeUnsupported(_) => "DEPLOYMENT_ARTIFACT_SOURCE_SIZE_UNSUPPORTED",
+            Self::ArtifactSourceSizeMismatch(_) => "DEPLOYMENT_ARTIFACT_SOURCE_SIZE_MISMATCH",
+            Self::ArtifactSourceChanged(_) => "DEPLOYMENT_ARTIFACT_SOURCE_CHANGED",
+            Self::ArtifactSourceAllocationFailed(_) => {
+                "DEPLOYMENT_ARTIFACT_SOURCE_ALLOCATION_FAILED"
+            }
+            Self::ArtifactSourceReadFailed(_) => "DEPLOYMENT_ARTIFACT_SOURCE_READ_FAILED",
         }
     }
 }

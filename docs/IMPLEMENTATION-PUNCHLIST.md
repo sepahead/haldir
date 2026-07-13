@@ -60,10 +60,12 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   the declaration in `StartupReport` and separately mints a private move-only capability
   consumed by the live coordinator typestate, holds the instance lock, and explicitly
   provisions or opens development-local state. Exact reference and copied-report paths
-  cannot mint the capability. A separate strict package/owned-artifact verifier and atomic v3
-  package-plus-boot ratchet now exist, but no Gate startup consumes either typestate
+  cannot mint the capability. A separate strict package/owned-artifact verifier, bounded Linux/macOS
+  source from a caller-supplied directory capability, and atomic v3 package-plus-boot ratchet now
+  exist, but no Gate startup consumes either typestate
   (`CL-DEPLOYMENT-PRIMITIVE-01`). **Still absent:** private Gate glue that makes the authenticated
-  declaration mandatory, a protected credential/artifact opener, and a deployed external
+  declaration mandatory, authenticated/protected artifact-root and credential acquisition,
+  semantic artifact loaders, and a deployed external
   non-rewindable anchor, so end-to-end cross-restart protection is not established (see
   `docs/LIMITATIONS.md`). Direct actor construction bypasses template startup.
 - `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,
@@ -182,8 +184,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   now enforce explicit disposable provisioning versus `OpenExisting` live bind/immediate shutdown.
   The declaration and activation delivery are neither authenticated nor durable, and no
   authenticated credential-opening executable or ongoing control loop selects them. A separate
-  package primitive verifies and retains exact signed artifact bytes and can supply neutral values
-  to an atomic package/boot ratchet, but no Gate path consumes those stages. The
+  package primitive verifies and retains exact signed artifact bytes; its optional bounded Linux/macOS
+  source captures signed flat leaves from a caller-supplied open directory without reopening them.
+  It can also supply neutral values to an atomic package/boot ratchet, but no Gate path consumes
+  those stages. The
   retained synthetic ACL campaign proves the fixed final-command/controller-intent subset across all
   configured principals, and the separate retained development campaign proves only concrete
   session-open, aggregate-bind, and immediate local-shutdown returns. Certificate

@@ -94,13 +94,18 @@ says they mean.
 A separate, non-runnable deployment primitive strictly verifies a canonical signed package against
 separately supplied bootstrap trust and an exact expected authority/Gate/realm/vehicle/profile/
 runtime policy. The standalone API does not prove where its caller obtained that policy. It then
-consumes and retains one exact owned byte string for every closed required artifact role. The
-separate durable v3 anti-rollback primitive can atomically commit caller-supplied neutral revision/
+consumes and retains one exact owned byte string for every closed required artifact role. On Linux
+and macOS,
+an optional fused source accepts an already-open directory capability, uses each signed logical ID
+as one flat non-dot leaf, opens each leaf once without following its final symlink, captures bounded
+bytes from that same handle, and resolves the complete captured set within the same consuming call.
+The caller remains responsible for selecting and protecting the root directory. The separate durable v3 anti-rollback
+primitive can atomically commit caller-supplied neutral revision/
 payload-digest values with a fresh boot, rejecting rollback, same-revision equivocation, implicit
 legacy binding, and later plain-boot downgrade. No type-enforced path makes those values originate
 at the verifier (`CL-DEPLOYMENT-PRIMITIVE-01`). No Gate startup path consumes the resolved typestate
-yet; there is no protected artifact/credential opener or running-binary/configuration binding, so
-`CL-DEPLOYMENT-PACKAGE-01` remains unproven.
+yet; there is no authenticated/protected root or credential opener, semantic artifact use, or
+running-binary/configuration binding, so `CL-DEPLOYMENT-PACKAGE-01` remains unproven.
 
 ### What is implemented and tested locally (the P0 pure core)
 

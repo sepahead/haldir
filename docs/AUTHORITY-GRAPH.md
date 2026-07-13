@@ -12,8 +12,10 @@ than one authority domain: `CONTROLLER_INTENT`, `MISSION_AUTHORITY`,
 Gate, realm, vehicle, class, runtime, and NCP-wire profile, and the verifier rejects any package
 mismatch. The standalone API cannot establish where its caller obtained that policy; future Gate
 glue must source it from bootstrap state rather than derive it from the package. This capability is
-not yet an input to the Gate command conjunction below: no startup path consumes the resolved
-artifact typestate or package-booted durable capability.
+not yet an input to the Gate command conjunction below. Its optional Linux/macOS artifact source begins
+from a caller-supplied open directory and proves bounded no-reopen byte capture, not authenticated
+root or credential custody; no startup path consumes the resolved artifact typestate or
+package-booted durable capability.
 
 ## Effective permission to create a plant command (conjunction)
 

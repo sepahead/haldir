@@ -25,9 +25,10 @@ fully proven; **not started** means no qualifying implementation/evidence is pre
 The offline P0 reference-monitor core is implemented and its local exit gate passes.
 A retained clean-source development campaign now proves the narrow strict-session-open,
 aggregate-bind, and immediate local-shutdown observation in `CL-LIVE-GATE-DEV-BIND-01`.
-A separate local primitive now verifies strict signed deployment-package bytes, resolves and
-retains exact artifact bytes, and supplies neutral revision/payload-digest values to an atomic
-package-plus-boot ratchet (`CL-DEPLOYMENT-PRIMITIVE-01`). It is not connected to Gate startup.
+A separate local primitive now verifies strict signed deployment-package bytes, optionally captures
+bounded artifact bytes from a caller-supplied Linux/macOS directory capability without a leaf reopen,
+resolves and retains the exact bytes, and supplies neutral revision/payload-digest values to an
+atomic package-plus-boot ratchet (`CL-DEPLOYMENT-PRIMITIVE-01`). It is not connected to Gate startup.
 The full Haldir project remains incomplete: production durable recovery, authenticated mandatory
 selection of the exact NCP/internal strict transport path, certificate-lifecycle/reconnect and
 bypass proof beyond the retained synthetic ACL subset and narrow development Gate bind/shutdown
@@ -48,7 +49,7 @@ limitations inside `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
 | 2 — canonical contracts and malformed corpus | Done (P0) | Strict deterministic CBOR, golden vectors, structural limits, and hostile parser tests (`CL-CBOR-01`). |
 | 3 — signatures, roles, trust | Done (P0) | COSE/Ed25519, domain binding, trust conflict handling, role/subject enforcement (`CL-COSE-01`, `CL-TRUST-01`, `CL-IDENTITY-01`). |
 | 4 — controller/backend admission | Partial | Structural digest admission exists; profile reconstruction and behavioral backend equivalence do not (`CL-BACKEND-01`). |
-| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases/revocation, a collision-free lease-term scope with downgrade-safe migration, checked high-water state, classified generation anchors, Unix atomic files, explicit development-local Gate startup, runtime-profile validation before the listed startup-owned calls/accesses, a strict signed deployment-package/owned-artifact verifier, and an atomic store-global package-plus-boot ratchet for the store's authenticated Gate binding exist (`CL-DURABLE-PRIMITIVE-01`, `CL-DURABLE-STARTUP-DEV-01`, `CL-DEPLOYMENT-PRIMITIVE-01`). The verifier and ratchet are not connected to Gate startup. An authenticated mandatory runtime package, protected artifact/credential loader, authenticated live control plane, deployed external anchor, cross-store transfer, crash campaign, and live preemption do not (`CL-DEPLOYMENT-PACKAGE-01`, `CL-LIVE-CONTROL-PLANE-01`, `CL-DURABLE-01`, issue #3). |
+| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases/revocation, a collision-free lease-term scope with downgrade-safe migration, checked high-water state, classified generation anchors, Unix atomic files, explicit development-local Gate startup, runtime-profile validation before the listed startup-owned calls/accesses, a strict signed deployment-package/owned-artifact verifier with an optional bounded Linux/macOS directory-capability source, and an atomic store-global package-plus-boot ratchet for the store's authenticated Gate binding exist (`CL-DURABLE-PRIMITIVE-01`, `CL-DURABLE-STARTUP-DEV-01`, `CL-DEPLOYMENT-PRIMITIVE-01`). The verifier and ratchet are not connected to Gate startup. An authenticated mandatory runtime package, authenticated/protected artifact-root and credential acquisition, authenticated live control plane, deployed external anchor, cross-store transfer, crash campaign, and live preemption do not (`CL-DEPLOYMENT-PACKAGE-01`, `CL-LIVE-CONTROL-PLANE-01`, `CL-DURABLE-01`, issue #3). |
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
@@ -122,8 +123,8 @@ limitations inside `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
 
 1. **Authority/evidence:** preserve the retained development smoke and the separately proven
    deployment primitives at their narrow claim boundaries (`CL-LIVE-GATE-DEV-BIND-01`,
-   `CL-DEPLOYMENT-PRIMITIVE-01`). Next add a bounded single-open source loader, protected
-   credential opening, semantic decoders for every verified artifact, and private Gate glue that
+   `CL-DEPLOYMENT-PRIMITIVE-01`). Next add authenticated/protected artifact-root and credential
+   acquisition, semantic decoders for every verified artifact, and private Gate glue that
    consumes the resolved package plus package-booted capability before startup effects. Then add a
    real external anchor and mandatory durable evidence-manager selection before authority can
    become active. The full deployment-package/control-plane claims remain unproven until those gates.
