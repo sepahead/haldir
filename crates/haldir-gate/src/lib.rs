@@ -8,8 +8,10 @@
 //! `assurance-reference-v1` profile: in-process, deterministic, no live transport,
 //! no neural runtime, no physical hardware (see `docs/LIMITATIONS.md`). The
 //! off-by-default `live-zenoh` feature additionally exposes single-owner local
-//! kernels and an optional caller-session-backed ingress aggregate; no executable
-//! or supervised runnable package selects that aggregate here.
+//! kernels and an optional caller-session-backed ingress aggregate. The stricter
+//! `live-gate-dev-smoke` feature adds separate disposable-fixture provisioning and
+//! OpenExisting-only bind/immediate-shutdown examples; no authenticated or
+//! supervised production package selects the aggregate here.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,

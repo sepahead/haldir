@@ -28,7 +28,8 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **YES** — Parser/size limits before expensive work (ingress cap before verify).
 - **PARTIAL** — Actual route + principal bound: the actual key and application signer
   are bound in actor Stage 3, and the retained mTLS router campaign binds configured
-  certificate principals to its tested route subset. No runnable Gate passes an
+  certificate principals to its tested route subset. The development bind target records Zenoh's
+  operational ZID as non-authoritative and never processes an event; no Gate passes an
   authenticated transport identity into actor decisions.
 - **PARTIAL** — NCP stream/source/session semantics: current P0 fixtures remain modeled,
   while a closed explicit exact-revision selection passes upstream validated JSON,
@@ -44,8 +45,10 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   lease becomes active. The lower public service can consume only that route-bound result plus a
   preconstructed matched publisher. The outer aggregate instead consumes that result and one
   supplied session wrapper, internally deriving the publisher and exact ingress from the same
-  lineage. No runnable Gate package authenticates/refreshes those control inputs or
-  selects/opens the session, credentials, or Crebain deployment.
+  lineage. Separate development examples explicitly provision then `OpenExisting`-open that path
+  for immediate bind/shutdown only; they do not authenticate/refresh control inputs, protect
+  credential custody, process an intent, or select a Crebain deployment, and their retained live
+  evidence is still open (`CL-LIVE-GATE-DEV-BIND-01`).
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
   coordinator orders local receipt/Called/terminal evidence and blocks replacement after
@@ -66,8 +69,9 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   successful request acceptance is not cleanup acknowledgment, legacy `process_next` ignores it,
   and clones must be restricted. This does not establish an in-flight timeout, OS-signal runner,
   journal finalization, remote session retirement, or graceful production shutdown. Service result, cold/pending-drop, rejection, and terminal-fault
-  tests still use a fake publisher rather than a live session. No runnable Gate credential-opening
-  package, control loop, or publisher worker selects it; lower APIs remain bypasses, the frame
+  tests still use a fake publisher rather than a live session. The development target binds and
+  immediately shuts down without calling the processing/publisher path. No authenticated protected-
+  credential package, control loop, or publisher worker selects it; lower APIs remain bypasses, the frame
   remains copyable there, and exactly-once submission is not enforced.
 
 ## Policy
@@ -113,8 +117,8 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   never flips a decision.
 - **PARTIAL** — The retained live mTLS/ACL campaign proves only the pinned synthetic
   command/intent subset (`CL-LIVE-TRANSPORT-01`). The remaining operation/route and
-  certificate-lifecycle matrix, p99/p99.9 latency, and long-run resource campaign are
-  still absent.
+  certificate-lifecycle matrix, a retained Gate bind/shutdown run
+  (`CL-LIVE-GATE-DEV-BIND-01`), p99/p99.9 latency, and long-run resource campaign are absent.
 - **PARTIAL** — Exact commits/lockfile pinned and `pins.toml`/`verify-pins.py`
   present; SBOM/provenance/reproducible-release is a release-phase task.
 - **YES** — Every push was normal and non-forced.

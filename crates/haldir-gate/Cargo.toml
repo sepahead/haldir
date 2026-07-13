@@ -21,10 +21,21 @@ live-zenoh = [
     "dep:tokio",
     "haldir-transport-zenoh/live-zenoh",
 ]
+live-gate-dev-smoke = ["live-zenoh", "dep:serde_json", "tokio/rt"]
 
 [[bin]]
 name = "haldir-gate"
 path = "src/main.rs"
+
+[[example]]
+name = "live_gate_dev_fixture_provision"
+path = "examples/live_gate_dev_fixture_provision.rs"
+required-features = ["live-gate-dev-smoke"]
+
+[[example]]
+name = "live_gate_dev_bind_shutdown"
+path = "examples/live_gate_dev_bind_shutdown.rs"
+required-features = ["live-gate-dev-smoke"]
 
 [dependencies]
 haldir-contracts.workspace = true
@@ -39,6 +50,7 @@ haldir-evidence.workspace = true
 haldir-durable.workspace = true
 haldir-transport-zenoh = { workspace = true, optional = true }
 getrandom.workspace = true
+serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 [dev-dependencies]

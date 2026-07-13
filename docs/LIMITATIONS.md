@@ -45,7 +45,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   compatibility label and now has the narrow synthetic ACL evidence above. It is still
   not established for a packaged Gate/Crebain deployment, production credentials, or a
   complete actuator/bypass inventory.
-- **Declared-live startup validation is not a live Gate path.** The off-by-default
+- **Declared-live validation plus a development target is not an authenticated live service.** The off-by-default
   `real-ncp` feature compiles the exact pinned `ncp-core` v0.8.0 revision and its
   frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). `GateConfigTemplate` now carries
   both the closed adapter selection and an explicit `GateRuntimeProfile`.
@@ -73,13 +73,31 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   service to a preconstructed matched publisher. A separate outer
   `DeclaredLiveGateZenohService` consumes that same capability, one caller-opened session wrapper,
   and bounded ingress limits; it re-derives the accepted-controller route and internally constructs
-  the publisher and exact ingress from the same supplied session lineage. No runnable Gate binary
-  or service package selects this aggregate, authenticates or continually supplies those local
-  control/state inputs, opens/authenticates its session, loads/protects its credentials, or supplies
-  a plant binding.
-  It therefore proves neither transport invocation nor publication, delivery, acceptance,
-  application, credential custody, bypass closure, or ACL exclusivity.
-- **A public single-owner kernel exists; its deployment binding is not runnable.** The actor keeps
+  the publisher and exact ingress from the same supplied session lineage. The separate
+  `live-gate-dev-smoke` examples use public deterministic fixture keys: an offline target explicitly
+  provisions disposable state+journal, while the networked target refuses provisioning, opens that
+  existing fixture, performs caller-local activation, consumes a caller-supplied strict-client
+  configuration, binds, and immediately invokes explicit shutdown under its own outer lock. It
+  receives/processes no intent and invokes no command publication. No retained clean-source live
+  campaign has exercised those calls yet (`CL-LIVE-GATE-DEV-BIND-01`). Neither target authenticates
+  or continually supplies control/state inputs, loads protected credentials, or supplies a plant
+  binding. Compile/offline evidence therefore proves neither concrete transport invocation nor
+  publication, delivery, acceptance, application, credential custody, bypass closure, or ACL
+  exclusivity. The target preflights the exact state files and bounded journal namespace before
+  committing its fresh boot, publishes its result atomically outside the fixture, and attempts to
+  publish a bounded cleanup classification for failures after the outer lock is acquired. Result
+  publication is best-effort under storage failure; fixture/result preflight and lock-acquisition
+  failures occur before that reporting boundary and produce no result JSON. The disposable
+  journal permits at most 32 segments; provisioning consumes the first, and an attempted reopen
+  can close the active tail and consume another even if the later session open or bind fails.
+  Exhausted or uncertain fixtures must be discarded and reprovisioned rather than treated as a
+  restartable production store. The pathname checks and advisory outer lock assume a cooperative,
+  trusted host; they are not confinement against a host that replaces directories. The campaign
+  runner cleans its named containers, network, image, copied fixture, and ephemeral private-key
+  directories on handled exits, but abrupt process/daemon/host loss can leave material below the
+  ignored `target/live-gate-dev-smoke/` output and requires manual cleanup. BuildKit caches are not
+  retained campaign evidence and are outside that runtime cleanup result.
+- **A public single-owner kernel exists; deployment binding is limited to a disposable smoke.** The actor keeps
   one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
   non-cloneable; exact bytes become accessible only after the actor rechecks authority,
   causal state, the safety-margin deadline, and checked active-horizon arithmetic.
@@ -145,16 +163,18 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   undeclare/drain, then drops the publisher-owning service, then closes the retained wrapper.
   That is local transport cleanup, not a durable evidence-journal footer/finalization operation
   or confirmed remote session retirement. Dropping the service releases its durable instance
-  lock before session close returns; a future package needs a separate outer instance lock held
-  from before credential/session setup through final teardown.
+  lock before session close returns. The development bind target adds a separate target-local lock
+  held from before configuration/session setup through final teardown; a production package still
+  needs an authenticated, deployment-wide version of that rule.
   Offline tests use an explicit fake session/ingress/publisher seam and prove only local
   composition and ownership ordering; no test opens the concrete session, declares the concrete
   subscriber, or invokes the concrete publisher. `SecureZenohSession` is move-only but wraps a
   shared session, and public borrowing constructors can mint typed ingress/publisher handles before
   the wrapper is consumed. The aggregate therefore does not prove exclusive credentials, a sole
   global session/subscriber/publisher handle, or confirmed remote cleanup after cancellation/drop.
-  No production control plane, credential-opening package, publisher worker, supervisor, or runnable
-  executable selects it, and no graceful production-shutdown property is established. A Called record alone is a
+  No production control plane, protected credential-opening package, publisher worker, or supervisor
+  selects it, and no graceful production-shutdown property is established. The development target's
+  immediate shutdown is only a local cleanup call. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.
   Lower-level actor frame access, the copyable frame type, the reusable publisher API, and
   independently constructible session-backed publishers still permit resubmission outside
@@ -176,7 +196,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   disk-full behavior, real append-commit ambiguity on either recovery side, panic-abort or service
   supervision, live-session cancellation/timeout/panic, child-process crash, a shared
   clock origin, or power loss. The concrete
-  method is compile-tested but not live-invoked; this is not a publication,
+  method is compile-tested but not live-invoked; the development target never calls it. This is not a publication,
   receiver-inactivity, delivery, or application claim.
 - **NEST / Engram controllers.** No neural runtime is present. Admission checks
   digest equality only; **no backend behavioural conformance** (running NEST /
@@ -238,7 +258,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   safe path-based standard-library APIs, and does not claim macOS `F_FULLFSYNC`,
   power-loss, network/FAT/overlay filesystem, or adversarial directory-rewind
   guarantees. A same-filesystem anchor cannot close `CL-DURABLE-01`.
-- **Durable evidence lifecycle is not selected by a runnable Gate service.**
+- **Durable evidence lifecycle is selected only by the disposable development examples.**
   `haldir-evidence::journal` unit-tests a bounded Unix segment format with
   CRC32C-framed opaque records, Gate/boot/key/sequence/previous-digest headers,
   checked genesis/successor construction, signed segment-content digests,
@@ -285,8 +305,10 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   compatibility are preflighted before directory access. Journal provision is allowed
   only with freshly provisioned durable Gate state, and restart requires open, but the
   selected journal path itself is not yet committed into the durable Gate configuration.
-  Direct `VehicleActor` construction and the in-process spool remain available, and no
-  executable/service package makes the bound path mandatory. The public service kernel and its
+  Direct `VehicleActor` construction and the in-process spool remain available. The offline
+  provisioner and `OpenExisting` bind target make the bound path mandatory only inside those
+  explicitly development-only processes; no authenticated deployment package makes it universal.
+  The public service kernel and its
   private coordinator can create a locally
   sync-confirmed receipt/Called/publisher-result sequence through its test-only future seam,
   and its test-only cold-drop, pending timeout-as-drop, panic-unwind, and synthetic
@@ -306,7 +328,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   reserve lifecycle capacity, append anything, or alter startup/actor state. The separate
   Gate startup binding closes recovered dangling calls only after authenticated replay and
   bounded precommit; its private lifecycle child adds the narrowly bounded local ordering in
-  `CL-GATE-LIFECYCLE-01`. No runnable runtime or child-process crash-durability claim follows.
+  `CL-GATE-LIFECYCLE-01`. No production runtime or child-process crash-durability claim follows.
   Therefore evidence crash durability remains unproven under `CL-DURABLE-01`.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,

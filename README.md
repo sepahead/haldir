@@ -28,10 +28,17 @@ derives the matched publisher and exact accepted-controller-route ingress from t
 shutdown-aware consuming method return the aggregate owner before a retained retry or wake an idle
 receive; once an event is selected, request-driven cancellation does not occur and the request
 remains latched for the next owner. The request is cooperative: success is not a cleanup
-acknowledgment, legacy `process_next` ignores it, and clones must be restricted. No runnable Gate executable or service package selects the
-aggregate and authenticates the provenance or
-delivery of the caller-supplied state and nonce, selects the declaration, opens/authenticates the
-session, loads credentials, or proves credential or handle exclusivity. Successful
+acknowledgment, legacy `process_next` ignores it, and clones must be restricted. No authenticated
+runnable Gate service selects the aggregate and authenticates the provenance or delivery of the
+caller-supplied state and nonce.
+The additional off-by-default `live-gate-dev-smoke` feature now provides two explicitly
+development-only examples: one offline provisioner for a disposable local state/journal fixture,
+and one `OpenExisting`-only target that locally activates the fresh boot, opens a caller-supplied
+strict client configuration, binds the concrete aggregate, and immediately invokes explicit
+local shutdown under a separate outer lock. The target processes zero intents and invokes zero
+command publications. It has not yet been exercised in a retained clean-source live campaign,
+and it is not an authenticated package, control plane, worker, or supervisor. It has no protected
+credential loader and proves no credential custody, handle exclusivity, or remote cleanup. Successful
 declared-live startup mints the private move-only capability required by the live coordinator;
 exact reference and copied-report paths cannot reach its concrete publisher method. Crebain is
 intended to remain the sole owner of final command application and vehicle-specific safe action;
@@ -74,8 +81,10 @@ says they mean.
   The outer Zenoh aggregate instead derives its publisher and exact ingress internally from one
   supplied session wrapper. Its shutdown-aware consuming method preserves the owner when a local
   request wins at an idle boundary and never request-cancels an already-selected event. The
-  request remains cooperative rather than enforced, and no runnable Gate executable/package selects this aggregate,
-  provides authenticated ongoing control/state delivery, or opens its credentials/session.
+  request remains cooperative rather than enforced. The separate development smoke target can
+  open and immediately close the aggregate from an existing disposable fixture, but no
+  authenticated package provides ongoing control/state delivery, protected credential custody,
+  a processing loop, or supervision, and no retained live run yet proves that target's calls.
   Exact selection is also exercised through durable startup and the actor Called boundary.
 
 ### What is implemented and tested locally (the P0 pure core)
@@ -140,7 +149,8 @@ commit, and faults if a term commit is unavailable.
 The startup library explicitly provisions or opens those paths, but no service package
 loads protected secrets or a deployed external non-rewindable anchor. The direct
 `VehicleActor` profile still selects the lossy in-process spool, while the new bound type
-remains externally read-only and no runnable Gate executable or package constructs the live service kernel.
+remains externally read-only. Only the explicitly development-only smoke example constructs the
+live aggregate, and then shuts it down without receiving or processing an intent.
 Production declared-live startup with injected in-memory backends and the actual journal manager
 is tested through coordinator construction only. Separately, tests wrap an initially inactive
 actor and actual journal manager in a test-minted marked capability, then exercise local
@@ -189,8 +199,9 @@ package now exist, and the retained synthetic campaign proves the fixed final-co
 controller-intent ACL subset for its ephemeral test PKI. A public no-network activation and
 single-owner live service kernel plus an aggregate-local session/ingress owner exist, but their
 initial state/challenge delivery remains caller-supplied. The aggregate has a stop-only local
-safe-boundary request handle, but no runnable Gate executable/package
-opens credentials/session or selects the `DeclaredLiveZenoh` startup/control path. Certificate
+safe-boundary request handle. A development-only example opens an externally configured session,
+binds, and immediately shuts down from a disposable local fixture, but it has no retained live
+evidence and does not select an authenticated ongoing `DeclaredLiveZenoh` control path. Certificate
 lifecycle/reconnect, bypass, application, and credential custody remain unproved.
 NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends
 (Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated; no
@@ -208,7 +219,25 @@ under `crates/haldir-range/`.
 ```bash
 cargo build --workspace --locked
 cargo test  --workspace --locked
+cargo build -p haldir-gate --examples --features live-gate-dev-smoke --locked
 ```
+
+The final command only compiles the development evidence targets. The offline provisioner and
+`OpenExisting`-only bind/shutdown example are not a production runbook, and compilation is not
+live-session evidence.
+
+From a clean committed tree, a disposable candidate can be generated and independently checked:
+
+```bash
+python3 tools/run-live-gate-dev-smoke.py \
+  --output target/live-gate-dev-smoke/<unique-run>
+python3 tools/verify-live-gate-dev-smoke.py \
+  --evidence target/live-gate-dev-smoke/<unique-run>/evidence
+```
+
+Use one newly provisioned fixture per campaign. Generator output remains outside retained evidence
+until the independent verifier passes and a separate, reviewed promotion places it at
+`evidence/12-live-gate-dev-smoke`; neither command changes claim status by itself.
 
 `just ci` (or the equivalent cargo/python commands in `.github/workflows/ci.yml`) is the
 canonical gate.

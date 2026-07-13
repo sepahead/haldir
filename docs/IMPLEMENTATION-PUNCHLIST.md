@@ -80,8 +80,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   bound coordinator selects it for ordered lifecycle mutation. A test-only coordinator
   seam covers definite pre-terminal-append failure and synthetic ambiguity returned after
   actual terminal append/sync for both publisher result branches. A public service kernel
-  selects that coordinator and a private capacity-one slot, but direct actors and no
-  executable/package make the path mandatory; no OS-level append/write/
+  selects that coordinator and a private capacity-one slot. The development examples make the
+  bound path mandatory only inside an explicit `ProvisionNew` provisioner and separate
+  `OpenExisting` bind/shutdown target; direct actors still bypass it and no authenticated
+  package makes it universal. No OS-level append/write/
   `sync_data` fault-injection, disk-full, child-process crash, or power-loss campaign exists
   (`CL-GATE-LIFECYCLE-01`, `CL-DURABLE-01`).
 - `[x]` **B15** Reference plant has exactly one command ingress; zero application from any
@@ -117,8 +119,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   before receive/retry or wake idle receive, while never request-cancelling an already-selected
   event; a concurrent request then stays latched. The cooperative clones must remain restricted and
   a runner must exclusively use the shutdown-aware method. This is not
-  an in-flight timeout, signal runner, or graceful production shutdown, and no runnable
-  Gate credential-opening executable/control package selects it. Preparation/output allocation
+  an in-flight timeout, signal runner, or graceful production shutdown. The development target
+  opens an external strict-client configuration and immediately shuts down under an outer lock,
+  but no authenticated protected-credential/control package selects it, and retained live
+  evidence is still open (`CL-LIVE-GATE-DEV-BIND-01`). Preparation/output allocation
   alone does not mutate history; duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.
@@ -166,12 +170,13 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   route from the verified controller; the outer aggregate can consume that route-bound result
   plus one supplied session wrapper and derive its publisher/exact ingress internally.
   A local monotonic request latch now preserves the owner across idle stop, without cancelling an
-  already-selected event or claiming timeout/supervision behavior.
+  already-selected event or claiming timeout/supervision behavior. Separate development examples
+  now enforce explicit disposable provisioning versus `OpenExisting` live bind/immediate shutdown.
   The declaration and activation delivery are neither authenticated nor durable, and no
   authenticated credential-opening executable/package or ongoing control loop selects them. The retained
   synthetic campaign proves the fixed
   final-command/controller-intent subset across all configured principals, but certificate
-  lifecycle/reconnect, service wiring, the full matrix, and bypass inventory remain open;
+  lifecycle/reconnect, retained concrete bind evidence, the full matrix, and bypass inventory remain open;
   the deliverable is still P0-only.
 - `[~]` **G3** Actuator-path disposition table needs Crebain + a live bypass campaign (out of P0).
 - `[x]` **G4** Assurance profiles + pins + verify + dependency rationale as an entry gate.

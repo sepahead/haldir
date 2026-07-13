@@ -128,8 +128,12 @@ return the owner before retry/new receive or wake an idle receive, but never req
 selected event and supplies no in-flight timeout or signal supervision. The request is cooperative:
 legacy `process_next` ignores it, successful latching is not a cleanup acknowledgment, and a runner
 must restrict clones and exclusively use the shutdown-aware method. Offline fake tests prove the composition and ownership ordering, not concrete
-Zenoh invocation. No runnable Gate binary/service package selects `DeclaredLiveZenoh`, constructs
-the concrete aggregate, or opens/authenticates its session or credentials.
+Zenoh invocation. The feature-gated development examples now hard-select `DeclaredLiveZenoh` and
+exact v0.8 for a separately provisioned disposable fixture; the networked target opens an external
+strict-client configuration, constructs the aggregate, and immediately shuts it down without
+processing. No retained live run proves those concrete calls yet, and no authenticated production
+package protects the session/credentials or makes the selection mandatory
+(`CL-LIVE-GATE-DEV-BIND-01`).
 The runtime-profile value is a cooperative caller declaration, not authenticated package data
 or a durable anti-downgrade state; public `GateConfig` and direct `VehicleActor` construction
 bypasses template startup and remains outside this capability chain. Production declared-live

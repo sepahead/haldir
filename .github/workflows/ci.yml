@@ -97,7 +97,11 @@ jobs:
         run: python3 tools/verify-evidence.py
       - name: Verify offline secure Zenoh configuration profile
         run: |
-          python3 -m unittest tools/test_secure_zenoh.py tools/test_live_secure_zenoh.py
+          python3 -m unittest \
+            tools/test_secure_zenoh.py \
+            tools/test_live_secure_zenoh.py \
+            tools/test_live_gate_dev_smoke.py \
+            tools/test_live_gate_dev_smoke_verifier.py
           python3 tools/verify-secure-zenoh.py
           python3 tools/verify-live-secure-zenoh.py
       - name: Forbidden-claim drift check

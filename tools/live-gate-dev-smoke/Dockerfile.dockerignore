@@ -1,0 +1,11 @@
+**
+!Cargo.toml
+!Cargo.lock
+!crates/
+!crates/**
+!tools/
+!tools/haldir-ctl/
+!tools/haldir-ctl/**
+!tools/live-gate-dev-smoke/
+!tools/live-gate-dev-smoke/Dockerfile
+!tools/live-gate-dev-smoke/Dockerfile.dockerignore
