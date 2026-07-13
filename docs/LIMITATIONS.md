@@ -65,10 +65,14 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   downgrade on restart. Public `GateConfig` and direct `VehicleActor` construction bypass the
   template-startup check and remain outside the internal capability chain. The process-local
   capability is also not authenticated or durable and does not prevent a service from selecting
-  `InProcessReference` after restart. A public feature-gated service kernel can consume
-  `DeclaredLiveZenoh` plus a preconstructed route-matched publisher, but no runnable binary or
-  service package selects the declaration, opens/owns its live session or ingress, loads
-  credentials, or supplies a plant binding.
+  `InProcessReference` after restart. A public feature-gated no-network kernel can consume that
+  capability plus one bounded caller-supplied trusted-state/challenge/signed-lease bundle. It
+  derives the canonical intent route from the verified, admission-bound controller and rejects a
+  differing signed lease route before challenge consumption, durable term commit, revision change,
+  or activation. Only the resulting move-only route-bound capability can bind the public service
+  to a preconstructed matched publisher. No runnable binary or service package authenticates or
+  continually supplies those local control/state inputs, selects the declaration, opens/owns its
+  live session or ingress, loads credentials, or supplies a plant binding.
   It therefore proves neither transport invocation nor publication, delivery, acceptance,
   application, credential custody, bypass closure, or ACL exclusivity.
 - **A public single-owner kernel exists; its deployment binding is not runnable.** The actor keeps
@@ -99,19 +103,24 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   publisher error or definite Gate rejection can record ReturnedError. These are not live
   Zenoh tests.
 
-  `DeclaredLiveGateService` now consumes the marked coordinator and one preconstructed matched
-  publisher, privately owns one fixed capacity slot, and returns the sole service owner only on
-  safe continuation. Its input event type remains publicly constructible and is not transport
-  provenance evidence; the service enforces only the hard envelope and route-length bounds before
-  capacity, clock, and actor work. Cold drop before the outer service future's first poll performs
-  no decision/clock sample/Called; pending drop after publisher polling destroys the owner after
-  Called. Marked-live tests exercise this ownership with a fake publisher. The slot is canonical
-  only within that process-local service lifetime; it is not an authenticated deployment queue.
-  A test composes production declared-live startup code with injected in-memory backends and the
-  actual journal manager through live coordinator construction, while activated
-  service/decision/Called and publisher-result composition uses test-only binders. No production
-  control plane, session/ingress owner, queue, worker, or runnable executable/package selects the
-  kernel. A Called record alone is a
+  `DeclaredLiveGateKernel` first consumes the marked coordinator and fail-stop primes an initially
+  inactive actor with one caller-supplied trusted state, challenge, and signed lease. The route
+  validator runs after signature/admission checks but before the lease's challenge/term/activation
+  commit, and the returned `LiveIntentRouteBoundGate` retains the sealed coordinator and exact
+  canonical controller route.
+  This is static local priming, not authenticated state provenance, signed challenge publication,
+  lease delivery, refresh, revocation, or preemption. `DeclaredLiveGateService` consumes only that
+  ready capability plus one preconstructed matched publisher, privately owns one fixed capacity
+  slot, and returns the sole service owner only on safe continuation. Its input event type remains
+  publicly constructible and is not transport provenance evidence; the service enforces only the
+  hard envelope and route-length bounds before capacity, clock, and actor work. Cold drop before
+  the outer service future's first poll performs no decision/clock sample/Called; pending drop
+  after publisher polling destroys the owner after Called. Tests compose an initially inactive
+  test-minted marked-live actor, the real journal manager, canonical local activation, and the shared fake-
+  publisher binding core; lifecycle/result faults still use test publisher seams. The slot is
+  canonical only within that process-local service lifetime; it is not an authenticated deployment
+  queue. No production control plane, session/ingress owner, queue, worker, or runnable executable/
+  package selects the kernel. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.
   Lower-level actor frame access, the copyable frame type, the reusable publisher API, and
   independently constructible session-backed publishers still permit resubmission outside

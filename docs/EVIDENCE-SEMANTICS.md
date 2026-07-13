@@ -18,11 +18,15 @@ mints a separate move-only capability that the live coordinator consumes and car
 each runtime-returning state; error and fatal paths destroy it. The concrete production
 publisher path borrows the frame only from the resulting live Called type, after the linked
 Called append was locally `sync_data`-confirmed and post-sync actor
-checks pass. A public off-by-default service kernel now encloses that marked coordinator, one
-preconstructed route-matched concrete publisher, and one internally created capacity slot.
-Its consuming one-event API returns the sole owner only on safe continuation paths. This is a
-process-local ownership boundary, not a selected startup/session/ingress package, queue,
-publisher worker, supervisor, or runnable transport pipeline.
+checks pass. Before service binding, a public no-network kernel consumes one bounded
+caller-supplied initial trusted state, challenge, and signed lease. It validates the canonical
+intent route from the verified, admission-bound controller before lease-term/challenge commit and
+returns a move-only route-bound capability. The service kernel consumes only that capability plus
+one preconstructed route-matched concrete publisher and creates one internal capacity slot. Its
+consuming one-event API returns the sole owner only on safe continuation paths. This is a
+process-local ownership boundary with static local priming, not authenticated state/control
+provenance, a selected startup/session/ingress package, queue, publisher worker, supervisor, or
+runnable transport pipeline.
 
 ## Each producer signs only what it observed
 
@@ -110,10 +114,18 @@ drops the bound runtime, publisher, and permit and reopens as one linked Unknown
 ReturnedError. An explicit local publisher error or definite Gate rejection can take that
 terminal path.
 
-The public `DeclaredLiveGateService` narrows the production call surface further. Binding
-consumes the startup-marked coordinator capability and one already-created concrete publisher,
-checks its exact route, and creates a private fixed one-slot pool. `process_one` consumes the
-service and one raw, publicly constructible `IntentIngressEvent`; it rejects an oversized
+The public `DeclaredLiveGateKernel` and `LiveIntentRouteBoundGate` narrow the production call
+surface before publisher binding. The kernel consumes the startup-marked coordinator plus one bounded
+caller-supplied initial state/challenge/signed-lease bundle. Signed lease verification and
+admission binding precede canonical `realm/session/controller` intent-route equality, and that
+route check precedes challenge consumption, durable term commit, revision change, and Active.
+Failure returns no runtime owner. This does not authenticate how the caller obtained or delivered
+the state, nonce, or lease and provides no ongoing control/state/revocation path.
+
+`DeclaredLiveGateService::bind` then consumes only the route-bound capability and one
+already-created concrete publisher, checks its exact final-command route, and creates a private
+fixed one-slot pool. `process_one` consumes the service and one raw, publicly constructible
+`IntentIngressEvent`; it rejects an oversized
 envelope or actual-key field before capacity, clock, actor, journal, or publisher work, and
 returns the exact event with the service. It otherwise returns the service only for a
 no-publication decision, a pre-Called rejection, pre-mutation unavailability, or local
@@ -124,7 +136,8 @@ creates no Called record; dropping after it reaches a pending publisher leaves C
 restart classification. This service does not open or exclusively own the shared Zenoh
 session and does not own ingress; its publisher retains a shared session handle, while a
 caller-held session can still create other publishers or close the session. The service does
-not authenticate package choice or stop lower-level public publisher/session APIs elsewhere.
+not authenticate package/control choice or stop lower-level public publisher/session APIs
+elsewhere.
 
 Test-only terminal-record fault injection also covers both observed publisher `Ok` and
 `Err`. A definite failure before terminal bytes are appended consumes the runtime and
@@ -132,11 +145,13 @@ publisher, then reopen closes the remaining Called tail as Unknown. A synthetic
 `AppendCommitAmbiguous` returned only after the real terminal append and sync also consumes
 them, but reopen finds the exact ReturnedOk or ReturnedError record and emits no Unknown.
 The original publisher error, when one existed, is retained only in the immediate diagnostic;
-the recovered journal remains authoritative. A test composes production declared-live
-startup code with injected in-memory backends and the actual journal manager through live
-coordinator construction; activated lifecycle/result cases still use a test-only binder. No
-live invocation exercises the concrete method. No executable/package constructs the public
-service kernel, opens its session, or drives an ingress loop. Lower-level actor/frame and
+the recovered journal remains authoritative. Production declared-live startup with injected
+backends is tested through marked coordinator construction. Separately, a test-minted marked
+capability around an initially inactive actor and the actual journal manager exercises caller-
+supplied local activation, canonical route validation, and the shared fake-publisher binding core;
+lifecycle/result fault cases still use a test-only publisher. No live invocation exercises the
+concrete method. No executable/package constructs the public service kernel, authenticates or
+refreshes its state/lease controls, opens its session, or drives an ingress loop. Lower-level actor/frame and
 publisher/session constructors still permit copying
 or resubmission outside this coordinator binding.
 

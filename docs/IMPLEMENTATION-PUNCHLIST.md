@@ -108,9 +108,11 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   realm/session route before invocation, consumes a matched strict publisher around one
   await, and journals the observed local result. Test-only futures also cover cold drop,
   pending timeout-as-drop, and panic unwind without converting an unobserved result to
-  ReturnedError. A public consuming service kernel encloses the marked coordinator,
-  preconstructed matched publisher, and one private slot, while no runnable executable/session
-  owner selects it. Preparation/output allocation
+  ReturnedError. A public no-network activation kernel first validates one bounded caller-supplied
+  initial state/challenge/signed lease and mints a canonical route capability only from the
+  verified controller. The consuming service encloses that marked route-bound coordinator,
+  preconstructed matched publisher, and one private slot, while no runnable executable/control/
+  session owner selects it. Preparation/output allocation
   alone does not mutate history; duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.
@@ -119,12 +121,16 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **H10** Domain-separated, golden-vectored `semantic_intent_digest` /
   `state_snapshot_digest` (per-kind prefix so digest domains cannot collide).
 - `[x]` **H11** Structural limits enforced DURING decode; strict ASCII security IDs; reject
-  seq 0 / malformed UUID.
+  seq 0 / malformed UUID. Declared-live activation also rejects a signed lease envelope larger
+  than the 64-KiB large-contract profile before consuming the live kernel.
 - `[~]` **H12** Lease acceptance reads the maximum of the canonical and legacy term
   namespaces, then commits through an injected term-store interface before consuming
   the challenge or exposing ACTIVE state; an unavailable durable commit latches
   `FAULT_LATCHED` and grants no lease. The default P0 constructor remains
-  in-memory. An explicit development-local startup path exists, but the deployed external
+  in-memory. The declared-live activation path additionally checks the signed controller
+  intent route against the canonical realm/session/verified-controller route after signature/
+  admission verification but before challenge consumption or term commit. Its initial state,
+  nonce, and lease delivery remain caller-supplied. An explicit development-local startup path exists, but the deployed external
   anchor and crash campaign required by `CL-DURABLE-01` do not.
 - `[x]` **H13** Wall-clock jumps don't move a live lease deadline; far-future `controller_t_ns`
   no effect; `controller_t_ns` never becomes final `t`.
@@ -148,9 +154,11 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   boundary and deterministic direction-specific ACL package now exist. Template startup
   also rejects an inexact or feature-disabled `DeclaredLiveZenoh` declaration before its
   listed backend calls, entropy, locks, or directory access, and its private process-local
-  capability now gates concrete coordinator publication. The caller-supplied declaration
-  is neither authenticated nor durable. A public service kernel can consume the marked path,
-  but no authenticated executable/package or session owner selects it. The retained
+  capability now gates concrete coordinator publication. A public no-network activation
+  typestate requires bounded initial state/challenge/signed-lease input and derives the intent
+  route from the verified controller; the service can consume only that route-bound result.
+  The declaration and activation delivery are neither authenticated nor durable, and no
+  authenticated executable/package, ongoing control loop, or session owner selects them. The retained
   synthetic campaign proves the fixed
   final-command/controller-intent subset across all configured principals, but certificate
   lifecycle/reconnect, service wiring, the full matrix, and bypass inventory remain open;

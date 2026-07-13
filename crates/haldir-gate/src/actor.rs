@@ -72,6 +72,18 @@ pub enum GateError {
     PublicationPending,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum LeaseEnvelopeValidationError<E> {
+    Gate(GateError),
+    ValidatorRejected(E),
+}
+
+impl<E> From<GateError> for LeaseEnvelopeValidationError<E> {
+    fn from(error: GateError) -> Self {
+        Self::Gate(error)
+    }
+}
+
 /// A cross-field configuration validation failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GateConfigError {
@@ -1108,6 +1120,12 @@ impl VehicleActor {
     /// # Errors
     /// Returns a stable reason code on any ingress-validation failure.
     pub fn set_trusted_state(&mut self, state: TrustedStateSnapshotV1) -> Result<(), R> {
+        self.validate_trusted_state(&state)?;
+        self.trusted_state = Some(state);
+        Ok(())
+    }
+
+    pub(crate) fn validate_trusted_state(&self, state: &TrustedStateSnapshotV1) -> Result<(), R> {
         if state.vehicle_id != self.vehicle_id {
             return Err(R::DenyStateProducer);
         }
@@ -1125,8 +1143,18 @@ impl VehicleActor {
         {
             return Err(R::DenyStateStale);
         }
-        self.trusted_state = Some(state);
         Ok(())
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    pub(crate) fn active_intent_binding(
+        &self,
+    ) -> Option<(&haldir_contracts::ids::ControllerId, &str)> {
+        if !self.process.is_active() {
+            return None;
+        }
+        let lease = self.lease.as_ref()?;
+        Some((&lease.controller_id, lease.controller_intent_key.as_str()))
     }
 
     /// Accept a signed mission lease and become ACTIVE.
@@ -1135,14 +1163,32 @@ impl VehicleActor {
     /// Returns a [`GateError`] if a publication slot is unresolved or signature,
     /// admission, or acceptance fails.
     pub fn accept_lease_env(&mut self, env: &[u8], now: MonoInstant) -> Result<(), GateError> {
+        match self
+            .accept_lease_env_with_validator(env, now, |_| Ok::<(), core::convert::Infallible>(()))
+        {
+            Ok(()) => Ok(()),
+            Err(LeaseEnvelopeValidationError::Gate(error)) => Err(error),
+            Err(LeaseEnvelopeValidationError::ValidatorRejected(infallible)) => match infallible {},
+        }
+    }
+
+    pub(crate) fn accept_lease_env_with_validator<E, F>(
+        &mut self,
+        env: &[u8],
+        now: MonoInstant,
+        validate: F,
+    ) -> Result<(), LeaseEnvelopeValidationError<E>>
+    where
+        F: FnOnce(&MissionLeaseV1) -> Result<(), E>,
+    {
         if self.fault.is_latched() {
-            return Err(GateError::Faulted);
+            return Err(GateError::Faulted.into());
         }
         if self.publication_state != PublicationState::Idle {
-            return Err(GateError::PublicationPending);
+            return Err(GateError::PublicationPending.into());
         }
         if !self.mono_ok(now) {
-            return Err(GateError::Faulted);
+            return Err(GateError::Faulted.into());
         }
         let ctx = ExpectedContext {
             kind: MissionLeaseV1::KIND,
@@ -1158,10 +1204,10 @@ impl VehicleActor {
         // (H-H01): the verified KID must be the lease's issuer key, and the verified
         // subject must be the lease issuer id.
         if kid != lease.issuer_key_id {
-            return Err(GateError::Crypto("DENY_WRONG_ROLE"));
+            return Err(GateError::Crypto("DENY_WRONG_ROLE").into());
         }
         if sub.as_deref() != Some(lease.issuer_id.as_str()) {
-            return Err(GateError::Crypto("DENY_WRONG_ROLE"));
+            return Err(GateError::Crypto("DENY_WRONG_ROLE").into());
         }
 
         let claim = AdmissionClaim {
@@ -1196,6 +1242,7 @@ impl VehicleActor {
             controller,
             local_cap_ms: self.local_cap_ms,
         };
+        validate(&lease).map_err(LeaseEnvelopeValidationError::ValidatorRejected)?;
         let snap = accept_lease(
             &lease,
             &lctx,
@@ -1207,9 +1254,9 @@ impl VehicleActor {
             Ok(snapshot) => snapshot,
             Err(LeaseAcceptError::TermStoreUnavailable) => {
                 self.latch_fault("LEASE_TERM_STORE_UNAVAILABLE");
-                return Err(GateError::Faulted);
+                return Err(GateError::Faulted.into());
             }
-            Err(error) => return Err(GateError::Lease(error.reason_code().code())),
+            Err(error) => return Err(GateError::Lease(error.reason_code().code()).into()),
         };
         let usage = LeaseUsage::new(snap.max_total_intents, snap.max_intent_rate_millihz, now);
         self.lease = Some(snap);
@@ -1219,11 +1266,11 @@ impl VehicleActor {
         self.history.clear_slew_reference();
         if self.revision.bump().is_none() {
             self.latch_fault("AUTHORIZATION_REVISION_EXHAUSTED");
-            return Err(GateError::Faulted);
+            return Err(GateError::Faulted.into());
         }
         if self.process.transition(GateProcessStateV1::Active).is_err() {
             self.latch_fault("ACTIVATE_TRANSITION");
-            return Err(GateError::Faulted);
+            return Err(GateError::Faulted.into());
         }
         Ok(())
     }

@@ -77,8 +77,8 @@ copyable report.
 
 Gate's off-by-default `live-zenoh` feature now provides a crate-private consuming binding
 from one durable coordinator Called state to one awaited invocation of the concrete
-`FinalCommandPublisher`, plus a public single-owner service kernel that encloses it with one
-preconstructed matched publisher and one private capacity slot. The live coordinator
+`FinalCommandPublisher`, plus public no-network activation and single-owner service typestates.
+The live coordinator
 constructor consumes the private startup capability and cross-checks the retained declaration
 and exact actor wire profile before clock sampling. The resulting marker is carried through
 every runtime-returning coordinator state; error and fatal paths destroy it. The concrete
@@ -105,22 +105,31 @@ after the real terminal append and sync, with reopen respectively producing Unkn
 exact terminal state. These tests do not open a live Zenoh session, execute the concrete
 method, enforce a real deadline, or inject an OS-I/O fault.
 
-The public off-by-default `DeclaredLiveGateService` now consumes the marked coordinator and one
-preconstructed route-matched publisher. For each raw, publicly constructible
+The public off-by-default `DeclaredLiveGateKernel` first consumes the marked coordinator plus one
+bounded caller-supplied initial trusted state, challenge, and signed lease. It derives the intent
+route from the verified, admission-bound controller and requires the signed route to equal the
+canonical realm/session/controller route before challenge consumption, durable term commit,
+revision change, or activation. Failure returns no owner. `DeclaredLiveGateService` then consumes
+only that move-only route-bound result and one preconstructed route-matched publisher, creating
+one private capacity slot. For each raw, publicly constructible
 `IntentIngressEvent`, it enforces the hard envelope and actual-key-field bounds before capacity,
 clock, or actor access. The key value is caller-supplied at this boundary and is not transport
 provenance. The service privately owns one capacity slot and returns the sole service owner
 only on safe continuation; fatal, cancellation, publisher-error, and
 terminal-boundary-failure paths return no service/publisher capability. Marked-live service
 tests use a fake publisher seam; the
-production concrete signature compiles but is not invoked. No runnable binary/package selects
-`DeclaredLiveZenoh`, opens/owns the session or ingress, or constructs the concrete service.
+production concrete signature compiles but is not invoked. The activation inputs are locally
+caller-supplied rather than authenticated control/state ingress, and no refresh/revocation loop
+exists. No runnable binary/package selects `DeclaredLiveZenoh`, opens/owns the session or ingress,
+or constructs the concrete service.
 The runtime-profile value is a cooperative caller declaration, not authenticated package data
 or a durable anti-downgrade state; public `GateConfig` and direct `VehicleActor` construction
-bypasses template startup and remains outside this capability chain. One test composes
-production declared-live startup code with injected in-memory backends and the actual journal
-manager into the marked coordinator, while activated service/Called/route tests use test-only
-binders. Nothing in this composition opens a Zenoh session, invokes the concrete publisher,
+bypasses template startup and remains outside this capability chain. Production declared-live
+startup with injected in-memory backends is tested through marked coordinator construction.
+Separately, a test-minted marked capability wraps an initially inactive actor and
+the actual journal manager, then exercises bounded local activation, canonical intent-route
+binding, and fake-publisher service binding. Called/result fault tests still use test-only
+publisher seams. Neither test path opens a Zenoh session or invokes the concrete publisher,
 or establishes credential custody.
 The retained synthetic campaign proves the exact final-command/controller-intent ACL subset
 using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not the service

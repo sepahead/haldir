@@ -11,10 +11,16 @@
 use core::num::{NonZeroU32, NonZeroUsize};
 
 use haldir_contracts::digest::{DigestDomain, DigestV1};
+#[cfg(feature = "live-zenoh")]
+use haldir_contracts::ids::{ChallengeNonce, ControllerId};
 use haldir_contracts::ids::{DecisionId, GateBootId, GateId, VehicleId};
 use haldir_contracts::publication::PublicationStageEventV1;
+#[cfg(feature = "live-zenoh")]
+use haldir_contracts::receipt::DecisionReasonCodeV1;
 use haldir_contracts::receipt::{DecisionOutcomeV1, PublishStageV1};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpStreamPositionV1};
+#[cfg(feature = "live-zenoh")]
+use haldir_core::snapshot::TrustedStateSnapshotV1;
 use haldir_core::time::{MonoInstant, MonotonicClock};
 use haldir_evidence::gate_journal::{
     GateJournalMutationError, GateJournalReservation, RecoveredGateJournal,
@@ -37,6 +43,8 @@ use crate::actor::{
     DecisionRecord, PreparedPublication, PublicationError, PublishCalledPublication,
     ValidatedPublicationCall, VehicleActor,
 };
+#[cfg(feature = "live-zenoh")]
+use crate::actor::{GateError, LeaseEnvelopeValidationError};
 use crate::startup::JournalBoundRunningGate;
 #[cfg(feature = "live-zenoh")]
 use crate::startup::{GateRuntimeProfile, ValidatedDeclaredLiveZenohStartup};
@@ -145,6 +153,35 @@ pub(crate) struct DeclaredLiveZenohPublication {
     _startup: ValidatedDeclaredLiveZenohStartup,
 }
 
+/// Exact intent subscription identity minted only from an accepted live lease.
+#[cfg(feature = "live-zenoh")]
+pub(crate) struct ActiveIntentBinding {
+    controller_id: ControllerId,
+    intent_route: String,
+}
+
+#[cfg(feature = "live-zenoh")]
+impl ActiveIntentBinding {
+    pub(crate) const fn controller_id(&self) -> &ControllerId {
+        &self.controller_id
+    }
+
+    pub(crate) fn intent_route(&self) -> &str {
+        &self.intent_route
+    }
+}
+
+/// Fail-stop outcome while priming a declared-live coordinator with local control inputs.
+#[cfg(feature = "live-zenoh")]
+pub(crate) enum LiveIntentActivationFailure {
+    Fatal(CoordinatorFatal),
+    TrustedState(DecisionReasonCodeV1),
+    ChallengeRejected,
+    IntentRouteMismatch,
+    Lease(GateError),
+    ActiveBindingUnavailable,
+}
+
 /// A pre-decision refusal that returns the coordinator without actor, journal,
 /// decision, or output-sequence mutation. Its clock high-water may advance.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -199,7 +236,7 @@ struct CoordinatorCore<C, P> {
     last_observed: MonoInstant,
     restart_clearance_diagnostic_not_before: Option<MonoInstant>,
     #[cfg(feature = "live-zenoh")]
-    expected_final_command_route: String,
+    haldir_keys: HaldirKeys,
 }
 
 impl<C: MonotonicClock, P> CoordinatorCore<C, P> {
@@ -497,7 +534,65 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
     }
 
     pub(crate) fn publisher_route_matches(&self, publisher_route: &str) -> bool {
-        publisher_route == self.core.expected_final_command_route
+        publisher_route == self.core.haldir_keys.final_command()
+    }
+
+    /// Prime the otherwise inactive startup actor with one caller-supplied state,
+    /// challenge, and signed lease while keeping the coordinator capability sealed.
+    /// The canonical intent route is checked after signature/admission validation
+    /// but before lease-term commit, challenge consumption, or activation.
+    pub(crate) fn activate_live_intent(
+        mut self,
+        trusted_state: TrustedStateSnapshotV1,
+        challenge_nonce: ChallengeNonce,
+        lease_envelope: &[u8],
+    ) -> Result<(Self, ActiveIntentBinding), LiveIntentActivationFailure> {
+        let now = self
+            .core
+            .sample_now()
+            .map_err(LiveIntentActivationFailure::Fatal)?;
+
+        let actor = &mut self.core.bound.gate.actor;
+        actor
+            .validate_trusted_state(&trusted_state)
+            .map_err(LiveIntentActivationFailure::TrustedState)?;
+        // Static activation verifies and consumes the supplied lease at this same
+        // sampled instant, so no caller-selected challenge lifetime is needed.
+        if !actor.register_challenge(challenge_nonce, now, now) {
+            return Err(LiveIntentActivationFailure::ChallengeRejected);
+        }
+
+        let keys = &self.core.haldir_keys;
+        actor
+            .accept_lease_env_with_validator(lease_envelope, now, |lease| {
+                let expected = keys.intent(lease.controller_id.as_str()).map_err(|_| ())?;
+                if lease.controller_intent_key.as_str() != expected {
+                    return Err(());
+                }
+                Ok(())
+            })
+            .map_err(|error| match error {
+                LeaseEnvelopeValidationError::Gate(error) => {
+                    LiveIntentActivationFailure::Lease(error)
+                }
+                LeaseEnvelopeValidationError::ValidatorRejected(()) => {
+                    LiveIntentActivationFailure::IntentRouteMismatch
+                }
+            })?;
+
+        // The same exclusive actor was prevalidated immediately above. A failure
+        // here is still fail-stop because lease authority has already committed.
+        actor
+            .set_trusted_state(trusted_state)
+            .map_err(LiveIntentActivationFailure::TrustedState)?;
+        let intent_binding = actor
+            .active_intent_binding()
+            .map(|(controller_id, intent_route)| ActiveIntentBinding {
+                controller_id: controller_id.clone(),
+                intent_route: intent_route.to_owned(),
+            })
+            .ok_or(LiveIntentActivationFailure::ActiveBindingUnavailable)?;
+        Ok((self, intent_binding))
     }
 }
 
@@ -509,13 +604,11 @@ impl<C: MonotonicClock, P> PublicationCoordinator<C, P> {
     ) -> Result<Self, CoordinatorFatal> {
         let startup_now = clock.now();
         #[cfg(feature = "live-zenoh")]
-        let expected_final_command_route = HaldirKeys::try_new(
+        let haldir_keys = HaldirKeys::try_new(
             bound.actor().realm().as_str(),
             bound.actor().ncp_session().session_id.as_str(),
         )
-        .map_err(CoordinatorFatal::InvalidFinalCommandRoute)?
-        .final_command()
-        .to_owned();
+        .map_err(CoordinatorFatal::InvalidFinalCommandRoute)?;
         // This cannot reconstruct the old boot's policy window. It is exposed only
         // as a current-policy diagnostic while the actual restart block remains
         // indefinite and requires a future authenticated external clearance.
@@ -538,7 +631,7 @@ impl<C: MonotonicClock, P> PublicationCoordinator<C, P> {
                 last_observed: startup_now,
                 restart_clearance_diagnostic_not_before,
                 #[cfg(feature = "live-zenoh")]
-                expected_final_command_route,
+                haldir_keys,
             }),
         })
     }
@@ -770,12 +863,12 @@ impl<C: MonotonicClock, P> DurableCalledPublication<C, P> {
 
     #[cfg(feature = "live-zenoh")]
     fn publisher_route_matches(&self, publisher_route: &str) -> bool {
-        publisher_route == self.core.expected_final_command_route
+        publisher_route == self.core.haldir_keys.final_command()
     }
 
     #[cfg(all(test, feature = "live-zenoh"))]
     pub(crate) fn expected_final_command_route(&self) -> &str {
-        &self.core.expected_final_command_route
+        self.core.haldir_keys.final_command()
     }
 
     /// Exercise route rejection without constructing a live Zenoh session.

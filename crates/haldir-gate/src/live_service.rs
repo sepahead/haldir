@@ -1,14 +1,19 @@
 //! Single-owner declared-live Gate publication service.
 //!
 //! This module closes the public service-local ownership boundary around the
-//! startup-marked coordinator, one concrete strict publisher, and one output
-//! capacity slot. It deliberately does not open a session, own intent ingress,
-//! spawn a worker, or provide supervision and reconnect policy.
+//! startup-marked coordinator, one locally primed canonical intent binding, one
+//! concrete strict publisher, and one output-capacity slot. Activation performs
+//! no network activity. This module deliberately does not open a session, own
+//! intent ingress, spawn a worker, or provide supervision and reconnect policy.
 
 use core::fmt;
 use core::num::NonZeroUsize;
 
+use haldir_contracts::cbor::Limits;
 use haldir_contracts::digest::DigestV1;
+use haldir_contracts::ids::{ChallengeNonce, ControllerId};
+use haldir_contracts::receipt::DecisionReasonCodeV1;
+use haldir_core::snapshot::TrustedStateSnapshotV1;
 use haldir_core::time::{MonoInstant, MonotonicClock};
 use haldir_evidence::gate_journal::GateJournalMutationError;
 use haldir_ncp08::NcpCommandWireProfile;
@@ -17,30 +22,45 @@ use haldir_transport_zenoh::{
     MAX_HALDIR_ROUTE_BYTES, SecureZenohError,
 };
 
-use crate::actor::{DecisionRecord, PublicationError};
+use crate::actor::{DecisionRecord, GateError, PublicationError};
 use crate::startup::publication_coordinator::{
-    CallTransition, CoordinatorFatal, DecisionTransition, DecisionUnavailable,
-    DeclaredLiveZenohPublication, DurableCalledPublication, OutputCapacityPool,
-    PublicationCoordinator, PublishOnceError, StrictPublisherCallError,
+    ActiveIntentBinding, CallTransition, CoordinatorFatal, DecisionTransition, DecisionUnavailable,
+    DeclaredLiveZenohPublication, DurableCalledPublication, LiveIntentActivationFailure,
+    OutputCapacityPool, PublicationCoordinator, PublishOnceError, StrictPublisherCallError,
 };
 use crate::startup::{GateRuntimeProfile, JournalBoundRunningGate};
 
-/// Failure while binding one startup-marked runtime to one owned service publisher handle.
+/// Failure while validating one startup-marked runtime as a declared-live kernel.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum LiveServiceStartError {
+pub enum LiveKernelStartError {
     /// The startup-marked coordinator could not be constructed.
     Coordinator(LiveServiceFatal),
+}
+
+impl fmt::Display for LiveKernelStartError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Coordinator(error) => {
+                write!(formatter, "declared-live kernel startup failed: {error}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for LiveKernelStartError {}
+
+/// Failure while consuming a route-bound Gate into one publisher-owning service.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum LiveServiceBindError {
     /// The supplied concrete publisher advertises another realm/session route.
     PublisherRouteMismatch,
 }
 
-impl fmt::Display for LiveServiceStartError {
+impl fmt::Display for LiveServiceBindError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Coordinator(error) => {
-                write!(formatter, "live coordinator binding failed: {error}")
-            }
             Self::PublisherRouteMismatch => formatter.write_str(
                 "the concrete publisher route does not match the startup-bound Gate runtime",
             ),
@@ -48,7 +68,220 @@ impl fmt::Display for LiveServiceStartError {
     }
 }
 
-impl std::error::Error for LiveServiceStartError {}
+impl std::error::Error for LiveServiceBindError {}
+
+/// Hard maximum for one caller-supplied signed mission-lease envelope during
+/// declared-live local activation.
+pub const MAX_LIVE_LEASE_ENVELOPE_BYTES: usize = Limits::LARGE.max_total_bytes;
+
+/// Invalid bounded input for one local declared-live activation attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum LiveIntentActivationInputError {
+    /// The signed lease envelope exceeded the large-contract decoder profile.
+    LeaseEnvelopeTooLarge {
+        /// Activation profile maximum.
+        maximum_bytes: usize,
+        /// Supplied envelope length.
+        actual_bytes: usize,
+    },
+}
+
+impl fmt::Display for LiveIntentActivationInputError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::LeaseEnvelopeTooLarge {
+                maximum_bytes,
+                actual_bytes,
+            } => write!(
+                formatter,
+                "lease envelope is {actual_bytes} bytes; maximum is {maximum_bytes}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for LiveIntentActivationInputError {}
+
+/// Bounded caller-supplied inputs for one static local activation attempt.
+///
+/// This is not an authenticated control-plane message. The trusted-state value,
+/// challenge nonce, and lease delivery are supplied by the embedding caller.
+/// Construction proves only the lease-envelope size bound.
+pub struct LiveIntentActivationInput {
+    trusted_state: TrustedStateSnapshotV1,
+    challenge_nonce: ChallengeNonce,
+    signed_lease_envelope: Vec<u8>,
+}
+
+impl LiveIntentActivationInput {
+    /// Construct one bounded static activation input.
+    ///
+    /// # Errors
+    /// Returns when the signed lease envelope exceeds the 64-KiB large-contract
+    /// decoder profile. State, challenge, signature, authority, and route checks
+    /// occur only when a declared-live kernel consumes this value.
+    pub fn new(
+        trusted_state: TrustedStateSnapshotV1,
+        challenge_nonce: ChallengeNonce,
+        signed_lease_envelope: Vec<u8>,
+    ) -> Result<Self, LiveIntentActivationInputError> {
+        if signed_lease_envelope.len() > MAX_LIVE_LEASE_ENVELOPE_BYTES {
+            return Err(LiveIntentActivationInputError::LeaseEnvelopeTooLarge {
+                maximum_bytes: MAX_LIVE_LEASE_ENVELOPE_BYTES,
+                actual_bytes: signed_lease_envelope.len(),
+            });
+        }
+        Ok(Self {
+            trusted_state,
+            challenge_nonce,
+            signed_lease_envelope,
+        })
+    }
+}
+
+/// Fail-stop declared-live activation failure. No kernel/runtime owner is returned.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum LiveIntentActivationError {
+    /// The activation clock failed after kernel startup.
+    Coordinator(LiveServiceFatal),
+    /// The caller-supplied initial trusted-state snapshot was rejected.
+    TrustedState(DecisionReasonCodeV1),
+    /// The nonce was duplicate, expired, or outside the bounded challenge table.
+    ChallengeRejected,
+    /// The signed lease selected a route other than the canonical realm/session/controller route.
+    IntentRouteMismatch,
+    /// Signed lease verification, admission, scope, challenge, or term acceptance failed.
+    Lease(GateError),
+    /// Lease activation completed without a retained active controller binding.
+    ActiveBindingUnavailable,
+}
+
+impl fmt::Display for LiveIntentActivationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::Coordinator(_) => "declared-live coordinator activation failed",
+            Self::TrustedState(_) => "initial trusted state was rejected",
+            Self::ChallengeRejected => "challenge registration was rejected",
+            Self::IntentRouteMismatch => "lease intent route is not canonical for this runtime",
+            Self::Lease(_) => "signed mission lease was rejected",
+            Self::ActiveBindingUnavailable => "active intent binding is unavailable",
+        };
+        formatter.write_str(message)
+    }
+}
+
+impl std::error::Error for LiveIntentActivationError {}
+
+impl From<LiveIntentActivationFailure> for LiveIntentActivationError {
+    fn from(error: LiveIntentActivationFailure) -> Self {
+        match error {
+            LiveIntentActivationFailure::Fatal(error) => Self::Coordinator(error.into()),
+            LiveIntentActivationFailure::TrustedState(reason) => Self::TrustedState(reason),
+            LiveIntentActivationFailure::ChallengeRejected => Self::ChallengeRejected,
+            LiveIntentActivationFailure::IntentRouteMismatch => Self::IntentRouteMismatch,
+            LiveIntentActivationFailure::Lease(error) => Self::Lease(error),
+            LiveIntentActivationFailure::ActiveBindingUnavailable => Self::ActiveBindingUnavailable,
+        }
+    }
+}
+
+/// Validated declared-live kernel before caller-supplied local authority priming.
+///
+/// It is non-cloneable, contains the sole startup capability descendant, and has
+/// no actor/coordinator decomposition API. It performs no network activity.
+///
+/// ```compile_fail
+/// fn requires_clone<T: Clone>() {}
+/// requires_clone::<haldir_gate::DeclaredLiveGateKernel<()>>();
+/// ```
+#[must_use = "dropping the kernel stops the bound Gate runtime"]
+pub struct DeclaredLiveGateKernel<C> {
+    coordinator: PublicationCoordinator<C, DeclaredLiveZenohPublication>,
+}
+
+impl<C: MonotonicClock> DeclaredLiveGateKernel<C> {
+    /// Consume a journal-bound runtime and validate its declared-live startup capability.
+    ///
+    /// # Errors
+    /// Returns on profile, exact-wire, startup-capability, route, clock, or restart
+    /// diagnostic failure. Failure consumes the bound runtime.
+    pub fn start(bound: JournalBoundRunningGate, clock: C) -> Result<Self, LiveKernelStartError> {
+        let coordinator = PublicationCoordinator::new_declared_live(bound, clock)
+            .map_err(|error| LiveKernelStartError::Coordinator(error.into()))?;
+        Ok(Self { coordinator })
+    }
+
+    /// Consume this kernel and one bounded static activation input.
+    ///
+    /// The signed lease's verified/admission-bound controller ID is used to
+    /// derive the canonical exact intent route. Route equality is checked before
+    /// lease-term commit, challenge consumption, revision change, or activation.
+    /// Any failure is fail-stop and returns no kernel owner.
+    ///
+    /// This does not authenticate how the caller obtained the state, nonce, or
+    /// lease and does not implement ongoing lease/state/revocation ingress.
+    ///
+    /// # Errors
+    /// Returns on clock, state, challenge, lease, or exact-route validation failure.
+    pub fn activate(
+        self,
+        activation: LiveIntentActivationInput,
+    ) -> Result<LiveIntentRouteBoundGate<C>, LiveIntentActivationError> {
+        let LiveIntentActivationInput {
+            trusted_state,
+            challenge_nonce,
+            signed_lease_envelope,
+        } = activation;
+        let (coordinator, intent_binding) = self
+            .coordinator
+            .activate_live_intent(trusted_state, challenge_nonce, &signed_lease_envelope)
+            .map_err(LiveIntentActivationError::from)?;
+        Ok(LiveIntentRouteBoundGate {
+            coordinator,
+            intent_binding,
+        })
+    }
+}
+
+/// Non-cloneable live Gate capability with initial trusted state and one
+/// canonical, accepted-lease-derived controller intent route.
+///
+/// This wrapper retains the sealed coordinator and accepted canonical binding.
+/// Its route and controller accessors are read-only observability; authority
+/// remains in the consuming wrapper. No session or ingress exists yet.
+///
+/// ```compile_fail
+/// fn requires_clone<T: Clone>() {}
+/// requires_clone::<haldir_gate::LiveIntentRouteBoundGate<()>>();
+/// ```
+#[must_use = "dropping the route-bound Gate stops the bound runtime and invalidates its route capability"]
+pub struct LiveIntentRouteBoundGate<C> {
+    coordinator: PublicationCoordinator<C, DeclaredLiveZenohPublication>,
+    intent_binding: ActiveIntentBinding,
+}
+
+impl<C> LiveIntentRouteBoundGate<C> {
+    /// Verified and admission-bound controller selected by the accepted lease.
+    #[must_use]
+    pub const fn controller_id(&self) -> &ControllerId {
+        self.intent_binding.controller_id()
+    }
+
+    /// Canonical exact intent route retained from the accepted lease.
+    #[must_use]
+    pub fn intent_route(&self) -> &str {
+        self.intent_binding.intent_route()
+    }
+}
+
+#[cfg(test)]
+impl<C: MonotonicClock> LiveIntentRouteBoundGate<C> {
+    pub(crate) const fn actor(&self) -> &crate::actor::VehicleActor {
+        self.coordinator.actor()
+    }
+}
 
 /// A refusal before actor, journal, decision, or output-sequence mutation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -286,33 +519,48 @@ struct LiveServiceCore<C, P> {
 ///
 /// The service is not cloneable and exposes no coordinator, publisher, frame,
 /// pool, permit, or decomposition accessor. Calling [`Self::process_one`] consumes
-/// it; only safe continuation paths return another service value. This is not a
-/// session owner, ingress loop, spawned worker, supervisor, or delivery proof. Its
-/// publisher retains a shared Zenoh session handle that this service neither opens
-/// nor exclusively owns; other holders can create publishers or close that session.
+/// it; only safe continuation paths return another service value. Construction
+/// additionally requires a [`LiveIntentRouteBoundGate`] whose initial state and
+/// signed lease selected the canonical controller intent route. This is not a session
+/// owner, ingress loop, spawned worker, supervisor, ongoing control plane, or
+/// delivery proof. Its publisher retains a shared Zenoh session handle that this
+/// service neither opens nor exclusively owns; other holders can create publishers
+/// or close that session.
+///
+/// ```compile_fail
+/// fn requires_clone<T: Clone>() {}
+/// requires_clone::<haldir_gate::DeclaredLiveGateService<()>>();
+/// ```
 #[must_use = "dropping the service stops the bound Gate runtime and drops its owned publisher handle"]
 pub struct DeclaredLiveGateService<C> {
     core: LiveServiceCore<C, FinalCommandPublisher>,
+    intent_binding: ActiveIntentBinding,
 }
 
 impl<C: MonotonicClock> DeclaredLiveGateService<C> {
-    /// Bind a startup-marked live runtime to exactly one route-matched publisher
-    /// and an internally created one-slot output-capacity pool.
+    /// Bind one locally activated live runtime to exactly one route-matched
+    /// publisher and an internally created one-slot output-capacity pool.
     ///
     /// # Errors
-    /// Returns when the live coordinator capability/profile checks fail or the
-    /// publisher advertises another exact realm/session route. Failure consumes
-    /// and drops every supplied owned value/handle.
+    /// Returns when the publisher advertises another exact realm/session route.
+    /// Failure consumes and drops the route-bound runtime, accepted intent-route
+    /// capability, and publisher.
     ///
     /// Route equality does not authenticate the session's credential identity or
     /// establish exclusive credential/session custody.
     pub fn bind(
-        bound: JournalBoundRunningGate,
-        clock: C,
+        route_bound: LiveIntentRouteBoundGate<C>,
         publisher: FinalCommandPublisher,
-    ) -> Result<Self, LiveServiceStartError> {
+    ) -> Result<Self, LiveServiceBindError> {
+        let LiveIntentRouteBoundGate {
+            coordinator,
+            intent_binding,
+        } = route_bound;
         let publisher_route = publisher.route().to_owned();
-        bind_core(bound, clock, publisher, &publisher_route).map(|core| Self { core })
+        bind_publisher_core(coordinator, publisher, &publisher_route).map(|core| Self {
+            core,
+            intent_binding,
+        })
     }
 
     /// Consume one caller-supplied raw intent event through service hard bounds, decision,
@@ -323,9 +571,16 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
     /// restart recovery must classify the locally confirmed Called tail. Local
     /// publisher `Ok` is not delivery, receiver acceptance, application, or an ACK.
     pub async fn process_one(self, event: IntentIngressEvent) -> LiveServiceTransition<C> {
-        match prepare_one(self.core, event) {
+        let Self {
+            core,
+            intent_binding,
+        } = self;
+        match prepare_one(core, event) {
             PreparedServiceStep::Continue { core, outcome } => LiveServiceTransition::Continue {
-                service: Self { core },
+                service: Self {
+                    core,
+                    intent_binding,
+                },
                 outcome,
             },
             PreparedServiceStep::Unavailable {
@@ -333,7 +588,10 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
                 event,
                 reason,
             } => LiveServiceTransition::Unavailable {
-                service: Self { core },
+                service: Self {
+                    core,
+                    intent_binding,
+                },
                 event,
                 reason,
             },
@@ -356,6 +614,7 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
                                 publisher,
                                 output_pool,
                             },
+                            intent_binding,
                         },
                         outcome: LiveServiceOutcome::PublishReturnedOk {
                             decision: Box::new(decision),
@@ -385,16 +644,13 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
     }
 }
 
-fn bind_core<C: MonotonicClock, P>(
-    bound: JournalBoundRunningGate,
-    clock: C,
+fn bind_publisher_core<C: MonotonicClock, P>(
+    coordinator: PublicationCoordinator<C, DeclaredLiveZenohPublication>,
     publisher: P,
     publisher_route: &str,
-) -> Result<LiveServiceCore<C, P>, LiveServiceStartError> {
-    let coordinator = PublicationCoordinator::new_declared_live(bound, clock)
-        .map_err(|error| LiveServiceStartError::Coordinator(error.into()))?;
+) -> Result<LiveServiceCore<C, P>, LiveServiceBindError> {
     if !coordinator.publisher_route_matches(publisher_route) {
-        return Err(LiveServiceStartError::PublisherRouteMismatch);
+        return Err(LiveServiceBindError::PublisherRouteMismatch);
     }
     Ok(LiveServiceCore {
         coordinator,
@@ -577,13 +833,16 @@ impl<C: MonotonicClock, P> TestDeclaredLiveGateService<C, P> {
         }
     }
 
-    pub(crate) fn bind(
-        bound: JournalBoundRunningGate,
-        clock: C,
+    pub(crate) fn bind_route_bound(
+        route_bound: LiveIntentRouteBoundGate<C>,
         publisher: P,
         publisher_route: &str,
-    ) -> Result<Self, LiveServiceStartError> {
-        bind_core(bound, clock, publisher, publisher_route).map(|core| Self { core })
+    ) -> Result<Self, LiveServiceBindError> {
+        let LiveIntentRouteBoundGate {
+            coordinator,
+            intent_binding: _,
+        } = route_bound;
+        bind_publisher_core(coordinator, publisher, publisher_route).map(|core| Self { core })
     }
 
     pub(crate) fn available_output_slots(&self) -> usize {

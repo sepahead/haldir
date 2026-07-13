@@ -34,8 +34,11 @@ pub use actor::{
 };
 #[cfg(feature = "live-zenoh")]
 pub use startup::{
-    DeclaredLiveGateService, LiveDecisionUnavailable, LivePublisherError, LiveServiceFatal,
-    LiveServiceOutcome, LiveServiceStartError, LiveServiceStop, LiveServiceTransition,
+    DeclaredLiveGateKernel, DeclaredLiveGateService, LiveDecisionUnavailable,
+    LiveIntentActivationError, LiveIntentActivationInput, LiveIntentActivationInputError,
+    LiveIntentRouteBoundGate, LiveKernelStartError, LivePublisherError, LiveServiceBindError,
+    LiveServiceFatal, LiveServiceOutcome, LiveServiceStop, LiveServiceTransition,
+    MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 pub use startup::{
     DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, GateRuntimeProfile,
@@ -111,7 +114,7 @@ mod e2e {
     use std::sync::{Arc, Mutex};
     use std::task::{Context, Poll, Waker};
 
-    const INTENT_KEY: &str = "veh/uav-1/haldir/intent/survey-v1";
+    const INTENT_KEY: &str = "range-a/session/sess-1/haldir/intent/survey-v1";
 
     fn poll_once<F: Future>(future: Pin<&mut F>) -> Poll<F::Output> {
         let mut context = Context::from_waker(Waker::noop());
@@ -620,6 +623,44 @@ mod e2e {
     }
 
     #[test]
+    fn lease_validator_route_rejection_preserves_challenge_and_term_for_retry() {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let (cfg, rec, admission_digest) =
+            gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        let mut actor = VehicleActor::new(cfg).expect("valid Gate configuration");
+        assert!(actor.register_challenge(
+            ChallengeNonce::new([7; 32]),
+            MonoInstant::from_nanos(u64::MAX),
+            now,
+        ));
+        let mut lease = build_lease(admission_digest, &rec);
+        lease.controller_intent_key =
+            BoundedAscii::new("veh/uav-1/haldir/intent/wrong-controller").unwrap();
+        let lease_env = sign_message(&lease, MissionLeaseV1::KIND, 1, &kid(2), &mission_sk);
+
+        let rejected = actor.accept_lease_env_with_validator(&lease_env, now, |verified| {
+            if verified.controller_intent_key.as_str() == INTENT_KEY {
+                Ok(())
+            } else {
+                Err(())
+            }
+        });
+
+        assert_eq!(
+            rejected,
+            Err(crate::actor::LeaseEnvelopeValidationError::ValidatorRejected(()))
+        );
+        assert_eq!(actor.process_state(), GateProcessStateV1::SessionBound);
+        actor
+            .accept_lease_env(&lease_env, now)
+            .expect("validator rejection must not spend challenge or lease term");
+        assert_eq!(actor.process_state(), GateProcessStateV1::Active);
+    }
+
+    #[test]
     fn gate_config_rejects_unknown_gate_signer_kid() {
         let mut cfg = valid_config(acl_publication());
         cfg.trust = TrustStore::new();
@@ -927,6 +968,73 @@ mod e2e {
             admission_digest: parts.admission_digest,
             _directory: parts.directory,
         }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    struct UnactivatedLiveFixture {
+        bound: JournalBoundRunningGate,
+        clock: SharedClock,
+        mission_sk: SigningKey,
+        admission_record: AdmissionRecordV1,
+        admission_digest: DigestV1,
+        now: MonoInstant,
+        _directory: CoordinatorTestDirectory,
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    fn unactivated_live_fixture() -> UnactivatedLiveFixture {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let (mut cfg, admission_record, admission_digest) =
+            gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        cfg.ncp_adapter = haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let actor = VehicleActor::new(cfg).expect("valid inactive Gate configuration");
+        let parts = journal_bound_fixture(
+            64,
+            None,
+            Fixture {
+                actor,
+                ctrl_sk,
+                now,
+                admission_digest,
+            },
+            GateRuntimeProfile::DeclaredLiveZenoh,
+        );
+        UnactivatedLiveFixture {
+            bound: parts.bound,
+            clock: parts.clock,
+            mission_sk,
+            admission_record,
+            admission_digest,
+            now,
+            _directory: parts.directory,
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    fn live_activation_input(
+        fixture: &UnactivatedLiveFixture,
+        intent_route: &str,
+        state: TrustedStateSnapshotV1,
+    ) -> LiveIntentActivationInput {
+        let signed_lease_envelope = live_signed_lease_envelope(fixture, intent_route);
+        LiveIntentActivationInput::new(state, ChallengeNonce::new([7; 32]), signed_lease_envelope)
+            .unwrap()
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    fn live_signed_lease_envelope(fixture: &UnactivatedLiveFixture, intent_route: &str) -> Vec<u8> {
+        let mut lease = build_lease(fixture.admission_digest, &fixture.admission_record);
+        lease.controller_intent_key = BoundedAscii::new(intent_route).unwrap();
+        sign_message(
+            &lease,
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &fixture.mission_sk,
+        )
     }
 
     fn journal_bound_fixture(
@@ -2134,85 +2242,238 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
-    fn declared_live_service_bind_prioritizes_profile_before_route_match_and_owns_publisher() {
-        let success = journal_bound_fixture(
-            64,
-            None,
-            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
-            GateRuntimeProfile::DeclaredLiveZenoh,
+    fn declared_live_activation_input_enforces_exact_lease_size_boundary_before_kernel_access() {
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let at_limit = LiveIntentActivationInput::new(
+            trusted_state(now),
+            ChallengeNonce::new([7; 32]),
+            vec![0; MAX_LIVE_LEASE_ENVELOPE_BYTES],
         );
-        let expected_route = HaldirKeys::try_new(
-            success.bound.actor().realm().as_str(),
-            success.bound.actor().ncp_session().session_id.as_str(),
-        )
-        .unwrap()
-        .final_command()
-        .to_owned();
-        let success_drops = Arc::new(AtomicUsize::new(0));
-        let service = TestDeclaredLiveGateService::bind(
-            success.bound,
-            success.clock,
+        let result = LiveIntentActivationInput::new(
+            trusted_state(now),
+            ChallengeNonce::new([7; 32]),
+            vec![0; MAX_LIVE_LEASE_ENVELOPE_BYTES + 1],
+        );
+
+        assert!(at_limit.is_ok());
+        assert!(matches!(
+            result,
+            Err(LiveIntentActivationInputError::LeaseEnvelopeTooLarge {
+                maximum_bytes: MAX_LIVE_LEASE_ENVELOPE_BYTES,
+                actual_bytes,
+            }) if actual_bytes == MAX_LIVE_LEASE_ENVELOPE_BYTES + 1
+        ));
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_mints_only_the_canonical_accepted_controller_route() {
+        let fixture = unactivated_live_fixture();
+        let expected_route = HaldirKeys::try_new("range-a", "sess-1")
+            .unwrap()
+            .intent("survey-v1")
+            .unwrap();
+        assert_eq!(expected_route, INTENT_KEY);
+        let activation =
+            live_activation_input(&fixture, &expected_route, trusted_state(fixture.now));
+        let samples_before = fixture.clock.sample_count();
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock.clone()).unwrap();
+        assert_eq!(fixture.clock.sample_count(), samples_before + 1);
+
+        let route_bound = kernel.activate(activation).unwrap();
+
+        assert_eq!(fixture.clock.sample_count(), samples_before + 2);
+        assert_eq!(route_bound.controller_id().as_str(), "survey-v1");
+        assert_eq!(route_bound.intent_route(), expected_route);
+        assert_eq!(
+            route_bound.actor().process_state(),
+            GateProcessStateV1::Active
+        );
+        let final_route = HaldirKeys::try_new("range-a", "sess-1")
+            .unwrap()
+            .final_command()
+            .to_owned();
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::bind_route_bound(
+            route_bound,
             TestPublisher {
-                drops: Arc::clone(&success_drops),
+                drops: Arc::clone(&publisher_drops),
             },
-            &expected_route,
+            &final_route,
         )
         .unwrap();
         assert_eq!(service.available_output_slots(), 1);
-        assert_eq!(success_drops.load(Ordering::SeqCst), 0);
         drop(service);
-        assert_eq!(success_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
+    }
 
-        let mismatch = journal_bound_fixture(
-            64,
-            None,
-            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
-            GateRuntimeProfile::DeclaredLiveZenoh,
-        );
-        let mismatch_clock = mismatch.clock.clone();
-        let mismatch_samples = mismatch_clock.sample_count();
-        let mismatch_drops = Arc::new(AtomicUsize::new(0));
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_rejects_noncanonical_signed_routes_fail_stop() {
+        for route in [
+            "veh/uav-1/haldir/intent/survey-v1",
+            "range-a/session/sess-1/haldir/intent/*",
+            "range-a/session/sess-1/haldir/intent/other-controller",
+            "other/session/sess-1/haldir/intent/survey-v1",
+        ] {
+            let fixture = unactivated_live_fixture();
+            let activation = live_activation_input(&fixture, route, trusted_state(fixture.now));
+            let kernel =
+                DeclaredLiveGateKernel::start(fixture.bound, fixture.clock.clone()).unwrap();
+
+            let error = match kernel.activate(activation) {
+                Err(error) => error,
+                Ok(_) => panic!("noncanonical route minted a route-bound Gate"),
+            };
+            assert_eq!(
+                error,
+                LiveIntentActivationError::IntentRouteMismatch,
+                "route {route:?} must not mint a live intent binding"
+            );
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_reports_signed_lease_verification_failure_fail_stop() {
+        let fixture = unactivated_live_fixture();
+        let mut signed_lease_envelope = live_signed_lease_envelope(&fixture, INTENT_KEY);
+        let final_byte = signed_lease_envelope
+            .last_mut()
+            .expect("signed lease envelope is nonempty");
+        *final_byte ^= 1;
+        let activation = LiveIntentActivationInput::new(
+            trusted_state(fixture.now),
+            ChallengeNonce::new([7; 32]),
+            signed_lease_envelope,
+        )
+        .unwrap();
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+
+        let error = match kernel.activate(activation) {
+            Err(error) => error,
+            Ok(_) => panic!("tampered lease minted a route-bound Gate"),
+        };
+
         assert!(matches!(
-            TestDeclaredLiveGateService::bind(
-                mismatch.bound,
-                mismatch.clock,
-                TestPublisher {
-                    drops: Arc::clone(&mismatch_drops),
-                },
-                "wrong/realm/session/command",
-            ),
-            Err(LiveServiceStartError::PublisherRouteMismatch)
+            error,
+            LiveIntentActivationError::Lease(GateError::Crypto(_))
         ));
-        assert_eq!(mismatch_clock.sample_count(), mismatch_samples + 1);
-        assert_eq!(mismatch_drops.load(Ordering::SeqCst), 1);
+    }
 
-        let reference = journal_bound_fixture(
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_rejects_lease_nonce_outside_the_local_input_fail_stop() {
+        let fixture = unactivated_live_fixture();
+        let signed_lease_envelope = live_signed_lease_envelope(&fixture, INTENT_KEY);
+        let activation = LiveIntentActivationInput::new(
+            trusted_state(fixture.now),
+            ChallengeNonce::new([8; 32]),
+            signed_lease_envelope,
+        )
+        .unwrap();
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+
+        let error = match kernel.activate(activation) {
+            Err(error) => error,
+            Ok(_) => panic!("lease with another nonce minted a route-bound Gate"),
+        };
+
+        assert_eq!(
+            error,
+            LiveIntentActivationError::Lease(GateError::Lease("DENY_LEASE_ABSENT"))
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_rejects_state_before_challenge_or_lease_activation() {
+        let fixture = unactivated_live_fixture();
+        let mut wrong_state = trusted_state(fixture.now);
+        wrong_state.vehicle_id = VehicleId::new("other-vehicle").unwrap();
+        let activation = live_activation_input(&fixture, INTENT_KEY, wrong_state);
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+
+        let error = match kernel.activate(activation) {
+            Err(error) => error,
+            Ok(_) => panic!("wrong trusted state minted a route-bound Gate"),
+        };
+        assert_eq!(
+            error,
+            LiveIntentActivationError::TrustedState(DecisionReasonCodeV1::DenyStateProducer)
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_clock_regression_is_terminal() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        fixture.clock.script_samples([
+            fixture.now,
+            MonoInstant::from_nanos(fixture.now.as_nanos() - 1),
+        ]);
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+
+        let error = match kernel.activate(activation) {
+            Err(error) => error,
+            Ok(_) => panic!("clock regression minted a route-bound Gate"),
+        };
+        assert_eq!(
+            error,
+            LiveIntentActivationError::Coordinator(LiveServiceFatal::ClockRegression)
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_kernel_rejects_reference_profile_before_clock_sampling() {
+        let fixture = journal_bound_fixture(
             64,
             None,
             setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
             GateRuntimeProfile::InProcessReference,
         );
-        let reference_clock = reference.clock.clone();
-        let reference_samples = reference_clock.sample_count();
-        let reference_drops = Arc::new(AtomicUsize::new(0));
+        let clock = fixture.clock.clone();
+        let samples_before = clock.sample_count();
+
+        let error = match DeclaredLiveGateKernel::start(fixture.bound, fixture.clock) {
+            Err(error) => error,
+            Ok(_) => panic!("reference profile minted a declared-live kernel"),
+        };
+
+        assert_eq!(
+            error,
+            LiveKernelStartError::Coordinator(LiveServiceFatal::RuntimeProfileMismatch {
+                required: GateRuntimeProfile::DeclaredLiveZenoh,
+                actual: GateRuntimeProfile::InProcessReference,
+            })
+        );
+        assert_eq!(clock.sample_count(), samples_before);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_bind_rejects_route_mismatch_and_owns_publisher_on_failure() {
+        let fixture = unactivated_live_fixture();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+        let route_bound = kernel.activate(activation).unwrap();
+        let publisher_drops = Arc::new(AtomicUsize::new(0));
+
+        let result = TestDeclaredLiveGateService::bind_route_bound(
+            route_bound,
+            TestPublisher {
+                drops: Arc::clone(&publisher_drops),
+            },
+            "wrong/realm/session/command",
+        );
+
         assert!(matches!(
-            TestDeclaredLiveGateService::bind(
-                reference.bound,
-                reference.clock,
-                TestPublisher {
-                    drops: Arc::clone(&reference_drops),
-                },
-                "wrong/realm/session/command",
-            ),
-            Err(LiveServiceStartError::Coordinator(
-                LiveServiceFatal::RuntimeProfileMismatch {
-                    required: GateRuntimeProfile::DeclaredLiveZenoh,
-                    actual: GateRuntimeProfile::InProcessReference,
-                }
-            ))
+            result,
+            Err(LiveServiceBindError::PublisherRouteMismatch)
         ));
-        assert_eq!(reference_clock.sample_count(), reference_samples);
-        assert_eq!(reference_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
     }
 
     #[cfg(feature = "live-zenoh")]
@@ -2778,7 +3039,11 @@ mod e2e {
         assert_type_send::<LivePublisherError>();
         assert_type_send::<LiveServiceFatal>();
         assert_type_send::<LiveServiceOutcome>();
-        assert_type_send::<LiveServiceStartError>();
+        assert_type_send::<LiveIntentActivationInput>();
+        assert_type_send::<LiveIntentActivationInputError>();
+        assert_type_send::<LiveIntentRouteBoundGate<SharedClock>>();
+        assert_type_send::<LiveKernelStartError>();
+        assert_type_send::<LiveServiceBindError>();
         assert_type_send::<LiveServiceStop>();
         assert_type_send::<LiveServiceTransition<SharedClock>>();
         assert_send::<fn(DeclaredLiveGateService<SharedClock>, IntentIngressEvent)>(check_service);

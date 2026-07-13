@@ -52,8 +52,11 @@ mod live_service;
 
 #[cfg(feature = "live-zenoh")]
 pub use live_service::{
-    DeclaredLiveGateService, LiveDecisionUnavailable, LivePublisherError, LiveServiceFatal,
-    LiveServiceOutcome, LiveServiceStartError, LiveServiceStop, LiveServiceTransition,
+    DeclaredLiveGateKernel, DeclaredLiveGateService, LiveDecisionUnavailable,
+    LiveIntentActivationError, LiveIntentActivationInput, LiveIntentActivationInputError,
+    LiveIntentRouteBoundGate, LiveKernelStartError, LivePublisherError, LiveServiceBindError,
+    LiveServiceFatal, LiveServiceOutcome, LiveServiceStop, LiveServiceTransition,
+    MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 
 #[cfg(all(test, feature = "live-zenoh"))]
