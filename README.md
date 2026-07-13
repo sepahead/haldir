@@ -17,12 +17,15 @@ final-route publication to Gate, and a retained synthetic mTLS campaign has show
 Gate among all eight configured certificate principals reached the allowed remote receivers on
 that route. The startup library rejects a `DeclaredLiveZenoh` template unless the exact adapter
 is selected and the `live-zenoh` feature is compiled, before startup-owned backend calls,
-entropy, locks, or directories. No runnable service selects that declaration, binds it to
-strict transport, or proves credential custody. Successful declared-live startup does now
-mint the private move-only capability required by the live coordinator; exact reference and
-copied-report paths cannot reach its concrete publisher method. Crebain is intended to remain
-the sole owner of final command application and vehicle-specific safe action; that integration
-is also still unproven.
+entropy, locks, or directories. A public off-by-default single-owner service kernel can now
+consume that startup-marked runtime, one preconstructed route-matched strict publisher, and
+one raw ingress event at a time after enforcing hard envelope and route-length bounds. No
+executable or service package selects the declaration,
+opens/owns the session, loads credentials, or proves credential custody. Successful
+declared-live startup mints the private move-only capability required by the live coordinator;
+exact reference and copied-report paths cannot reach its concrete publisher method. Crebain is
+intended to remain the sole owner of final command application and vehicle-specific safe action;
+that integration is also still unproven.
 
 > A controller signs a typed Haldir action request. Gate independently validates the
 > controller deployment, mission lease, current NCP session, source/state evidence, and
@@ -54,7 +57,8 @@ says they mean.
   declared-live startup separately retains a private move-only capability required by the
   live coordinator typestate; `StartupReport` remains observation only. The declaration and
   profile choice remain caller-supplied; startup internally derives the unauthenticated,
-  process-local capability. No runnable service selects either path.
+  process-local capability. The public live service kernel can consume the marked path plus a
+  preconstructed matched publisher, but no executable/package selects or authenticates it.
   Exact selection is also exercised through durable startup and the actor Called boundary.
 
 ### What is implemented and tested locally (the P0 pure core)
@@ -87,7 +91,13 @@ the resulting live Called type. It
 consumes one Called state and one concrete strict publisher, rejects a publisher whose exact
 route differs from the coordinator's actor realm/session before frame access or invocation,
 awaits a matched publisher once, and returns it only after local `Ok` plus terminal journal
-success
+success. The public `live-zenoh` service kernel encloses that coordinator, one concrete
+publisher, and an internally created fixed one-slot pool. Its consuming `process_one` API
+hard-bounds one raw, publicly constructible `IntentIngressEvent` before capacity, clock, or
+actor access and returns the sole service owner only after
+a no-output decision, pre-Called rejection, pre-mutation unavailability, or locally successful
+publish plus confirmed terminal record. Fatal/cancellation/publisher-error/terminal-boundary
+failure paths return no service or publisher capability
 (`CL-GATE-LIFECYCLE-01`), canonical linked publication-stage
 payload/reduction primitives (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), and
 authenticated snapshot/generation-anchor primitives with commit-before-mutation
@@ -107,17 +117,20 @@ commit, and faults if a term commit is unavailable.
 The startup library explicitly provisions or opens those paths, but no service package
 loads protected secrets or a deployed external non-rewindable anchor. The direct
 `VehicleActor` profile still selects the lossy in-process spool, while the new bound type
-remains externally read-only and no runnable service selects its internal coordinator.
+remains externally read-only and no executable or package constructs the live service kernel.
 One test composes the production declared-live startup code with injected in-memory backends
 and the actual journal manager through live coordinator construction; activated
 decision/Called and route-result composition still uses a clearly test-only binder around a
-preactivated actor. The concrete permit pool is a bounded slot primitive, but no canonical
-service-wide pool, queue, publisher worker, or runnable transport binding is selected. Publisher-result
+preactivated actor. The service kernel owns one canonical capacity-one pool for its own
+process-local lifetime, but it is not a queue, separate publisher worker, session/ingress
+owner, supervisor, or runnable transport package. Publisher-result
 ordering, cold drop before first poll, pending timeout-as-drop, panic unwind, and synthetic
 terminal-record faults use test-only seams; no live Zenoh session executes the concrete
-coordinator method in tests. The consuming future exists only after Called is locally
-sync-confirmed, so cold drop, pending drop, and unwind all leave Called for restart
-classification as `UnknownAfterPublish`; cold drop is not rejection before Called. A definite
+service/coordinator method in tests. A cold-dropped service `process_one` future never polls
+and therefore creates no Called record; after its first poll reaches the publisher await,
+pending drop or unwind leaves Called for restart classification as `UnknownAfterPublish`.
+The lower-level Called publisher future already exists after Called is sync-confirmed, so even
+its cold drop leaves Called. A definite
 synthetic terminal failure before append likewise reopens as Unknown, while synthetic
 ambiguity injected after an actual terminal append and sync replays that terminal record.
 Prepared cancellation or pre-call rejection still leaves unreclaimed Prepared evidence.
@@ -140,8 +153,9 @@ phase-by-phase status and current ecosystem blockers are tracked in
 See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). In short: exact routes, an
 off-by-default strict Zenoh 1.9 mTLS boundary, and a deterministic default-deny ACL
 package now exist, and the retained synthetic campaign proves the fixed final-command/
-controller-intent ACL subset for its ephemeral test PKI. No runnable Gate service selects
-the `DeclaredLiveZenoh` startup profile or coordinator path, and certificate
+controller-intent ACL subset for its ephemeral test PKI. A public single-owner live service
+kernel exists, but no runnable Gate executable/package selects the `DeclaredLiveZenoh`
+startup/session/ingress path, and certificate
 lifecycle/reconnect, bypass, application, and credential custody remain unproved.
 NEST/Engram controllers, Crebain/PX4-SITL, neuromorphic backends
 (Norse/Rockpool/XyloSim/SpiNNaker), and physical hardware remain unintegrated; no

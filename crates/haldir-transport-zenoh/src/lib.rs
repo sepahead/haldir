@@ -22,11 +22,12 @@ mod keys;
 #[cfg(feature = "live-zenoh")]
 mod live;
 
-pub use keys::{HaldirKeyError, HaldirKeys};
+pub use keys::{HaldirKeyError, HaldirKeys, MAX_HALDIR_ROUTE_BYTES};
 #[cfg(feature = "live-zenoh")]
 pub use live::{
-    FinalCommandPublisher, IngressCounters, IngressCountersSnapshot, IngressLimits, IntentIngress,
-    IntentIngressEvent, SecureClientConfig, SecureZenohError, SecureZenohSession,
+    FinalCommandPublisher, HARD_MAX_INTENT_BYTES, IngressCounters, IngressCountersSnapshot,
+    IngressLimits, IntentIngress, IntentIngressEvent, SecureClientConfig, SecureZenohError,
+    SecureZenohSession,
 };
 
 /// Crate version string.

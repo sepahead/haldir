@@ -65,12 +65,13 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   downgrade on restart. Public `GateConfig` and direct `VehicleActor` construction bypass the
   template-startup check and remain outside the internal capability chain. The process-local
   capability is also not authenticated or durable and does not prevent a service from selecting
-  `InProcessReference` after restart. No runnable binary or service selects
-  `DeclaredLiveZenoh`, opens a live session from it, or supplies the resulting live coordinator
-  with a session-backed strict publisher or plant binding.
+  `InProcessReference` after restart. A public feature-gated service kernel can consume
+  `DeclaredLiveZenoh` plus a preconstructed route-matched publisher, but no runnable binary or
+  service package selects the declaration, opens/owns its live session or ingress, loads
+  credentials, or supplies a plant binding.
   It therefore proves neither transport invocation nor publication, delivery, acceptance,
   application, credential custody, bypass closure, or ACL exclusivity.
-- **Publication lifecycle coordination is internal; its strict binding is not runnable.** The actor keeps
+- **A public single-owner kernel exists; its deployment binding is not runnable.** The actor keeps
   one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
   non-cloneable; exact bytes become accessible only after the actor rechecks authority,
   causal state, the safety-margin deadline, and checked active-horizon arithmetic.
@@ -98,11 +99,19 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   publisher error or definite Gate rejection can record ReturnedError. These are not live
   Zenoh tests.
 
-  The pool is not authenticated as one canonical service queue. A test composes production
-  declared-live startup code with injected in-memory backends and the actual journal manager
-  through live coordinator construction, while activated decision/Called and publisher-result
-  composition uses a test-only binder around an already-active actor. No production control plane,
-  queue, worker, or runnable service selects the coordinator. A Called record alone is a
+  `DeclaredLiveGateService` now consumes the marked coordinator and one preconstructed matched
+  publisher, privately owns one fixed capacity slot, and returns the sole service owner only on
+  safe continuation. Its input event type remains publicly constructible and is not transport
+  provenance evidence; the service enforces only the hard envelope and route-length bounds before
+  capacity, clock, and actor work. Cold drop before the outer service future's first poll performs
+  no decision/clock sample/Called; pending drop after publisher polling destroys the owner after
+  Called. Marked-live tests exercise this ownership with a fake publisher. The slot is canonical
+  only within that process-local service lifetime; it is not an authenticated deployment queue.
+  A test composes production declared-live startup code with injected in-memory backends and the
+  actual journal manager through live coordinator construction, while activated
+  service/decision/Called and publisher-result composition uses test-only binders. No production
+  control plane, session/ingress owner, queue, worker, or runnable executable/package selects the
+  kernel. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.
   Lower-level actor frame access, the copyable frame type, the reusable publisher API, and
   independently constructible session-backed publishers still permit resubmission outside
@@ -234,7 +243,8 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   only with freshly provisioned durable Gate state, and restart requires open, but the
   selected journal path itself is not yet committed into the durable Gate configuration.
   Direct `VehicleActor` construction and the in-process spool remain available, and no
-  runnable service selects the bound path. The private coordinator can create a locally
+  executable/service package makes the bound path mandatory. The public service kernel and its
+  private coordinator can create a locally
   sync-confirmed receipt/Called/publisher-result sequence through its test-only future seam,
   and its test-only cold-drop, pending timeout-as-drop, panic-unwind, and synthetic
   terminal-fault matrix can drive reopen to the journal-supported Unknown or terminal state;

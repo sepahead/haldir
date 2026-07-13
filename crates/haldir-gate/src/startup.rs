@@ -42,9 +42,22 @@ use crate::actor::{
 #[path = "publication_coordinator.rs"]
 #[allow(
     dead_code,
-    reason = "internal lifecycle scaffold has no production service caller yet"
+    reason = "internal lifecycle typestates are reached only through feature-gated service and test facades"
 )]
 pub(crate) mod publication_coordinator;
+
+#[cfg(feature = "live-zenoh")]
+#[path = "live_service.rs"]
+mod live_service;
+
+#[cfg(feature = "live-zenoh")]
+pub use live_service::{
+    DeclaredLiveGateService, LiveDecisionUnavailable, LivePublisherError, LiveServiceFatal,
+    LiveServiceOutcome, LiveServiceStartError, LiveServiceStop, LiveServiceTransition,
+};
+
+#[cfg(all(test, feature = "live-zenoh"))]
+pub(crate) use live_service::{TestDeclaredLiveGateService, TestLiveServiceTransition};
 
 const ENTROPY_BYTES: usize = 48;
 const BOOT_ENTROPY_BYTES: usize = 32;

@@ -48,9 +48,10 @@ struct OutputCapacityState {
     capacity: usize,
 }
 
-/// Cloneable bounded-pool handle that mints move-only slot permits for a possible
-/// future publisher worker. The coordinator does not authenticate one canonical pool.
-#[derive(Clone)]
+/// Bounded-pool handle that mints move-only slot permits. The public service holds
+/// one production handle; tests may clone it to observe permit release across
+/// consuming lifecycle transitions.
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct OutputCapacityPool {
     state: Arc<OutputCapacityState>,
 }
@@ -344,15 +345,15 @@ impl JournaledReturnedError {
 /// Failure of the consuming one-call publisher binding.
 ///
 /// The publisher capability is deliberately absent from both variants. A local
-/// publisher error has a terminal record when possible; if terminal recording
-/// itself fails, the original publisher result remains available for diagnosis.
+/// publisher error has a terminal record when possible; if the terminal journal/
+/// actor boundary fails, the original publisher result remains available for diagnosis.
 #[cfg(any(test, feature = "live-zenoh"))]
 pub(crate) enum PublishOnceError<E> {
     PublisherReturned {
         source: E,
         journaled: Box<JournaledReturnedError>,
     },
-    TerminalRecordFailed {
+    TerminalBoundaryFailed {
         publisher_error: Option<E>,
         source: CoordinatorFatal,
     },
@@ -493,6 +494,10 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
             clock,
             DeclaredLiveZenohPublication { _startup: startup },
         )
+    }
+
+    pub(crate) fn publisher_route_matches(&self, publisher_route: &str) -> bool {
+        publisher_route == self.core.expected_final_command_route
     }
 }
 
@@ -823,7 +828,7 @@ impl<C: MonotonicClock, P> DurableCalledPublication<C, P> {
                 Ok(journaled) => Ok((journaled, publisher)),
                 Err(source) => {
                     drop(publisher);
-                    Err(PublishOnceError::TerminalRecordFailed {
+                    Err(PublishOnceError::TerminalBoundaryFailed {
                         publisher_error: None,
                         source,
                     })
@@ -839,7 +844,7 @@ impl<C: MonotonicClock, P> DurableCalledPublication<C, P> {
                 }
                 Err(source) => {
                     drop(publisher);
-                    Err(PublishOnceError::TerminalRecordFailed {
+                    Err(PublishOnceError::TerminalBoundaryFailed {
                         publisher_error: Some(error),
                         source,
                     })
@@ -939,7 +944,7 @@ impl<C: MonotonicClock> DurableCalledPublication<C, DeclaredLiveZenohPublication
     /// terminally recorded before frame access or invocation. A matched publisher
     /// is returned for a later distinct output only after its local call returned
     /// `Ok` and the linked terminal record was sync-confirmed. A publisher error
-    /// or terminal-record failure drops the publisher capability.
+    /// or terminal-boundary failure drops the publisher capability.
     /// Cancellation while awaiting drops this Called state without inventing a
     /// returned-error record; restart recovery must classify the synced Called tail.
     /// Local `Ok` is not delivery, receiver acceptance, application, or an ACK.

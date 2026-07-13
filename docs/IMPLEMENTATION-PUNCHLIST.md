@@ -79,8 +79,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   A bounded, locked signed-segment directory manager is also unit tested and the private
   bound coordinator selects it for ordered lifecycle mutation. A test-only coordinator
   seam covers definite pre-terminal-append failure and synthetic ambiguity returned after
-  actual terminal append/sync for both publisher result branches. Direct actors and
-  runnable services do not make that path mandatory, and no OS-level append/write/
+  actual terminal append/sync for both publisher result branches. A public service kernel
+  selects that coordinator and a private capacity-one slot, but direct actors and no
+  executable/package make the path mandatory; no OS-level append/write/
   `sync_data` fault-injection, disk-full, child-process crash, or power-loss campaign exists
   (`CL-GATE-LIFECYCLE-01`, `CL-DURABLE-01`).
 - `[x]` **B15** Reference plant has exactly one command ingress; zero application from any
@@ -107,7 +108,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   realm/session route before invocation, consumes a matched strict publisher around one
   await, and journals the observed local result. Test-only futures also cover cold drop,
   pending timeout-as-drop, and panic unwind without converting an unobserved result to
-  ReturnedError; no runnable service selects the binding. Preparation/output allocation
+  ReturnedError. A public consuming service kernel encloses the marked coordinator,
+  preconstructed matched publisher, and one private slot, while no runnable executable/session
+  owner selects it. Preparation/output allocation
   alone does not mutate history; duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.
@@ -131,8 +134,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[~]` **H16** Controller-influenced TTL is clamped by the full min-set. The P0
   single-thread actor denies allocation failure before frame construction. The internal
   coordinator requires a sealed bounded-pool permit and three logical journal units before
-  actor mutation, but it is not bound to a canonical pool or actual queue/worker and emits
-  no overload loss-summary evidence.
+  actor mutation. The public service binds it to one canonical process-local capacity slot,
+  but no actual queue/worker exists and no overload loss-summary evidence is emitted.
 - `[x]` **H17** 1:1 Haldir-UUID `gate_output_epoch` ↔ wire `stream.epoch`; conversion labeled
   `FIXED_POINT_TO_NCP_FLOAT_V1` with sampled monotonicity/finiteness/bounds/round-trip
   property tests plus an explicitly ignored exhaustive full-i32 sweep. NCP's JSON-safe
@@ -146,7 +149,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   also rejects an inexact or feature-disabled `DeclaredLiveZenoh` declaration before its
   listed backend calls, entropy, locks, or directory access, and its private process-local
   capability now gates concrete coordinator publication. The caller-supplied declaration
-  is neither authenticated nor durable and no service selects it. The retained
+  is neither authenticated nor durable. A public service kernel can consume the marked path,
+  but no authenticated executable/package or session owner selects it. The retained
   synthetic campaign proves the fixed
   final-command/controller-intent subset across all configured principals, but certificate
   lifecycle/reconnect, service wiring, the full matrix, and bypass inventory remain open;

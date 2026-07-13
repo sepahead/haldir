@@ -198,7 +198,7 @@ impl SecureZenohSession {
     }
 }
 
-/// Hard maximum for one signed intent envelope before verification.
+/// Hard maximum for one candidate intent envelope before verification.
 pub const HARD_MAX_INTENT_BYTES: usize = 16 * 1024;
 /// Hard maximum number of copied intent envelopes waiting for Gate.
 pub const HARD_MAX_INTENT_QUEUE: usize = 1024;
@@ -250,7 +250,11 @@ impl IngressLimits {
     }
 }
 
-/// One bounded raw intent sample handed to Gate.
+/// One raw intent sample handed to Gate.
+///
+/// [`IntentIngress`] emits only samples that passed its configured hard payload
+/// bound. The fields remain public for consumers and tests, so downstream service
+/// boundaries must not treat construction of this type as ingress provenance.
 ///
 /// `actual_key` is observed sample metadata. No publisher-CN field exists because
 /// Zenoh's stable sample API does not expose the mTLS certificate principal.
@@ -258,7 +262,7 @@ impl IngressLimits {
 pub struct IntentIngressEvent {
     /// Exact key expression observed on the received sample.
     pub actual_key: String,
-    /// Raw signed envelope bytes, copied only after the size check.
+    /// Raw candidate intent-envelope bytes. [`IntentIngress`] copies these only after its size check.
     pub bytes: Vec<u8>,
 }
 
@@ -369,7 +373,7 @@ impl IntentIngress {
         })
     }
 
-    /// Wait for the next bounded raw intent event.
+    /// Wait for the next event admitted by this bounded ingress callback.
     pub async fn recv(&mut self) -> Option<IntentIngressEvent> {
         self.receiver.recv().await
     }

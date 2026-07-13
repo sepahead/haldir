@@ -18,8 +18,11 @@ mints a separate move-only capability that the live coordinator consumes and car
 each runtime-returning state; error and fatal paths destroy it. The concrete production
 publisher path borrows the frame only from the resulting live Called type, after the linked
 Called append was locally `sync_data`-confirmed and post-sync actor
-checks pass. This remains an internal tested mechanism, not a selected queue, service,
-publisher worker, transport pipeline, or coordinator-bound singleton pool.
+checks pass. A public off-by-default service kernel now encloses that marked coordinator, one
+preconstructed route-matched concrete publisher, and one internally created capacity slot.
+Its consuming one-event API returns the sole owner only on safe continuation paths. This is a
+process-local ownership boundary, not a selected startup/session/ingress package, queue,
+publisher worker, supervisor, or runnable transport pipeline.
 
 ## Each producer signs only what it observed
 
@@ -107,6 +110,22 @@ drops the bound runtime, publisher, and permit and reopens as one linked Unknown
 ReturnedError. An explicit local publisher error or definite Gate rejection can take that
 terminal path.
 
+The public `DeclaredLiveGateService` narrows the production call surface further. Binding
+consumes the startup-marked coordinator capability and one already-created concrete publisher,
+checks its exact route, and creates a private fixed one-slot pool. `process_one` consumes the
+service and one raw, publicly constructible `IntentIngressEvent`; it rejects an oversized
+envelope or actual-key field before capacity, clock, actor, journal, or publisher work, and
+returns the exact event with the service. It otherwise returns the service only for a
+no-publication decision, a pre-Called rejection, pre-mutation unavailability, or local
+publisher `Ok` followed by a confirmed terminal append. Fatal coordinator errors, a publisher
+error, a terminal-boundary failure, cancellation, or unwind return no service/publisher
+capability. Cold-dropping this outer future before its first poll performs no decision and
+creates no Called record; dropping after it reaches a pending publisher leaves Called for
+restart classification. This service does not open or exclusively own the shared Zenoh
+session and does not own ingress; its publisher retains a shared session handle, while a
+caller-held session can still create other publishers or close the session. The service does
+not authenticate package choice or stop lower-level public publisher/session APIs elsewhere.
+
 Test-only terminal-record fault injection also covers both observed publisher `Ok` and
 `Err`. A definite failure before terminal bytes are appended consumes the runtime and
 publisher, then reopen closes the remaining Called tail as Unknown. A synthetic
@@ -116,8 +135,9 @@ The original publisher error, when one existed, is retained only in the immediat
 the recovered journal remains authoritative. A test composes production declared-live
 startup code with injected in-memory backends and the actual journal manager through live
 coordinator construction; activated lifecycle/result cases still use a test-only binder. No
-runnable service or live invocation selects the concrete
-method. Lower-level actor/frame and publisher constructors still permit copying
+live invocation exercises the concrete method. No executable/package constructs the public
+service kernel, opens its session, or drives an ingress loop. Lower-level actor/frame and
+publisher/session constructors still permit copying
 or resubmission outside this coordinator binding.
 
 On reopen, dangling Called tails become linked Unknown records. If replay contains any
@@ -149,5 +169,5 @@ invocation, delivery, receiver inactivity, or application evidence
 - A durable restart represents a recovered dangling `PUBLISH_CALLED` as
   `UNKNOWN_AFTER_PUBLISH`, never as success, failure, or non-delivery. The current
   crate-private coordinator can create and recover that locally sync-confirmed
-  sequence, but no runnable service yet makes the path mandatory or proves a real
-  publisher call.
+  sequence, and the public service kernel selects it in code; no executable/package makes
+  the path mandatory or proves a real publisher call.

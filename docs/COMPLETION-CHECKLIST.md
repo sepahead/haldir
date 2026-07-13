@@ -38,8 +38,9 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   calls, entropy, locks, or directories. Successful declared-live startup separately mints
   the private move-only capability required by the live coordinator; exact reference and
   forged-report paths cannot mint it. The declaration remains cooperative, process-local,
-  and bypassed by direct actor construction; no runnable Gate selects the coordinator,
-  session-backed publisher, or Crebain deployment.
+  and bypassed by direct actor construction. A public service kernel can consume the marked
+  coordinator and a preconstructed route-matched publisher, but no runnable Gate package
+  selects/opens the session, ingress, credentials, or Crebain deployment.
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
   coordinator orders local receipt/Called/terminal evidence and blocks replacement after
@@ -47,10 +48,12 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   capability and is the only Called type exposing the concrete method. It rejects a concrete
   publisher whose exact route differs from the actor realm/session before frame access or
   invocation, then consumes a matched publisher around one awaited call and returns that
-  capability only after local `Ok` plus terminal journal success. Result, cold-drop, pending timeout-as-drop,
-  panic-unwind, and synthetic terminal-fault tests use test-only seams rather than a live
-  session. No runnable worker selects it, the frame remains copyable through lower-level
-  APIs, and exactly-once submission is not enforced.
+  capability only after local `Ok` plus terminal journal success. A public non-cloneable
+  service kernel adds an internal capacity-one pool and returns itself only on safe
+  continuation. Service result, cold/pending-drop, rejection, and terminal-fault tests use a
+  marked-live fake publisher seam rather than a live session. No runnable worker/session owner
+  selects it, the frame remains copyable through lower-level APIs, and exactly-once submission
+  is not enforced.
 
 ## Policy
 
@@ -84,8 +87,8 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   unwind, definite pre-terminal-append failure, and synthetic ambiguity after a real
   terminal append/sync. Production declared-live startup code with injected in-memory
   backends plus the actual journal manager is composed through live coordinator construction;
-  activated decision/Called, result, and fault composition remains test-only. Mandatory
-  service selection, Prepared abandonment/reclamation, OS-level append/write/
+  activated service/decision/Called, result, and fault composition remains test-only. An
+  executable authenticated service package, Prepared abandonment/reclamation, OS-level append/write/
   `sync_data` or disk-full fault injection, live-session faults, panic-abort/supervisor handling, child-process
   crash, and power-loss behavior remain absent.
 - **YES** — Evidence storage bounded; tamper/chain-break detected; full-spool drop

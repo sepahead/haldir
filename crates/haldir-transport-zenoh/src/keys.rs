@@ -5,7 +5,7 @@ use std::fmt;
 use ncp_core::Keys;
 
 /// Maximum complete route length accepted by Haldir signed routing fields.
-const MAX_ROUTE_BYTES: usize = 256;
+pub const MAX_HALDIR_ROUTE_BYTES: usize = 256;
 /// Maximum signed Haldir realm length (one exact route segment).
 const MAX_REALM_BYTES: usize = 64;
 /// Maximum NCP session-id length, matching Haldir's signed session contract.
@@ -184,7 +184,7 @@ fn extension_route(session_prefix: &str, leaf: &str) -> Result<String, HaldirKey
 }
 
 fn check_route(route: &str) -> Result<(), HaldirKeyError> {
-    if route.len() > MAX_ROUTE_BYTES {
+    if route.len() > MAX_HALDIR_ROUTE_BYTES {
         Err(HaldirKeyError::RouteTooLong)
     } else {
         Ok(())
@@ -258,7 +258,7 @@ mod tests {
     #[test]
     fn complete_signed_route_bound_is_enforced_defensively() {
         assert_eq!(
-            check_route(&"x".repeat(MAX_ROUTE_BYTES + 1)).unwrap_err(),
+            check_route(&"x".repeat(MAX_HALDIR_ROUTE_BYTES + 1)).unwrap_err(),
             HaldirKeyError::RouteTooLong
         );
     }

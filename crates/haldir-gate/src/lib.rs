@@ -6,7 +6,10 @@
 //! output -> explicit modeled publication call -> deterministic reference plant ->
 //! staged evidence. This is the P0
 //! `assurance-reference-v1` profile: in-process, deterministic, no live transport,
-//! no neural runtime, no physical hardware (see `docs/LIMITATIONS.md`).
+//! no neural runtime, no physical hardware (see `docs/LIMITATIONS.md`). The
+//! off-by-default `live-zenoh` feature additionally exposes a single-owner service
+//! kernel around a startup-marked coordinator and preconstructed strict publisher;
+//! no executable/session/ingress owner is selected here.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -29,6 +32,11 @@ pub use actor::{
     DecisionRecord, GateConfig, GateConfigError, GateError, GateStartupError, PreparedPublication,
     PublicationError, PublicationState, PublishCalledPublication, VehicleActor,
 };
+#[cfg(feature = "live-zenoh")]
+pub use startup::{
+    DeclaredLiveGateService, LiveDecisionUnavailable, LivePublisherError, LiveServiceFatal,
+    LiveServiceOutcome, LiveServiceStartError, LiveServiceStop, LiveServiceTransition,
+};
 pub use startup::{
     DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, GateRuntimeProfile,
     JournalBindingError, JournalBoundRunningGate, LocalStartupConfig, OsEntropy,
@@ -49,6 +57,8 @@ mod e2e {
     use crate::startup::publication_coordinator::{
         DeclaredLiveZenohPublication, StrictPublisherCallError,
     };
+    #[cfg(feature = "live-zenoh")]
+    use crate::startup::{TestDeclaredLiveGateService, TestLiveServiceTransition};
     use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
     use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
@@ -90,6 +100,10 @@ mod e2e {
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
     use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
+    #[cfg(feature = "live-zenoh")]
+    use haldir_transport_zenoh::{
+        HARD_MAX_INTENT_BYTES, HaldirKeys, IntentIngressEvent, MAX_HALDIR_ROUTE_BYTES,
+    };
     use std::collections::BTreeMap;
     use std::future::Future;
     use std::pin::Pin;
@@ -789,6 +803,7 @@ mod e2e {
 
     struct SharedClockState {
         nanoseconds: AtomicU64,
+        samples: AtomicUsize,
         scripted_samples: Mutex<std::collections::VecDeque<u64>>,
     }
 
@@ -799,6 +814,7 @@ mod e2e {
         fn new(start: MonoInstant) -> Self {
             Self(Arc::new(SharedClockState {
                 nanoseconds: AtomicU64::new(start.as_nanos()),
+                samples: AtomicUsize::new(0),
                 scripted_samples: Mutex::new(std::collections::VecDeque::new()),
             }))
         }
@@ -817,10 +833,16 @@ mod e2e {
             let mut scripted = self.0.scripted_samples.lock().unwrap();
             scripted.extend(samples.into_iter().map(MonoInstant::as_nanos));
         }
+
+        #[cfg(feature = "live-zenoh")]
+        fn sample_count(&self) -> usize {
+            self.0.samples.load(Ordering::SeqCst)
+        }
     }
 
     impl MonotonicClock for SharedClock {
         fn now(&self) -> MonoInstant {
+            self.0.samples.fetch_add(1, Ordering::SeqCst);
             let scripted = self.0.scripted_samples.lock().unwrap().pop_front();
             if let Some(nanoseconds) = scripted {
                 self.0.nanoseconds.store(nanoseconds, Ordering::SeqCst);
@@ -1341,7 +1363,7 @@ mod e2e {
                 assert_eq!(source, TestPublishError);
                 *journaled
             }
-            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed { .. })) => {
+            Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed { .. })) => {
                 panic!("terminal error record unexpectedly failed")
             }
             Poll::Ready(Ok(_)) => panic!("publisher error became success"),
@@ -1402,7 +1424,7 @@ mod e2e {
         ));
 
         let source = match poll_once(publish.as_mut()) {
-            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+            Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed {
                 publisher_error: None,
                 source,
             })) => source,
@@ -1457,7 +1479,7 @@ mod e2e {
         ));
 
         let source = match poll_once(publish.as_mut()) {
-            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+            Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed {
                 publisher_error: Some(error),
                 source,
             })) => {
@@ -1516,7 +1538,7 @@ mod e2e {
         ));
 
         let source = match poll_once(publish.as_mut()) {
-            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+            Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed {
                 publisher_error: None,
                 source,
             })) => source,
@@ -1572,7 +1594,7 @@ mod e2e {
         ));
 
         let source = match poll_once(publish.as_mut()) {
-            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed {
+            Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed {
                 publisher_error: Some(error),
                 source,
             })) => {
@@ -1650,7 +1672,7 @@ mod e2e {
                 assert_eq!(source, StrictPublisherCallError::PublisherRouteMismatch);
                 *journaled
             }
-            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed { .. })) => {
+            Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed { .. })) => {
                 panic!("route-mismatch terminal record unexpectedly failed")
             }
             Poll::Ready(Ok(_)) => panic!("wrong route became publisher success"),
@@ -2110,6 +2132,591 @@ mod e2e {
         assert_eq!(pool.available(), 2);
     }
 
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_bind_prioritizes_profile_before_route_match_and_owns_publisher() {
+        let success = journal_bound_fixture(
+            64,
+            None,
+            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
+            GateRuntimeProfile::DeclaredLiveZenoh,
+        );
+        let expected_route = HaldirKeys::try_new(
+            success.bound.actor().realm().as_str(),
+            success.bound.actor().ncp_session().session_id.as_str(),
+        )
+        .unwrap()
+        .final_command()
+        .to_owned();
+        let success_drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::bind(
+            success.bound,
+            success.clock,
+            TestPublisher {
+                drops: Arc::clone(&success_drops),
+            },
+            &expected_route,
+        )
+        .unwrap();
+        assert_eq!(service.available_output_slots(), 1);
+        assert_eq!(success_drops.load(Ordering::SeqCst), 0);
+        drop(service);
+        assert_eq!(success_drops.load(Ordering::SeqCst), 1);
+
+        let mismatch = journal_bound_fixture(
+            64,
+            None,
+            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
+            GateRuntimeProfile::DeclaredLiveZenoh,
+        );
+        let mismatch_clock = mismatch.clock.clone();
+        let mismatch_samples = mismatch_clock.sample_count();
+        let mismatch_drops = Arc::new(AtomicUsize::new(0));
+        assert!(matches!(
+            TestDeclaredLiveGateService::bind(
+                mismatch.bound,
+                mismatch.clock,
+                TestPublisher {
+                    drops: Arc::clone(&mismatch_drops),
+                },
+                "wrong/realm/session/command",
+            ),
+            Err(LiveServiceStartError::PublisherRouteMismatch)
+        ));
+        assert_eq!(mismatch_clock.sample_count(), mismatch_samples + 1);
+        assert_eq!(mismatch_drops.load(Ordering::SeqCst), 1);
+
+        let reference = journal_bound_fixture(
+            64,
+            None,
+            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
+            GateRuntimeProfile::InProcessReference,
+        );
+        let reference_clock = reference.clock.clone();
+        let reference_samples = reference_clock.sample_count();
+        let reference_drops = Arc::new(AtomicUsize::new(0));
+        assert!(matches!(
+            TestDeclaredLiveGateService::bind(
+                reference.bound,
+                reference.clock,
+                TestPublisher {
+                    drops: Arc::clone(&reference_drops),
+                },
+                "wrong/realm/session/command",
+            ),
+            Err(LiveServiceStartError::Coordinator(
+                LiveServiceFatal::RuntimeProfileMismatch {
+                    required: GateRuntimeProfile::DeclaredLiveZenoh,
+                    actual: GateRuntimeProfile::InProcessReference,
+                }
+            ))
+        ));
+        assert_eq!(reference_clock.sample_count(), reference_samples);
+        assert_eq!(reference_drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_bounds_forgeable_events_before_clock_or_actor_work() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let oversized_envelope = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: vec![0; HARD_MAX_INTENT_BYTES + 1],
+        };
+        let expected_envelope = oversized_envelope.clone();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let samples_before = fixture.clock.sample_count();
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(
+            oversized_envelope,
+            move |_| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            },
+        ));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("oversized envelope must refuse before publisher work"),
+        };
+        let service = match transition {
+            TestLiveServiceTransition::Unavailable {
+                service,
+                event,
+                reason:
+                    LiveDecisionUnavailable::IntentEnvelopeTooLarge {
+                        maximum_bytes: HARD_MAX_INTENT_BYTES,
+                        actual_bytes,
+                    },
+            } => {
+                assert_eq!(actual_bytes, HARD_MAX_INTENT_BYTES + 1);
+                assert_eq!(event, expected_envelope);
+                service
+            }
+            _ => panic!("oversized envelope must return its exact event and service"),
+        };
+        assert_eq!(fixture.clock.sample_count(), samples_before);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(service.available_output_slots(), 1);
+
+        let oversized_key = IntentIngressEvent {
+            actual_key: "x".repeat(MAX_HALDIR_ROUTE_BYTES + 1),
+            bytes: b"bounded".to_vec(),
+        };
+        let expected_key = oversized_key.clone();
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(
+            oversized_key,
+            move |_| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            },
+        ));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("oversized key must refuse before publisher work"),
+        };
+        let service = match transition {
+            TestLiveServiceTransition::Unavailable {
+                service,
+                event,
+                reason:
+                    LiveDecisionUnavailable::ActualKeyTooLong {
+                        maximum_bytes: MAX_HALDIR_ROUTE_BYTES,
+                        actual_bytes,
+                    },
+            } => {
+                assert_eq!(actual_bytes, MAX_HALDIR_ROUTE_BYTES + 1);
+                assert_eq!(event, expected_key);
+                service
+            }
+            _ => panic!("oversized key must return its exact event and service"),
+        };
+        assert_eq!(fixture.clock.sample_count(), samples_before);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(service.available_output_slots(), 1);
+        drop(service);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_returns_exact_event_before_clock_when_its_own_slot_is_held() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let expected_event = event.clone();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let held_slot = service.reserve_output_slot_for_test().unwrap();
+        assert_eq!(service.available_output_slots(), 0);
+        let samples_before = fixture.clock.sample_count();
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(event, move |_| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("held output capacity must refuse before publisher work"),
+        };
+
+        let service = match transition {
+            TestLiveServiceTransition::Unavailable {
+                service,
+                event,
+                reason: LiveDecisionUnavailable::OutputCapacityUnavailable,
+            } => {
+                assert_eq!(event, expected_event);
+                service
+            }
+            _ => panic!("the held service-owned slot must return the exact event and owner"),
+        };
+        assert_eq!(fixture.clock.sample_count(), samples_before);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(service.available_output_slots(), 0);
+        drop(held_slot);
+        assert_eq!(service.available_output_slots(), 1);
+        drop(service);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_success_returns_the_same_single_owner_after_terminal_journal() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let pool_observer = service.output_pool_observer();
+        assert_eq!(service.available_output_slots(), 1);
+        assert_eq!(pool_observer.available(), 1);
+
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(event, move |frame| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            assert!(!frame.bytes().is_empty());
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("ready publisher must complete the service step"),
+        };
+
+        let service = match transition {
+            TestLiveServiceTransition::Continue {
+                service,
+                outcome:
+                    LiveServiceOutcome::PublishReturnedOk {
+                        decision,
+                        terminal_envelope_digest: _,
+                    },
+            } => {
+                assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
+                service
+            }
+            _ => panic!("publisher success must return the sole live service owner"),
+        };
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 0);
+        assert_eq!(service.available_output_slots(), 1);
+        let held_after_success = pool_observer.try_reserve().unwrap();
+        assert_eq!(service.available_output_slots(), 0);
+        drop(held_after_success);
+        assert_eq!(service.available_output_slots(), 1);
+        drop(service);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_no_publication_releases_its_single_output_slot() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: b"not-a-signed-intent".to_vec(),
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(event, move |_| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("no-publication decision must complete synchronously"),
+        };
+
+        let service = match transition {
+            TestLiveServiceTransition::Continue {
+                service,
+                outcome: LiveServiceOutcome::NoPublication(decision),
+            } => {
+                assert_ne!(decision.outcome, DecisionOutcomeV1::Allow);
+                service
+            }
+            _ => panic!("a terminal non-ALLOW decision must return the service"),
+        };
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(service.available_output_slots(), 1);
+        drop(service);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_pre_call_rejection_returns_owner_without_invocation() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let decision_at = fixture.clock.now();
+        let validation_at = decision_at.checked_add_ms(21).unwrap();
+        fixture.clock.script_samples([decision_at, validation_at]);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(event, move |_| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("pre-call rejection must not await a publisher"),
+        };
+
+        let service = match transition {
+            TestLiveServiceTransition::Continue {
+                service,
+                outcome:
+                    LiveServiceOutcome::RejectedBeforeCall {
+                        decision,
+                        reason: PublicationError::DeadlineElapsed,
+                    },
+            } => {
+                assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
+                service
+            }
+            _ => panic!("pre-call rejection must return the same service owner"),
+        };
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(service.available_output_slots(), 1);
+        drop(service);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn cold_dropping_a_live_service_step_never_invokes_the_publisher() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let samples_before = fixture.clock.sample_count();
+        let observed_calls = Arc::clone(&calls);
+        let process = Box::pin(service.process_one_with_test_future(event, move |_| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+
+        drop(process);
+        assert_eq!(fixture.clock.sample_count(), samples_before);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_publisher_error_returns_no_service_capability() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(event, move |_| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            std::future::ready(Err::<(), _>(TestPublishError))
+        }));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("ready publisher error must complete the service step"),
+        };
+
+        assert!(matches!(
+            transition,
+            TestLiveServiceTransition::PublisherReturned { .. }
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_terminal_record_failure_returns_no_service_capability() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_fault(
+            event,
+            Some(TestTerminalAppendFault::BeforeAppend),
+            move |_| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            },
+        ));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("ready publisher must reach the terminal fault"),
+        };
+
+        assert!(matches!(
+            transition,
+            TestLiveServiceTransition::TerminalBoundaryFailed {
+                publisher_error: None,
+                source: LiveServiceFatal::Journal(_),
+            }
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_preserves_publisher_error_when_terminal_record_also_fails() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_fault(
+            event,
+            Some(TestTerminalAppendFault::BeforeAppend),
+            move |_| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Err::<(), _>(TestPublishError))
+            },
+        ));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("ready publisher error must reach the terminal fault"),
+        };
+
+        assert!(matches!(
+            transition,
+            TestLiveServiceTransition::TerminalBoundaryFailed {
+                publisher_error: Some(TestPublishError),
+                source: LiveServiceFatal::Journal(_),
+            }
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_service_clock_regression_is_fatal_before_publisher_invocation() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let current = fixture.clock.now().as_nanos();
+        fixture.clock.set_ns(current - 1);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let observed_calls = Arc::clone(&calls);
+        let mut process = Box::pin(service.process_one_with_test_future(event, move |_| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            std::future::ready(Ok::<(), TestPublishError>(()))
+        }));
+        let transition = match poll_once(process.as_mut()) {
+            Poll::Ready(transition) => transition,
+            Poll::Pending => panic!("clock regression must fail before publisher work"),
+        };
+
+        assert!(matches!(
+            transition,
+            TestLiveServiceTransition::Fatal(LiveServiceFatal::ClockRegression)
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn dropping_a_pending_live_service_step_destroys_the_owner_after_called() {
+        let fixture = declared_live_coordinator_fixture(64);
+        let event = IntentIngressEvent {
+            actual_key: INTENT_KEY.to_owned(),
+            bytes: signed_coordinator_intent(&fixture, 1),
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let polls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let service = TestDeclaredLiveGateService::new(
+            fixture.coordinator,
+            TestPublisher {
+                drops: Arc::clone(&drops),
+            },
+        );
+        let observed_calls = Arc::clone(&calls);
+        let observed_polls = Arc::clone(&polls);
+        let mut process = Box::pin(service.process_one_with_test_future(event, move |_| {
+            observed_calls.fetch_add(1, Ordering::SeqCst);
+            PendingPublish {
+                polls: observed_polls,
+            }
+        }));
+
+        assert!(matches!(poll_once(process.as_mut()), Poll::Pending));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 0);
+        drop(process);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+    }
+
     #[test]
     fn coordinator_clock_regression_is_fatal_and_releases_output_capacity() {
         let fixture = coordinator_fixture(64);
@@ -2147,6 +2754,7 @@ mod e2e {
     #[test]
     fn concrete_strict_publish_future_is_send() {
         fn assert_send<T: Send>(_: T) {}
+        fn assert_type_send<T: Send>() {}
         fn check(
             called: DurableCalledPublication<SharedClock, DeclaredLiveZenohPublication>,
             publisher: haldir_transport_zenoh::FinalCommandPublisher,
@@ -2160,6 +2768,20 @@ mod e2e {
                 haldir_transport_zenoh::FinalCommandPublisher,
             ),
         >(check);
+
+        fn check_service(service: DeclaredLiveGateService<SharedClock>, event: IntentIngressEvent) {
+            assert_send(service.process_one(event));
+        }
+
+        assert_type_send::<DeclaredLiveGateService<SharedClock>>();
+        assert_type_send::<LiveDecisionUnavailable>();
+        assert_type_send::<LivePublisherError>();
+        assert_type_send::<LiveServiceFatal>();
+        assert_type_send::<LiveServiceOutcome>();
+        assert_type_send::<LiveServiceStartError>();
+        assert_type_send::<LiveServiceStop>();
+        assert_type_send::<LiveServiceTransition<SharedClock>>();
+        assert_send::<fn(DeclaredLiveGateService<SharedClock>, IntentIngressEvent)>(check_service);
     }
 
     #[cfg(feature = "real-ncp")]

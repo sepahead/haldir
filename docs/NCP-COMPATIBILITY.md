@@ -77,10 +77,12 @@ copyable report.
 
 Gate's off-by-default `live-zenoh` feature now provides a crate-private consuming binding
 from one durable coordinator Called state to one awaited invocation of the concrete
-`FinalCommandPublisher`. The live coordinator constructor consumes the private startup
-capability and cross-checks the retained declaration and exact actor wire profile before
-clock sampling. The resulting marker is carried through every runtime-returning coordinator
-state; error and fatal paths destroy it. The concrete publisher method exists only on the
+`FinalCommandPublisher`, plus a public single-owner service kernel that encloses it with one
+preconstructed matched publisher and one private capacity slot. The live coordinator
+constructor consumes the private startup capability and cross-checks the retained declaration
+and exact actor wire profile before clock sampling. The resulting marker is carried through
+every runtime-returning coordinator state; error and fatal paths destroy it. The concrete
+publisher method exists only on the
 marked live Called type. Exact
 `InProcessReference`, forged-report, and modeled-actor paths cannot construct it.
 Coordinator construction derives the exact pinned command route
@@ -88,7 +90,7 @@ from its actor realm/session; a publisher for any other route is terminally reje
 frame access or invocation. A matched publisher capability is returned only after local
 publisher `Ok` and linked terminal journal success; a publisher error is journaled
 conservatively when terminal append and sync succeed and does not return the capability.
-Terminal-record failure instead returns an immediate diagnostic and no capabilities.
+Terminal-boundary failure instead returns an immediate diagnostic and no capabilities.
 Dropping the future while it is pending
 leaves locally sync-confirmed Called, which the tested restart path closes as
 `UnknownAfterPublish`. Tests exercise the
@@ -103,15 +105,23 @@ after the real terminal append and sync, with reopen respectively producing Unkn
 exact terminal state. These tests do not open a live Zenoh session, execute the concrete
 method, enforce a real deadline, or inject an OS-I/O fault.
 
-No runnable binary or service selects `DeclaredLiveZenoh` or the coordinator/publisher
-binding. The runtime-profile value is a cooperative caller declaration, not authenticated
-package data or a durable anti-downgrade state; public `GateConfig` and direct
-`VehicleActor` construction bypasses template startup and remains outside this capability
-chain. One test composes production declared-live startup code with injected in-memory
-backends and the actual journal manager into the marked coordinator, while activated
-Called/route tests use a test-only binder. Nothing in this coordinator composition opens a
-Zenoh session, selects a runnable coordinator, invokes the concrete publisher, or establishes
-credential custody.
+The public off-by-default `DeclaredLiveGateService` now consumes the marked coordinator and one
+preconstructed route-matched publisher. For each raw, publicly constructible
+`IntentIngressEvent`, it enforces the hard envelope and actual-key-field bounds before capacity,
+clock, or actor access. The key value is caller-supplied at this boundary and is not transport
+provenance. The service privately owns one capacity slot and returns the sole service owner
+only on safe continuation; fatal, cancellation, publisher-error, and
+terminal-boundary-failure paths return no service/publisher capability. Marked-live service
+tests use a fake publisher seam; the
+production concrete signature compiles but is not invoked. No runnable binary/package selects
+`DeclaredLiveZenoh`, opens/owns the session or ingress, or constructs the concrete service.
+The runtime-profile value is a cooperative caller declaration, not authenticated package data
+or a durable anti-downgrade state; public `GateConfig` and direct `VehicleActor` construction
+bypasses template startup and remains outside this capability chain. One test composes
+production declared-live startup code with injected in-memory backends and the actual journal
+manager into the marked coordinator, while activated service/Called/route tests use test-only
+binders. Nothing in this composition opens a Zenoh session, invokes the concrete publisher,
+or establishes credential custody.
 The retained synthetic campaign proves the exact final-command/controller-intent ACL subset
 using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not the service
 binding or application. Even a local Zenoh success would not prove delivery or application.
