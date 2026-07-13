@@ -1,6 +1,6 @@
 //! `haldir-state` — bounded, verified state machines for sessions, controller
-//! replay, Gate-output streams, mission leases, anti-rollback, process lifecycle,
-//! and the authorization-revision TOCTOU guard.
+//! replay, Gate-output streams, mission leases, deployment-package anti-rollback,
+//! process lifecycle, and the authorization-revision TOCTOU guard.
 //!
 //! The `model` tests encode the specification's safety invariants (Phase 6 /
 //! punch-list) as executable checks. A TLA+ model of the same invariants is
@@ -34,11 +34,14 @@ pub mod session;
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use anti_rollback::{AntiRollbackError, AntiRollbackStore, BootContext};
+pub use anti_rollback::{
+    AntiRollbackError, AntiRollbackStore, BootContext, DeploymentPackageBinding,
+};
 pub use challenge::ChallengeTable;
 pub use clock::{SystemMonotonicClock, TestClock};
 pub use durable::{
-    BootedDurableAntiRollbackStore, DurableAntiRollbackError, DurableAntiRollbackStore,
+    BootedDurableAntiRollbackStore, DeploymentBootedDurableAntiRollbackStore,
+    DurableAntiRollbackError, DurableAntiRollbackStore,
 };
 pub use fault::FaultLatch;
 pub use gate_process::{GateProcessMachine, InvalidTransition};

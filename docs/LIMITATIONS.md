@@ -226,6 +226,24 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   encoding, and neither result proves a wired live service or durable runtime.
 - **`missing_docs` hardening.** Deferred; the workspace does not yet
   `deny(missing_docs)`. Crate- and item-level docs are written voluntarily.
+- **Deployment-package primitive is not a deployed package loader.** `haldir-deployment`
+  strictly verifies one canonical v1.0 COSE package against bootstrap trust, revocations, and
+  a separately supplied exact expected deployment authority/Gate/realm/vehicle/class/runtime/
+  NCP-wire policy. The standalone API exact-matches that policy but cannot establish where its
+  caller obtained it; future Gate glue must source policy from bootstrap state rather than derive
+  it from the package. The contract binds distinct nonzero state/journal IDs and one canonical,
+  unique logical ID,
+  nonzero size, and deployment-artifact-domain digest for every closed required artifact role.
+  Its consuming resolver preflights externally supplied per-artifact/total bounds and retains
+  caller-owned verified byte buffers behind a resolved typestate, with no path or reopen API.
+  Bootstrap-policy provenance, bootstrap-revocation freshness, secure path traversal/opening,
+  semantic parsing or use of any artifact, correspondence to the running executable, and NCP
+  compatibility-record semantics remain outside that boundary. `GateConfigTemplate` is still
+  caller-constructed, and no Gate startup consumes the resolved typestate or proves verification
+  precedes its entropy, durable, secret, or network effects. The durable v3 state primitive can
+  atomically bind a package revision/payload digest with a fresh boot, but its lower public method
+  accepts neutral values and only a later Gate glue typestate can require that they came from this
+  verifier. This proves `CL-DEPLOYMENT-PRIMITIVE-01`, not `CL-DEPLOYMENT-PACKAGE-01`.
 - **Durable anti-rollback / restart rollback protection.** The default P0 actor
   constructor still uses an **in-memory** anti-rollback store. A separate recovered
   constructor now accepts only a non-cloneable booted-store capability produced after
@@ -236,8 +254,14 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   logical issuer ID and vehicle ID, with the old delimiter-based namespace retained as
   a conservative read-only migration floor. Realm, Gate incarnation, session/output
   epoch, and issuer signing-key ID do not reset that high-water within one store. Because
-  the next write upgrades the durable payload shape to v2, a pre-v2 executable rejects
-  the rewritten state instead of silently falling back to the stale legacy floor.
+  the current durable payload shape is v3, a pre-v3 executable rejects rewritten state.
+  Valid canonical v1/v2 state is preserved only with an explicit `MigrationRequired` package
+  marker; unrelated v3 writes preserve that marker, and no package can bind it implicitly. Any
+  ordinary use of a pristine v3 store also makes later first package binding migration-required.
+  A package-bound store rejects the plain boot path; same revision/digest may restart with a fresh
+  boot, a higher revision advances the pair, and rollback or same-revision/different-digest fails
+  before mutation. The package pair and boot share one authenticated snapshot commit, but no Gate
+  package loader currently selects that path.
   Operational rollback must still restore a compatible binary and its authenticated
   state as one reviewed unit. Durable stores are provisioned and authenticated for one
   Gate ID, so no cross-store or

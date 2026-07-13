@@ -60,16 +60,23 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   the declaration in `StartupReport` and separately mints a private move-only capability
   consumed by the live coordinator typestate, holds the instance lock, and explicitly
   provisions or opens development-local state. Exact reference and copied-report paths
-  cannot mint the capability. **Still absent:** an authenticated or durably bound runtime
-  declaration, a service package that selects it, and a deployed external non-rewindable
-  anchor, so end-to-end cross-restart protection is not established (see
+  cannot mint the capability. A separate strict package/owned-artifact verifier and atomic v3
+  package-plus-boot ratchet now exist, but no Gate startup consumes either typestate
+  (`CL-DEPLOYMENT-PRIMITIVE-01`). **Still absent:** private Gate glue that makes the authenticated
+  declaration mandatory, a protected credential/artifact opener, and a deployed external
+  non-rewindable anchor, so end-to-end cross-restart protection is not established (see
   `docs/LIMITATIONS.md`). Direct actor construction bypasses template startup.
 - `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,
   an unambiguous versioned `(logical issuer, vehicle)` term namespace with a
   conservative legacy-scope upgrade read, separate-key authenticated snapshots,
   generation-anchor reconciliation, anchor assurance classification, Unix
   temp→file-sync→rename→directory-sync mechanics, and Gate injection/fault latching
-  are unit tested. Development-local startup is wired, but a deployed external
+  are unit tested. Durable v3 also distinguishes pristine, package-bound, and migration-required
+  state and atomically ratchets one store-global package revision/payload digest for the store's
+  authenticated Gate binding with the next
+  boot. It rejects legacy/prior-use implicit binding, rollback, same-revision equivocation, and
+  plain boot after binding; storage/anchor failure tests cover neither-or-both recovery. The lower
+  ratchet still accepts neutral values and is not wired to the verifier or Gate. Development-local startup is wired, but a deployed external
   non-rewindable anchor and child-process crash evidence are absent; therefore the Gate still
   cannot claim cross-restart protection.
 - `[~]` **B13** Monotonic-clock regression while ACTIVE now coherently latches both
@@ -174,7 +181,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   already-selected event or claiming timeout/supervision behavior. Separate development examples
   now enforce explicit disposable provisioning versus `OpenExisting` live bind/immediate shutdown.
   The declaration and activation delivery are neither authenticated nor durable, and no
-  authenticated credential-opening executable/package or ongoing control loop selects them. The
+  authenticated credential-opening executable or ongoing control loop selects them. A separate
+  package primitive verifies and retains exact signed artifact bytes and can supply neutral values
+  to an atomic package/boot ratchet, but no Gate path consumes those stages. The
   retained synthetic ACL campaign proves the fixed final-command/controller-intent subset across all
   configured principals, and the separate retained development campaign proves only concrete
   session-open, aggregate-bind, and immediate local-shutdown returns. Certificate

@@ -17,6 +17,8 @@ each component observed.
 | Compromised controller emitting well-formed signed intents | conjunctive authorization: scope + admission + lease + source + policy | `haldir-gate` e2e denies, `range::*` |
 | Stale controller (old lease/session/source, retired epoch) | atomic session pair, boot binding, two-phase replay, source correlation | `range::session_generation_replay`, `intent_replay`, `stale_intent_sequence`, `stale_state` |
 | Wrong admitted artifact | admission digest equality (bundle/backend/admission) | `range::bundle_substitution`, `backend_profile_substitution` |
+| Wrong deployment bytes at the standalone verifier boundary | separately passed expected authority/scope/profile policy and bootstrap trust, strict signed package, exact owned role/ID/size/digest set | `haldir-deployment` signature/policy/artifact negatives |
+| Package rollback/equivocation at the standalone state boundary | atomic store-global revision/payload-digest plus boot ratchet for the store's authenticated Gate binding | `haldir-state` deployment-ratchet negatives |
 | Buggy controller (extreme/oscillatory) | fixed-point bounds, norm, slew, duty, geofence, uncertainty | `haldir-policy-native`, `range::excessive_*`, `geofence_violation` |
 | Replay / duplicate | replay state (no liveness effect), output stream never reused | `haldir-state::replay`, `range::intent_replay` |
 | Clock fault (regression) | monotonic-only freshness; regression denies, never "fresh" | `haldir-policy-native` freshness test |
@@ -27,6 +29,9 @@ each component observed.
 ## Adversaries NOT solved by the P0 core (need controls out of scope)
 
 - Root compromise of the Gate host / kernel / process memory / signing key.
+- Mandatory use of the standalone deployment verifier/ratchet by Gate startup; secure artifact
+  opening, bootstrap-policy provenance, protected credential custody, and
+  running-binary/configuration correspondence.
 - Compromise of both mission and admission authorities.
 - Malicious plant/Crebain code that ignores validation, or malicious firmware.
 - Physical sensor spoofing not caught by the state-estimation boundary.

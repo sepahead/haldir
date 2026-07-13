@@ -135,9 +135,12 @@ processing. The retained development campaign proves those concrete local calls 
 one fresh disposable fixture with zero intents processed and zero commands published
 (`CL-LIVE-GATE-DEV-BIND-01`). No authenticated production package protects the
 session/credentials, authenticates ongoing controls, or makes the selection mandatory.
-The runtime-profile value is a cooperative caller declaration, not authenticated package data
-or a durable anti-downgrade state; public `GateConfig` and direct `VehicleActor` construction
-bypasses template startup and remains outside this capability chain. Production declared-live
+The separate deployment verifier authenticates a closed runtime/NCP-wire selection plus exact
+compatibility-artifact bytes. The state primitive separately ratchets caller-supplied neutral values,
+but no type-enforced path makes those values originate at the verifier, semantically validates that
+record, or feeds Gate startup (`CL-DEPLOYMENT-PRIMITIVE-01`). The actual template runtime-profile
+value therefore remains a cooperative caller declaration; public `GateConfig` and direct
+`VehicleActor` construction bypass template startup and remain outside this capability chain. Production declared-live
 startup with injected in-memory backends is tested through marked coordinator construction.
 Separately, a test-minted marked capability wraps an initially inactive actor and
 the actual journal manager, then exercises bounded local activation, canonical intent-route

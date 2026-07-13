@@ -67,6 +67,10 @@ pub enum DigestDomain {
     BackendProfile,
     /// An admission record.
     Admission,
+    /// Exact bytes of an artifact referenced by a deployment package.
+    DeploymentArtifact,
+    /// Exact canonical payload bytes of a deployment package.
+    DeploymentPackage,
     /// A Gate decision identifier derived from a full boot id and counter.
     DecisionId,
 }
@@ -85,6 +89,8 @@ impl DigestDomain {
             Self::Bundle => b"haldir.digest.bundle.v1",
             Self::BackendProfile => b"haldir.digest.backend_profile.v1",
             Self::Admission => b"haldir.digest.admission.v1",
+            Self::DeploymentArtifact => b"haldir.digest.deployment_artifact.v1",
+            Self::DeploymentPackage => b"haldir.digest.deployment_package.v1",
             Self::DecisionId => b"haldir.digest.decision_id.v1",
         }
     }

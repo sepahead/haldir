@@ -16,6 +16,12 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **YES** — Mission lease, admission, policy, session, Gate output stream,
   controller intent stream, boot id, and ACL-exclusive publication are separate
   identities/types (`ids.rs` B5 newtypes; state machines).
+- **PARTIAL** — A strict signed deployment-package contract, separately passed exact-policy verifier,
+  exact owned-artifact resolver, and atomic store-global package-plus-boot ratchet for one
+  authenticated Gate binding are tested
+  (`CL-DEPLOYMENT-PRIMITIVE-01`). No Gate startup consumes the resolved/package-booted stages,
+  securely opens artifacts or credentials, or makes their selections mandatory
+  (`CL-DEPLOYMENT-PACKAGE-01`).
 - **YES** — Restart invalidates active controller delegation (fresh boot id; state
   `restart_invalidates_lease_via_new_boot_id`).
 - **PARTIAL** — Revocation can preempt command traffic: the revocation snapshot and

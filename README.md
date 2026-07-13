@@ -39,8 +39,8 @@ local shutdown under a separate outer lock. The target processes zero intents an
 command publications. A retained clean-source synthetic campaign now proves those concrete local
 calls and returns against the pinned router and fresh ephemeral Gate PKI for one disposable fixture
 (`CL-LIVE-GATE-DEV-BIND-01`; `evidence/12-live-gate-dev-smoke`, source commit
-`3a75c039c3e73b999a74741b5633ee43a0a69e97`). It is not an authenticated package, control
-plane, worker, or supervisor. It has no protected credential loader and proves no peer identity,
+`3a75c039c3e73b999a74741b5633ee43a0a69e97`). It is not selected by an authenticated package
+loader, control plane, worker, or supervisor. It has no protected credential loader and proves no peer identity,
 credential custody, handle exclusivity, delivery, or remote cleanup. Successful declared-live
 startup mints the private move-only capability required by the live coordinator;
 exact reference and copied-report paths cannot reach its concrete publisher method. Crebain is
@@ -87,9 +87,20 @@ says they mean.
   request remains cooperative rather than enforced. The separate development smoke target can
   open and immediately close the aggregate from an existing disposable fixture; the retained
   development campaign proves those local calls while processing zero intents and publishing zero
-  commands. No authenticated package provides ongoing control/state delivery, protected credential
-  custody, a processing loop, or supervision.
+  commands. No authenticated package loader/runtime wiring provides ongoing control/state delivery,
+  protected credential custody, a processing loop, or supervision.
   Exact selection is also exercised through durable startup and the actor Called boundary.
+
+A separate, non-runnable deployment primitive strictly verifies a canonical signed package against
+separately supplied bootstrap trust and an exact expected authority/Gate/realm/vehicle/profile/
+runtime policy. The standalone API does not prove where its caller obtained that policy. It then
+consumes and retains one exact owned byte string for every closed required artifact role. The
+separate durable v3 anti-rollback primitive can atomically commit caller-supplied neutral revision/
+payload-digest values with a fresh boot, rejecting rollback, same-revision equivocation, implicit
+legacy binding, and later plain-boot downgrade. No type-enforced path makes those values originate
+at the verifier (`CL-DEPLOYMENT-PRIMITIVE-01`). No Gate startup path consumes the resolved typestate
+yet; there is no protected artifact/credential opener or running-binary/configuration binding, so
+`CL-DEPLOYMENT-PACKAGE-01` remains unproven.
 
 ### What is implemented and tested locally (the P0 pure core)
 

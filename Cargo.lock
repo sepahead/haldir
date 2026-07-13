@@ -761,6 +761,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "haldir-deployment"
+version = "0.1.0-experimental"
+dependencies = [
+ "haldir-contracts",
+ "haldir-crypto",
+ "proptest",
+]
+
+[[package]]
 name = "haldir-durable"
 version = "0.1.0-experimental"
 dependencies = [

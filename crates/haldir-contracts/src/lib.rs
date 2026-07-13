@@ -30,6 +30,7 @@ mod macros;
 pub mod action;
 pub mod cbor;
 pub mod challenge;
+pub mod deployment;
 pub mod digest;
 pub mod error;
 pub mod ids;

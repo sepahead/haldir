@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/haldir-contracts",
     "crates/haldir-crypto",
+    "crates/haldir-deployment",
     "crates/haldir-core",
     "crates/haldir-state",
     "crates/haldir-policy-native",
@@ -35,6 +36,7 @@ publish = false
 # --- internal ---
 haldir-contracts = { path = "crates/haldir-contracts" }
 haldir-crypto = { path = "crates/haldir-crypto" }
+haldir-deployment = { path = "crates/haldir-deployment" }
 haldir-core = { path = "crates/haldir-core" }
 haldir-state = { path = "crates/haldir-state" }
 haldir-policy-native = { path = "crates/haldir-policy-native" }

@@ -7,6 +7,14 @@ than one authority domain: `CONTROLLER_INTENT`, `MISSION_AUTHORITY`,
 `ADMISSION_AUTHORITY`, `POLICY_AUTHORITY`, `REVOCATION_AUTHORITY`,
 `GATE_APPLICATION`, `CREBAIN_EVIDENCE`, `DEPLOYMENT_AUTHORITY`, `DEVELOPMENT_ONLY`.
 
+`DEPLOYMENT_AUTHORITY` now has a strict standalone package-verification boundary
+(`CL-DEPLOYMENT-PRIMITIVE-01`). A separately passed policy names the expected deployment authority,
+Gate, realm, vehicle, class, runtime, and NCP-wire profile, and the verifier rejects any package
+mismatch. The standalone API cannot establish where its caller obtained that policy; future Gate
+glue must source it from bootstrap state rather than derive it from the package. This capability is
+not yet an input to the Gate command conjunction below: no startup path consumes the resolved
+artifact typestate or package-booted durable capability.
+
 ## Effective permission to create a plant command (conjunction)
 
 Enforced in `crates/haldir-gate/src/actor.rs::decide_intent`, in order:
