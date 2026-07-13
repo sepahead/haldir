@@ -139,9 +139,16 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   capture-limit error returns no partial snapshot, but ordinary recovery may already
   have removed an insufficient tail or pending creation artifact. The manager still
   assumes one writer and a trusted local parent directory; it has no Gate `TrustStore`
-  policy adapter, semantic COSE reducer, automatic retention, OS fault-injection/
-  child-process crash proof, or power-loss claim. The actor still uses its in-process
-  spool and does not select this manager or emit recovery/loss-summary events, and no
+  policy selected by the runtime, automatic retention, OS fault-injection/child-process
+  crash proof, or power-loss claim. An assurance-only stateless Gate adapter and
+  consume-once ordered publication replay now bind the closed receipt/stage profile to
+  exact Gate signer/subject/segment boot and rebuild fresh read-only state
+  (`CL-GATE-JOURNAL-REPLAY-01`). Historical evidence is rejected when its key is revoked
+  in the supplied snapshot; there is no signed-time key-validity model, snapshot
+  freshness proof, or support for other journal record kinds. The replay snapshot
+  excludes the newly created current tail, and caller-supplied journal boot options do
+  not prove a durable Gate boot. The actor still uses its in-process spool and does not
+  select this manager/verifier/replay or emit recovery/loss-summary events, and no
   child-process crash/disk-full campaign exists.
   A canonical Gate publication-stage payload and retained-state-bounded pure
   identity/link/transition reducer are now tested
@@ -151,8 +158,10 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   later/current boot provenance, and generic replay permits multiple Unknown events
   from one claimed recovery boot. The primitives do not verify COSE, Gate-role signer
   binding, supplied-value/envelope correspondence, or the envelope size/work bound;
-  observe ordered recovered manager records; reserve lifecycle capacity; append anything;
-  or alter startup/actor state. No runtime crash-durability claim follows.
+  themselves observe ordered recovered manager records; reserve lifecycle capacity;
+  append anything; or alter startup/actor state. The separate Gate replay adapter closes
+  verification/reduction only for an already successful snapshot. No runtime
+  crash-durability claim follows.
   Therefore evidence crash durability remains unproven under `CL-DURABLE-01`.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,

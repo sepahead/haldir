@@ -27,14 +27,17 @@ pub mod trust;
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use cose::{ExpectedContext, VerifiedCose, content_type_for, external_aad_for, verify_sign1};
+pub use cose::{
+    ExpectedContext, VerifiedCose, content_type_for, external_aad_for, verify_sign1,
+    verify_sign1_dispatched,
+};
 pub use error::CryptoError;
 pub use key::{Signature, SigningKey, VerifyingKey};
 pub use role::{KeyClass, KeyRole};
 pub use trust::{KeyRecord, RevocationSnapshot, TrustStore, TrustStoreError};
 
 use haldir_contracts::cbor::{
-    CanonicalValue, Limits, Validate, from_canonical_bytes, to_canonical_bytes,
+    CanonicalMessage, CanonicalValue, Limits, Validate, from_canonical_bytes, to_canonical_bytes,
 };
 use haldir_contracts::ids::KeyId;
 
@@ -62,13 +65,16 @@ pub fn sign_message<T: CanonicalValue>(
 ///
 /// # Errors
 /// Returns a [`CryptoError`] on any verification or canonical-decode failure.
-pub fn verify_and_decode<T: CanonicalValue + Validate>(
+pub fn verify_and_decode<T: CanonicalMessage + Validate>(
     env: &[u8],
     ctx: &ExpectedContext,
     trust: &TrustStore,
     revocations: &RevocationSnapshot,
     limits: Limits,
 ) -> Result<(T, KeyId, Option<String>), CryptoError> {
+    if ctx.kind != T::KIND || ctx.schema_major != T::SCHEMA_MAJOR {
+        return Err(CryptoError::ContentTypeMismatch);
+    }
     let verified = verify_sign1(env, ctx, trust, revocations)?;
     let msg = from_canonical_bytes::<T>(verified.payload, limits)?;
     Ok((msg, verified.signer_kid, verified.signer_subject))
@@ -320,6 +326,90 @@ mod tests {
     }
 
     #[test]
+    fn typed_decode_rejects_a_matching_envelope_context_for_another_kind() {
+        let k = kid(1);
+        let sk = signer(1);
+        let trust = trust_with(&k, &sk, KeyRole::ControllerIntent, KeyClass::Assurance);
+        let wrong_kind = "haldir.mission_lease";
+        let env = sign_message(&intent(), wrong_kind, 1, &k, &sk);
+        let ctx = ExpectedContext {
+            kind: wrong_kind,
+            schema_major: 1,
+            required_role: KeyRole::ControllerIntent,
+            assurance_profile: true,
+        };
+        let res: Result<(HaldirIntentV1, _, _), _> = verify_and_decode(
+            &env,
+            &ctx,
+            &trust,
+            &RevocationSnapshot::new(),
+            Limits::LARGE,
+        );
+        assert_eq!(res.err(), Some(CryptoError::ContentTypeMismatch));
+    }
+
+    #[test]
+    fn typed_decode_rejects_a_matching_envelope_context_for_another_major() {
+        let k = kid(1);
+        let sk = signer(1);
+        let trust = trust_with(&k, &sk, KeyRole::ControllerIntent, KeyClass::Assurance);
+        let env = sign_message(&intent(), HaldirIntentV1::KIND, 2, &k, &sk);
+        let ctx = ExpectedContext {
+            kind: HaldirIntentV1::KIND,
+            schema_major: 2,
+            required_role: KeyRole::ControllerIntent,
+            assurance_profile: true,
+        };
+        let res: Result<(HaldirIntentV1, _, _), _> = verify_and_decode(
+            &env,
+            &ctx,
+            &trust,
+            &RevocationSnapshot::new(),
+            Limits::LARGE,
+        );
+        assert_eq!(res.err(), Some(CryptoError::ContentTypeMismatch));
+    }
+
+    #[test]
+    fn protected_type_dispatch_selects_one_exact_context() {
+        let k = kid(1);
+        let sk = signer(1);
+        let trust = trust_with(&k, &sk, KeyRole::ControllerIntent, KeyClass::Assurance);
+        let revocations = RevocationSnapshot::new();
+        let env = sign_message(&intent(), KIND, 1, &k, &sk);
+        let expected_content_type = content_type_for(KIND);
+
+        let (verified, tag) =
+            verify_sign1_dispatched(&env, &trust, &revocations, |protected_content_type| {
+                (protected_content_type == expected_content_type).then(|| (ctx(), 7u8))
+            })
+            .unwrap();
+        assert_eq!(tag, 7);
+        assert!(!verified.payload.is_empty());
+
+        assert_eq!(
+            verify_sign1_dispatched(&env, &trust, &revocations, |_| {
+                None::<(ExpectedContext<'static>, u8)>
+            })
+            .err(),
+            Some(CryptoError::ContentTypeMismatch)
+        );
+        let wrong_context = ExpectedContext {
+            kind: "haldir.mission_lease",
+            schema_major: 1,
+            required_role: KeyRole::ControllerIntent,
+            assurance_profile: true,
+        };
+        assert_eq!(
+            verify_sign1_dispatched(&env, &trust, &revocations, |_| {
+                Some((wrong_context, 9u8))
+            })
+            .err(),
+            Some(CryptoError::ContentTypeMismatch)
+        );
+    }
+
+    #[test]
     fn duplicate_conflicting_kid_rejected() {
         let k = kid(1);
         let sk1 = signer(1);
@@ -365,8 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn wrong_major_version_aad_rejected() {
-        // AAD encodes the major version; verifying at a different major fails.
+    fn wrong_major_version_type_context_and_cose_aad_are_rejected() {
         let k = kid(1);
         let sk = signer(1);
         let trust = trust_with(&k, &sk, KeyRole::ControllerIntent, KeyClass::Assurance);
@@ -377,6 +466,13 @@ mod tests {
             required_role: KeyRole::ControllerIntent,
             assurance_profile: true,
         };
+        // The low-level COSE path proves the `{kind}.v{major}` external-AAD
+        // separation even without typed decoding.
+        assert_eq!(
+            verify_sign1(&env, &bad_ctx, &trust, &RevocationSnapshot::new()).err(),
+            Some(CryptoError::SignatureInvalid)
+        );
+        // The higher-level Rust V1 type rejects a V2 context before verification.
         let res: Result<(HaldirIntentV1, _, _), _> = verify_and_decode(
             &env,
             &bad_ctx,
@@ -384,6 +480,6 @@ mod tests {
             &RevocationSnapshot::new(),
             Limits::LARGE,
         );
-        assert_eq!(res.err(), Some(CryptoError::SignatureInvalid));
+        assert_eq!(res.err(), Some(CryptoError::ContentTypeMismatch));
     }
 }

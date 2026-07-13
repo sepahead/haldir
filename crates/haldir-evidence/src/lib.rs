@@ -20,6 +20,7 @@
 
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 
+pub mod gate_journal;
 pub mod journal;
 pub mod manager;
 pub mod publication;

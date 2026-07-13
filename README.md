@@ -55,8 +55,9 @@ on actor revalidation and charges history only on caller-reported modeled return
 opt-in exact upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts, a bounded locked Unix
 signed-segment manager with opt-in bounded ordered recovery snapshots
-(`CL-EVIDENCE-MANAGER-01`), canonical linked publication-stage payload/reduction
-primitives (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), and
+(`CL-EVIDENCE-MANAGER-01`), a stateless Gate trust/COSE adapter and fresh ordered
+publication replay (`CL-GATE-JOURNAL-REPLAY-01`), canonical linked publication-stage
+payload/reduction primitives (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), and
 authenticated snapshot/generation-anchor primitives with commit-before-mutation
 anti-rollback tests,
 Unix atomic-file mechanics, classified local-development recovery, and Gate-bound

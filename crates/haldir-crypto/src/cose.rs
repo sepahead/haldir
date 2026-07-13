@@ -205,6 +205,42 @@ pub fn verify_sign1<'a>(
 ) -> Result<VerifiedCose<'a>, CryptoError> {
     let parsed = parse_sign1(env)?;
     let (content_type, kid) = parse_protected(parsed.protected)?;
+    verify_parsed_sign1(parsed, &content_type, kid, ctx, trust, revocations)
+}
+
+/// Select one closed, statically named dispatch context from the protected
+/// content type, then verify the envelope exactly once.
+///
+/// The selector sees only the structurally parsed protected content type. It must
+/// exact-match a bounded closed vocabulary and return a `'static` context; this
+/// function rechecks that selected context before role, revocation, and signature
+/// verification. Payload fields never select their own decoder.
+///
+/// # Errors
+/// Returns [`CryptoError::ContentTypeMismatch`] when the selector rejects the
+/// protected type or supplies a nonmatching context, plus the errors documented
+/// by [`verify_sign1`].
+pub fn verify_sign1_dispatched<'a, D>(
+    env: &'a [u8],
+    trust: &TrustStore,
+    revocations: &RevocationSnapshot,
+    select: impl FnOnce(&str) -> Option<(ExpectedContext<'static>, D)>,
+) -> Result<(VerifiedCose<'a>, D), CryptoError> {
+    let parsed = parse_sign1(env)?;
+    let (content_type, kid) = parse_protected(parsed.protected)?;
+    let (ctx, dispatch) = select(&content_type).ok_or(CryptoError::ContentTypeMismatch)?;
+    let verified = verify_parsed_sign1(parsed, &content_type, kid, &ctx, trust, revocations)?;
+    Ok((verified, dispatch))
+}
+
+fn verify_parsed_sign1<'a>(
+    parsed: ParsedSign1<'a>,
+    content_type: &str,
+    kid: KeyId,
+    ctx: &ExpectedContext,
+    trust: &TrustStore,
+    revocations: &RevocationSnapshot,
+) -> Result<VerifiedCose<'a>, CryptoError> {
     if content_type != ctx.content_type() {
         return Err(CryptoError::ContentTypeMismatch);
     }

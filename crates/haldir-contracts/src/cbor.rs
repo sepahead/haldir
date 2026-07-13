@@ -64,6 +64,14 @@ pub trait CanonicalValue: Sized {
     fn decode(r: &mut CborReader<'_>) -> Result<Self, DecodeError>;
 }
 
+/// A top-level canonical message with a fixed embedded kind domain.
+pub trait CanonicalMessage: CanonicalValue {
+    /// Exact `message_kind` value encoded at map key `1`.
+    const KIND: &'static str;
+    /// Major schema version represented by this Rust message type.
+    const SCHEMA_MAJOR: u16;
+}
+
 /// Optional semantic validation applied after structural decode.
 pub trait Validate {
     /// Return a stable error if a cross-field or version invariant is violated.

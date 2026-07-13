@@ -139,6 +139,11 @@ macro_rules! canonical_struct {
             pub const KIND: &'static str = $kind;
         }
 
+        impl $crate::cbor::CanonicalMessage for $name {
+            const KIND: &'static str = $kind;
+            const SCHEMA_MAJOR: u16 = 1;
+        }
+
         impl $crate::cbor::CanonicalValue for $name {
             fn encode(&self, w: &mut $crate::cbor::CborWriter) {
                 let mut count: u64 = 1;

@@ -44,6 +44,15 @@ side-effect-free because calls can precede new append capacity and commit; seman
 reduction happens only after a confirmed append or over a successfully returned
 recovery snapshot used to rebuild fresh state exactly once.
 
+The assurance-only Gate adapter closes that semantic gap offline for the two-record
+publication journal profile. It binds footer and record KIDs to the same unrevoked
+Gate-application assurance key/subject, dispatches only protected receipt/stage
+content types, enforces the current Gate receipt shape and segment Gate/producer boot,
+and consumes one ordered recovery snapshot to build fresh publication state. Empty
+segments participate in boot chronology; boot resurrection and same-boot segment or
+record time regression fail closed. This still does not authenticate the newly created
+current tail as a durably committed Gate boot or append any recovery event.
+
 ## Honesty rules
 
 - A publish/prepare stage is never automatically upgraded to `received` /
