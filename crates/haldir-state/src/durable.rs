@@ -4,8 +4,8 @@ use crate::mission::{LeaseTermStore, LeaseTermStoreError};
 use crate::{AntiRollbackError, AntiRollbackStore, BootContext};
 use haldir_contracts::ids::{GateBootId, GateId};
 use haldir_durable::{
-    AuthenticatedSnapshotStore, CommitReceipt, DurableError, GenerationAnchor, RecoveryStatus,
-    SnapshotBinding, SnapshotStorage, StorageMacKey,
+    AnchorProtection, AuthenticatedSnapshotStore, CommitReceipt, DurableError, GenerationAnchor,
+    RecoveryStatus, SnapshotBinding, SnapshotStorage, StorageMacKey,
 };
 
 /// A semantic or durable-storage failure.
@@ -104,6 +104,12 @@ impl<S: SnapshotStorage, A: GenerationAnchor> DurableAntiRollbackStore<S, A> {
     #[must_use]
     pub const fn last_gate_boot_id(&self) -> Option<GateBootId> {
         self.state.last_gate_boot_id()
+    }
+
+    /// Protection class declared by the configured generation anchor.
+    #[must_use]
+    pub fn anchor_protection(&self) -> AnchorProtection {
+        self.snapshots.anchor_protection()
     }
 
     /// Whether the authenticated snapshot store is provisioned for `gate_id`.
@@ -206,6 +212,12 @@ impl<S: SnapshotStorage, A: GenerationAnchor> BootedDurableAntiRollbackStore<S, 
         self.store.is_bound_to_gate(gate_id)
     }
 
+    /// Protection class declared by the configured generation anchor.
+    #[must_use]
+    pub fn anchor_protection(&self) -> AnchorProtection {
+        self.store.anchor_protection()
+    }
+
     /// Highest accepted lease term for `scope`.
     #[must_use]
     pub fn highest_term(&self, scope: &[u8]) -> u64 {
@@ -287,6 +299,10 @@ mod tests {
     }
 
     impl GenerationAnchor for MemoryAnchor {
+        fn protection(&self) -> AnchorProtection {
+            AnchorProtection::EphemeralTest
+        }
+
         fn read(&self, store_id: StoreId) -> Result<Option<Anchor>, DurableError> {
             Ok(self.heads.borrow().get(&store_id).copied())
         }
@@ -332,8 +348,10 @@ mod tests {
         let storage = MemoryStorage::default();
         let anchor = MemoryAnchor::default();
         let mut store = provision(storage.clone(), anchor.clone());
+        assert_eq!(store.anchor_protection(), AnchorProtection::EphemeralTest);
         store.accept_term(b"lease", 4).unwrap();
         let (booted, _) = store.begin_boot(&gate_id(), [1; 32]).unwrap();
+        assert_eq!(booted.anchor_protection(), AnchorProtection::EphemeralTest);
         let boot = booted.boot_context();
         assert_eq!(boot.boot_counter, 1);
         drop(booted);

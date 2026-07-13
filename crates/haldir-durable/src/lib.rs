@@ -18,15 +18,17 @@
 
 pub mod error;
 mod file;
+mod local_anchor;
 mod mac;
 pub mod snapshot;
 
 pub use error::DurableError;
 pub use file::AtomicFileSnapshot;
+pub use local_anchor::LocalFileGenerationAnchor;
 pub use mac::StorageMacKey;
 pub use snapshot::{
-    Anchor, AuthenticatedSnapshotStore, CommitReceipt, GenerationAnchor, LoadedSnapshot,
-    RecoveryStatus, SnapshotBinding, SnapshotStorage, StoreId,
+    Anchor, AnchorProtection, AuthenticatedSnapshotStore, CommitReceipt, GenerationAnchor,
+    LoadedSnapshot, RecoveryStatus, SnapshotBinding, SnapshotStorage, StoreId,
 };
 
 /// Crate version string.

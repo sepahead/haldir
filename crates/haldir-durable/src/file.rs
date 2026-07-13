@@ -32,7 +32,8 @@ static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 ///
 /// This type does not lock writers, prevent an external rollback, or promise
 /// power-loss durability. Callers must provide exclusive-writer coordination
-/// and a separate [`crate::GenerationAnchor`] when anti-rewind is required.
+/// and an [`crate::AnchorProtection::ExternalNonRewindable`] generation anchor
+/// when protection from local rewind is required.
 #[derive(Debug, Clone)]
 pub struct AtomicFileSnapshot {
     path: PathBuf,

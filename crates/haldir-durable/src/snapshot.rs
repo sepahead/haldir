@@ -1,4 +1,4 @@
-//! Authenticated snapshot envelopes and external-anchor reconciliation.
+//! Authenticated snapshot envelopes and generation-anchor reconciliation.
 //!
 //! This module deliberately abstracts atomic storage and the generation anchor.
 //! A backend must not claim durability until it proves its replace/sync contract;
@@ -24,6 +24,12 @@ impl StoreId {
     #[must_use]
     pub const fn new(bytes: [u8; 16]) -> Self {
         Self(bytes)
+    }
+
+    /// Borrow the provisioned identifier bytes.
+    #[must_use]
+    pub const fn as_bytes(&self) -> &[u8; 16] {
+        &self.0
     }
 }
 
@@ -60,7 +66,7 @@ impl SnapshotBinding {
     }
 }
 
-/// Externally anchored snapshot head.
+/// Snapshot head held by a configured generation anchor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Anchor {
     /// Monotonic snapshot generation.
@@ -81,9 +87,29 @@ pub trait SnapshotStorage {
     fn replace(&mut self, bytes: &[u8]) -> Result<(), DurableError>;
 }
 
-/// Monotonic anchor outside the snapshot storage's rewritable failure domain.
+/// Assurance classification declared by a generation-anchor implementation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum AnchorProtection {
+    /// In-memory or otherwise ephemeral implementation for deterministic tests.
+    EphemeralTest,
+    /// Locally durable but rewritable state in the snapshot host's failure domain.
+    LocalRewritable,
+    /// Independently administered monotonic state intended to resist local rewind.
+    ExternalNonRewindable,
+}
+
+/// Monotonic generation-anchor contract.
+///
+/// Callers must inspect [`GenerationAnchor::protection`] rather than inferring
+/// assurance from the concrete backend name. `LocalRewritable` is useful for
+/// process-crash reconciliation but cannot establish anti-rewind against an
+/// attacker who can restore both local files.
 pub trait GenerationAnchor {
-    /// Read the externally witnessed head for `store_id`.
+    /// Declared protection class for deployment-policy checks and honest claims.
+    #[must_use]
+    fn protection(&self) -> AnchorProtection;
+
+    /// Read the configured head for `store_id`.
     fn read(&self, store_id: StoreId) -> Result<Option<Anchor>, DurableError>;
 
     /// Compare-and-set the head. A mismatch must return
@@ -99,10 +125,10 @@ pub trait GenerationAnchor {
 /// Result of opening an existing store.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecoveryStatus {
-    /// Snapshot and external anchor already agreed.
+    /// Snapshot and generation anchor already agreed.
     Clean,
     /// A crash left a valid next snapshot installed; opening completed the
-    /// pending external-anchor advance.
+    /// pending generation-anchor advance.
     CompletedPendingAnchor,
 }
 
@@ -122,7 +148,7 @@ impl LoadedSnapshot {
         self.generation
     }
 
-    /// Digest externally anchored for this envelope.
+    /// Envelope digest held by the configured generation anchor.
     #[must_use]
     pub const fn snapshot_digest(&self) -> [u8; 32] {
         self.snapshot_digest
@@ -140,7 +166,7 @@ impl LoadedSnapshot {
 pub struct CommitReceipt {
     /// Committed generation.
     pub generation: u64,
-    /// Externally anchored envelope digest.
+    /// Generation-anchored envelope digest.
     pub snapshot_digest: [u8; 32],
 }
 
@@ -152,6 +178,7 @@ pub struct AuthenticatedSnapshotStore<S, A> {
     binding: SnapshotBinding,
     max_payload_bytes: usize,
     current: LoadedSnapshot,
+    commit_uncertain: bool,
 }
 
 impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
@@ -161,12 +188,20 @@ impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
         self.binding
     }
 
+    /// Protection class declared by the configured generation anchor.
+    #[must_use]
+    pub fn anchor_protection(&self) -> AnchorProtection {
+        self.anchor.protection()
+    }
+
     /// Explicitly provision a new store. Missing state is never implicitly
     /// treated as a fresh store by [`Self::open_existing`].
     ///
     /// # Errors
     /// Returns [`DurableError::AlreadyProvisioned`] if either backend is nonempty,
-    /// or a backend/authentication error if the initial commit fails.
+    /// or a backend/authentication error if the initial commit fails. Provisioning
+    /// spans two backends and is deliberately not auto-repaired: a failure after
+    /// either side becomes visible can require explicit operator recovery.
     pub fn provision_new(
         mut storage: S,
         mut anchor: A,
@@ -193,6 +228,7 @@ impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
             binding,
             max_payload_bytes,
             current: loaded,
+            commit_uncertain: false,
         })
     }
 
@@ -247,6 +283,7 @@ impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
                 binding,
                 max_payload_bytes,
                 current: loaded,
+                commit_uncertain: false,
             },
             status,
         ))
@@ -258,13 +295,27 @@ impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
         &self.current
     }
 
-    /// Install the next authenticated snapshot, then advance the external anchor.
+    /// Whether replacement may have changed bytes without a confirmed anchor advance.
+    ///
+    /// A store in this state refuses every later [`Self::commit`]. Consume it
+    /// with [`Self::into_parts`] and use [`Self::open_existing`] for controlled
+    /// reconciliation.
+    #[must_use]
+    pub const fn is_commit_uncertain(&self) -> bool {
+        self.commit_uncertain
+    }
+
+    /// Install the next authenticated snapshot, then advance the generation anchor.
     /// The returned receipt is the commit boundary; callers must not expose the
     /// candidate semantic authority before this succeeds.
     ///
     /// # Errors
-    /// Returns on generation exhaustion, storage failure, or anchor failure.
+    /// Returns on generation exhaustion, storage failure, anchor failure, or if
+    /// a prior anchor failure left the installed snapshot outcome uncertain.
     pub fn commit(&mut self, payload: &[u8]) -> Result<CommitReceipt, DurableError> {
+        if self.commit_uncertain {
+            return Err(DurableError::CommitUncertain);
+        }
         let generation = self
             .current
             .generation
@@ -287,10 +338,16 @@ impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
             generation: next.generation,
             snapshot_digest: next.snapshot_digest,
         };
+        self.commit_uncertain = true;
+        // A backend error is not proof that the old envelope remains visible.
+        // For example, a filesystem backend can complete rename and then fail
+        // the parent-directory sync. The pre-set latch therefore remains set on
+        // every error until controlled reopen reconciles the two backends.
         self.storage.replace(&bytes)?;
         self.anchor
             .compare_and_set(self.binding.store_id, Some(previous_head), next_head)?;
         self.current = next;
+        self.commit_uncertain = false;
         Ok(CommitReceipt {
             generation,
             snapshot_digest: next_head.snapshot_digest,
@@ -433,7 +490,7 @@ impl<'a> Cursor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::RefCell;
+    use std::cell::{Cell, RefCell};
     use std::collections::BTreeMap;
     use std::rc::Rc;
 
@@ -451,10 +508,47 @@ mod tests {
         }
     }
 
+    #[derive(Clone)]
+    struct WriteThenFailStorage {
+        inner: MemoryStorage,
+        fail_after_next_replace: Rc<Cell<bool>>,
+    }
+
+    impl WriteThenFailStorage {
+        fn new(inner: MemoryStorage) -> Self {
+            Self {
+                inner,
+                fail_after_next_replace: Rc::new(Cell::new(false)),
+            }
+        }
+
+        fn fail_next_replace_after_write(&self) {
+            self.fail_after_next_replace.set(true);
+        }
+    }
+
+    impl SnapshotStorage for WriteThenFailStorage {
+        fn load(&self) -> Result<Option<Vec<u8>>, DurableError> {
+            self.inner.load()
+        }
+
+        fn replace(&mut self, bytes: &[u8]) -> Result<(), DurableError> {
+            self.inner.replace(bytes)?;
+            if self.fail_after_next_replace.replace(false) {
+                return Err(DurableError::Storage);
+            }
+            Ok(())
+        }
+    }
+
     #[derive(Clone, Default)]
     struct MemoryAnchor(Rc<RefCell<BTreeMap<StoreId, Anchor>>>);
 
     impl GenerationAnchor for MemoryAnchor {
+        fn protection(&self) -> AnchorProtection {
+            AnchorProtection::EphemeralTest
+        }
+
         fn read(&self, store_id: StoreId) -> Result<Option<Anchor>, DurableError> {
             Ok(self.0.borrow().get(&store_id).copied())
         }
@@ -470,6 +564,47 @@ mod tests {
             }
             self.0.borrow_mut().insert(store_id, next);
             Ok(())
+        }
+    }
+
+    #[derive(Clone)]
+    struct FaultingAnchor {
+        inner: MemoryAnchor,
+        next_failure: Rc<Cell<Option<DurableError>>>,
+    }
+
+    impl FaultingAnchor {
+        fn new(inner: MemoryAnchor) -> Self {
+            Self {
+                inner,
+                next_failure: Rc::new(Cell::new(None)),
+            }
+        }
+
+        fn fail_next_compare_and_set(&self, error: DurableError) {
+            self.next_failure.set(Some(error));
+        }
+    }
+
+    impl GenerationAnchor for FaultingAnchor {
+        fn protection(&self) -> AnchorProtection {
+            self.inner.protection()
+        }
+
+        fn read(&self, store_id: StoreId) -> Result<Option<Anchor>, DurableError> {
+            self.inner.read(store_id)
+        }
+
+        fn compare_and_set(
+            &mut self,
+            store_id: StoreId,
+            expected: Option<Anchor>,
+            next: Anchor,
+        ) -> Result<(), DurableError> {
+            if let Some(error) = self.next_failure.take() {
+                return Err(error);
+            }
+            self.inner.compare_and_set(store_id, expected, next)
         }
     }
 
@@ -614,6 +749,88 @@ mod tests {
                 .unwrap();
         assert_eq!(status, RecoveryStatus::CompletedPendingAnchor);
         assert_eq!(recovered.current().payload(), b"pending");
+    }
+
+    #[test]
+    fn write_then_storage_error_poison_store_until_reopen() {
+        let storage = WriteThenFailStorage::new(MemoryStorage::default());
+        let anchor = MemoryAnchor::default();
+        let mut store = AuthenticatedSnapshotStore::provision_new(
+            storage.clone(),
+            anchor,
+            key(7),
+            binding(1),
+            1024,
+            b"one",
+        )
+        .unwrap();
+        storage.fail_next_replace_after_write();
+
+        assert_eq!(store.commit(b"two"), Err(DurableError::Storage));
+        assert!(store.is_commit_uncertain());
+        assert_eq!(store.commit(b"three"), Err(DurableError::CommitUncertain));
+
+        let (storage, anchor) = store.into_parts();
+        let (recovered, status) =
+            AuthenticatedSnapshotStore::open_existing(storage, anchor, key(7), binding(1), 1024)
+                .unwrap();
+        assert_eq!(status, RecoveryStatus::CompletedPendingAnchor);
+        assert_eq!(recovered.current().payload(), b"two");
+        assert!(!recovered.is_commit_uncertain());
+    }
+
+    #[test]
+    fn unavailable_anchor_after_replace_poison_store_until_reopen() {
+        let storage = MemoryStorage::default();
+        let anchor = FaultingAnchor::new(MemoryAnchor::default());
+        let mut store = AuthenticatedSnapshotStore::provision_new(
+            storage,
+            anchor.clone(),
+            key(7),
+            binding(1),
+            1024,
+            b"one",
+        )
+        .unwrap();
+        anchor.fail_next_compare_and_set(DurableError::AnchorUnavailable);
+
+        assert_eq!(store.commit(b"two"), Err(DurableError::AnchorUnavailable));
+        assert!(store.is_commit_uncertain());
+        assert_eq!(store.commit(b"three"), Err(DurableError::CommitUncertain));
+
+        let (storage, anchor) = store.into_parts();
+        let (recovered, status) =
+            AuthenticatedSnapshotStore::open_existing(storage, anchor, key(7), binding(1), 1024)
+                .unwrap();
+        assert_eq!(status, RecoveryStatus::CompletedPendingAnchor);
+        assert_eq!(recovered.current().payload(), b"two");
+        assert!(!recovered.is_commit_uncertain());
+    }
+
+    #[test]
+    fn anchor_conflict_after_replace_poison_store_until_reopen() {
+        let storage = MemoryStorage::default();
+        let anchor = FaultingAnchor::new(MemoryAnchor::default());
+        let mut store = AuthenticatedSnapshotStore::provision_new(
+            storage,
+            anchor.clone(),
+            key(7),
+            binding(1),
+            1024,
+            b"one",
+        )
+        .unwrap();
+        anchor.fail_next_compare_and_set(DurableError::AnchorConflict);
+
+        assert_eq!(store.commit(b"two"), Err(DurableError::AnchorConflict));
+        assert_eq!(store.commit(b"three"), Err(DurableError::CommitUncertain));
+
+        let (storage, anchor) = store.into_parts();
+        let (recovered, status) =
+            AuthenticatedSnapshotStore::open_existing(storage, anchor, key(7), binding(1), 1024)
+                .unwrap();
+        assert_eq!(status, RecoveryStatus::CompletedPendingAnchor);
+        assert_eq!(recovered.current().payload(), b"two");
     }
 
     #[test]

@@ -12,14 +12,14 @@ pub enum DurableError {
     Missing,
     /// Provisioning was requested for non-empty storage or an existing anchor.
     AlreadyProvisioned,
-    /// Snapshot storage exists but the required external anchor is absent.
+    /// Snapshot storage exists but the required generation anchor is absent.
     AnchorMissing,
-    /// The snapshot is older than the external anchor.
+    /// The snapshot is older than the generation anchor.
     Rewind,
     /// Snapshot and anchor claim the same generation with different digests, or
     /// a next-generation snapshot does not link to the anchored predecessor.
     Fork,
-    /// The snapshot jumped over one or more externally anchored generations.
+    /// The snapshot jumped over one or more anchored generations.
     GenerationGap,
     /// The checked generation namespace is exhausted.
     Exhausted,
@@ -27,10 +27,16 @@ pub enum DurableError {
     Storage,
     /// The selected backend is unavailable on this platform.
     Unsupported,
-    /// The external anchor backend was unavailable.
+    /// The generation-anchor backend was unavailable.
     AnchorUnavailable,
-    /// The external anchor compare-and-set observed unexpected state.
+    /// The anchor request or persisted value named another logical store.
+    AnchorBindingMismatch,
+    /// The generation-anchor compare-and-set observed unexpected state.
     AnchorConflict,
+    /// A snapshot replacement may have changed bytes, but the installed
+    /// snapshot/anchor outcome is uncertain. Controlled reopen/recovery is
+    /// required before another commit.
+    CommitUncertain,
 }
 
 impl DurableError {
@@ -50,7 +56,9 @@ impl DurableError {
             Self::Storage => "DURABLE_STORAGE_FAILED",
             Self::Unsupported => "DURABLE_UNSUPPORTED",
             Self::AnchorUnavailable => "DURABLE_ANCHOR_UNAVAILABLE",
+            Self::AnchorBindingMismatch => "DURABLE_ANCHOR_BINDING_MISMATCH",
             Self::AnchorConflict => "DURABLE_ANCHOR_CONFLICT",
+            Self::CommitUncertain => "DURABLE_COMMIT_UNCERTAIN",
         }
     }
 }

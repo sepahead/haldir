@@ -59,8 +59,8 @@ mod e2e {
         sign_message, verify_and_decode,
     };
     use haldir_durable::{
-        Anchor, DurableError, GenerationAnchor, SnapshotBinding, SnapshotStorage, StorageMacKey,
-        StoreId,
+        Anchor, AnchorProtection, DurableError, GenerationAnchor, SnapshotBinding, SnapshotStorage,
+        StorageMacKey, StoreId,
     };
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
     use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
@@ -365,6 +365,10 @@ mod e2e {
     struct GateMemoryAnchor(Arc<Mutex<BTreeMap<StoreId, Anchor>>>);
 
     impl GenerationAnchor for GateMemoryAnchor {
+        fn protection(&self) -> AnchorProtection {
+            AnchorProtection::EphemeralTest
+        }
+
         fn read(&self, store_id: StoreId) -> Result<Option<Anchor>, DurableError> {
             Ok(self.0.lock().unwrap().get(&store_id).copied())
         }
