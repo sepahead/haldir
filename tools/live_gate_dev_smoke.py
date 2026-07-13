@@ -55,6 +55,7 @@ GATE_CONFIG_PATH = "/etc/haldir-live-gate/gate.json"
 GATE_SECRET_FILES = frozenset({"ca.pem", "gate.cert.pem", "gate.key.pem"})
 PRIVATE_KEY_MARKER = re.compile(rb"-----BEGIN (?:[A-Z0-9]+ )?PRIVATE KEY-----")
 MANIFEST_SCHEMA_VERSION = 2
+BUILD_TIMEOUT_SECONDS = 3600
 EXAMPLE_EXECUTABLES = {
     "live_gate_dev_bind_shutdown": BIND_BINARY,
     "live_gate_dev_fixture_provision": PROVISION_BINARY,
@@ -499,6 +500,7 @@ def run_smoke(output: Path) -> Path:
             [
                 "docker",
                 "build",
+                "--progress=plain",
                 "--pull",
                 "--file",
                 str(dockerfile),
@@ -506,7 +508,7 @@ def run_smoke(output: Path) -> Path:
                 smoke_image,
                 str(source_root),
             ],
-            timeout_seconds=1200,
+            timeout_seconds=BUILD_TIMEOUT_SECONDS,
         )
         smoke_image_id = resolve_image_id(runner, smoke_image)
         example_executable_sha256 = inspect_example_executables(

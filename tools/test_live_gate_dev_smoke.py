@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from live_gate_dev_smoke import (
     BUILDER_IMAGE,
+    BUILD_TIMEOUT_SECONDS,
     EXPECTED_ROUTER_IMAGE,
     EXAMPLE_EXECUTABLES,
     GATE_SECRET_FILES,
@@ -40,6 +41,7 @@ class LiveGateDevSmokeTests(unittest.TestCase):
         self.assertIn("--example live_gate_dev_bind_shutdown", dockerfile)
         self.assertIn("--features live-gate-dev-smoke", dockerfile)
         self.assertRegex(EXPECTED_ROUTER_IMAGE, r"@sha256:[0-9a-f]{64}$")
+        self.assertEqual(BUILD_TIMEOUT_SECONDS, 3600)
 
     def test_raw_output_is_confined_to_its_ignored_target_subtree(self) -> None:
         safe = SAFE_OUTPUT_ROOT / "unit-new-output"

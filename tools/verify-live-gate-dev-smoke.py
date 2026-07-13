@@ -886,6 +886,7 @@ def verify_commands(
     expected_build = [
         "docker",
         "build",
+        "--progress=plain",
         "--pull",
         "--file",
         "$WORK/source/tools/live-gate-dev-smoke/Dockerfile",
