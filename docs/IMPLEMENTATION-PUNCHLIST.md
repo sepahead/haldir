@@ -65,7 +65,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   exist, but no Gate startup consumes either typestate
   (`CL-DEPLOYMENT-PRIMITIVE-01`). **Still absent:** private Gate glue that makes the authenticated
   declaration mandatory, authenticated/protected artifact-root and credential acquisition,
-  semantic artifact loaders, and a deployed external
+  semantic loaders for the remaining artifacts and signed-role composition for the standalone NCP
+  command-subset compatibility proof (`CL-NCP-COMPATIBILITY-01`), and a deployed external
   non-rewindable anchor, so end-to-end cross-restart protection is not established (see
   `docs/LIMITATIONS.md`). Direct actor construction bypasses template startup.
 - `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,

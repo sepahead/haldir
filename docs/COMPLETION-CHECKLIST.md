@@ -19,9 +19,11 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **PARTIAL** — A strict signed deployment-package contract, separately passed exact-policy verifier,
   exact owned-artifact resolver, bounded Linux/macOS source from a caller-supplied open directory, and
   atomic store-global package-plus-boot ratchet for one authenticated Gate binding are tested
-  (`CL-DEPLOYMENT-PRIMITIVE-01`). No Gate startup consumes the resolved/package-booted stages,
-  authenticates/protects artifact-root or credential acquisition, semantically uses the artifacts,
-  or makes their selections mandatory
+  (`CL-DEPLOYMENT-PRIMITIVE-01`). A separate bounded decoder exact-matches a supplied canonical NCP
+  compatibility artifact to the implemented frozen command subset (`CL-NCP-COMPATIBILITY-01`), but
+  no Gate startup binds that proof to the signed role, consumes the resolved/package-booted stages,
+  authenticates/protects artifact-root or credential acquisition, semantically uses the remaining
+  artifacts, or makes their selections mandatory
   (`CL-DEPLOYMENT-PACKAGE-01`).
 - **YES** — Restart invalidates active controller delegation (fresh boot id; state
   `restart_invalidates_lease_via_new_boot_id`).
@@ -41,7 +43,9 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **PARTIAL** — NCP stream/source/session semantics: current P0 fixtures remain modeled,
   while a closed explicit exact-revision selection passes upstream validated JSON,
   frozen-corpus, differential, tamper, and actor-Called-boundary tests
-  (`CL-NCP-REAL-01`). Template startup's explicit `DeclaredLiveZenoh` profile now requires
+  (`CL-NCP-REAL-01`). A standalone strict canonical artifact decoder exact-matches the implemented
+  frozen command subset to all compiled pins, but is not yet bound to the signed deployment role
+  (`CL-NCP-COMPATIBILITY-01`). Template startup's explicit `DeclaredLiveZenoh` profile now requires
   that exact selection and the compiled `live-zenoh` feature before startup-owned backend
   calls, entropy, locks, or directories. Successful declared-live startup separately mints
   the private move-only capability required by the live coordinator; exact reference and

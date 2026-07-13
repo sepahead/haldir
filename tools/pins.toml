@@ -17,6 +17,7 @@ contract_hash = "d1b50a2d8a265276"
 proto_sha256 = "6f13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227"
 command_vector_sha256 = "3e3d73235fe2dd4288158c29f9cd2f3f17034f7a58d803682f45c145a9733f2e"
 command_schema_sha256 = "abd9743323e4f6eabdbc27888704462b1b1fd128777422b35146605709a01344"
+enabled_increment = 1
 capability_profile = "PRE_AUTHORITY_ACL_ONLY"
 
 [zenoh]

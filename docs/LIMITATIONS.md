@@ -249,8 +249,14 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   custody; special-node open effects can occur before descriptor type rejection; concurrent writes
   can cause rejection; and byte bounds do not impose a wall-clock bound on NFS, FUSE, or stalled
   storage. Other targets return unsupported. Bootstrap-policy provenance, bootstrap-revocation
-  freshness, protected credential opening, semantic parsing or use of any artifact, correspondence
-  to the running executable, and NCP compatibility-record semantics remain outside that boundary.
+  freshness, protected credential opening, semantic parsing/use by the deployment primitive, and
+  correspondence to the running executable remain outside that boundary. Separately,
+  `haldir-ncp08` strictly decodes a supplied canonical compatibility artifact under a 512-byte cap
+  and exact-matches the implemented frozen command-frame subset to the compiled tag/commit/wire/
+  contract/proto/schema/vector/increment/profile/adapter-version pins before returning a
+  private-field proof (`CL-NCP-COMPATIBILITY-01`). That standalone proof is not bound to the signed
+  deployment role or consumed by Gate; it is not a full NCP schema/conformance-set identity and does
+  not establish adapter source/build or running-binary provenance.
   `GateConfigTemplate` is still
   caller-constructed, and no Gate startup consumes the resolved typestate or proves verification
   precedes its entropy, durable, secret, or network effects. The durable v3 state primitive can

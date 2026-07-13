@@ -31,8 +31,9 @@ each component observed.
 - Root compromise of the Gate host / kernel / process memory / signing key.
 - Mandatory use of the standalone deployment verifier/ratchet by Gate startup; authenticated root
   selection, owner/mode/ACL and writer-exclusion policy for the optional Linux/macOS artifact source,
-  bootstrap-policy provenance, protected credential custody, semantic artifact use, and
-  running-binary/configuration correspondence.
+  bootstrap-policy provenance, protected credential custody, signed-role binding for the standalone
+  NCP compatibility proof, semantic use of the remaining artifacts, and running-binary/configuration
+  correspondence.
 - Compromise of both mission and admission authorities.
 - Malicious plant/Crebain code that ignores validation, or malicious firmware.
 - Physical sensor spoofing not caught by the state-estimation boundary.

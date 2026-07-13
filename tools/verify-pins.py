@@ -232,25 +232,55 @@ def main() -> None:
 
     compatibility_path = ROOT / "crates" / "haldir-ncp08" / "src" / "compatibility.rs"
     compatibility = compatibility_path.read_text()
+    baseline_match = re.search(
+        r"pub const NCP_V0_8_0: NcpCompatibilityRecordV1 = "
+        r"NcpCompatibilityRecordV1 \{\n(?P<body>.*?)\n\};",
+        compatibility,
+        flags=re.DOTALL,
+    )
+    if baseline_match is None:
+        fail("haldir-ncp08 NCP_V0_8_0 baseline record is missing or malformed")
+    baseline = baseline_match.group("body")
     fields = {
         "ncp_tag": "tag",
         "ncp_commit": "commit",
         "wire_version": "wire_version",
         "contract_hash": "contract_hash",
         "proto_sha256": "proto_sha256",
+        "command_schema_sha256": "command_schema_sha256",
+        "command_vector_sha256": "command_vector_sha256",
         "capability_profile": "capability_profile",
     }
     for rust_field, pin_field in fields.items():
         expected = pins.get("ncp", {}).get(pin_field, "")
-        if f'{rust_field}: "{expected}"' not in compatibility:
+        field_pattern = (
+            rf'(?m)^\s*{re.escape(rust_field)}:\s*"{re.escape(str(expected))}",\s*$'
+        )
+        if re.search(field_pattern, baseline) is None:
             fail(
                 f"haldir-ncp08 {rust_field} disagrees with "
                 f"tools/pins.toml ncp.{pin_field}"
             )
 
+    enabled_increment = pins.get("ncp", {}).get("enabled_increment")
+    if type(enabled_increment) is not int or enabled_increment <= 0:
+        fail("ncp.enabled_increment must be a positive integer")
+    increment_pattern = rf"(?m)^\s*enabled_increment:\s*{enabled_increment},\s*$"
+    if re.search(increment_pattern, baseline) is None:
+        fail(
+            "haldir-ncp08 enabled_increment disagrees with "
+            "tools/pins.toml ncp.enabled_increment"
+        )
+    adapter_version_pattern = (
+        r'(?m)^\s*haldir_adapter_version:\s*env!\("CARGO_PKG_VERSION"\),\s*$'
+    )
+    if re.search(adapter_version_pattern, baseline) is None:
+        fail("haldir-ncp08 adapter version must come from the compiled package version")
+
     print(
         "verify-pins: OK "
-        "(NCP record/dependency/corpus, exact TLS-only Zenoh, toolchain, Cargo.lock)"
+        "(NCP command-subset record/dependency/corpus, exact TLS-only Zenoh, "
+        "toolchain, Cargo.lock)"
     )
 
 

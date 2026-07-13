@@ -104,8 +104,11 @@ primitive can atomically commit caller-supplied neutral revision/
 payload-digest values with a fresh boot, rejecting rollback, same-revision equivocation, implicit
 legacy binding, and later plain-boot downgrade. No type-enforced path makes those values originate
 at the verifier (`CL-DEPLOYMENT-PRIMITIVE-01`). No Gate startup path consumes the resolved typestate
-yet; there is no authenticated/protected root or credential opener, semantic artifact use, or
-running-binary/configuration binding, so `CL-DEPLOYMENT-PACKAGE-01` remains unproven.
+yet. A separate strict, bounded NCP compatibility-artifact decoder exact-matches the implemented
+frozen command subset to every compiled pin, but no private composition binds that proof to the
+signed artifact role (`CL-NCP-COMPATIBILITY-01`). There is no authenticated/protected root or
+credential opener, semantic use of the other artifacts, or running-binary/configuration binding, so
+`CL-DEPLOYMENT-PACKAGE-01` remains unproven.
 
 ### What is implemented and tested locally (the P0 pure core)
 
@@ -116,7 +119,8 @@ fixed-point deterministic policy engine, a deterministic reference plant with st
 evidence, an opaque single-slot prepare/call typestate that gates first command access
 on actor revalidation and charges history only on caller-asserted modeled returned-ok
 (`CL-PUBLICATION-STATE-01`), the Gate-owned NCP v0.8.0 modeled output adapter plus an
-opt-in, explicitly selectable exact upstream adapter (`CL-NCP-REAL-01`), a bounded evidence
+opt-in, explicitly selectable exact upstream adapter (`CL-NCP-REAL-01`), a strict bounded
+command-subset compatibility-artifact decoder (`CL-NCP-COMPATIBILITY-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts, a bounded locked Unix
 signed-segment manager with opt-in bounded ordered recovery snapshots
 and manager-affine conservative logical capacity reservations

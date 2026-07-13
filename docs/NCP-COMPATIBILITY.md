@@ -3,7 +3,7 @@
 Haldir's stable contracts contain semantic Haldir fields, not NCP-generated
 structs. Only `haldir-ncp08` is aware of NCP wire semantics.
 
-## Pinned baseline (immutable)
+## Pinned baseline (exact commit)
 
 | Field | Value |
 | --- | --- |
@@ -12,10 +12,38 @@ structs. Only `haldir-ncp08` is aware of NCP wire semantics.
 | `wire_version` | `0.8` |
 | `contract_hash` | `d1b50a2d8a265276` |
 | `proto_sha256` | `6f13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227` (measured locally 2026-07-12) |
+| `command_schema_sha256` | `abd9743323e4f6eabdbc27888704462b1b1fd128777422b35146605709a01344` |
+| `command_vector_sha256` | `3e3d73235fe2dd4288158c29f9cd2f3f17034f7a58d803682f45c145a9733f2e` |
+| `enabled_increment` | `1` |
 | `capability_profile` | `PRE_AUTHORITY_ACL_ONLY` |
+| `haldir_adapter_version` | compiled `haldir-ncp08` package version |
 
-These are encoded in `crates/haldir-ncp08/src/compatibility.rs` (`NCP_V0_8_0`) and
-`tools/pins.toml`, and enforced by `tools/verify-pins.py`.
+The pinned values through `capability_profile` are duplicated in
+`crates/haldir-ncp08/src/compatibility.rs` (`NCP_V0_8_0`) and `tools/pins.toml`.
+`haldir_adapter_version` instead derives from the compiled Cargo package version.
+`tools/verify-pins.py` enforces both the duplicated values and that derivation.
+
+The two command digests deliberately name Haldir's frozen command-frame schema/vector subset. They
+are not aggregate identities for every file in NCP's schema and conformance sets. The normative
+full-set manifest digests and reproducible Haldir adapter source/build identity remain open.
+
+## Canonical compatibility artifact
+
+`NcpCompatibilityArtifactV1` is the strict canonical CBOR syntax for the ordinary
+`NCP_COMPATIBILITY` deployment artifact. It has fixed kind `haldir.ncp_compatibility`, exact schema
+`1.0`, required fields for every pin above, raw 32-byte SHA-256 values, and a 512-byte whole-item
+limit. The shared canonical decoder rejects unknown/missing/duplicate/reordered fields,
+non-shortest or indefinite encodings, trailing bytes, and parser-limit excess. Structural decode is
+not acceptance: `validate_ncp_compatibility_artifact` exact-matches every decoded field to the
+compiled baseline before returning a private-field `ValidatedNcpCompatibilityArtifact` proof.
+Golden vectors, one-field substitutions, hostile shapes, arbitrary bytes, and default/exact-adapter
+identity agreement are tested (`CL-NCP-COMPATIBILITY-01`).
+
+This standalone function validates whichever bytes its caller supplies. It does not establish that
+the bytes came from the signed deployment role, identify the running executable or source tree, or
+select Gate startup. Later private Gate composition must retain the resolved deployment package,
+select its `NcpCompatibility` role internally, and consume this proof before those properties can be
+claimed.
 
 ## Default P0 model, exact conformance adapter, and route boundary
 
@@ -136,9 +164,10 @@ one fresh disposable fixture with zero intents processed and zero commands publi
 (`CL-LIVE-GATE-DEV-BIND-01`). No authenticated production package protects the
 session/credentials, authenticates ongoing controls, or makes the selection mandatory.
 The separate deployment verifier authenticates a closed runtime/NCP-wire selection plus exact
-compatibility-artifact bytes. The state primitive separately ratchets caller-supplied neutral values,
-but no type-enforced path makes those values originate at the verifier, semantically validates that
-record, or feeds Gate startup (`CL-DEPLOYMENT-PRIMITIVE-01`). The actual template runtime-profile
+compatibility-artifact bytes. `haldir-ncp08` separately exact-validates the implemented frozen
+command-subset record when explicitly passed bytes (`CL-NCP-COMPATIBILITY-01`). The state primitive
+separately ratchets caller-supplied neutral values, but no type-enforced path connects the signed
+artifact role, semantic proof, ratchet, or Gate startup (`CL-DEPLOYMENT-PRIMITIVE-01`). The actual template runtime-profile
 value therefore remains a cooperative caller declaration; public `GateConfig` and direct
 `VehicleActor` construction bypass template startup and remain outside this capability chain. Production declared-live
 startup with injected in-memory backends is tested through marked coordinator construction.

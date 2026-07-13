@@ -33,7 +33,11 @@ pub use adapter::{
     AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NCP_JSON_SAFE_INTEGER_MAX,
     NcpCommandAdapter, NcpCommandFrameV1,
 };
-pub use compatibility::{NCP_V0_8_0, NcpCompatibilityRecordV1};
+pub use compatibility::{
+    NCP_COMPATIBILITY_ARTIFACT_MAX_BYTES, NCP_V0_8_0, NcpCompatibilityArtifactV1,
+    NcpCompatibilityError, NcpCompatibilityRecordV1, ValidatedNcpCompatibilityArtifact,
+    pinned_ncp_compatibility_artifact_bytes, validate_ncp_compatibility_artifact,
+};
 pub use conversion::{mm_s_to_ncp_m_s, ncp_m_s_to_mm_s};
 pub use error::NcpAdapterError;
 #[cfg(feature = "real-ncp")]

@@ -151,10 +151,12 @@ mod tests {
     #[test]
     fn exact_constructor_selects_and_delegates_to_upstream_json() {
         let adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let modeled = SelectedNcpCommandAdapter::modeled_p0();
         assert_eq!(
             adapter.wire_profile(),
             NcpCommandWireProfile::ExactNcpV0_8Json
         );
+        assert_eq!(adapter.compatibility(), modeled.compatibility());
         let input = input();
         let frame = adapter.build_command(&input).unwrap();
         adapter.validate_exact_command(&frame, &input).unwrap();
