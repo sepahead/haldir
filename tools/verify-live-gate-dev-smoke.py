@@ -842,6 +842,105 @@ def option_value(argv: list[str], option: str) -> str:
     return argv[positions[0] + 1]
 
 
+def verify_provision_export_commands(
+    records: list[dict[str, Any]], provision_container: str
+) -> list[str]:
+    """Require the one supported export path from the provisioner's tmpfs."""
+    argvs = [record["argv"] for record in records]
+    provision_export = [
+        "docker",
+        "exec",
+        provision_container,
+        "tar",
+        "-C",
+        "/fixture",
+        "-cf",
+        "-",
+        "gate",
+        "provision-result.json",
+    ]
+    if argvs.count(provision_export) != 1:
+        raise VerificationError(
+            "campaign did not retain exactly one provisioned fixture archive export"
+        )
+    marker_poll = [
+        "docker",
+        "exec",
+        provision_container,
+        "cat",
+        "/run/haldir-provision-exit",
+    ]
+    running_inspect = [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.State.Running}}",
+        provision_container,
+    ]
+    marker_indices = [
+        index for index, record in enumerate(records) if record["argv"] == marker_poll
+    ]
+    successful_markers = [
+        index for index in marker_indices if records[index]["exit_code"] == 0
+    ]
+    if len(successful_markers) != 1:
+        raise VerificationError(
+            "provisioner exit marker was not observed exactly once successfully"
+        )
+    successful_marker = successful_markers[0]
+    if not marker_indices or marker_indices[-1] != successful_marker:
+        raise VerificationError("provisioner polled again after its successful marker")
+    failed_marker_indices = marker_indices[:-1]
+    expected_running_inspects = [index + 1 for index in failed_marker_indices]
+    actual_running_inspects = [
+        index
+        for index, record in enumerate(records)
+        if record["argv"] == running_inspect
+    ]
+    if actual_running_inspects != expected_running_inspects or any(
+        records[index]["exit_code"] != 0 for index in actual_running_inspects
+    ):
+        raise VerificationError(
+            "failed provisioner marker polls were not paired with running-state checks"
+        )
+    export_index = argvs.index(provision_export)
+    stop = ["docker", "stop", "--time", "1", provision_container]
+    if argvs.count(stop) != 1:
+        raise VerificationError("provisioner was not stopped exactly once")
+    stop_index = argvs.index(stop)
+    if not successful_marker < export_index < stop_index:
+        raise VerificationError(
+            "provisioner marker, fixture export, and stop order differs"
+        )
+
+    allowed_touching_commands = {
+        tuple(marker_poll),
+        tuple(running_inspect),
+        tuple(provision_export),
+        ("docker", "logs", provision_container),
+        tuple(stop),
+        ("docker", "container", "inspect", provision_container),
+        ("docker", "rm", "--force", provision_container),
+    }
+    for argv in argvs:
+        touches_provisioner = any(
+            item == provision_container or item.startswith(f"{provision_container}:")
+            for item in argv
+        )
+        if not touches_provisioner:
+            continue
+        is_provision_run = (
+            argv[:2] == ["docker", "run"]
+            and "--name" in argv
+            and option_value(argv, "--name") == provision_container
+        )
+        if not is_provision_run and tuple(argv) not in allowed_touching_commands:
+            raise VerificationError(
+                "provisioner contains an unexpected lifecycle or export command"
+            )
+    return provision_export
+
+
 def verify_commands(
     evidence: Path,
     profile: dict[str, Any],
@@ -943,19 +1042,19 @@ def verify_commands(
         smoke_image_id,
     ]
     require_once(inspector_create, "non-running executable inspector")
+    allowed_docker_copies: list[list[str]] = []
     for example, binary in (
         ("live_gate_dev_bind_shutdown", BIND_BINARY),
         ("live_gate_dev_fixture_provision", PROVISION_BINARY),
     ):
-        require_once(
-            [
-                "docker",
-                "cp",
-                f"{names['inspector']}:{binary}",
-                f"$WORK/built-executable-inspection/{example}",
-            ],
-            f"{example} executable copy",
-        )
+        copy = [
+            "docker",
+            "cp",
+            f"{names['inspector']}:{binary}",
+            f"$WORK/built-executable-inspection/{example}",
+        ]
+        allowed_docker_copies.append(copy)
+        require_once(copy, f"{example} executable copy")
     if any(
         names["inspector"] in argv
         and argv[:2] in (["docker", "start"], ["docker", "exec"])
@@ -999,29 +1098,7 @@ def verify_commands(
         raise VerificationError(
             "offline provisioner command differs from the exact sandbox"
         )
-    marker_polls = [
-        record
-        for record in records
-        if record["argv"]
-        == [
-            "docker",
-            "exec",
-            names["provision"],
-            "cat",
-            "/run/haldir-provision-exit",
-        ]
-    ]
-    if not marker_polls or marker_polls[-1]["exit_code"] != 0:
-        raise VerificationError("provisioner exit marker was not observed successfully")
-    require_once(
-        [
-            "docker",
-            "cp",
-            f"{names['provision']}:/fixture/.",
-            "$WORK/provisioned",
-        ],
-        "provisioned fixture extraction",
-    )
+    verify_provision_export_commands(records, names["provision"])
     require_once(
         ["docker", "stop", "--time", "1", names["provision"]],
         "provisioner stop",
@@ -1089,15 +1166,21 @@ def verify_commands(
         "/evidence/bind-result.json",
     ]
     require_once(expected_gate, "live Gate bind/shutdown run")
-    require_once(
-        [
-            "docker",
-            "cp",
-            f"{names['gate']}:/evidence/bind-result.json",
-            "$WORK/raw/bind-result.json",
-        ],
-        "Gate result extraction",
+    gate_result_copy = [
+        "docker",
+        "cp",
+        f"{names['gate']}:/evidence/bind-result.json",
+        "$WORK/raw/bind-result.json",
+    ]
+    allowed_docker_copies.append(gate_result_copy)
+    require_once(gate_result_copy, "Gate result extraction")
+    docker_copy_commands = matching(
+        lambda argv: (
+            argv[:2] == ["docker", "cp"] or argv[:3] == ["docker", "container", "cp"]
+        )
     )
+    if sorted(docker_copy_commands) != sorted(allowed_docker_copies):
+        raise VerificationError("campaign Docker copy command set differs")
     docker_runs = matching(lambda argv: argv[:2] == ["docker", "run"])
     if sorted(docker_runs) != sorted(
         [expected_provision, expected_router, expected_gate]

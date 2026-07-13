@@ -18,6 +18,7 @@ import json
 import os
 import re
 import secrets
+import selectors
 import shutil
 import stat
 import subprocess
@@ -139,6 +140,129 @@ class CommandRunner:
             stderr = sanitize_text(process.stderr[-4000:], self.work)
             raise CampaignError(f"command failed ({process.returncode}): {argv[0]}: {stderr}")
         return process
+
+    def run_bytes(
+        self,
+        argv: list[str],
+        *,
+        cwd: Path | None = None,
+        check: bool = True,
+        max_stdout_bytes: int,
+        timeout_seconds: int = 120,
+    ) -> subprocess.CompletedProcess[bytes]:
+        """Run a command while enforcing a hard in-memory stdout bound."""
+        if max_stdout_bytes <= 0:
+            raise ValueError("max_stdout_bytes must be positive")
+        process = subprocess.Popen(
+            argv,
+            cwd=cwd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if process.stdout is None or process.stderr is None:
+            process.kill()
+            process.wait()
+            raise CampaignError("binary command pipes could not be created")
+        streams = selectors.DefaultSelector()
+        streams.register(process.stdout, selectors.EVENT_READ, "stdout")
+        streams.register(process.stderr, selectors.EVENT_READ, "stderr")
+        stdout = bytearray()
+        stderr_tail = bytearray()
+        deadline = time.monotonic() + timeout_seconds
+        timed_out = False
+        stdout_limit_exceeded = False
+
+        def kill_process() -> None:
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
+
+        try:
+            while streams.get_map():
+                if not timed_out and not stdout_limit_exceeded:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        timed_out = True
+                        kill_process()
+                        remaining = None
+                else:
+                    remaining = None
+                events = streams.select(remaining)
+                if not events:
+                    timed_out = True
+                    kill_process()
+                    continue
+                for key, _ in events:
+                    chunk = os.read(key.fd, 64 * 1024)
+                    if not chunk:
+                        streams.unregister(key.fileobj)
+                        key.fileobj.close()
+                        continue
+                    if key.data == "stdout":
+                        available = max_stdout_bytes - len(stdout)
+                        if len(chunk) > available:
+                            stdout.extend(chunk[: max(available, 0)])
+                            stdout_limit_exceeded = True
+                            kill_process()
+                        else:
+                            stdout.extend(chunk)
+                    else:
+                        stderr_tail.extend(chunk)
+                        del stderr_tail[:-4000]
+            returncode = process.wait()
+        finally:
+            streams.close()
+            if process.poll() is None:
+                kill_process()
+                process.wait()
+
+        command = {
+            "argv": sanitize_value(argv, self.work),
+            "cwd": sanitize_text(str(cwd or ROOT), self.work),
+        }
+        if timed_out:
+            self.commands.append(
+                {
+                    **command,
+                    "exit_code": "timeout",
+                    "timeout_seconds": timeout_seconds,
+                }
+            )
+            raise CampaignError(
+                f"command timed out after {timeout_seconds}s: {argv[0]}"
+            )
+        if stdout_limit_exceeded:
+            self.commands.append(
+                {
+                    **command,
+                    "exit_code": "stdout-limit",
+                    "max_stdout_bytes": max_stdout_bytes,
+                }
+            )
+            raise CampaignError(
+                f"command stdout exceeded {max_stdout_bytes} bytes: {argv[0]}"
+            )
+        self.commands.append(
+            {
+                **command,
+                "exit_code": returncode,
+            }
+        )
+        if check and returncode != 0:
+            stderr = sanitize_text(
+                bytes(stderr_tail).decode("utf-8", errors="replace"), self.work
+            )
+            raise CampaignError(
+                f"command failed ({returncode}): {argv[0]}: {stderr}"
+            )
+        return subprocess.CompletedProcess(
+            argv,
+            returncode,
+            stdout=bytes(stdout),
+            stderr=bytes(stderr_tail),
+        )
 
 
 def require_clean_source(runner: CommandRunner) -> str:

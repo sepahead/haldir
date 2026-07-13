@@ -96,6 +96,117 @@ def bind_result(intent_route: str) -> dict[str, object]:
 
 
 class LiveGateDevSmokeVerifierTests(unittest.TestCase):
+    def test_tmpfs_fixture_requires_exact_tar_export_command(self) -> None:
+        provision = "haldir-gate-provision-123456789abc"
+
+        def record(argv: list[str], exit_code: int = 0) -> dict[str, object]:
+            return {"argv": argv, "exit_code": exit_code}
+
+        marker = [
+            "docker",
+            "exec",
+            provision,
+            "cat",
+            "/run/haldir-provision-exit",
+        ]
+        running_inspect = [
+            "docker",
+            "inspect",
+            "--format",
+            "{{.State.Running}}",
+            provision,
+        ]
+        export = [
+            "docker",
+            "exec",
+            provision,
+            "tar",
+            "-C",
+            "/fixture",
+            "-cf",
+            "-",
+            "gate",
+            "provision-result.json",
+        ]
+        stop = ["docker", "stop", "--time", "1", provision]
+        valid = [record(marker), record(export), record(stop)]
+        self.assertEqual(
+            VERIFIER.verify_provision_export_commands(valid, provision),
+            export,
+        )
+        slow_valid = [
+            record(marker, exit_code=1),
+            record(running_inspect),
+            *valid,
+        ]
+        self.assertEqual(
+            VERIFIER.verify_provision_export_commands(slow_valid, provision),
+            export,
+        )
+        invalid_sets = {
+            "missing export": [record(marker), record(stop)],
+            "duplicate export": [
+                record(marker),
+                record(export),
+                record(export),
+                record(stop),
+            ],
+            "export before marker": [record(export), record(marker), record(stop)],
+            "stop before export": [record(marker), record(stop), record(export)],
+            "failed marker without state inspect": [
+                record(marker, exit_code=1),
+                record(marker),
+                record(export),
+                record(stop),
+            ],
+            "unexpected exec": [
+                record(marker),
+                record(export),
+                record(["docker", "exec", provision, "find", "/fixture"]),
+                record(stop),
+            ],
+            "unsupported copy": [
+                record(marker),
+                record(export),
+                record(
+                    ["docker", "cp", f"{provision}:/fixture/.", "$WORK/provisioned"]
+                ),
+                record(stop),
+            ],
+            "unsupported option copy": [
+                record(marker),
+                record(export),
+                record(
+                    [
+                        "docker",
+                        "cp",
+                        "--archive",
+                        f"{provision}:/fixture/.",
+                        "$WORK/provisioned",
+                    ]
+                ),
+                record(stop),
+            ],
+            "unsupported alias copy": [
+                record(marker),
+                record(export),
+                record(
+                    [
+                        "docker",
+                        "container",
+                        "cp",
+                        f"{provision}:/fixture/.",
+                        "$WORK/provisioned",
+                    ]
+                ),
+                record(stop),
+            ],
+        }
+        for label, records in invalid_sets.items():
+            with self.subTest(label=label):
+                with self.assertRaises(VERIFIER.VerificationError):
+                    VERIFIER.verify_provision_export_commands(records, provision)
+
     def test_duplicate_json_key_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "duplicate.json"

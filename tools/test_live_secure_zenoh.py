@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_secure_zenoh import (
     BUILDER_IMAGE,
     CampaignError,
+    CommandRunner,
     EXPECTED_ROUTER_IMAGE,
     ROOT,
     canonical_json,
@@ -39,6 +40,49 @@ VERIFIER_SPEC.loader.exec_module(VERIFIER)
 
 
 class LiveSecureZenohHarnessTests(unittest.TestCase):
+    def test_binary_command_output_is_preserved_and_recorded(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            runner = CommandRunner(Path(temporary))
+            result = runner.run_bytes(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.stdout.buffer.write(bytes([0, 255, 1]))",
+                ],
+                max_stdout_bytes=3,
+            )
+            self.assertEqual(result.stdout, bytes([0, 255, 1]))
+            self.assertEqual(runner.commands[0]["exit_code"], 0)
+
+            with self.assertRaises(CampaignError):
+                runner.run_bytes(
+                    [sys.executable, "-c", "print('unbounded-output')"],
+                    max_stdout_bytes=3,
+                )
+            self.assertEqual(runner.commands[1]["exit_code"], "stdout-limit")
+            self.assertEqual(runner.commands[1]["max_stdout_bytes"], 3)
+
+            with self.assertRaises(CampaignError) as failure:
+                runner.run_bytes(
+                    [
+                        sys.executable,
+                        "-c",
+                        f"import sys; sys.stderr.write({str(Path(temporary))!r}); sys.exit(7)",
+                    ],
+                    max_stdout_bytes=3,
+                )
+            self.assertIn("$WORK", str(failure.exception))
+            self.assertNotIn(str(Path(temporary)), str(failure.exception))
+            self.assertEqual(runner.commands[2]["exit_code"], 7)
+
+            with self.assertRaises(CampaignError):
+                runner.run_bytes(
+                    [sys.executable, "-c", "import time; time.sleep(2)"],
+                    max_stdout_bytes=3,
+                    timeout_seconds=1,
+                )
+            self.assertEqual(runner.commands[3]["exit_code"], "timeout")
+
     def test_images_are_immutable_digests_and_match_profile(self) -> None:
         self.assertRegex(BUILDER_IMAGE, r"@sha256:[0-9a-f]{64}$")
         self.assertRegex(EXPECTED_ROUTER_IMAGE, r"@sha256:[0-9a-f]{64}$")

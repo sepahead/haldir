@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import io
 import json
 import hashlib
+import os
+import stat
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,11 +24,15 @@ from live_gate_dev_smoke import (
     GATE_SECRET_FILES,
     GENERATOR_ACTIONS,
     MANIFEST_SCHEMA_VERSION,
+    MAX_PROVISION_FILE_BYTES,
+    PROVISION_ARCHIVE_DIRECTORIES,
+    PROVISION_ARCHIVE_FILES,
     ROOT,
     SAFE_OUTPUT_ROOT,
     CampaignError,
     build_candidate,
     cleanup_runtime,
+    extract_provision_archive,
     hash_copied_example_executables,
     isolate_gate_secrets,
     require_safe_output,
@@ -34,6 +42,69 @@ from live_gate_dev_smoke import (
 
 
 class LiveGateDevSmokeTests(unittest.TestCase):
+    @staticmethod
+    def provision_archive(
+        *,
+        missing: str | None = None,
+        extra: str | None = None,
+        symlink: str | None = None,
+        duplicate: str | None = None,
+        wrong_owner: str | None = None,
+        wrong_mode: str | None = None,
+        contiguous: str | None = None,
+        oversized: str | None = None,
+    ) -> bytes:
+        output = io.BytesIO()
+        with tarfile.open(fileobj=output, mode="w") as archive:
+            for name in sorted(PROVISION_ARCHIVE_DIRECTORIES):
+                if name == missing:
+                    continue
+                member = tarfile.TarInfo(name)
+                member.type = tarfile.DIRTYPE
+                member.mode = 0o700
+                member.uid = os.getuid()
+                member.gid = os.getgid()
+                archive.addfile(member)
+            for name in sorted(PROVISION_ARCHIVE_FILES):
+                if name == missing:
+                    continue
+                member = tarfile.TarInfo(name)
+                member.mode = 0o644 if name == wrong_mode else 0o600
+                member.uid = os.getuid() + (1 if name == wrong_owner else 0)
+                member.gid = os.getgid()
+                if name == symlink:
+                    member.type = tarfile.SYMTYPE
+                    member.linkname = "gate/state/generation.anchor"
+                    archive.addfile(member)
+                    continue
+                if name == contiguous:
+                    member.type = tarfile.CONTTYPE
+                data = (
+                    b"x" * (MAX_PROVISION_FILE_BYTES + 1)
+                    if name == oversized
+                    else b""
+                    if name.endswith(".lock")
+                    else name.encode()
+                )
+                member.size = len(data)
+                archive.addfile(member, io.BytesIO(data))
+                if name == duplicate:
+                    repeated = tarfile.TarInfo(name)
+                    repeated.mode = 0o600
+                    repeated.uid = os.getuid()
+                    repeated.gid = os.getgid()
+                    repeated.size = len(data)
+                    archive.addfile(repeated, io.BytesIO(data))
+            if extra is not None:
+                data = b"unexpected"
+                member = tarfile.TarInfo(extra)
+                member.mode = 0o600
+                member.uid = os.getuid()
+                member.gid = os.getgid()
+                member.size = len(data)
+                archive.addfile(member, io.BytesIO(data))
+        return output.getvalue()
+
     def test_dockerfile_builds_both_examples_from_the_pinned_image(self) -> None:
         dockerfile = (ROOT / "tools" / "live-gate-dev-smoke" / "Dockerfile").read_text()
         self.assertEqual(dockerfile.count(f"FROM {BUILDER_IMAGE}"), 2)
@@ -89,6 +160,80 @@ class LiveGateDevSmokeTests(unittest.TestCase):
             replaced.unlink()
             replaced.write_bytes(original)
             self.assertEqual(hash_copied_example_executables(root), expected)
+
+    def test_exact_provision_archive_is_reconstructed_with_restricted_modes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "provisioned"
+            extract_provision_archive(
+                self.provision_archive(),
+                destination,
+                expected_uid=os.getuid(),
+                expected_gid=os.getgid(),
+            )
+            actual = {
+                path.relative_to(destination).as_posix()
+                for path in destination.rglob("*")
+            }
+            self.assertEqual(
+                actual, PROVISION_ARCHIVE_DIRECTORIES | PROVISION_ARCHIVE_FILES
+            )
+            for name in PROVISION_ARCHIVE_DIRECTORIES:
+                mode = stat.S_IMODE(
+                    destination.joinpath(*name.split("/")).stat().st_mode
+                )
+                self.assertEqual(mode, 0o700)
+            for name in PROVISION_ARCHIVE_FILES:
+                path = destination.joinpath(*name.split("/"))
+                mode = stat.S_IMODE(path.stat().st_mode)
+                self.assertEqual(mode, 0o600)
+                expected = b"" if name.endswith(".lock") else name.encode()
+                self.assertEqual(path.read_bytes(), expected)
+
+    def test_provision_archive_rejects_shape_and_type_attacks(self) -> None:
+        first_file = sorted(PROVISION_ARCHIVE_FILES)[0]
+        cases = {
+            "missing": self.provision_archive(missing=first_file),
+            "extra": self.provision_archive(extra="gate/unexpected"),
+            "traversal": self.provision_archive(extra="../escape"),
+            "absolute": self.provision_archive(extra="/escape"),
+            "symlink": self.provision_archive(symlink=first_file),
+            "duplicate": self.provision_archive(duplicate=first_file),
+            "wrong owner": self.provision_archive(wrong_owner=first_file),
+            "wrong mode": self.provision_archive(wrong_mode=first_file),
+            "contiguous file": self.provision_archive(contiguous=first_file),
+            "oversized": self.provision_archive(oversized=first_file),
+            "truncated": b"not a tar archive",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for label, archive in cases.items():
+                with self.subTest(label=label):
+                    destination = root / label
+                    with self.assertRaises(CampaignError):
+                        extract_provision_archive(
+                            archive,
+                            destination,
+                            expected_uid=os.getuid(),
+                            expected_gid=os.getgid(),
+                        )
+                    self.assertFalse(destination.exists())
+
+    def test_provision_archive_never_replaces_an_existing_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "provisioned"
+            destination.mkdir()
+            sentinel = destination / "sentinel"
+            sentinel.write_text("preserve")
+            with self.assertRaises(CampaignError):
+                extract_provision_archive(
+                    self.provision_archive(),
+                    destination,
+                    expected_uid=os.getuid(),
+                    expected_gid=os.getgid(),
+                )
+            self.assertEqual(sentinel.read_text(), "preserve")
 
     def test_manifest_generator_actions_are_location_neutral(self) -> None:
         self.assertEqual(MANIFEST_SCHEMA_VERSION, 2)

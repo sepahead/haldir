@@ -13,6 +13,7 @@ abrupt process, host, or daemon loss requires manual cleanup of the output root.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import re
@@ -20,6 +21,7 @@ import secrets
 import shutil
 import stat
 import sys
+import tarfile
 import time
 from pathlib import Path
 from typing import Any
@@ -56,6 +58,8 @@ GATE_SECRET_FILES = frozenset({"ca.pem", "gate.cert.pem", "gate.key.pem"})
 PRIVATE_KEY_MARKER = re.compile(rb"-----BEGIN (?:[A-Z0-9]+ )?PRIVATE KEY-----")
 MANIFEST_SCHEMA_VERSION = 2
 BUILD_TIMEOUT_SECONDS = 3600
+MAX_PROVISION_ARCHIVE_BYTES = 4 * 1024 * 1024
+MAX_PROVISION_FILE_BYTES = 1024 * 1024
 EXAMPLE_EXECUTABLES = {
     "live_gate_dev_bind_shutdown": BIND_BINARY,
     "live_gate_dev_fixture_provision": PROVISION_BINARY,
@@ -64,6 +68,24 @@ GENERATOR_ACTIONS = {
     "independent_verification_performed": False,
     "promotion_performed": False,
 }
+PROVISION_ARCHIVE_DIRECTORIES = frozenset(
+    {
+        "gate",
+        "gate/publication-journal",
+        "gate/state",
+    }
+)
+PROVISION_ARCHIVE_FILES = frozenset(
+    {
+        "gate/.haldir-live-gate-smoke.lock",
+        "gate/publication-journal/.haldir-evidence.lock",
+        "gate/publication-journal/segment-00000000000000000001",
+        "gate/state/.haldir-gate.lock",
+        "gate/state/anti-rollback.snapshot",
+        "gate/state/generation.anchor",
+        "provision-result.json",
+    }
+)
 
 PROVISION_SCRIPT = f"""
 set +e
@@ -124,6 +146,136 @@ def remove_private_material(work: Path) -> bool:
         )
     ]
     return all(outcomes)
+
+
+def _write_restricted_file(path: Path, data: bytes) -> None:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb", closefd=False) as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+    finally:
+        os.close(descriptor)
+
+
+def extract_provision_archive(
+    archive_bytes: bytes,
+    destination: Path,
+    *,
+    expected_uid: int,
+    expected_gid: int,
+) -> None:
+    """Validate and manually extract the exact fresh fixture archive."""
+    if not archive_bytes or len(archive_bytes) > MAX_PROVISION_ARCHIVE_BYTES:
+        raise CampaignError("provisioned fixture archive has an invalid size")
+    if destination.exists() or destination.is_symlink():
+        raise CampaignError("provisioned fixture destination already exists")
+
+    expected = PROVISION_ARCHIVE_DIRECTORIES | PROVISION_ARCHIVE_FILES
+    members_by_name: dict[str, tarfile.TarInfo] = {}
+    try:
+        with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:") as archive:
+            for member in archive.getmembers():
+                name = member.name[:-1] if member.name.endswith("/") else member.name
+                if name in members_by_name:
+                    raise CampaignError("provisioned fixture archive repeats a member")
+                if name not in expected:
+                    raise CampaignError(
+                        "provisioned fixture archive contains an unexpected member"
+                    )
+                if member.uid != expected_uid or member.gid != expected_gid:
+                    raise CampaignError("provisioned fixture archive ownership differs")
+                if name in PROVISION_ARCHIVE_DIRECTORIES:
+                    if (
+                        not member.isdir()
+                        or member.size != 0
+                        or stat.S_IMODE(member.mode) != 0o700
+                    ):
+                        raise CampaignError(
+                            "provisioned fixture archive directory metadata differs"
+                        )
+                elif (
+                    member.type != tarfile.REGTYPE
+                    or stat.S_IMODE(member.mode) != 0o600
+                    or member.size < 0
+                    or member.size > MAX_PROVISION_FILE_BYTES
+                ):
+                    raise CampaignError(
+                        "provisioned fixture archive file metadata differs"
+                    )
+                members_by_name[name] = member
+            if set(members_by_name) != expected:
+                raise CampaignError("provisioned fixture archive shape differs")
+
+            destination.mkdir(mode=0o700)
+            destination.chmod(0o700)
+            for name in sorted(
+                PROVISION_ARCHIVE_DIRECTORIES,
+                key=lambda candidate: (candidate.count("/"), candidate),
+            ):
+                directory = destination.joinpath(*name.split("/"))
+                directory.mkdir(mode=0o700)
+                directory.chmod(0o700)
+            for name in sorted(PROVISION_ARCHIVE_FILES):
+                member = members_by_name[name]
+                source = archive.extractfile(member)
+                if source is None:
+                    raise CampaignError(
+                        "provisioned fixture archive file cannot be read"
+                    )
+                with source:
+                    data = source.read(MAX_PROVISION_FILE_BYTES + 1)
+                if len(data) != member.size:
+                    raise CampaignError("provisioned fixture archive file size differs")
+                _write_restricted_file(destination.joinpath(*name.split("/")), data)
+    except CampaignError as error:
+        if not delete_directory(destination):
+            raise CampaignError(
+                "provisioned fixture extraction failed and cleanup is incomplete"
+            ) from error
+        raise
+    except (OSError, tarfile.TarError, EOFError) as error:
+        if not delete_directory(destination):
+            raise CampaignError(
+                "provisioned fixture extraction failed and cleanup is incomplete"
+            ) from error
+        raise CampaignError("cannot extract provisioned fixture archive") from error
+
+
+def copy_provisioned_fixture(
+    runner: CommandRunner,
+    *,
+    provision_container: str,
+    destination: Path,
+    expected_uid: int,
+    expected_gid: int,
+) -> None:
+    """Stream the tmpfs fixture from inside the container and extract it safely."""
+    archive = runner.run_bytes(
+        [
+            "docker",
+            "exec",
+            provision_container,
+            "tar",
+            "-C",
+            "/fixture",
+            "-cf",
+            "-",
+            "gate",
+            "provision-result.json",
+        ],
+        max_stdout_bytes=MAX_PROVISION_ARCHIVE_BYTES,
+        timeout_seconds=60,
+    ).stdout
+    extract_provision_archive(
+        archive,
+        destination,
+        expected_uid=expected_uid,
+        expected_gid=expected_gid,
+    )
 
 
 def hash_copied_example_executables(directory: Path) -> dict[str, str]:
@@ -552,10 +704,12 @@ def run_smoke(output: Path) -> Path:
             raise CampaignError(
                 f"offline provisioner failed with exit code {provision_exit}"
             )
-        provisioned.mkdir(mode=stat.S_IRWXU)
-        runner.run(
-            ["docker", "cp", f"{provision_container}:/fixture/.", str(provisioned)],
-            timeout_seconds=60,
+        copy_provisioned_fixture(
+            runner,
+            provision_container=provision_container,
+            destination=provisioned,
+            expected_uid=uid,
+            expected_gid=gid,
         )
         shutil.copy2(
             provisioned / "provision-result.json", raw / "provision-result.json"
