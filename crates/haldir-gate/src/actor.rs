@@ -6,7 +6,7 @@
 //! no output and (from the replay-commit point on) consumes the intent sequence.
 
 use haldir_admission::{AdmissionClaim, AdmissionSnapshot};
-use haldir_contracts::cbor::Limits;
+use haldir_contracts::cbor::{CanonicalMessage, Limits};
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::ids::KeyId;
 use haldir_contracts::ids::{DecisionId, GateBootId, GateId, GateOutputEpoch, VehicleId};
@@ -419,10 +419,29 @@ pub struct VehicleActor {
     publication_owner: Arc<()>,
     local_cap_ms: u32,
     last_seen_mono: Option<MonoInstant>,
-    gate_signer: SigningKey,
-    gate_signer_kid: KeyId,
+    gate_signer: GateApplicationSigner,
     lease_usage: Option<LeaseUsage>,
     evidence: EvidenceSpool,
+}
+
+/// Single owner of the Gate application private key after configuration has
+/// been validated. Future journal coordination can use short-lived borrows of
+/// this capability without creating a second private-key owner.
+struct GateApplicationSigner {
+    kid: KeyId,
+    key: SigningKey,
+}
+
+impl GateApplicationSigner {
+    fn sign_receipt(&self, receipt: &DecisionReceiptV1) -> Vec<u8> {
+        sign_message(
+            receipt,
+            DecisionReceiptV1::KIND,
+            DecisionReceiptV1::SCHEMA_MAJOR,
+            &self.kid,
+            &self.key,
+        )
+    }
 }
 
 /// Bound on retained decision-receipt evidence records (in-process P0 spool).
@@ -631,8 +650,10 @@ impl VehicleActor {
             publication_owner: Arc::new(()),
             local_cap_ms: cfg.local_cap_ms,
             last_seen_mono: None,
-            gate_signer: cfg.gate_signer,
-            gate_signer_kid: cfg.gate_signer_kid,
+            gate_signer: GateApplicationSigner {
+                kid: cfg.gate_signer_kid,
+                key: cfg.gate_signer,
+            },
             lease_usage: None,
             evidence: EvidenceSpool::new(MAX_EVIDENCE_RECORDS, MAX_EVIDENCE_BYTES),
         })
@@ -1058,13 +1079,7 @@ impl VehicleActor {
     }
 
     fn sign_receipt(&self, receipt: &DecisionReceiptV1) -> Vec<u8> {
-        sign_message(
-            receipt,
-            DecisionReceiptV1::KIND,
-            1,
-            &self.gate_signer_kid,
-            &self.gate_signer,
-        )
+        self.gate_signer.sign_receipt(receipt)
     }
 
     /// Build and sign a no-output response. Internal faults produce ERROR; policy /

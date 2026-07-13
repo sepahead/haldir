@@ -532,6 +532,7 @@ mod tests {
     use haldir_crypto::{KeyRecord, SigningKey, sign_message};
     use std::fs;
     use std::path::{Path, PathBuf};
+    use std::sync::LazyLock;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -572,8 +573,10 @@ mod tests {
         SigningKey::from_seed([seed; 32])
     }
 
-    fn journal_signer() -> JournalSigner {
-        JournalSigner::new(kid(3), key(3))
+    static TEST_SIGNER: LazyLock<(KeyId, SigningKey)> = LazyLock::new(|| (kid(3), key(3)));
+
+    fn journal_signer() -> JournalSigner<'static> {
+        JournalSigner::new(&TEST_SIGNER.0, &TEST_SIGNER.1)
     }
 
     fn trust_with_gate_keys(seeds: &[u8]) -> TrustStore {
@@ -722,7 +725,7 @@ mod tests {
         EvidenceJournalManager::open_existing_with_recovered_records(
             path,
             options(boot, created, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             Some(&journal_signer()),
             RecoveryCaptureLimits::new(128, 512 * 1024),
             verifier(),
@@ -738,7 +741,7 @@ mod tests {
         let (mut manager, _) = EvidenceJournalManager::provision_new(
             &journal,
             options(1, 10, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
@@ -766,7 +769,7 @@ mod tests {
         );
         let returned_env = sign_stage(&returned, 3);
         for envelope in [&deny, &prepared_env, &called_env, &returned_env] {
-            manager.append(envelope, 10).unwrap();
+            manager.append(envelope, 10, &journal_signer()).unwrap();
         }
         drop(manager);
 
@@ -813,18 +816,18 @@ mod tests {
         let (mut first, _) = EvidenceJournalManager::provision_new(
             &journal,
             options(1, 10, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
-        first.append(&prepared_env, 10).unwrap();
-        first.append(&called_env, 10).unwrap();
-        drop(first.finish().unwrap());
+        first.append(&prepared_env, 10, &journal_signer()).unwrap();
+        first.append(&called_env, 10, &journal_signer()).unwrap();
+        drop(first.finish(&journal_signer()).unwrap());
 
         let (mut second, _) = EvidenceJournalManager::open_existing(
             &journal,
             options(2, 1, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             None,
             verifier(),
         )
@@ -837,8 +840,10 @@ mod tests {
             DigestV1::compute(DigestDomain::RawEnvelope, &called_env),
             2,
         );
-        second.append(&sign_stage(&unknown, 3), 1).unwrap();
-        drop(second.finish().unwrap());
+        second
+            .append(&sign_stage(&unknown, 3), 1, &journal_signer())
+            .unwrap();
+        drop(second.finish(&journal_signer()).unwrap());
 
         let (_, recovery) = open_capture(&journal, 3, 1, journal_limits);
         let reducer = verifier().rebuild_publication_state(recovery, 4).unwrap();
@@ -1001,29 +1006,29 @@ mod tests {
         let (first, _) = EvidenceJournalManager::provision_new(
             &journal,
             options(1, 10, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
-        drop(first.finish().unwrap());
+        drop(first.finish(&journal_signer()).unwrap());
         let (second, _) = EvidenceJournalManager::open_existing(
             &journal,
             options(2, 1, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             None,
             verifier(),
         )
         .unwrap();
-        drop(second.finish().unwrap());
+        drop(second.finish(&journal_signer()).unwrap());
         let (third, _) = EvidenceJournalManager::open_existing(
             &journal,
             options(1, 20, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             None,
             verifier(),
         )
         .unwrap();
-        drop(third.finish().unwrap());
+        drop(third.finish(&journal_signer()).unwrap());
 
         let (_, recovery) = open_capture(&journal, 3, 1, journal_limits);
         assert!(matches!(
@@ -1051,13 +1056,17 @@ mod tests {
         let (mut manager, _) = EvidenceJournalManager::provision_new(
             &trace_journal,
             options(1, 10, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
-        manager.append(&prepared_env, 10).unwrap();
-        manager.append(&sign_stage(&bad_called, 3), 10).unwrap();
-        drop(manager.finish().unwrap());
+        manager
+            .append(&prepared_env, 10, &journal_signer())
+            .unwrap();
+        manager
+            .append(&sign_stage(&bad_called, 3), 10, &journal_signer())
+            .unwrap();
+        drop(manager.finish(&journal_signer()).unwrap());
         let (_, recovery) = open_capture(&trace_journal, 2, 1, journal_limits);
         assert!(matches!(
             verifier().rebuild_publication_state(recovery, 4),
@@ -1076,13 +1085,17 @@ mod tests {
         let (mut manager, _) = EvidenceJournalManager::provision_new(
             &duplicate_journal,
             options(1, 10, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
-        manager.append(&sign_receipt(&first, 3), 10).unwrap();
-        manager.append(&sign_receipt(&second, 3), 10).unwrap();
-        drop(manager.finish().unwrap());
+        manager
+            .append(&sign_receipt(&first, 3), 10, &journal_signer())
+            .unwrap();
+        manager
+            .append(&sign_receipt(&second, 3), 10, &journal_signer())
+            .unwrap();
+        drop(manager.finish(&journal_signer()).unwrap());
         let (_, recovery) = open_capture(&duplicate_journal, 2, 1, journal_limits);
         assert!(matches!(
             verifier().rebuild_publication_state(recovery, 4),
@@ -1098,17 +1111,25 @@ mod tests {
         let (mut first, _) = EvidenceJournalManager::provision_new(
             &segment_journal,
             options(1, 10, one_record_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
         first
-            .append(&sign_receipt(&deny_receipt(1, 1, 11), 3), 10)
+            .append(
+                &sign_receipt(&deny_receipt(1, 1, 11), 3),
+                10,
+                &journal_signer(),
+            )
             .unwrap();
         first
-            .append(&sign_receipt(&deny_receipt(2, 1, 12), 3), 10)
+            .append(
+                &sign_receipt(&deny_receipt(2, 1, 12), 3),
+                10,
+                &journal_signer(),
+            )
             .unwrap();
-        drop(first.finish().unwrap());
+        drop(first.finish(&journal_signer()).unwrap());
         let (_, recovery) = open_capture(&segment_journal, 2, 1, one_record_limits);
         assert!(matches!(
             verifier().rebuild_publication_state(recovery, 1),
@@ -1120,20 +1141,28 @@ mod tests {
         let (mut valid, _) = EvidenceJournalManager::provision_new(
             &valid_journal,
             options(1, 10, one_record_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
         valid
-            .append(&sign_receipt(&deny_receipt(1, 1, 11), 3), 10)
+            .append(
+                &sign_receipt(&deny_receipt(1, 1, 11), 3),
+                10,
+                &journal_signer(),
+            )
             .unwrap();
         // The pending record was observed at 12 before rotation created its
         // containing successor at 13; this is valid. The successor still follows
         // the prior segment's record at 11.
         valid
-            .append(&sign_receipt(&deny_receipt(2, 1, 12), 3), 13)
+            .append(
+                &sign_receipt(&deny_receipt(2, 1, 12), 3),
+                13,
+                &journal_signer(),
+            )
             .unwrap();
-        drop(valid.finish().unwrap());
+        drop(valid.finish(&journal_signer()).unwrap());
         let (_, recovery) = open_capture(&valid_journal, 2, 1, one_record_limits);
         let state = verifier().rebuild_publication_state(recovery, 1).unwrap();
         assert_eq!(state.replayed_segments(), 2);
@@ -1145,17 +1174,25 @@ mod tests {
         let (mut manager, _) = EvidenceJournalManager::provision_new(
             &record_journal,
             options(1, 1, journal_limits),
-            journal_signer(),
+            &journal_signer(),
             verifier(),
         )
         .unwrap();
         manager
-            .append(&sign_receipt(&deny_receipt(1, 1, 10), 3), 1)
+            .append(
+                &sign_receipt(&deny_receipt(1, 1, 10), 3),
+                1,
+                &journal_signer(),
+            )
             .unwrap();
         manager
-            .append(&sign_receipt(&deny_receipt(2, 1, 9), 3), 1)
+            .append(
+                &sign_receipt(&deny_receipt(2, 1, 9), 3),
+                1,
+                &journal_signer(),
+            )
             .unwrap();
-        drop(manager.finish().unwrap());
+        drop(manager.finish(&journal_signer()).unwrap());
         let (_, recovery) = open_capture(&record_journal, 2, 1, journal_limits);
         assert!(matches!(
             verifier().rebuild_publication_state(recovery, 1),
@@ -1255,7 +1292,7 @@ mod tests {
             EvidenceJournalManager::provision_new(
                 TestDirectory::new().journal(),
                 options(1, 1, limits(4)),
-                journal_signer(),
+                &journal_signer(),
                 revoked,
             ),
             Err(JournalManagerError::Verification(

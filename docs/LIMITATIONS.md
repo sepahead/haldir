@@ -137,7 +137,11 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   in authenticated segment/append order (`CL-EVIDENCE-MANAGER-01`). Capture is returned
   only after complete open success and legacy open does not retain the snapshot. A
   capture-limit error returns no partial snapshot, but ordinary recovery may already
-  have removed an insufficient tail or pending creation artifact. The manager still
+  have removed an insufficient tail or pending creation artifact. The manager retains
+  only the configured signer KID/public key and requires an exact short-lived private-key
+  borrow before any append/finish operation that may footer-complete. This permits a
+  future coordinator to keep the validated Gate actor as the single private-key owner;
+  no such actor-to-manager coordinator is selected yet. The manager still
   assumes one writer and a trusted local parent directory; it has no Gate `TrustStore`
   policy selected by the runtime, automatic retention, OS fault-injection/child-process
   crash proof, or power-loss claim. An assurance-only stateless Gate adapter and

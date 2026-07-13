@@ -2,7 +2,9 @@
 //!
 //! The manager owns the directory lock, verifies the complete on-disk chain,
 //! closes a recovered prior-boot tail, and rotates segments without retrying a
-//! record after an ambiguous commit. It inherits the segment primitive's narrow
+//! record after an ambiguous commit. It retains only the configured signer's
+//! public identity and borrows the private key for operations that may commit a
+//! footer. It inherits the segment primitive's narrow
 //! Unix process-crash scope; it does not claim power-loss durability or an
 //! external non-rewindable witness.
 
@@ -207,10 +209,14 @@ impl JournalLimits {
     }
 }
 
-/// Gate application signer bound into newly created segment headers.
-pub struct JournalSigner {
-    kid: KeyId,
-    key: SigningKey,
+/// Borrowed Gate application signer for one journal operation.
+///
+/// The manager retains only the public signer identity. Keeping the private key
+/// behind this short-lived, non-cloneable borrow lets one runtime component own
+/// the key while the journal uses it only at footer commit boundaries.
+pub struct JournalSigner<'key> {
+    kid: &'key KeyId,
+    key: &'key SigningKey,
 }
 
 /// Identity, time, and bounds for opening the journal for one Gate boot.
@@ -240,10 +246,10 @@ impl JournalOpenOptions {
     }
 }
 
-impl JournalSigner {
-    /// Bind a key identifier to its private signing key.
+impl<'key> JournalSigner<'key> {
+    /// Borrow a key identifier and its private signing key.
     #[must_use]
-    pub fn new(kid: KeyId, key: SigningKey) -> Self {
+    pub const fn new(kid: &'key KeyId, key: &'key SigningKey) -> Self {
         Self { kid, key }
     }
 }
@@ -371,7 +377,8 @@ pub struct EvidenceJournalManager<V> {
     directory: PathBuf,
     _lock_file: File,
     verifier: V,
-    signer: JournalSigner,
+    signer_kid: KeyId,
+    signer_public_key: [u8; 32],
     gate_id: GateId,
     gate_boot_id: GateBootId,
     limits: JournalLimits,
@@ -396,7 +403,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     pub fn provision_new(
         directory: impl Into<PathBuf>,
         options: JournalOpenOptions,
-        signer: JournalSigner,
+        signer: &JournalSigner<'_>,
         verifier: V,
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
         let (manager, report, _) = Self::open_inner(
@@ -421,7 +428,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     pub fn provision_new_with_recovered_records(
         directory: impl Into<PathBuf>,
         options: JournalOpenOptions,
-        signer: JournalSigner,
+        signer: &JournalSigner<'_>,
         capture_limits: RecoveryCaptureLimits,
         verifier: V,
     ) -> Result<(Self, JournalRecovery), JournalManagerError> {
@@ -453,8 +460,8 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     pub fn open_existing(
         directory: impl Into<PathBuf>,
         options: JournalOpenOptions,
-        signer: JournalSigner,
-        recovered_tail_signer: Option<&JournalSigner>,
+        signer: &JournalSigner<'_>,
+        recovered_tail_signer: Option<&JournalSigner<'_>>,
         verifier: V,
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
         let (manager, report, _) = Self::open_inner(
@@ -483,8 +490,8 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     pub fn open_existing_with_recovered_records(
         directory: impl Into<PathBuf>,
         options: JournalOpenOptions,
-        signer: JournalSigner,
-        recovered_tail_signer: Option<&JournalSigner>,
+        signer: &JournalSigner<'_>,
+        recovered_tail_signer: Option<&JournalSigner<'_>>,
         capture_limits: RecoveryCaptureLimits,
         verifier: V,
     ) -> Result<(Self, JournalRecovery), JournalManagerError> {
@@ -507,8 +514,8 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         directory: PathBuf,
         mode: OpenMode,
         options: JournalOpenOptions,
-        signer: JournalSigner,
-        recovered_tail_signer: Option<&JournalSigner>,
+        signer: &JournalSigner<'_>,
+        recovered_tail_signer: Option<&JournalSigner<'_>>,
         capture_limits: Option<RecoveryCaptureLimits>,
         verifier: V,
     ) -> Result<(Self, JournalRecoveryReport, Option<JournalRecovery>), JournalManagerError> {
@@ -667,7 +674,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             let active_bytes =
                 u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
             let mut closed = active
-                .close(&tail_signer.kid, &tail_signer.key)
+                .close(tail_signer.kid, tail_signer.key)
                 .map_err(map_commit_error)?;
             total_bytes = total_bytes
                 .checked_sub(active_bytes)
@@ -690,7 +697,8 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             directory,
             _lock_file: lock_file,
             verifier,
-            signer,
+            signer_kid: signer.kid.clone(),
+            signer_public_key: signer.key.verifying_key().to_bytes(),
             gate_id,
             gate_boot_id,
             limits,
@@ -739,6 +747,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         &mut self,
         record: &[u8],
         rotation_created_mono_ns: u64,
+        signer: &JournalSigner<'_>,
     ) -> Result<(), JournalManagerError> {
         if self.poisoned {
             return Err(JournalManagerError::Poisoned);
@@ -746,6 +755,12 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         if self.quiesced {
             return Err(JournalManagerError::Quiesced);
         }
+        let active_identity = self
+            .active
+            .as_ref()
+            .ok_or(JournalManagerError::Quiesced)?
+            .identity();
+        ensure_matching_signer(&self.verifier, active_identity, signer)?;
         let record_digest = EvidenceRecordDigest::compute(record);
         if self.record_digests.contains(&record_digest) {
             return Err(JournalManagerError::DuplicateRecord);
@@ -763,7 +778,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                     ActiveEvidenceSegment::footer_bytes(),
                     self.limits.max_total_bytes,
                 ) {
-                    self.quiesce()?;
+                    self.quiesce(signer)?;
                     return Err(JournalManagerError::Quiesced);
                 }
                 let active = self.active.as_mut().ok_or(JournalManagerError::Quiesced)?;
@@ -788,7 +803,13 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             }
             Err(JournalError::RotationRequired) => {
                 let frame_bytes = ActiveEvidenceSegment::framed_record_bytes(record.len())?;
-                self.rotate_and_append(record, record_digest, rotation_created_mono_ns, frame_bytes)
+                self.rotate_and_append(
+                    record,
+                    record_digest,
+                    rotation_created_mono_ns,
+                    frame_bytes,
+                    signer,
+                )
             }
             Err(JournalError::CommitAmbiguous | JournalError::Poisoned) => {
                 self.poisoned = true;
@@ -833,17 +854,28 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
 
     /// Gracefully footer-complete the active tail.
     ///
+    /// This consumes the manager on success or error. A rejected signer issues
+    /// no journal I/O, but the caller must reopen to regain a manager handle.
+    ///
     /// # Errors
-    /// Returns on a poisoned manager or footer commit failure.
-    pub fn finish(mut self) -> Result<Option<CompletedSegment>, JournalManagerError> {
+    /// Returns on a poisoned manager, signer mismatch, or footer commit failure.
+    pub fn finish(
+        mut self,
+        signer: &JournalSigner<'_>,
+    ) -> Result<Option<CompletedSegment>, JournalManagerError> {
         if self.poisoned {
             return Err(JournalManagerError::Poisoned);
         }
+        let Some(active_identity) = self.active.as_ref().map(ActiveEvidenceSegment::identity)
+        else {
+            return Ok(None);
+        };
+        ensure_matching_signer(&self.verifier, active_identity, signer)?;
         let Some(active) = self.active.take() else {
             return Ok(None);
         };
         active
-            .close(&self.signer.kid, &self.signer.key)
+            .close(signer.kid, signer.key)
             .map(Some)
             .map_err(map_commit_error)
     }
@@ -854,11 +886,12 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         record_digest: EvidenceRecordDigest,
         created_mono_ns: u64,
         frame_bytes: usize,
+        signer: &JournalSigner<'_>,
     ) -> Result<(), JournalManagerError> {
         let active = self.active.take().ok_or(JournalManagerError::Quiesced)?;
         let active_bytes =
             u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
-        let completed = match active.close(&self.signer.kid, &self.signer.key) {
+        let completed = match active.close(signer.kid, signer.key) {
             Ok(completed) => completed,
             Err(JournalError::CommitAmbiguous) => {
                 self.poisoned = true;
@@ -929,10 +962,15 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             segment_sequence: sequence,
             previous_completed_digest,
             created_mono_ns,
-            signer_kid: self.signer.kid.clone(),
-            signer_public_key: self.signer.key.verifying_key().to_bytes(),
+            signer_kid: self.signer_kid.clone(),
+            signer_public_key: self.signer_public_key,
         };
-        ensure_matching_signer(&self.verifier, &identity, &self.signer)?;
+        let resolved = self.verifier.resolve_signer(&identity)?;
+        if resolved.to_bytes() != self.signer_public_key {
+            return Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner,
+            ));
+        }
         let minimum = ActiveEvidenceSegment::minimum_complete_bytes(&identity)?;
         let required = minimum
             .checked_add(pending_frame_bytes.unwrap_or(0))
@@ -976,14 +1014,14 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         Ok(())
     }
 
-    fn quiesce(&mut self) -> Result<(), JournalManagerError> {
+    fn quiesce(&mut self, signer: &JournalSigner<'_>) -> Result<(), JournalManagerError> {
         let Some(active) = self.active.take() else {
             self.quiesced = true;
             return Ok(());
         };
         let active_bytes =
             u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
-        match active.close(&self.signer.kid, &self.signer.key) {
+        match active.close(signer.kid, signer.key) {
             Ok(completed) => {
                 self.total_bytes = self
                     .total_bytes
@@ -1296,11 +1334,11 @@ fn validate_records<V: JournalVerifier>(
 fn ensure_matching_signer<V: JournalVerifier>(
     verifier: &V,
     identity: &SegmentIdentity,
-    signer: &JournalSigner,
+    signer: &JournalSigner<'_>,
 ) -> Result<(), JournalManagerError> {
     let resolved = verifier.resolve_signer(identity)?;
     let supplied = signer.key.verifying_key().to_bytes();
-    if identity.signer_kid != signer.kid
+    if &identity.signer_kid != signer.kid
         || identity.signer_public_key != supplied
         || resolved.to_bytes() != supplied
     {
@@ -1336,8 +1374,8 @@ fn map_commit_error(error: JournalError) -> JournalManagerError {
 mod tests {
     use super::*;
     use std::io::Write;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::{Arc, LazyLock};
 
     static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -1450,8 +1488,15 @@ mod tests {
         KeyId::new(vec![3, 0xab, 3]).unwrap()
     }
 
-    fn signer() -> JournalSigner {
-        JournalSigner::new(kid(), SigningKey::from_seed([3; 32]))
+    static TEST_SIGNER: LazyLock<(KeyId, SigningKey)> = LazyLock::new(|| {
+        (
+            KeyId::new(vec![3, 0xab, 3]).unwrap(),
+            SigningKey::from_seed([3; 32]),
+        )
+    });
+
+    fn signer() -> JournalSigner<'static> {
+        JournalSigner::new(&TEST_SIGNER.0, &TEST_SIGNER.1)
     }
 
     fn verifier() -> TestVerifier {
@@ -1490,7 +1535,7 @@ mod tests {
             EvidenceJournalManager::open_existing(
                 directory,
                 options(boot, limits),
-                signer(),
+                &signer(),
                 Some(&recovered_tail_signer),
                 verifier(),
             )
@@ -1498,7 +1543,7 @@ mod tests {
             EvidenceJournalManager::provision_new(
                 directory,
                 options(boot, limits),
-                signer(),
+                &signer(),
                 verifier(),
             )
         }
@@ -1515,7 +1560,7 @@ mod tests {
             EvidenceJournalManager::open_existing_with_recovered_records(
                 directory,
                 options(boot, limits),
-                signer(),
+                &signer(),
                 Some(&recovered_tail_signer),
                 capture_limits,
                 verifier(),
@@ -1524,7 +1569,7 @@ mod tests {
             EvidenceJournalManager::provision_new_with_recovered_records(
                 directory,
                 options(boot, limits),
-                signer(),
+                &signer(),
                 capture_limits,
                 verifier(),
             )
@@ -1542,7 +1587,7 @@ mod tests {
         let result = EvidenceJournalManager::open_existing(
             &missing,
             options(1, limits(4, 4)),
-            signer(),
+            &signer(),
             None,
             verifier(),
         );
@@ -1553,7 +1598,7 @@ mod tests {
         let empty = EvidenceJournalManager::open_existing(
             &missing,
             options(1, limits(4, 4)),
-            signer(),
+            &signer(),
             None,
             verifier(),
         );
@@ -1568,7 +1613,7 @@ mod tests {
         let (manager, report) = EvidenceJournalManager::provision_new(
             &journal,
             options(1, limits(4, 4)),
-            signer(),
+            &signer(),
             verifier(),
         )
         .unwrap();
@@ -1578,7 +1623,7 @@ mod tests {
             EvidenceJournalManager::provision_new(
                 &journal,
                 options(1, limits(4, 4)),
-                signer(),
+                &signer(),
                 verifier(),
             ),
             Err(JournalManagerError::AlreadyProvisioned)
@@ -1594,7 +1639,7 @@ mod tests {
             EvidenceJournalManager::open_existing(
                 &interrupted,
                 options(1, limits(4, 4)),
-                signer(),
+                &signer(),
                 None,
                 verifier(),
             ),
@@ -1615,10 +1660,90 @@ mod tests {
     }
 
     #[test]
+    fn wrong_borrowed_signer_is_rejected_before_nonrotating_append() {
+        let directory = TestDirectory::new();
+        let (mut manager, _) = open(&directory.journal(), 1, limits(4, 4)).unwrap();
+        let wrong_kid = kid();
+        let wrong_key = SigningKey::from_seed([4; 32]);
+        let wrong_signer = JournalSigner::new(&wrong_kid, &wrong_key);
+        let record = b"not-written";
+
+        assert_eq!(
+            manager.append(record, 1, &wrong_signer),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner
+            ))
+        );
+        assert_eq!(
+            manager.contains_record(EvidenceRecordDigest::compute(record)),
+            Ok(false)
+        );
+        let other_kid = KeyId::new(vec![9, 0xab, 9]).unwrap();
+        let wrong_kid_signer = JournalSigner::new(&other_kid, &TEST_SIGNER.1);
+        assert_eq!(
+            manager.append(record, 1, &wrong_kid_signer),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner
+            ))
+        );
+        assert_eq!(
+            manager.contains_record(EvidenceRecordDigest::compute(record)),
+            Ok(false)
+        );
+        manager.append(record, 1, &signer()).unwrap();
+    }
+
+    #[test]
+    fn wrong_borrowed_signer_cannot_trigger_rotation() {
+        let directory = TestDirectory::new();
+        let (mut manager, _) = open(&directory.journal(), 1, limits(1, 3)).unwrap();
+        manager.append(b"one", 1, &signer()).unwrap();
+        let wrong_key = SigningKey::from_seed([4; 32]);
+        let expected_kid = kid();
+        let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
+
+        assert_eq!(
+            manager.append(b"two", 2, &wrong_signer),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner
+            ))
+        );
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(1));
+        assert!(!manager.is_quiesced());
+        manager.append(b"two", 2, &signer()).unwrap();
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    #[test]
+    fn wrong_finish_signer_writes_nothing_and_recovery_can_close_tail() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let (mut manager, _) = open(&journal, 1, limits(4, 4)).unwrap();
+        manager.append(b"one", 1, &signer()).unwrap();
+        let path = journal.join(segment_file_name(NonZeroU64::new(1).unwrap()));
+        let bytes_before = fs::metadata(&path).unwrap().len();
+        let wrong_key = SigningKey::from_seed([4; 32]);
+        let expected_kid = kid();
+        let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
+
+        assert!(matches!(
+            manager.finish(&wrong_signer),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner
+            ))
+        ));
+        assert_eq!(fs::metadata(&path).unwrap().len(), bytes_before);
+
+        let (_, report) = open(&journal, 2, limits(4, 4)).unwrap();
+        assert!(report.closed_active_tail);
+        assert_eq!(report.recovered_records, 1);
+    }
+
+    #[test]
     fn contiguous_recovery_closes_old_boot_tail_and_starts_new_boot() {
         let directory = TestDirectory::new();
         let (mut first, _) = open(&directory.journal(), 1, limits(4, 4)).unwrap();
-        first.append(b"one", 1).unwrap();
+        first.append(b"one", 1, &signer()).unwrap();
         drop(first);
 
         let (second, report) = open(&directory.journal(), 2, limits(4, 4)).unwrap();
@@ -1642,12 +1767,12 @@ mod tests {
         assert!(initial.segments().is_empty());
         assert_eq!(initial.records().count(), 0);
         assert_eq!(initial.record_bytes(), 0);
-        drop(first.finish().unwrap());
+        drop(first.finish(&signer()).unwrap());
 
         let (mut second, _) = open(&journal, 2, journal_limits).unwrap();
-        second.append(b"z-first", 2).unwrap();
-        second.append(b"a-second", 2).unwrap();
-        second.append(b"m-third", 2).unwrap();
+        second.append(b"z-first", 2, &signer()).unwrap();
+        second.append(b"a-second", 2, &signer()).unwrap();
+        second.append(b"m-third", 2, &signer()).unwrap();
         drop(second);
 
         let (third, recovered) =
@@ -1688,8 +1813,8 @@ mod tests {
         let journal = directory.journal();
         let journal_limits = limits(4, 4);
         let (mut first, _) = open(&journal, 1, journal_limits).unwrap();
-        first.append(b"one", 1).unwrap();
-        first.append(b"two", 1).unwrap();
+        first.append(b"one", 1, &signer()).unwrap();
+        first.append(b"two", 1, &signer()).unwrap();
         drop(first);
         let active_path = journal.join(segment_file_name(NonZeroU64::new(1).unwrap()));
         let active_before = fs::read(&active_path).unwrap();
@@ -1754,16 +1879,16 @@ mod tests {
         let journal = directory.journal();
         let journal_limits = limits(1, 4);
         let (mut first, _) = open(&journal, 1, journal_limits).unwrap();
-        first.append(b"good", 1).unwrap();
-        first.append(b"bad", 1).unwrap();
-        drop(first.finish().unwrap());
+        first.append(b"good", 1, &signer()).unwrap();
+        first.append(b"bad", 1, &signer()).unwrap();
+        drop(first.finish(&signer()).unwrap());
 
         let mut rejecting = verifier();
         rejecting.reject = Some(b"bad".to_vec());
         let result = EvidenceJournalManager::open_existing_with_recovered_records(
             &journal,
             options(2, journal_limits),
-            signer(),
+            &signer(),
             None,
             RecoveryCaptureLimits::new(2, 7),
             rejecting,
@@ -1787,7 +1912,7 @@ mod tests {
         let journal = directory.journal();
         let journal_limits = limits(4, 4);
         let (mut first, _) = open(&journal, 1, journal_limits).unwrap();
-        first.append(b"complete", 1).unwrap();
+        first.append(b"complete", 1, &signer()).unwrap();
         drop(first);
 
         let active_path = journal.join(segment_file_name(NonZeroU64::new(1).unwrap()));
@@ -1827,16 +1952,16 @@ mod tests {
         let (mut first, _) = EvidenceJournalManager::provision_new(
             &journal,
             options(1, journal_limits),
-            signer(),
+            &signer(),
             CountingVerifier {
                 validated: Arc::clone(&validated),
             },
         )
         .unwrap();
-        first.append(b"prepared", 1).unwrap();
+        first.append(b"prepared", 1, &signer()).unwrap();
         crate::journal::inject_create_publication_commit_ambiguous_once();
         assert_eq!(
-            first.append(b"called", 1),
+            first.append(b"called", 1, &signer()),
             Err(JournalManagerError::AppendCommitAmbiguous {
                 record_digest: EvidenceRecordDigest::compute(b"called"),
             })
@@ -1952,10 +2077,10 @@ mod tests {
         let directory = TestDirectory::new();
         let journal = directory.journal();
         let (mut manager, _) = open(&journal, 1, limits(1, 1)).unwrap();
-        manager.append(b"one", 1).unwrap();
+        manager.append(b"one", 1, &signer()).unwrap();
 
         assert_eq!(
-            manager.append(b"two", 2),
+            manager.append(b"two", 2, &signer()),
             Err(JournalManagerError::Quiesced)
         );
         assert!(manager.is_quiesced());
@@ -1984,10 +2109,22 @@ mod tests {
             .unwrap();
         let limits = JournalLimits::new(bounds, 4, u64::try_from(maximum).unwrap()).unwrap();
         let (mut manager, _) = open(&journal, 1, limits).unwrap();
-        manager.append(b"one", 1).unwrap();
+        manager.append(b"one", 1, &signer()).unwrap();
+        let wrong_key = SigningKey::from_seed([4; 32]);
+        let expected_kid = kid();
+        let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
 
         assert_eq!(
-            manager.append(b"two", 2),
+            manager.append(b"two", 2, &wrong_signer),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner
+            ))
+        );
+        assert!(!manager.is_quiesced());
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(1));
+
+        assert_eq!(
+            manager.append(b"two", 2, &signer()),
             Err(JournalManagerError::Quiesced)
         );
         assert!(manager.is_quiesced());
@@ -2014,10 +2151,10 @@ mod tests {
         let (mut manager, _) = open(&directory.journal(), 1, limits).unwrap();
 
         assert_eq!(
-            manager.append(b"four", 1),
+            manager.append(b"four", 1, &signer()),
             Err(JournalManagerError::Journal(JournalError::RecordTooLarge))
         );
-        manager.append(b"one", 2).unwrap();
+        manager.append(b"one", 2, &signer()).unwrap();
         assert!(!manager.is_quiesced());
         assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(1));
     }
@@ -2028,11 +2165,11 @@ mod tests {
         let directory = TestDirectory::new();
         let journal = directory.journal();
         let (mut manager, _) = open(&journal, 1, limits(1, 3)).unwrap();
-        manager.append(b"one", 1).unwrap();
+        manager.append(b"one", 1, &signer()).unwrap();
         crate::journal::inject_create_publication_commit_ambiguous_once();
 
         assert_eq!(
-            manager.append(b"two", 2),
+            manager.append(b"two", 2, &signer()),
             Err(JournalManagerError::AppendCommitAmbiguous {
                 record_digest: EvidenceRecordDigest::compute(b"two"),
             })
@@ -2046,7 +2183,7 @@ mod tests {
             (fs::read(&successor).unwrap(), fs::read(&pending).unwrap());
 
         assert_eq!(
-            manager.append(b"three", 3),
+            manager.append(b"three", 3, &signer()),
             Err(JournalManagerError::Poisoned)
         );
         assert_eq!(
@@ -2060,9 +2197,9 @@ mod tests {
         let directory = TestDirectory::new();
         let journal = directory.journal();
         let (mut manager, _) = open(&journal, 1, limits(1, 3)).unwrap();
-        manager.append(b"one", 1).unwrap();
-        manager.append(b"two", 2).unwrap();
-        manager.finish().unwrap();
+        manager.append(b"one", 1, &signer()).unwrap();
+        manager.append(b"two", 2, &signer()).unwrap();
+        manager.finish(&signer()).unwrap();
 
         let mut occurrences = 0usize;
         for sequence in 1..=2 {
@@ -2094,10 +2231,10 @@ mod tests {
         let journal = directory.journal();
         let digest = EvidenceRecordDigest::compute(b"one");
         let (mut first, _) = open(&journal, 1, limits(4, 4)).unwrap();
-        first.append(b"one", 1).unwrap();
+        first.append(b"one", 1, &signer()).unwrap();
         assert_eq!(first.contains_record(digest), Ok(true));
         assert_eq!(
-            first.append(b"one", 1),
+            first.append(b"one", 1, &signer()),
             Err(JournalManagerError::DuplicateRecord)
         );
         drop(first);
@@ -2105,7 +2242,7 @@ mod tests {
         let (mut recovered, _) = open(&journal, 2, limits(4, 4)).unwrap();
         assert_eq!(recovered.contains_record(digest), Ok(true));
         assert_eq!(
-            recovered.append(b"one", 2),
+            recovered.append(b"one", 2, &signer()),
             Err(JournalManagerError::DuplicateRecord)
         );
     }
@@ -2118,12 +2255,12 @@ mod tests {
         let (mut manager, _) = EvidenceJournalManager::provision_new(
             directory.journal(),
             options(1, limits(4, 4)),
-            signer(),
+            &signer(),
             rejecting,
         )
         .unwrap();
         assert_eq!(
-            manager.append(b"bad", 1),
+            manager.append(b"bad", 1, &signer()),
             Err(JournalManagerError::Verification(
                 JournalVerificationError::InvalidRecord
             ))
@@ -2140,7 +2277,7 @@ mod tests {
             EvidenceJournalManager::open_existing(
                 directory.journal(),
                 options(2, limits(4, 4)),
-                signer(),
+                &signer(),
                 Some(&recovered_tail_signer),
                 wrong,
             ),
@@ -2164,21 +2301,22 @@ mod tests {
                 (new_kid.clone(), new_key.verifying_key()),
             ],
         };
-        let old_signer = JournalSigner::new(old_kid.clone(), SigningKey::from_seed([0xa1; 32]));
+        let old_signer = JournalSigner::new(&old_kid, &old_key);
+        let new_signer = JournalSigner::new(&new_kid, &new_key);
         let (mut first, _) = EvidenceJournalManager::provision_new(
             &journal,
             options(1, limits(4, 4)),
-            old_signer,
+            &old_signer,
             verifier(),
         )
         .unwrap();
-        first.append(b"old", 1).unwrap();
+        first.append(b"old", 1, &old_signer).unwrap();
         drop(first);
 
         let unavailable = EvidenceJournalManager::open_existing(
             &journal,
             options(2, limits(4, 4)),
-            JournalSigner::new(new_kid.clone(), SigningKey::from_seed([0xb2; 32])),
+            &new_signer,
             None,
             verifier(),
         );
@@ -2192,12 +2330,11 @@ mod tests {
                 .exists()
         );
 
-        let historical = JournalSigner::new(old_kid.clone(), SigningKey::from_seed([0xa1; 32]));
         let (second, report) = EvidenceJournalManager::open_existing(
             &journal,
             options(2, limits(4, 4)),
-            JournalSigner::new(new_kid.clone(), SigningKey::from_seed([0xb2; 32])),
-            Some(&historical),
+            &new_signer,
+            Some(&old_signer),
             verifier(),
         )
         .unwrap();
