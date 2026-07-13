@@ -30,9 +30,10 @@ pub use actor::{
     PublicationError, PublicationState, PublishCalledPublication, VehicleActor,
 };
 pub use startup::{
-    DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, LocalStartupConfig,
-    OsEntropy, RunningGate, StartupProfile, StartupReport, StartupStateConfig, StateOpenMode,
-    start_local, start_with_backends,
+    DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, JournalBindingError,
+    JournalBoundRunningGate, LocalStartupConfig, OsEntropy, PublicationJournalConfigError,
+    PublicationJournalStartupConfig, RunningGate, StartupProfile, StartupReport,
+    StartupStateConfig, StateOpenMode, start_local, start_with_backends,
 };
 
 #[cfg(test)]

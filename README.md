@@ -56,7 +56,8 @@ opt-in exact upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts, a bounded locked Unix
 signed-segment manager with opt-in bounded ordered recovery snapshots
 (`CL-EVIDENCE-MANAGER-01`), a stateless Gate trust/COSE adapter and fresh ordered
-publication replay (`CL-GATE-JOURNAL-REPLAY-01`), canonical linked publication-stage
+publication replay (`CL-GATE-JOURNAL-REPLAY-01`), a staged fused current-boot journal
+binding (`CL-GATE-JOURNAL-BINDING-01`), canonical linked publication-stage
 payload/reduction primitives (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), and
 authenticated snapshot/generation-anchor primitives with commit-before-mutation
 anti-rollback tests,
@@ -66,8 +67,9 @@ durable startup/boot-ID mechanisms (`CL-DURABLE-PRIMITIVE-01`,
 capability returned only after a fresh matching boot commit, and faults if a term
 commit is unavailable.
 The startup library explicitly provisions or opens those paths, but no service package
-loads protected secrets or a deployed external non-rewindable anchor, and the actor still
-selects the lossy in-process spool. End-to-end crash durability therefore remains out of
+loads protected secrets or a deployed external non-rewindable anchor. The direct
+`VehicleActor` profile still selects the lossy in-process spool, while the new bound type
+deliberately exposes no live mutation yet. End-to-end crash durability therefore remains out of
 P0 (`CL-DURABLE-01`). The composed Gate runtime has its 13-stage decision pipeline,
 and a deterministic adversarial range + end-to-end
 acceptance campaign.

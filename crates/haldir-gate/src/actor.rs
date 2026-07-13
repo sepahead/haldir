@@ -29,7 +29,7 @@ use haldir_crypto::{
     sign_message, verify_and_decode,
 };
 use haldir_durable::{GenerationAnchor, SnapshotStorage};
-use haldir_evidence::EvidenceSpool;
+use haldir_evidence::{EvidenceSpool, gate_journal::GateJournalVerifier, manager::JournalSigner};
 use haldir_ncp08::{
     AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter,
 };
@@ -40,6 +40,7 @@ use haldir_state::{
     ControllerReplayState, GateOutputStreamState, GateProcessMachine, LeaseAcceptContext,
     LeaseAcceptError, LeaseTermStore, RevisionCounter, accept_lease,
 };
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 const MAX_RETIRED: usize = 16;
@@ -442,6 +443,10 @@ impl GateApplicationSigner {
             &self.key,
         )
     }
+
+    const fn journal_signer(&self) -> JournalSigner<'_> {
+        JournalSigner::new(&self.kid, &self.key)
+    }
 }
 
 /// Bound on retained decision-receipt evidence records (in-process P0 spool).
@@ -667,6 +672,35 @@ impl VehicleActor {
     #[must_use]
     pub fn evidence(&self) -> &EvidenceSpool {
         &self.evidence
+    }
+
+    pub(crate) const fn gate_id(&self) -> &GateId {
+        &self.gate_id
+    }
+
+    pub(crate) const fn gate_boot_id(&self) -> GateBootId {
+        self.gate_boot_id
+    }
+
+    pub(crate) const fn gate_signer_kid(&self) -> &KeyId {
+        &self.gate_signer.kid
+    }
+
+    pub(crate) fn gate_signer_public_key(&self) -> [u8; 32] {
+        self.gate_signer.key.verifying_key().to_bytes()
+    }
+
+    pub(crate) const fn journal_signer(&self) -> JournalSigner<'_> {
+        self.gate_signer.journal_signer()
+    }
+
+    pub(crate) fn journal_verifier(&self, max_envelope_bytes: NonZeroUsize) -> GateJournalVerifier {
+        GateJournalVerifier::new(
+            self.gate_id.clone(),
+            self.trust.clone(),
+            self.revocations.clone(),
+            max_envelope_bytes,
+        )
     }
 
     /// Current single-slot publication state.

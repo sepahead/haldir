@@ -759,6 +759,12 @@ impl ActiveEvidenceSegment {
     pub fn records(&self) -> &[Vec<u8>] {
         &self.records
     }
+
+    /// Move recovered record bytes into a higher-level bounded snapshot before
+    /// footer completion. Cryptographic chain/count state is retained.
+    pub(crate) fn take_records(&mut self) -> Vec<Vec<u8>> {
+        core::mem::take(&mut self.records)
+    }
 }
 
 fn encode_header(identity: &SegmentIdentity) -> Result<Vec<u8>, JournalError> {

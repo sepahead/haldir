@@ -5,6 +5,7 @@
 //! explicitly provisions or opens durable state, and commits a new boot before
 //! constructing [`VehicleActor`].
 
+use core::num::{NonZeroU64, NonZeroUsize};
 use std::fs::{self, File, OpenOptions, TryLockError};
 use std::path::{Path, PathBuf};
 
@@ -22,6 +23,13 @@ use haldir_durable::{
     AnchorProtection, AtomicFileSnapshot, CommitReceipt, GenerationAnchor,
     LocalFileGenerationAnchor, RecoveryStatus, SnapshotBinding, SnapshotStorage, StorageMacKey,
     StoreId,
+};
+use haldir_evidence::gate_journal::{
+    GateJournalOpenError, RecoveredGateJournal, RecoveredPublicationState,
+};
+use haldir_evidence::journal::SegmentIdentity;
+use haldir_evidence::manager::{
+    JournalLimits, JournalOpenOptions, JournalRecoveryReport, JournalSigner, RecoveryCaptureLimits,
 };
 use haldir_policy_native::NativePolicySnapshot;
 use haldir_state::{DurableAntiRollbackError, DurableAntiRollbackStore};
@@ -222,6 +230,95 @@ pub struct RunningGate {
     _instance_lock: File,
 }
 
+/// A durable-started Gate fused with the exact journal manager and publication
+/// replay produced during the same bounded open operation.
+///
+/// Mutable actor and journal access is intentionally withheld until recovery
+/// Unknown emission and lifecycle capacity reservation are coordinated.
+pub struct JournalBoundRunningGate {
+    journal: RecoveredGateJournal,
+    gate: RunningGate,
+}
+
+/// Identity-free bounds and paths for one Gate publication-journal startup.
+/// Gate ID, boot ID, signer, trust, and revocations are always derived from the
+/// consuming [`RunningGate`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublicationJournalStartupConfig {
+    directory: PathBuf,
+    created_mono_ns: u64,
+    limits: JournalLimits,
+    capture_limits: RecoveryCaptureLimits,
+    max_envelope_bytes: NonZeroUsize,
+    max_traces: NonZeroUsize,
+}
+
+/// Invalid identity-free publication-journal startup bounds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum PublicationJournalConfigError {
+    /// The reducer cannot retain every record admitted by recovery capture.
+    TraceCapacityTooSmall,
+}
+
+impl PublicationJournalStartupConfig {
+    /// Construct the non-authority journal path and bounded replay profile.
+    ///
+    /// # Errors
+    /// Returns when the reducer bound is smaller than the capture record bound.
+    pub fn new(
+        directory: impl Into<PathBuf>,
+        created_mono_ns: u64,
+        limits: JournalLimits,
+        capture_limits: RecoveryCaptureLimits,
+        max_envelope_bytes: NonZeroUsize,
+        max_traces: NonZeroUsize,
+    ) -> Result<Self, PublicationJournalConfigError> {
+        let max_traces_u64 = u64::try_from(max_traces.get()).unwrap_or(u64::MAX);
+        if max_traces_u64 < capture_limits.max_records() {
+            return Err(PublicationJournalConfigError::TraceCapacityTooSmall);
+        }
+        Ok(Self {
+            directory: directory.into(),
+            created_mono_ns,
+            limits,
+            capture_limits,
+            max_envelope_bytes,
+            max_traces,
+        })
+    }
+}
+
+/// Gate/journal construction or committed-current-boot binding failure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum JournalBindingError {
+    /// Fused directory open, bounded capture, or semantic replay failed.
+    Journal(GateJournalOpenError),
+    /// Logical bounds left no usable current active segment.
+    NoActiveSegment,
+    /// The current segment belongs to another Gate.
+    GateMismatch,
+    /// The current segment does not name this actual committed Gate boot.
+    BootMismatch,
+    /// The current segment does not use the actor's validated signer identity.
+    SignerMismatch,
+    /// This fresh committed boot already appeared in recovered history.
+    CurrentBootAlreadyRecovered,
+    /// The current segment does not immediately follow the recovered tail.
+    SequenceMismatch,
+    /// A restarted durable Gate attempted to fork a fresh journal directory.
+    JournalProvisionRequiresFreshGateState,
+    /// A freshly provisioned durable Gate attempted to adopt existing history.
+    JournalOpenRequiresExistingGateState,
+}
+
+impl From<GateJournalOpenError> for JournalBindingError {
+    fn from(error: GateJournalOpenError) -> Self {
+        Self::Journal(error)
+    }
+}
+
 impl RunningGate {
     /// Started vehicle actor.
     #[must_use]
@@ -229,16 +326,175 @@ impl RunningGate {
         &self.actor
     }
 
-    /// Started vehicle actor for serialized event processing.
-    #[must_use]
-    pub const fn actor_mut(&mut self) -> &mut VehicleActor {
-        &mut self.actor
-    }
-
     /// Durable startup report.
     #[must_use]
     pub const fn report(&self) -> StartupReport {
         self.report
+    }
+
+    /// Provision and bind a fresh selected Gate publication journal using this
+    /// runtime's committed boot and sole validated application signer.
+    ///
+    /// # Errors
+    /// Returns on journal provisioning/replay failure or any mismatch with the
+    /// non-forgeable running Gate state.
+    pub fn provision_publication_journal(
+        self,
+        config: PublicationJournalStartupConfig,
+    ) -> Result<JournalBoundRunningGate, JournalBindingError> {
+        if !self.report.provisioned {
+            return Err(JournalBindingError::JournalProvisionRequiresFreshGateState);
+        }
+        let PublicationJournalStartupConfig {
+            directory,
+            created_mono_ns,
+            limits,
+            capture_limits,
+            max_envelope_bytes,
+            max_traces,
+        } = config;
+        let options = JournalOpenOptions::new(
+            self.actor.gate_id().clone(),
+            self.actor.gate_boot_id(),
+            created_mono_ns,
+            limits,
+        );
+        let journal = {
+            let signer = self.actor.journal_signer();
+            let verifier = self.actor.journal_verifier(max_envelope_bytes);
+            RecoveredGateJournal::provision_new(
+                directory,
+                options,
+                &signer,
+                capture_limits,
+                verifier,
+                max_traces,
+            )?
+        };
+        self.bind_publication_journal(journal)
+    }
+
+    /// Recover and bind an existing selected Gate publication journal using
+    /// this runtime's committed boot and sole validated application signer.
+    ///
+    /// When `recovered_tail_signer` is absent, the current Gate signer is tried
+    /// for the prior open tail. Key rotation may instead supply the exact old
+    /// signer as a short-lived borrow.
+    ///
+    /// # Errors
+    /// Returns on journal recovery/replay failure or any mismatch with the
+    /// non-forgeable running Gate state.
+    pub fn open_publication_journal(
+        self,
+        config: PublicationJournalStartupConfig,
+        recovered_tail_signer: Option<&JournalSigner<'_>>,
+    ) -> Result<JournalBoundRunningGate, JournalBindingError> {
+        if self.report.provisioned {
+            return Err(JournalBindingError::JournalOpenRequiresExistingGateState);
+        }
+        let PublicationJournalStartupConfig {
+            directory,
+            created_mono_ns,
+            limits,
+            capture_limits,
+            max_envelope_bytes,
+            max_traces,
+        } = config;
+        let options = JournalOpenOptions::new(
+            self.actor.gate_id().clone(),
+            self.actor.gate_boot_id(),
+            created_mono_ns,
+            limits,
+        );
+        let journal = {
+            let signer = self.actor.journal_signer();
+            let tail_signer = recovered_tail_signer.or(Some(&signer));
+            let verifier = self.actor.journal_verifier(max_envelope_bytes);
+            RecoveredGateJournal::open_existing(
+                directory,
+                options,
+                &signer,
+                tail_signer,
+                capture_limits,
+                verifier,
+                max_traces,
+            )?
+        };
+        self.bind_publication_journal(journal)
+    }
+
+    fn bind_publication_journal(
+        self,
+        journal: RecoveredGateJournal,
+    ) -> Result<JournalBoundRunningGate, JournalBindingError> {
+        let active = journal
+            .active_identity()
+            .ok_or(JournalBindingError::NoActiveSegment)?;
+        if active.gate_id != *self.actor.gate_id() {
+            return Err(JournalBindingError::GateMismatch);
+        }
+        if active.gate_boot_id != self.actor.gate_boot_id() {
+            return Err(JournalBindingError::BootMismatch);
+        }
+        if active.signer_kid != *self.actor.gate_signer_kid()
+            || active.signer_public_key != self.actor.gate_signer_public_key()
+        {
+            return Err(JournalBindingError::SignerMismatch);
+        }
+        if journal
+            .publication()
+            .contains_recovered_boot(self.actor.gate_boot_id())
+        {
+            return Err(JournalBindingError::CurrentBootAlreadyRecovered);
+        }
+        let expected_sequence = match journal.publication().last_recovered_segment_sequence() {
+            Some(previous) => previous
+                .get()
+                .checked_add(1)
+                .and_then(NonZeroU64::new)
+                .ok_or(JournalBindingError::SequenceMismatch)?,
+            None => NonZeroU64::new(1).ok_or(JournalBindingError::SequenceMismatch)?,
+        };
+        if active.segment_sequence != expected_sequence {
+            return Err(JournalBindingError::SequenceMismatch);
+        }
+        Ok(JournalBoundRunningGate {
+            journal,
+            gate: self,
+        })
+    }
+}
+
+impl JournalBoundRunningGate {
+    /// Durable startup report. This remains observability data, not authority.
+    #[must_use]
+    pub const fn report(&self) -> StartupReport {
+        self.gate.report
+    }
+
+    /// Read-only started actor retained behind the journal binding.
+    #[must_use]
+    pub const fn actor(&self) -> &VehicleActor {
+        &self.gate.actor
+    }
+
+    /// Manager-created and trust-resolved current segment identity. The open
+    /// tail is not footer-authenticated evidence yet.
+    #[must_use]
+    pub fn active_journal_identity(&self) -> Option<&SegmentIdentity> {
+        self.journal.active_identity()
+    }
+
+    /// Read-only publication state rebuilt before current authority exposure.
+    #[must_use]
+    pub const fn recovered_publication(&self) -> &RecoveredPublicationState {
+        self.journal.publication()
+    }
+
+    /// Material journal recovery actions and current-tail status.
+    #[must_use]
+    pub const fn journal_recovery_report(&self) -> JournalRecoveryReport {
+        self.journal.recovery_report()
     }
 }
 
@@ -543,6 +799,8 @@ mod tests {
     use haldir_contracts::status::{AclExclusiveEvidenceV1, PlantPublicationUnavailableReasonV1};
     use haldir_crypto::{KeyClass, KeyRecord, KeyRole};
     use haldir_durable::{Anchor, DurableError};
+    use haldir_evidence::journal::JournalBounds;
+    use haldir_evidence::manager::JournalManagerError;
     use haldir_policy_native::GeofenceBoxV1;
 
     use super::*;
@@ -730,6 +988,30 @@ mod tests {
         StorageMacKey::new([7; 32])
     }
 
+    fn journal_limits() -> JournalLimits {
+        JournalLimits::new(JournalBounds::new(4096, 4, 2048).unwrap(), 8, 64 * 1024).unwrap()
+    }
+
+    const fn capture_limits() -> RecoveryCaptureLimits {
+        RecoveryCaptureLimits::new(32, 64 * 1024)
+    }
+
+    fn journal_config(
+        directory: impl Into<PathBuf>,
+        created_mono_ns: u64,
+        limits: JournalLimits,
+    ) -> PublicationJournalStartupConfig {
+        PublicationJournalStartupConfig::new(
+            directory,
+            created_mono_ns,
+            limits,
+            capture_limits(),
+            NonZeroUsize::new(32 * 1024).unwrap(),
+            NonZeroUsize::new(32).unwrap(),
+        )
+        .unwrap()
+    }
+
     #[test]
     fn open_existing_never_provisions_missing_state() {
         let directory = TestDirectory::new();
@@ -795,6 +1077,294 @@ mod tests {
         assert_eq!(second_report.boot_commit.generation, 3);
         assert_ne!(first_report.gate_boot_id, second_report.gate_boot_id);
         assert_ne!(first_report.output_epoch, second_report.output_epoch);
+    }
+
+    #[test]
+    fn publication_journal_config_rejects_trace_underprovisioning() {
+        let directory = TestDirectory::new();
+
+        assert_eq!(
+            PublicationJournalStartupConfig::new(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+                RecoveryCaptureLimits::new(8, 64 * 1024),
+                NonZeroUsize::new(32 * 1024).unwrap(),
+                NonZeroUsize::new(7).unwrap(),
+            ),
+            Err(PublicationJournalConfigError::TraceCapacityTooSmall)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn running_gate_provisions_and_retains_exact_current_journal_binding() {
+        let directory = TestDirectory::new();
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let running = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage,
+            anchor,
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        let committed_boot = running.report().gate_boot_id;
+
+        let bound = running
+            .provision_publication_journal(journal_config(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+            ))
+            .unwrap();
+        let active = bound.active_journal_identity().unwrap();
+
+        assert_eq!(active.gate_id, *bound.actor().gate_id());
+        assert_eq!(active.gate_boot_id, committed_boot);
+        assert_eq!(active.segment_sequence.get(), 1);
+        assert_eq!(bound.recovered_publication().replayed_segments(), 0);
+        assert_eq!(
+            bound
+                .journal_recovery_report()
+                .active_sequence
+                .map(NonZeroU64::get),
+            Some(1)
+        );
+        assert!(
+            !bound
+                .recovered_publication()
+                .contains_recovered_boot(committed_boot)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restart_fuses_prior_empty_tail_and_fresh_committed_boot() {
+        let directory = TestDirectory::new();
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let first = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        let first_boot = first.report().gate_boot_id;
+        let first = first
+            .provision_publication_journal(journal_config(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+            ))
+            .unwrap();
+        drop(first);
+
+        let second = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::OpenExisting),
+            storage,
+            anchor,
+            key(),
+            &mut DeterministicEntropy::new(91),
+        )
+        .unwrap();
+        let second_boot = second.report().gate_boot_id;
+        let second = second
+            .open_publication_journal(
+                journal_config(directory.0.join("journal"), 20, journal_limits()),
+                None,
+            )
+            .unwrap();
+
+        assert_eq!(
+            second
+                .active_journal_identity()
+                .unwrap()
+                .segment_sequence
+                .get(),
+            2
+        );
+        assert_eq!(
+            second.active_journal_identity().unwrap().gate_boot_id,
+            second_boot
+        );
+        assert!(
+            second
+                .recovered_publication()
+                .contains_recovered_boot(first_boot)
+        );
+        assert!(
+            !second
+                .recovered_publication()
+                .contains_recovered_boot(second_boot)
+        );
+        assert!(second.journal_recovery_report().closed_active_tail);
+        assert_eq!(second.journal_recovery_report().discovered_segments, 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn quiesced_journal_cannot_expose_a_bound_running_gate() {
+        let directory = TestDirectory::new();
+        let running = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        let unusable_limits =
+            JournalLimits::new(JournalBounds::new(4096, 4, 2048).unwrap(), 1, 1).unwrap();
+
+        let journal = directory.0.join("journal");
+        assert!(matches!(
+            running.provision_publication_journal(journal_config(&journal, 10, unusable_limits)),
+            Err(JournalBindingError::Journal(GateJournalOpenError::Journal(
+                JournalManagerError::Quiesced
+            )))
+        ));
+        assert!(!journal.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn caller_selected_journal_boot_cannot_bind_to_running_authority() {
+        let directory = TestDirectory::new();
+        let running = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        let forged_options = JournalOpenOptions::new(
+            running.actor.gate_id().clone(),
+            GateBootId::new([0xee; 16]),
+            10,
+            journal_limits(),
+        );
+        let forged = {
+            let signer = running.actor.journal_signer();
+            RecoveredGateJournal::provision_new(
+                directory.0.join("journal"),
+                forged_options,
+                &signer,
+                capture_limits(),
+                running
+                    .actor
+                    .journal_verifier(NonZeroUsize::new(32 * 1024).unwrap()),
+                NonZeroUsize::new(32).unwrap(),
+            )
+            .unwrap()
+        };
+
+        assert!(matches!(
+            running.bind_publication_journal(forged),
+            Err(JournalBindingError::BootMismatch)
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn current_committed_boot_cannot_reappear_in_recovered_history() {
+        let directory = TestDirectory::new();
+        let journal_path = directory.0.join("journal");
+        let running = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        let current_options = || {
+            JournalOpenOptions::new(
+                running.actor.gate_id().clone(),
+                running.actor.gate_boot_id(),
+                10,
+                journal_limits(),
+            )
+        };
+        let prior_same_boot = {
+            let signer = running.actor.journal_signer();
+            RecoveredGateJournal::provision_new(
+                &journal_path,
+                current_options(),
+                &signer,
+                capture_limits(),
+                running
+                    .actor
+                    .journal_verifier(NonZeroUsize::new(32 * 1024).unwrap()),
+                NonZeroUsize::new(32).unwrap(),
+            )
+            .unwrap()
+        };
+        drop(prior_same_boot);
+        let reopened_same_boot = {
+            let signer = running.actor.journal_signer();
+            RecoveredGateJournal::open_existing(
+                &journal_path,
+                current_options(),
+                &signer,
+                Some(&signer),
+                capture_limits(),
+                running
+                    .actor
+                    .journal_verifier(NonZeroUsize::new(32 * 1024).unwrap()),
+                NonZeroUsize::new(32).unwrap(),
+            )
+            .unwrap()
+        };
+
+        assert!(matches!(
+            running.bind_publication_journal(reopened_same_boot),
+            Err(JournalBindingError::CurrentBootAlreadyRecovered)
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restarted_gate_cannot_silently_fork_a_fresh_journal() {
+        let directory = TestDirectory::new();
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let first = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        drop(first);
+        let restarted = start_with_backends(
+            template(),
+            state(&directory, StateOpenMode::OpenExisting),
+            storage,
+            anchor,
+            key(),
+            &mut DeterministicEntropy::new(91),
+        )
+        .unwrap();
+        let fork = directory.0.join("forked-journal");
+
+        assert!(matches!(
+            restarted.provision_publication_journal(journal_config(&fork, 10, journal_limits(),)),
+            Err(JournalBindingError::JournalProvisionRequiresFreshGateState)
+        ));
+        assert!(!fork.exists());
     }
 
     #[test]
@@ -1000,6 +1570,7 @@ mod tests {
     fn running_gate_is_send() {
         fn assert_send<T: Send>() {}
         assert_send::<RunningGate>();
+        assert_send::<JournalBoundRunningGate>();
     }
 
     #[cfg(unix)]

@@ -7,7 +7,11 @@
 //! only after the complete pass succeeds.
 
 use crate::journal::SegmentIdentity;
-use crate::manager::{JournalRecovery, JournalVerificationError, JournalVerifier};
+use crate::manager::{
+    EvidenceJournalManager, JournalManagerError, JournalOpenOptions, JournalRecovery,
+    JournalRecoveryReport, JournalSigner, JournalVerificationError, JournalVerifier,
+    RecoveryCaptureLimits,
+};
 use crate::publication::{PublicationReductionError, PublicationStageReducer};
 use core::num::{NonZeroU64, NonZeroUsize};
 use haldir_contracts::cbor::{Limits, from_canonical_bytes};
@@ -22,6 +26,7 @@ use haldir_crypto::{
     content_type_for, verify_sign1_dispatched,
 };
 use std::collections::BTreeSet;
+use std::path::PathBuf;
 
 /// Gate-journal semantic verification failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +71,31 @@ pub enum PublicationRecoveryError {
     DuplicateDecisionReceipt,
     /// The linked publication trace was malformed, out of order, or over bound.
     Reduction(PublicationReductionError),
+}
+
+/// Fused Gate-journal open or semantic replay failure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum GateJournalOpenError {
+    /// The reducer bound cannot retain every record admitted by capture.
+    TraceCapacityTooSmall,
+    /// Directory discovery, recovery, signer, bounds, or storage failed.
+    Journal(JournalManagerError),
+    /// The complete history failed semantic replay before prior-tail closure and
+    /// current-segment creation. Pending-artifact removal or insufficient-tail
+    /// truncation may already have occurred as reported.
+    Replay {
+        /// Exact semantic rejection.
+        error: PublicationRecoveryError,
+        /// Observations available at the precommit boundary.
+        recovery: JournalRecoveryReport,
+    },
+}
+
+impl From<JournalManagerError> for GateJournalOpenError {
+    fn from(error: JournalManagerError) -> Self {
+        Self::Journal(error)
+    }
 }
 
 impl From<GateJournalVerificationError> for PublicationRecoveryError {
@@ -123,6 +153,179 @@ pub struct RecoveredPublicationState {
     replayed_records: u64,
     recovered_boots: BTreeSet<GateBootId>,
     last_recovered_segment_sequence: Option<NonZeroU64>,
+}
+
+/// One manager fused with the fresh publication state rebuilt from its exact
+/// successful recovery snapshot under the same verifier configuration.
+///
+/// The manager and reducer cannot be extracted separately. This prevents a
+/// caller from pairing manager A with state rebuilt from manager B or appending
+/// between replay and a later runtime binding.
+pub struct RecoveredGateJournal {
+    manager: EvidenceJournalManager<GateJournalVerifier>,
+    publication: RecoveredPublicationState,
+    recovery: JournalRecoveryReport,
+}
+
+impl RecoveredGateJournal {
+    /// Provision a fresh journal, capture its empty history, and fuse one replay
+    /// result with the retained manager.
+    ///
+    /// # Errors
+    /// Returns before directory access when the reducer bound is smaller than
+    /// the capture record bound, or on journal provisioning/capture and semantic
+    /// replay failures.
+    pub fn provision_new(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: &JournalSigner<'_>,
+        capture_limits: RecoveryCaptureLimits,
+        verifier: GateJournalVerifier,
+        max_traces: NonZeroUsize,
+    ) -> Result<Self, GateJournalOpenError> {
+        preflight_trace_bound(capture_limits, max_traces)?;
+        let mut publication = None;
+        let mut replay_failure = None;
+        let mut replay_report = None;
+        let mut precommit = |recovery: &JournalRecovery| match verifier
+            .rebuild_publication_state_ref(recovery, max_traces.get())
+        {
+            Ok(state) => {
+                publication = Some(state);
+                Ok(())
+            }
+            Err(error) => {
+                replay_report = Some(recovery.report());
+                replay_failure = Some(error);
+                Err(JournalManagerError::RecoveryConsumerRejected)
+            }
+        };
+        let (manager, recovery) =
+            match EvidenceJournalManager::provision_new_with_recovery_precommit(
+                directory,
+                options,
+                signer,
+                capture_limits,
+                verifier.clone(),
+                &mut precommit,
+            ) {
+                Ok(result) => result,
+                Err(JournalManagerError::RecoveryConsumerRejected) => {
+                    return Err(replay_open_error(replay_failure, replay_report));
+                }
+                Err(error) => return Err(error.into()),
+            };
+        let publication = publication.ok_or(GateJournalOpenError::Journal(
+            JournalManagerError::RecoveryConsumerRejected,
+        ))?;
+        Ok(Self {
+            manager,
+            publication,
+            recovery,
+        })
+    }
+
+    /// Open/recover an existing journal and fuse the exact ordered replay result
+    /// with the manager that produced it.
+    ///
+    /// # Errors
+    /// Returns before directory access when the reducer bound is smaller than
+    /// the capture record bound, or on journal open/recovery/capture and semantic
+    /// replay failures.
+    pub fn open_existing(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: &JournalSigner<'_>,
+        recovered_tail_signer: Option<&JournalSigner<'_>>,
+        capture_limits: RecoveryCaptureLimits,
+        verifier: GateJournalVerifier,
+        max_traces: NonZeroUsize,
+    ) -> Result<Self, GateJournalOpenError> {
+        preflight_trace_bound(capture_limits, max_traces)?;
+        let mut publication = None;
+        let mut replay_failure = None;
+        let mut replay_report = None;
+        let mut precommit = |recovery: &JournalRecovery| match verifier
+            .rebuild_publication_state_ref(recovery, max_traces.get())
+        {
+            Ok(state) => {
+                publication = Some(state);
+                Ok(())
+            }
+            Err(error) => {
+                replay_report = Some(recovery.report());
+                replay_failure = Some(error);
+                Err(JournalManagerError::RecoveryConsumerRejected)
+            }
+        };
+        let (manager, recovery) =
+            match EvidenceJournalManager::open_existing_with_recovery_precommit(
+                directory,
+                options,
+                signer,
+                recovered_tail_signer,
+                capture_limits,
+                verifier.clone(),
+                &mut precommit,
+            ) {
+                Ok(result) => result,
+                Err(JournalManagerError::RecoveryConsumerRejected) => {
+                    return Err(replay_open_error(replay_failure, replay_report));
+                }
+                Err(error) => return Err(error.into()),
+            };
+        let publication = publication.ok_or(GateJournalOpenError::Journal(
+            JournalManagerError::RecoveryConsumerRejected,
+        ))?;
+        Ok(Self {
+            manager,
+            publication,
+            recovery,
+        })
+    }
+
+    /// Manager-created and trust-resolved current active identity. The open tail
+    /// is not footer-authenticated evidence yet. This is observation data, not a
+    /// standalone boot authority; a runtime must consume this aggregate and
+    /// compare it with its non-forgeable committed startup state.
+    #[must_use]
+    pub fn active_identity(&self) -> Option<&SegmentIdentity> {
+        self.manager.active_identity()
+    }
+
+    /// Read-only publication state rebuilt from this manager's exact history.
+    #[must_use]
+    pub const fn publication(&self) -> &RecoveredPublicationState {
+        &self.publication
+    }
+
+    /// Material journal recovery actions and final current-tail status.
+    #[must_use]
+    pub const fn recovery_report(&self) -> JournalRecoveryReport {
+        self.recovery
+    }
+}
+
+fn preflight_trace_bound(
+    capture_limits: RecoveryCaptureLimits,
+    max_traces: NonZeroUsize,
+) -> Result<(), GateJournalOpenError> {
+    let max_traces = u64::try_from(max_traces.get()).unwrap_or(u64::MAX);
+    if max_traces < capture_limits.max_records() {
+        Err(GateJournalOpenError::TraceCapacityTooSmall)
+    } else {
+        Ok(())
+    }
+}
+
+fn replay_open_error(
+    error: Option<PublicationRecoveryError>,
+    recovery: Option<JournalRecoveryReport>,
+) -> GateJournalOpenError {
+    match (error, recovery) {
+        (Some(error), Some(recovery)) => GateJournalOpenError::Replay { error, recovery },
+        _ => GateJournalOpenError::Journal(JournalManagerError::RecoveryConsumerRejected),
+    }
 }
 
 impl RecoveredPublicationState {
@@ -377,6 +580,14 @@ impl GateJournalVerifier {
     pub fn rebuild_publication_state(
         &self,
         recovery: JournalRecovery,
+        max_traces: usize,
+    ) -> Result<RecoveredPublicationState, PublicationRecoveryError> {
+        self.rebuild_publication_state_ref(&recovery, max_traces)
+    }
+
+    fn rebuild_publication_state_ref(
+        &self,
+        recovery: &JournalRecovery,
         max_traces: usize,
     ) -> Result<RecoveredPublicationState, PublicationRecoveryError> {
         let replayed_segments = recovery.segments().len();
@@ -1101,6 +1312,89 @@ mod tests {
             verifier().rebuild_publication_state(recovery, 4),
             Err(PublicationRecoveryError::DuplicateDecisionReceipt)
         ));
+    }
+
+    #[test]
+    fn fused_replay_failure_does_not_close_tail_or_burn_current_segment() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(16);
+        let prepared = prepared_receipt(1, 1, 11);
+        let prepared_env = sign_receipt(&prepared, 3);
+        let wrong_digest = DigestV1::compute(DigestDomain::RawEnvelope, b"wrong-prepared");
+        let bad_called = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            wrong_digest,
+            wrong_digest,
+            12,
+        );
+        let (mut manager, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, journal_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        manager
+            .append(&prepared_env, 10, &journal_signer())
+            .unwrap();
+        manager
+            .append(&sign_stage(&bad_called, 3), 10, &journal_signer())
+            .unwrap();
+        drop(manager);
+        let first_path = journal.join("segment-00000000000000000001");
+        let second_path = journal.join("segment-00000000000000000002");
+        let bytes_before = fs::metadata(&first_path).unwrap().len();
+
+        for _ in 0..2 {
+            let error = RecoveredGateJournal::open_existing(
+                &journal,
+                options(2, 1, journal_limits),
+                &journal_signer(),
+                Some(&journal_signer()),
+                RecoveryCaptureLimits::new(8, 64 * 1024),
+                verifier(),
+                NonZeroUsize::new(8).unwrap(),
+            )
+            .err()
+            .unwrap();
+            assert!(matches!(
+                error,
+                GateJournalOpenError::Replay {
+                    error: PublicationRecoveryError::Reduction(
+                        PublicationReductionError::IdentityMismatch
+                    ),
+                    recovery: JournalRecoveryReport {
+                        closed_active_tail: false,
+                        active_sequence: None,
+                        ..
+                    }
+                }
+            ));
+            assert_eq!(fs::metadata(&first_path).unwrap().len(), bytes_before);
+            assert!(!second_path.exists());
+        }
+    }
+
+    #[test]
+    fn fused_trace_capacity_is_checked_before_directory_access() {
+        let directory = TestDirectory::new();
+        let journal = directory.0.join("absent-journal");
+
+        assert!(matches!(
+            RecoveredGateJournal::provision_new(
+                &journal,
+                options(1, 10, limits(16)),
+                &journal_signer(),
+                RecoveryCaptureLimits::new(8, 64 * 1024),
+                verifier(),
+                NonZeroUsize::new(7).unwrap(),
+            ),
+            Err(GateJournalOpenError::TraceCapacityTooSmall)
+        ));
+        assert!(!journal.exists());
     }
 
     #[test]

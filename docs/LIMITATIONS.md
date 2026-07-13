@@ -139,9 +139,9 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   capture-limit error returns no partial snapshot, but ordinary recovery may already
   have removed an insufficient tail or pending creation artifact. The manager retains
   only the configured signer KID/public key and requires an exact short-lived private-key
-  borrow before any append/finish operation that may footer-complete. This permits a
-  future coordinator to keep the validated Gate actor as the single private-key owner;
-  no such actor-to-manager coordinator is selected yet. The manager still
+  borrow before any append/finish operation that may footer-complete. The staged
+  `RunningGate` journal binding now uses that single-owner-compatible shape, but exposes
+  no live mutation yet. The manager still
   assumes one writer and a trusted local parent directory; it has no Gate `TrustStore`
   policy selected by the runtime, automatic retention, OS fault-injection/child-process
   crash proof, or power-loss claim. An assurance-only stateless Gate adapter and
@@ -150,10 +150,22 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   (`CL-GATE-JOURNAL-REPLAY-01`). Historical evidence is rejected when its key is revoked
   in the supplied snapshot; there is no signed-time key-validity model, snapshot
   freshness proof, or support for other journal record kinds. The replay snapshot
-  excludes the newly created current tail, and caller-supplied journal boot options do
-  not prove a durable Gate boot. The actor still uses its in-process spool and does not
-  select this manager/verifier/replay or emit recovery/loss-summary events, and no
-  child-process crash/disk-full campaign exists.
+  excludes the newly created current tail, and caller-supplied journal boot options alone
+  do not prove a durable Gate boot. An opt-in fused startup API now derives the current
+  journal Gate/boot/signer from the actual `RunningGate`, keeps the manager and
+  same-verifier replay inseparable, rejects a mismatched or current-boot-resurrected
+  tail, and withholds mutable actor/journal access (`CL-GATE-JOURNAL-BINDING-01`). Semantic
+  replay runs before prior-tail closure/current-segment creation; a failure cannot burn
+  successor segments, though earlier insufficient-tail truncation or pending-artifact
+  removal remains possible. Its action is reported on successful open and semantic-replay
+  rejection, but another later recovery failure can return without an exact action report.
+  Fresh genesis capacity and trace/capture
+  compatibility are preflighted before directory access. Journal provision is allowed
+  only with freshly provisioned durable Gate state, and restart requires open, but the
+  selected journal path itself is not yet committed into the durable Gate configuration.
+  Direct `VehicleActor` construction and the in-process spool remain available, and no
+  runnable service selects the bound path. The bound aggregate cannot emit recovery or
+  loss-summary events, and no child-process crash/disk-full campaign exists.
   A canonical Gate publication-stage payload and retained-state-bounded pure
   identity/link/transition reducer are now tested
   (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), including construction

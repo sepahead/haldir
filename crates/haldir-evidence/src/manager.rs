@@ -160,6 +160,9 @@ pub enum JournalManagerError {
     /// Bounded snapshot storage could not be reserved before closing a recovered
     /// active tail.
     RecoveryCaptureAllocation,
+    /// An in-process recovery consumer rejected the complete ordered snapshot
+    /// before prior-tail closure and current-segment creation.
+    RecoveryConsumerRejected,
 }
 
 impl From<JournalError> for JournalManagerError {
@@ -298,6 +301,12 @@ impl RecoveryCaptureLimits {
             max_total_record_bytes,
         }
     }
+
+    /// Maximum complete records admitted into one recovery snapshot.
+    #[must_use]
+    pub const fn max_records(self) -> u64 {
+        self.max_records
+    }
 }
 
 /// One authenticated journal segment and its verifier-accepted opaque records.
@@ -408,11 +417,10 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
         let (manager, report, _) = Self::open_inner(
             directory.into(),
-            OpenMode::ProvisionNew,
             options,
             signer,
             None,
-            None,
+            OpenBehavior::new(OpenMode::ProvisionNew, None, None),
             verifier,
         )?;
         Ok((manager, report))
@@ -434,11 +442,10 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     ) -> Result<(Self, JournalRecovery), JournalManagerError> {
         let (manager, _, recovery) = Self::open_inner(
             directory.into(),
-            OpenMode::ProvisionNew,
             options,
             signer,
             None,
-            Some(capture_limits),
+            OpenBehavior::new(OpenMode::ProvisionNew, Some(capture_limits), None),
             verifier,
         )?;
         Ok((
@@ -466,11 +473,10 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
         let (manager, report, _) = Self::open_inner(
             directory.into(),
-            OpenMode::OpenExisting,
             options,
             signer,
             recovered_tail_signer,
-            None,
+            OpenBehavior::new(OpenMode::OpenExisting, None, None),
             verifier,
         )?;
         Ok((manager, report))
@@ -497,11 +503,10 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     ) -> Result<(Self, JournalRecovery), JournalManagerError> {
         let (manager, _, recovery) = Self::open_inner(
             directory.into(),
-            OpenMode::OpenExisting,
             options,
             signer,
             recovered_tail_signer,
-            Some(capture_limits),
+            OpenBehavior::new(OpenMode::OpenExisting, Some(capture_limits), None),
             verifier,
         )?;
         Ok((
@@ -510,21 +515,98 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         ))
     }
 
-    fn open_inner(
-        directory: PathBuf,
-        mode: OpenMode,
+    /// Provision a fresh journal only after an in-process consumer accepts the
+    /// complete empty ordered snapshot. Used by fused semantic adapters so a
+    /// rejection cannot publish a current segment.
+    pub(crate) fn provision_new_with_recovery_precommit(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: &JournalSigner<'_>,
+        capture_limits: RecoveryCaptureLimits,
+        verifier: V,
+        precommit: &mut dyn FnMut(&JournalRecovery) -> Result<(), JournalManagerError>,
+    ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
+        let (manager, report, _) = Self::open_inner(
+            directory.into(),
+            options,
+            signer,
+            None,
+            OpenBehavior::new(
+                OpenMode::ProvisionNew,
+                Some(capture_limits),
+                Some(precommit),
+            ),
+            verifier,
+        )?;
+        Ok((manager, report))
+    }
+
+    /// Recover an existing journal only after an in-process consumer accepts
+    /// the complete ordered snapshot. Prior-tail closure and current-segment
+    /// creation occur after the callback succeeds.
+    pub(crate) fn open_existing_with_recovery_precommit(
+        directory: impl Into<PathBuf>,
         options: JournalOpenOptions,
         signer: &JournalSigner<'_>,
         recovered_tail_signer: Option<&JournalSigner<'_>>,
-        capture_limits: Option<RecoveryCaptureLimits>,
+        capture_limits: RecoveryCaptureLimits,
+        verifier: V,
+        precommit: &mut dyn FnMut(&JournalRecovery) -> Result<(), JournalManagerError>,
+    ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
+        let (manager, report, _) = Self::open_inner(
+            directory.into(),
+            options,
+            signer,
+            recovered_tail_signer,
+            OpenBehavior::new(
+                OpenMode::OpenExisting,
+                Some(capture_limits),
+                Some(precommit),
+            ),
+            verifier,
+        )?;
+        Ok((manager, report))
+    }
+
+    fn open_inner(
+        directory: PathBuf,
+        options: JournalOpenOptions,
+        signer: &JournalSigner<'_>,
+        recovered_tail_signer: Option<&JournalSigner<'_>>,
+        behavior: OpenBehavior<'_>,
         verifier: V,
     ) -> Result<(Self, JournalRecoveryReport, Option<JournalRecovery>), JournalManagerError> {
+        let OpenBehavior {
+            mode,
+            capture_limits,
+            mut recovery_precommit,
+        } = behavior;
         let JournalOpenOptions {
             gate_id,
             gate_boot_id,
             created_mono_ns,
             limits,
         } = options;
+        if mode == OpenMode::ProvisionNew {
+            let identity = SegmentIdentity {
+                gate_id: gate_id.clone(),
+                gate_boot_id,
+                segment_sequence: NonZeroU64::new(1)
+                    .ok_or(JournalManagerError::SequenceExhausted)?,
+                previous_completed_digest: [0; 32],
+                created_mono_ns,
+                signer_kid: signer.kid.clone(),
+                signer_public_key: signer.key.verifying_key().to_bytes(),
+            };
+            ensure_matching_signer(&verifier, &identity, signer)?;
+            let minimum = ActiveEvidenceSegment::minimum_complete_bytes(&identity)?;
+            if minimum > limits.segment.max_segment_bytes() {
+                return Err(JournalManagerError::Journal(JournalError::Bounds));
+            }
+            if !fits_total(0, minimum, 0, limits.max_total_bytes) {
+                return Err(JournalManagerError::Quiesced);
+            }
+        }
         let directory = prepare_directory(directory, mode)?;
         let lock_file = lock_directory(&directory, mode)?;
         let (entries, pending_creation) = discover_segments(&directory, limits.max_segments)?;
@@ -660,20 +742,44 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
                 .ok_or(JournalManagerError::SequenceExhausted)?;
         }
 
+        if let Some((active, _)) = recovered_active.as_mut()
+            && let Some(capture) = capture.as_mut()
+        {
+            let identity = active.identity().clone();
+            let prepared = capture.prepare_segment(active.records())?;
+            let records = active.take_records();
+            capture.commit_segment(identity, records, prepared);
+        }
+
+        let mut precommitted_recovery = None;
+        if let Some(precommit) = recovery_precommit.as_mut() {
+            let preview_report = JournalRecoveryReport {
+                discovered_segments,
+                completed_segments,
+                recovered_records,
+                truncated_tail_bytes,
+                closed_active_tail: false,
+                discarded_pending_creation,
+                active_sequence: None,
+                total_bytes,
+                quiesced: false,
+            };
+            let recovery = capture
+                .take()
+                .ok_or(JournalManagerError::RecoveryCaptureAllocation)?
+                .finish(preview_report);
+            precommit(&recovery)?;
+            precommitted_recovery = Some(recovery);
+        }
+
         let mut closed_active_tail = false;
         if let Some((active, _)) = recovered_active {
             let tail_signer =
                 recovered_tail_signer.ok_or(JournalManagerError::TailSignerUnavailable)?;
             ensure_matching_signer(&verifier, active.identity(), tail_signer)?;
-            let prepared_capture = if let Some(capture) = capture.as_mut() {
-                let identity = active.identity().clone();
-                Some((identity, capture.prepare_segment(active.records())?))
-            } else {
-                None
-            };
             let active_bytes =
                 u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
-            let mut closed = active
+            let closed = active
                 .close(tail_signer.kid, tail_signer.key)
                 .map_err(map_commit_error)?;
             total_bytes = total_bytes
@@ -684,11 +790,6 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             completed_segments = completed_segments
                 .checked_add(1)
                 .ok_or(JournalManagerError::Quiesced)?;
-            if let (Some(capture), Some((identity, prepared))) =
-                (capture.as_mut(), prepared_capture)
-            {
-                capture.commit_segment(identity, closed.take_records(), prepared);
-            }
             last_completed = Some(closed);
             closed_active_tail = true;
         }
@@ -726,7 +827,12 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             total_bytes: manager.total_bytes,
             quiesced: manager.quiesced,
         };
-        let recovery = capture.map(|capture| capture.finish(report));
+        let recovery = if let Some(mut recovery) = precommitted_recovery {
+            recovery.report = report;
+            Some(recovery)
+        } else {
+            capture.map(|capture| capture.finish(report))
+        };
         Ok((manager, report, recovery))
     }
 
@@ -834,6 +940,15 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         self.active
             .as_ref()
             .map(|segment| segment.identity().segment_sequence)
+    }
+
+    /// Current manager-created, verifier-resolved active identity for a fused
+    /// in-crate adapter. It is not footer-authenticated until completion.
+    pub(crate) fn active_identity(&self) -> Option<&SegmentIdentity> {
+        if self.poisoned || self.quiesced {
+            return None;
+        }
+        self.active.as_ref().map(ActiveEvidenceSegment::identity)
     }
 
     /// Whether recovery or this confirmed manager instance contains the exact
@@ -1050,6 +1165,29 @@ struct SegmentEntry {
 enum OpenMode {
     ProvisionNew,
     OpenExisting,
+}
+
+type RecoveryPrecommit<'callback> =
+    Option<&'callback mut dyn FnMut(&JournalRecovery) -> Result<(), JournalManagerError>>;
+
+struct OpenBehavior<'callback> {
+    mode: OpenMode,
+    capture_limits: Option<RecoveryCaptureLimits>,
+    recovery_precommit: RecoveryPrecommit<'callback>,
+}
+
+impl<'callback> OpenBehavior<'callback> {
+    const fn new(
+        mode: OpenMode,
+        capture_limits: Option<RecoveryCaptureLimits>,
+        recovery_precommit: RecoveryPrecommit<'callback>,
+    ) -> Self {
+        Self {
+            mode,
+            capture_limits,
+            recovery_precommit,
+        }
+    }
 }
 
 struct RecoveryCapture {
@@ -1604,6 +1742,25 @@ mod tests {
         );
         assert!(matches!(empty, Err(JournalManagerError::Missing)));
         assert!(fs::read_dir(&missing).unwrap().next().is_none());
+    }
+
+    #[test]
+    fn unusable_genesis_capacity_is_rejected_before_directory_creation() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let tiny_limits =
+            JournalLimits::new(JournalBounds::new(4096, 4, 1024).unwrap(), 1, 1).unwrap();
+
+        assert!(matches!(
+            EvidenceJournalManager::provision_new(
+                &journal,
+                options(1, tiny_limits),
+                &signer(),
+                verifier(),
+            ),
+            Err(JournalManagerError::Quiesced)
+        ));
+        assert!(!journal.exists());
     }
 
     #[test]

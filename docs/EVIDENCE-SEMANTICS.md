@@ -53,6 +53,19 @@ segments participate in boot chronology; boot resurrection and same-boot segment
 record time regression fail closed. This still does not authenticate the newly created
 current tail as a durably committed Gate boot or append any recovery event.
 
+A staged Gate startup boundary now fuses directory open, bounded capture, and semantic
+replay under one verifier snapshot, then consumes the actual `RunningGate` to bind the
+manager-created current segment to its private Gate identity, committed boot, and
+validated signer. Replay succeeds before prior-tail closure/current-segment creation;
+semantic rejection therefore cannot burn successor segments. Insufficient-tail
+truncation or pending-artifact removal can occur earlier. Its action is reported on a
+successful open or semantic-replay rejection; another later recovery failure can return
+without an exact action report. The
+manager and replay state cannot be extracted separately, and the bound aggregate
+withholds mutable actor/journal access. This prevents report/raw-ID authority
+substitution, but it is not yet the runnable service path and does not append recovery
+Unknown events.
+
 ## Honesty rules
 
 - A publish/prepare stage is never automatically upgraded to `received` /
