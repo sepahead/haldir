@@ -17,8 +17,8 @@ not a routine bump.
 | `ncp-core` | 0.8.0 at `2f5bd586…` | Normative upstream NCP key construction is always used by `haldir-transport-zenoh`; normative wire types/validation are also used by the off-by-default exact conformance adapter. Gate's `real-ncp` feature explicitly forwards that capability; Cargo feature unification may also compile the exact constructor but cannot change Gate's stored closed selection. The immutable git source is checked against `tools/pins.toml` and `.ncp-consumer`. | `haldir-transport-zenoh`; `haldir-ncp08` / `haldir-gate` `real-ncp` features |
 | `serde_json` | 1.0 (locked) | Serialize/decode the upstream NCP JSON frame in the exact conformance adapter and inspect effective Zenoh configuration values in the off-by-default live boundary; never used in signed Haldir contracts or policy. | `haldir-ncp08` `real-ncp`; `haldir-transport-zenoh` `live-zenoh` |
 | `hmac` | 0.12.1 | RustCrypto HMAC with constant-time `verify_slice`, paired with the existing SHA-256 0.10 stack for separately keyed authenticated durable snapshots. Version 0.13 targets the newer digest/SHA-2 generation, so 0.12.1 avoids duplicating the cryptographic hash stack. | `haldir-durable` |
-| `tokio` | 1 (locked) | Bounded MPSC handoff from Zenoh's callback into the future single-owner Gate runtime. The workspace dependency has default features disabled and enables only `sync`; Zenoh supplies its own required runtime features transitively when `live-zenoh` is selected. | `haldir-transport-zenoh` `live-zenoh` |
-| `zenoh` | exactly 1.9.0 | Pinned NCP-v0.8 transport baseline for the off-by-default strict mTLS client, exact-route subscriber, and typed final-command publisher. Default features are disabled and `transport_tls` is the sole admitted transport feature; plaintext, discovery, listeners, shared memory, compression, and generic publication are excluded by configuration/API/profile checks. | `haldir-transport-zenoh` `live-zenoh` |
+| `tokio` | 1 (locked) | Bounded MPSC handoff from Zenoh's callback into the future single-owner Gate runtime. The workspace dependency has default features disabled and enables only `sync`; Zenoh supplies its own required runtime features transitively when `live-zenoh` is selected. | `haldir-transport-zenoh` `live-zenoh`; forwarded by `haldir-gate` `live-zenoh` |
+| `zenoh` | exactly 1.9.0 | Pinned NCP-v0.8 transport baseline for the off-by-default strict mTLS client, exact-route subscriber, and typed final-command publisher. Default features are disabled and `transport_tls` is the sole admitted transport feature; plaintext, discovery, listeners, shared memory, compression, and generic publication are excluded by configuration/API/profile checks. Gate's identically named feature consumes only the typed publisher/result boundary. | `haldir-transport-zenoh` `live-zenoh`; forwarded by `haldir-gate` `live-zenoh` |
 
 The transitive `unicode-ident` build dependency uses the OSI-approved
 `Unicode-3.0` data license in addition to MIT/Apache-2.0; `deny.toml` admits that
@@ -59,10 +59,11 @@ plugin-free client feature.
 - **No `serde`/`serde_json` in signed Haldir contracts or policy**, no `HashMap`
   where iteration feeds a digest or decision. `serde_json` exists only in the
   opt-in exact NCP boundary.
-- **No async runtime, Zenoh, Python/PyO3, or neural runtime in the pure core.**
-  Tokio/Zenoh exist only in `haldir-transport-zenoh`'s off-by-default
-  `live-zenoh` feature. The always-on transport route builder uses only pinned
-  `ncp-core`; the Gate policy/state/contracts remain independent of both.
+- **No async runtime, Zenoh, Python/PyO3, or neural runtime in the default pure core.**
+  Tokio/Zenoh implementation remains in `haldir-transport-zenoh`'s off-by-default
+  `live-zenoh` feature. Gate's off-by-default feature forwards it and contains only the
+  consuming concrete publisher/result binding. The always-on transport route builder uses
+  only pinned `ncp-core`; Gate policy/state/contracts remain independent of both.
 - **No floating point in signed authority/policy/replay/action contracts.** Floats
   appear only at the modeled/exact NCP wire boundary, with an error-bounded
   conversion.

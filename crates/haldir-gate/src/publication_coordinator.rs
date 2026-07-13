@@ -2,9 +2,10 @@
 //!
 //! The state types consume one another so no usable bound runtime can escape an
 //! ambiguous journal append, a post-sync validation failure, or a dropped
-//! called typestate. Only the called state exposes exact output bytes. "Durable"
-//! state names below mean a local append whose `sync_data` returned successfully;
-//! they do not claim power-loss survival or a transport invocation.
+//! called typestate. The called state owns the exact output bytes, and the optional
+//! live binding lends them only to the concrete strict publisher. "Durable" state
+//! names below mean a local append whose `sync_data` returned successfully; they do
+//! not claim power-loss survival, delivery, acceptance, or application.
 
 use core::num::{NonZeroU32, NonZeroUsize};
 
@@ -19,6 +20,8 @@ use haldir_evidence::gate_journal::{
 };
 use haldir_evidence::publication::PublicationTraceState;
 use haldir_ncp08::ExactNcpCommandFrame;
+#[cfg(feature = "live-zenoh")]
+use haldir_transport_zenoh::{FinalCommandPublisher, HaldirKeyError, HaldirKeys, SecureZenohError};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -102,6 +105,8 @@ pub(crate) enum CoordinatorFatal {
     InvalidPreparedReceipt,
     ClockRegression,
     RestartDiagnosticHorizonOverflow,
+    #[cfg(feature = "live-zenoh")]
+    InvalidFinalCommandRoute(HaldirKeyError),
 }
 
 /// A pre-decision refusal that returns the coordinator without actor, journal,
@@ -156,6 +161,8 @@ struct CoordinatorCore<C> {
     clock: C,
     last_observed: MonoInstant,
     restart_clearance_diagnostic_not_before: Option<MonoInstant>,
+    #[cfg(feature = "live-zenoh")]
+    expected_final_command_route: String,
 }
 
 impl<C: MonotonicClock> CoordinatorCore<C> {
@@ -227,9 +234,10 @@ pub(crate) enum CallTransition<C> {
     },
 }
 
-/// A locally sync-confirmed Called output. This is the only state exposing bytes.
-/// Dropping it drops the whole bound runtime; it cannot return to Ready silently.
-#[must_use = "a called publication must record its one local return"]
+/// A locally sync-confirmed Called output. Production code can lend its bytes only
+/// to the feature-gated concrete publisher binding. Dropping it drops the whole
+/// bound runtime; it cannot return to Ready silently.
+#[must_use = "dropping a called publication abandons the bound runtime for restart recovery"]
 pub(crate) struct DurableCalledPublication<C> {
     core: Box<CoordinatorCore<C>>,
     decision: DecisionRecord,
@@ -240,7 +248,7 @@ pub(crate) struct DurableCalledPublication<C> {
     output_permit: OutputCapacityPermit,
 }
 
-/// A locally sync-confirmed caller assertion of successful local return.
+/// A locally sync-confirmed successful local publisher return.
 pub(crate) struct JournaledReturnedOk<C> {
     coordinator: PublicationCoordinator<C>,
     decision: DecisionRecord,
@@ -266,8 +274,9 @@ impl<C> JournaledReturnedOk<C> {
     }
 }
 
-/// A locally sync-confirmed caller assertion of ambiguous local error/timeout. No ready
-/// coordinator is returned because replacement output is forbidden this boot.
+/// A locally sync-confirmed publisher error return. This includes both definite
+/// pre-transport validation rejection and delivery-ambiguous local transport error.
+/// No ready coordinator is returned because replacement output is forbidden this boot.
 pub(crate) struct JournaledReturnedError {
     decision: DecisionRecord,
     terminal_envelope_digest: DigestV1,
@@ -282,6 +291,31 @@ impl JournaledReturnedError {
             self.output_permit,
         )
     }
+}
+
+/// Failure of the consuming one-call publisher binding.
+///
+/// The publisher capability is deliberately absent from both variants. A local
+/// publisher error has a terminal record when possible; if terminal recording
+/// itself fails, the original publisher result remains available for diagnosis.
+#[cfg(any(test, feature = "live-zenoh"))]
+pub(crate) enum PublishOnceError<E> {
+    PublisherReturned {
+        source: E,
+        journaled: Box<JournaledReturnedError>,
+    },
+    TerminalRecordFailed {
+        publisher_error: Option<E>,
+        source: CoordinatorFatal,
+    },
+}
+
+/// Gate-side validation or concrete strict-publisher failure.
+#[cfg(feature = "live-zenoh")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StrictPublisherCallError {
+    PublisherRouteMismatch,
+    Publisher(SecureZenohError),
 }
 
 #[derive(Clone)]
@@ -366,6 +400,14 @@ impl PublicationBinding {
 impl<C: MonotonicClock> PublicationCoordinator<C> {
     pub(crate) fn new(bound: JournalBoundRunningGate, clock: C) -> Result<Self, CoordinatorFatal> {
         let startup_now = clock.now();
+        #[cfg(feature = "live-zenoh")]
+        let expected_final_command_route = HaldirKeys::try_new(
+            bound.actor().realm().as_str(),
+            bound.actor().ncp_session().session_id.as_str(),
+        )
+        .map_err(CoordinatorFatal::InvalidFinalCommandRoute)?
+        .final_command()
+        .to_owned();
         // This cannot reconstruct the old boot's policy window. It is exposed only
         // as a current-policy diagnostic while the actual restart block remains
         // indefinite and requires a future authenticated external clearance.
@@ -386,6 +428,8 @@ impl<C: MonotonicClock> PublicationCoordinator<C> {
                 clock,
                 last_observed: startup_now,
                 restart_clearance_diagnostic_not_before,
+                #[cfg(feature = "live-zenoh")]
+                expected_final_command_route,
             }),
         })
     }
@@ -587,7 +631,7 @@ impl<C: MonotonicClock> DurablePreparedPublication<C> {
 }
 
 impl<C: MonotonicClock> DurableCalledPublication<C> {
-    pub(crate) const fn frame(&self) -> &ExactNcpCommandFrame {
+    const fn frame(&self) -> &ExactNcpCommandFrame {
         self.called.frame()
     }
 
@@ -602,9 +646,124 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
             .state(self.binding.decision_gate_boot_id, self.binding.decision_id)
     }
 
-    pub(crate) fn record_asserted_returned_ok(
+    /// Invoke a route-matched concrete strict publisher once for this consumed Called state.
+    ///
+    /// A publisher bound to another exact realm/session route is rejected and
+    /// terminally recorded before frame access or invocation. A matched publisher
+    /// is returned for a later distinct output only after its local call returned
+    /// `Ok` and the linked terminal record was sync-confirmed. A publisher error
+    /// or terminal-record failure drops the publisher capability.
+    /// Cancellation while awaiting drops this Called state without inventing a
+    /// returned-error record; restart recovery must classify the synced Called tail.
+    /// Local `Ok` is not delivery, receiver acceptance, application, or an ACK.
+    #[cfg(feature = "live-zenoh")]
+    pub(crate) async fn publish_once(
         self,
-    ) -> Result<JournaledReturnedOk<C>, CoordinatorFatal> {
+        publisher: FinalCommandPublisher,
+    ) -> Result<
+        (JournaledReturnedOk<C>, FinalCommandPublisher),
+        PublishOnceError<StrictPublisherCallError>,
+    > {
+        if !self.publisher_route_matches(publisher.route()) {
+            return self.finish_publish_once(
+                publisher,
+                Err(StrictPublisherCallError::PublisherRouteMismatch),
+            );
+        }
+        let publisher_result = publisher
+            .publish(self.frame())
+            .await
+            .map_err(StrictPublisherCallError::Publisher);
+        self.finish_publish_once(publisher, publisher_result)
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    fn publisher_route_matches(&self, publisher_route: &str) -> bool {
+        publisher_route == self.core.expected_final_command_route
+    }
+
+    #[cfg(all(test, feature = "live-zenoh"))]
+    pub(crate) fn expected_final_command_route(&self) -> &str {
+        &self.core.expected_final_command_route
+    }
+
+    /// Exercise route rejection without constructing a live Zenoh session.
+    #[cfg(all(test, feature = "live-zenoh"))]
+    pub(crate) async fn publish_once_with_test_route<P, F, Fut>(
+        self,
+        publisher: P,
+        publisher_route: &str,
+        invoke: F,
+    ) -> Result<(JournaledReturnedOk<C>, P), PublishOnceError<StrictPublisherCallError>>
+    where
+        F: FnOnce(&ExactNcpCommandFrame) -> Fut,
+        Fut: core::future::Future<Output = Result<(), SecureZenohError>>,
+    {
+        if !self.publisher_route_matches(publisher_route) {
+            return self.finish_publish_once(
+                publisher,
+                Err(StrictPublisherCallError::PublisherRouteMismatch),
+            );
+        }
+        let publisher_result = invoke(self.frame())
+            .await
+            .map_err(StrictPublisherCallError::Publisher);
+        self.finish_publish_once(publisher, publisher_result)
+    }
+
+    /// Exercise the same ownership and terminal-ordering path without a live session.
+    #[cfg(test)]
+    pub(crate) async fn publish_once_with_test_future<P, E, F, Fut>(
+        self,
+        publisher: P,
+        invoke: F,
+    ) -> Result<(JournaledReturnedOk<C>, P), PublishOnceError<E>>
+    where
+        F: FnOnce(&ExactNcpCommandFrame) -> Fut,
+        Fut: core::future::Future<Output = Result<(), E>>,
+    {
+        let publisher_result = invoke(self.frame()).await;
+        self.finish_publish_once(publisher, publisher_result)
+    }
+
+    #[cfg(any(test, feature = "live-zenoh"))]
+    fn finish_publish_once<P, E>(
+        self,
+        publisher: P,
+        publisher_result: Result<(), E>,
+    ) -> Result<(JournaledReturnedOk<C>, P), PublishOnceError<E>> {
+        match publisher_result {
+            Ok(()) => match self.record_returned_ok() {
+                Ok(journaled) => Ok((journaled, publisher)),
+                Err(source) => {
+                    drop(publisher);
+                    Err(PublishOnceError::TerminalRecordFailed {
+                        publisher_error: None,
+                        source,
+                    })
+                }
+            },
+            Err(error) => match self.record_returned_error() {
+                Ok(journaled) => {
+                    drop(publisher);
+                    Err(PublishOnceError::PublisherReturned {
+                        source: error,
+                        journaled: Box::new(journaled),
+                    })
+                }
+                Err(source) => {
+                    drop(publisher);
+                    Err(PublishOnceError::TerminalRecordFailed {
+                        publisher_error: Some(error),
+                        source,
+                    })
+                }
+            },
+        }
+    }
+
+    #[cfg(any(test, feature = "live-zenoh"))]
+    fn record_returned_ok(self) -> Result<JournaledReturnedOk<C>, CoordinatorFatal> {
         let Self {
             mut core,
             decision,
@@ -634,9 +793,8 @@ impl<C: MonotonicClock> DurableCalledPublication<C> {
         })
     }
 
-    pub(crate) fn record_asserted_returned_error(
-        self,
-    ) -> Result<JournaledReturnedError, CoordinatorFatal> {
+    #[cfg(any(test, feature = "live-zenoh"))]
+    fn record_returned_error(self) -> Result<JournaledReturnedError, CoordinatorFatal> {
         let Self {
             mut core,
             decision,

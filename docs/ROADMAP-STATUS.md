@@ -24,7 +24,7 @@ fully proven; **not started** means no qualifying implementation/evidence is pre
 
 The offline P0 reference-monitor core is implemented and its local exit gate passes.
 The full Haldir project remains incomplete: production durable recovery, enforcement of
-the exact NCP selection and strict transport binding in a runnable Gate, certificate-lifecycle/
+the exact NCP selection and the internal strict transport binding in a runnable Gate, certificate-lifecycle/
 reconnect and bypass proof beyond the retained synthetic ACL subset, Crebain and Engram
 integration, backend-conformance research, performance/endurance campaigns, and an
 experimental release are outstanding.
@@ -46,8 +46,8 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
-| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, closed startup selection, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); an exact-selected actor reaches Called with upstream JSON, and valid exact JSON traverses the synthetic live campaign. No runnable service yet requires exact mode or binds that Called state to the publisher (`CL-LIVE-TRANSPORT-01`). |
-| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, post-sync-revalidated publication seam, canonical linked stages, bounded locked manager/reservations, assurance Gate replay, and fused restart Unknown emission exist. An internal consuming coordinator now requires a sealed bounded-pool permit, reserves three logical lifecycle records before actor mutation, locally append-and-`sync_data`-orders receipt/Called/caller-asserted terminal transitions, and blocks indefinitely after recovered called-or-later history pending external clearance (`CL-GATE-LIFECYCLE-01`). Positive composition remains test-only. Missing gates include production control-plane/lease/state wiring, pre-durable-startup live-profile rejection of modeled output, a canonical service-wide pool and bounded async worker, actual strict-publisher/result binding, canonical journal-path binding, Prepared abandonment/retention/loss summary, coordinator append-fault injection, and child-process crash recovery (`CL-DURABLE-01`). |
+| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, closed startup selection, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); an exact-selected actor reaches Called with upstream JSON, and valid exact JSON traverses the synthetic live campaign. An off-by-default internal binding now rejects a publisher outside the actor's exact realm/session route before invocation and consumes Called around a matched concrete publisher, but no runnable service requires exact mode or selects it (`CL-LIVE-TRANSPORT-01`). |
+| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, post-sync-revalidated publication seam, canonical linked stages, bounded locked manager/reservations, assurance Gate replay, and fused restart Unknown emission exist. An internal consuming coordinator requires a sealed bounded-pool permit, reserves three logical lifecycle records before actor mutation, locally append-and-`sync_data`-orders receipt/Called/terminal transitions, and blocks indefinitely after recovered called-or-later history pending external clearance. Its off-by-default live binding awaits the concrete strict publisher once, returns that capability only after local `Ok` plus terminal journal success, and drops pending cancellation into tested restart Unknown recovery (`CL-GATE-LIFECYCLE-01`). Positive composition and result injection remain test-only; the concrete path is compiled but not live-invoked. Missing gates include production control-plane/lease/state wiring, pre-durable-startup live-profile rejection of modeled output, a canonical service-wide pool and bounded async worker, canonical journal-path binding, Prepared abandonment/retention/loss summary, coordinator append-fault, live-session cancellation/timeout and panic injection, and child-process crash recovery (`CL-DURABLE-01`). |
 | 11 — secure Zenoh and ACL proof | Partial | Exact routes, a TLS-only Zenoh 1.9 boundary, bounded ingress, typed exact-command publication, and an immutable-image/default-deny/direction-specific ACL package are statically tested (`CL-TRANSPORT-BOUNDARY-01`). The retained ephemeral-PKI campaign receiver-observes the fixed final-command/controller-intent subset across all configured principals (`CL-LIVE-TRANSPORT-01`). Runnable Gate wiring, certificate lifecycle/reconnect, the full operation/route matrix, production credential custody, and bypass inventory remain open. |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
@@ -83,6 +83,9 @@ Those stronger properties remain explicitly unproven or out of scope under
   receiver-observes that fixed command/intent subset on the pinned router with ephemeral
   certificates and all eight configured principals (`CL-LIVE-TRANSPORT-01`); its stated
   service, lifecycle, trust-union, application, and bypass limitations remain open.
+- Gate's off-by-default live feature now compiles a consuming coordinator-to-concrete-
+  publisher binding. Ready-result and pending-cancellation tests use a fake future; no
+  runnable service or live Zenoh session exercises that method yet.
 
 ## Next completion slice, reviewed from five lenses
 
@@ -96,9 +99,9 @@ Those stronger properties remain explicitly unproven or out of scope under
    evidence semantics under fault injection.
 4. **Operations/security:** wire the internal coordinator into a single-owner service
    with control-plane/lease/state ingress and one bounded publisher worker; reject the
-   modeled adapter there, bind each Called typestate to the actual publisher result, design
+   modeled adapter there, select the existing concrete Called/publisher binding, design
    authenticated restart clearance covering transport/session retirement and recovered
-   policy history, then test timeout/panic/cancellation, append ambiguity, reconnect,
+   policy history, then test live-session cancellation/timeout, panic, append ambiguity, reconnect,
    crash, the remaining operation/route matrix, and bypass inventory.
 5. **Research/release honesty:** integrate Crebain then Engram in that order, run the
    registered campaigns, and create an experimental release only after every stronger

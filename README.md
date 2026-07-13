@@ -66,9 +66,12 @@ binding that closes recovered dangling calls with signed successor-boot
 (`CL-GATE-JOURNAL-BINDING-01`), a crate-private consuming lifecycle coordinator that
 requires a non-cloneable slot from a bounded permit pool, reserves three logical journal
 units before decision/output allocation, locally sync-orders the exact receipt,
-`PublishCalled`, and caller-asserted local-return record around frame exposure, and
-keeps a restarted Gate fail-closed when any called-or-later history needs external
-clearance
+`PublishCalled`, and local-return record, and keeps a restarted Gate fail-closed when any
+called-or-later history needs external clearance. Its off-by-default `live-zenoh` binding
+consumes one Called state and one concrete strict publisher, rejects a publisher whose
+exact route differs from the coordinator's actor realm/session before frame access or
+invocation, awaits a matched publisher once, and returns it only after local `Ok` plus
+terminal journal success
 (`CL-GATE-LIFECYCLE-01`), canonical linked publication-stage
 payload/reduction primitives (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), and
 authenticated snapshot/generation-anchor primitives with commit-before-mutation
@@ -84,9 +87,11 @@ loads protected secrets or a deployed external non-rewindable anchor. The direct
 remains externally read-only and no runnable service selects its internal coordinator.
 Positive coordinator composition currently uses a test-only binder around a preactivated
 actor. The concrete permit pool is a bounded slot primitive, but no canonical service-wide
-pool, queue, publisher worker, or transport binding is selected; terminal methods accept
-unverified in-crate assertions, and cancellation/rejection leaves unreclaimed Prepared
-evidence. End-to-end crash durability remains out of P0 (`CL-DURABLE-01`). The composed
+pool, queue, publisher worker, or runnable transport binding is selected. Publisher-result
+ordering and pending-future cancellation use a test-only future seam; no live Zenoh session
+executes the concrete coordinator method in tests. Cancellation leaves durable Called for
+restart classification, while rejection/cancellation before Called leaves unreclaimed
+Prepared evidence. End-to-end crash durability remains out of P0 (`CL-DURABLE-01`). The composed
 Gate runtime has its 13-stage decision pipeline,
 and a deterministic adversarial range + end-to-end
 acceptance campaign.

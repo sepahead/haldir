@@ -39,11 +39,13 @@ pub use startup::{
 #[cfg(test)]
 mod e2e {
     use super::*;
+    #[cfg(feature = "live-zenoh")]
+    use crate::startup::publication_coordinator::StrictPublisherCallError;
     use crate::startup::publication_coordinator::{
         CallTransition, DecideError, DecisionTransition, DecisionUnavailable,
         DurableCalledPublication, DurablePreparedPublication, JournaledReturnedError,
         JournaledReturnedOk, OutputCapacityPermit, OutputCapacityPool, PublicationCoordinator,
-        ReadyDecision,
+        PublishOnceError, ReadyDecision,
     };
     use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
@@ -85,10 +87,44 @@ mod e2e {
     use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
     use std::collections::BTreeMap;
-    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
+    use std::task::{Context, Poll, Waker};
 
     const INTENT_KEY: &str = "veh/uav-1/haldir/intent/survey-v1";
+
+    fn poll_once<F: Future>(future: Pin<&mut F>) -> Poll<F::Output> {
+        let mut context = Context::from_waker(Waker::noop());
+        future.poll(&mut context)
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct TestPublishError;
+
+    struct TestPublisher {
+        drops: Arc<AtomicUsize>,
+    }
+
+    impl Drop for TestPublisher {
+        fn drop(&mut self) {
+            self.drops.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    struct PendingPublish {
+        polls: Arc<AtomicUsize>,
+    }
+
+    impl Future for PendingPublish {
+        type Output = Result<(), TestPublishError>;
+
+        fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
+            self.get_mut().polls.fetch_add(1, Ordering::SeqCst);
+            Poll::Pending
+        }
+    }
 
     fn kid(seed: u8) -> KeyId {
         KeyId::new(vec![seed, 0xAB, seed]).unwrap()
@@ -1052,7 +1088,7 @@ mod e2e {
     }
 
     #[test]
-    fn local_sync_coordinator_orders_receipt_called_and_asserted_ok() {
+    fn publisher_ok_is_journaled_before_the_publisher_and_runtime_return() {
         let fixture = coordinator_fixture(64);
         let envelope = signed_coordinator_intent(&fixture, 1);
         let output_pool = fixture.output_pool.clone();
@@ -1074,17 +1110,36 @@ mod e2e {
             CallTransition::Called(called) => called,
             CallTransition::Rejected { .. } => panic!("fresh call must pass"),
         };
-        assert!(!called.frame().bytes().is_empty());
-        assert_eq!(
-            called.decision().receipt.output_frame_digest,
-            Some(called.frame().digest())
-        );
+        let expected_frame_digest = called.decision().receipt.output_frame_digest.unwrap();
         assert_eq!(
             called.publication_trace_state(),
             Some(PublicationTraceState::PublishCalled)
         );
 
-        let returned = called.record_asserted_returned_ok().unwrap();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(
+            called.publish_once_with_test_future(publisher, move |frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                assert!(!frame.bytes().is_empty());
+                assert_eq!(frame.digest(), expected_frame_digest);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            }),
+        );
+        let (returned, publisher) = match poll_once(publish.as_mut()) {
+            Poll::Ready(Ok(success)) => success,
+            Poll::Ready(Err(_)) => panic!("local publisher Ok must reach terminal success"),
+            Poll::Pending => panic!("ready publisher result did not complete"),
+        };
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 0);
+        drop(publish);
+        drop(publisher);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
         let (coordinator, decision, terminal_digest, permit) = returned.into_parts();
         assert_eq!(decision.receipt.decision_id, decision_id);
         assert_ne!(
@@ -1121,7 +1176,7 @@ mod e2e {
     }
 
     #[test]
-    fn local_sync_coordinator_records_asserted_error_without_replacement_runtime() {
+    fn publisher_error_is_journaled_and_the_publisher_is_not_returned() {
         let fixture = coordinator_fixture(64);
         let envelope = signed_coordinator_intent(&fixture, 1);
         let output_pool = fixture.output_pool.clone();
@@ -1137,7 +1192,34 @@ mod e2e {
             CallTransition::Called(called) => called,
             CallTransition::Rejected { .. } => panic!("fresh call must pass"),
         };
-        let returned = called.record_asserted_returned_error().unwrap();
+        let expected_frame_digest = called.decision().receipt.output_frame_digest.unwrap();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(
+            called.publish_once_with_test_future(publisher, move |frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                assert_eq!(frame.digest(), expected_frame_digest);
+                std::future::ready(Err::<(), TestPublishError>(TestPublishError))
+            }),
+        );
+        let returned = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::PublisherReturned { source, journaled })) => {
+                assert_eq!(source, TestPublishError);
+                *journaled
+            }
+            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed { .. })) => {
+                panic!("terminal error record unexpectedly failed")
+            }
+            Poll::Ready(Ok(_)) => panic!("publisher error became success"),
+            Poll::Pending => panic!("ready publisher error did not complete"),
+        };
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        drop(publish);
         let (decision, terminal_digest, permit) = returned.into_parts();
         assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
         assert_ne!(
@@ -1161,6 +1243,148 @@ mod e2e {
                 .recovered_publication()
                 .state(decision_boot, decision_id),
             Some(PublicationTraceState::PublishReturnedError)
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn wrong_publisher_route_is_terminally_rejected_before_invocation() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        let expected_keys = haldir_transport_zenoh::HaldirKeys::try_new("range-a", "sess-1")
+            .expect("fixture route must be valid");
+        assert_eq!(
+            called.expected_final_command_route(),
+            expected_keys.final_command()
+        );
+        let wrong_keys = haldir_transport_zenoh::HaldirKeys::try_new("range-b", "sess-1")
+            .expect("mismatched test route must be valid");
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(called.publish_once_with_test_route(
+            publisher,
+            wrong_keys.final_command(),
+            move |_frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok::<(), haldir_transport_zenoh::SecureZenohError>(()))
+            },
+        ));
+        let returned = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::PublisherReturned { source, journaled })) => {
+                assert_eq!(source, StrictPublisherCallError::PublisherRouteMismatch);
+                *journaled
+            }
+            Poll::Ready(Err(PublishOnceError::TerminalRecordFailed { .. })) => {
+                panic!("route-mismatch terminal record unexpectedly failed")
+            }
+            Poll::Ready(Ok(_)) => panic!("wrong route became publisher success"),
+            Poll::Pending => panic!("route rejection unexpectedly waited on publisher"),
+        };
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 0);
+        drop(publish);
+        let (_, _, permit) = returned.into_parts();
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+        let restarted = reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::PublishReturnedError,
+            0,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::PublishReturnedError)
+        );
+    }
+
+    #[test]
+    fn cancelling_pending_publish_recovers_called_as_unknown() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let expected_frame_digest = prepared.decision().receipt.output_frame_digest.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        assert_eq!(
+            called.publication_trace_state(),
+            Some(PublicationTraceState::PublishCalled)
+        );
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let polls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let observed_polls = Arc::clone(&polls);
+        let mut publish = Box::pin(
+            called.publish_once_with_test_future(publisher, move |frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                assert_eq!(frame.digest(), expected_frame_digest);
+                PendingPublish {
+                    polls: observed_polls,
+                }
+            }),
+        );
+        assert!(poll_once(publish.as_mut()).is_pending());
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 0);
+        assert_eq!(output_pool.available(), 0);
+
+        drop(publish);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+        let restarted = reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::UnknownAfterPublish,
+            1,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
         );
     }
 
@@ -1376,11 +1600,31 @@ mod e2e {
         assert_send::<ReadyDecision<SharedClock>>();
         assert_send::<JournaledReturnedOk<SharedClock>>();
         assert_send::<JournaledReturnedError>();
+        assert_send::<PublishOnceError<TestPublishError>>();
         assert_send::<DecisionTransition<SharedClock>>();
         assert_send::<CallTransition<SharedClock>>();
         assert_send::<DecideError<SharedClock>>();
         assert_send::<OutputCapacityPermit>();
         assert_send::<OutputCapacityPool>();
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn concrete_strict_publish_future_is_send() {
+        fn assert_send<T: Send>(_: T) {}
+        fn check(
+            called: DurableCalledPublication<SharedClock>,
+            publisher: haldir_transport_zenoh::FinalCommandPublisher,
+        ) {
+            assert_send(called.publish_once(publisher));
+        }
+
+        assert_send::<
+            fn(
+                DurableCalledPublication<SharedClock>,
+                haldir_transport_zenoh::FinalCommandPublisher,
+            ),
+        >(check);
     }
 
     #[cfg(feature = "real-ncp")]

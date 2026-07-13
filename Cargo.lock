@@ -793,6 +793,7 @@ dependencies = [
  "haldir-policy-native",
  "haldir-reference-plant",
  "haldir-state",
+ "haldir-transport-zenoh",
 ]
 
 [[package]]

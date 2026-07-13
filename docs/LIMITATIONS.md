@@ -54,7 +54,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   exact mode or wires Zenoh to the actor/coordinator/plant. Exact selection therefore does
   not prove runtime publication, acceptance, application, or ACL exclusivity; a future live
   profile must reject modeled selection before durable startup or authority exposure.
-- **Publication lifecycle coordination is internal and caller-asserted.** The actor keeps
+- **Publication lifecycle coordination is internal; its strict binding is not runnable.** The actor keeps
   one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
   non-cloneable; exact bytes become accessible only after the actor rechecks authority,
   causal state, the safety-margin deadline, and checked active-horizon arithmetic.
@@ -67,14 +67,23 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   (`CL-PUBLICATION-STATE-01`). A separate crate-private consuming coordinator now owns a
   fused startup/journal aggregate, requires a sealed permit issued by a bounded pool,
   reserves three logical journal units before decision mutation, and locally
-  `sync_data`-orders the receipt, linked Called, and caller-asserted terminal record around
-  frame exposure (`CL-GATE-LIFECYCLE-01`). Only its Called state exposes the frame, and a
-  fatal transition returns no runtime. The pool is not authenticated as one canonical
-  service queue, however, and positive composition uses a test-only binder around an
-  already-active actor. No production control plane, queue, worker, or publisher selects
-  the coordinator. Called is a pre-exposure ambiguity boundary, not evidence that a local
-  transport call began; the frame is copyable, terminal methods accept unverified in-crate
-  assertions, and bytes can sit or be resubmitted after the last actor recheck.
+  `sync_data`-orders the receipt, linked Called, and terminal record
+  (`CL-GATE-LIFECYCLE-01`). Under its off-by-default `live-zenoh` feature, production
+  coordinator code derives the exact pinned command route from the actor realm/session,
+  terminally rejects a mismatched publisher before frame access or invocation, lends the
+  frame only to one awaited call on a matched concrete strict publisher, returns that
+  capability only after local `Ok` plus terminal journal success, and returns neither
+  runtime nor publisher after error. Pending-future cancellation is
+  tested to leave durable Called for restart recovery rather than inventing ReturnedError.
+  Result/cancellation tests use a test-only future seam, not a live Zenoh session.
+
+  The pool is not authenticated as one canonical service queue, positive composition uses
+  a test-only binder around an already-active actor, and no production control plane,
+  queue, worker, or runnable service selects the coordinator. A Called record alone is a
+  pre-invocation ambiguity boundary, not evidence that a local transport call began.
+  Lower-level actor frame access, the copyable frame type, the reusable publisher API, and
+  independently constructible session-backed publishers still permit resubmission outside
+  the coordinator binding.
 
   Restart converts a dangling Called tail to linked `UnknownAfterPublish`, then any
   recovered Called-or-later history blocks decisions indefinitely because no authenticated
@@ -83,9 +92,11 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   timestamp, not an authoritative reconstruction of prior policy/history; elapsed time does
   not clear it. Cancellation/pre-call rejection leaves a locally sync-confirmed Prepared
   trace, so retained trace/journal bounds can eventually quiesce without an
-  abandonment or loss-summary record. Coordinator-level append-fault, async cancellation,
-  child-process crash, shared clock-origin, and power-loss tests are absent. This is not a
-  transport invocation, publication, receiver-inactivity, delivery, or application claim.
+  abandonment or loss-summary record. Coordinator-level append-fault, live-session
+  cancellation/timeout, panic, child-process crash, shared clock-origin, and power-loss
+  tests are absent. The concrete
+  method is compile-tested but not live-invoked; this is not a publication,
+  receiver-inactivity, delivery, or application claim.
 - **NEST / Engram controllers.** No neural runtime is present. Admission checks
   digest equality only; **no backend behavioural conformance** (running NEST /
   Norse / Rockpool / XyloSim) is performed. Admission levels A1–A6 are structural
@@ -195,7 +206,8 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   selected journal path itself is not yet committed into the durable Gate configuration.
   Direct `VehicleActor` construction and the in-process spool remain available, and no
   runnable service selects the bound path. The private coordinator can create a locally
-  sync-confirmed receipt/Called/caller-asserted-return sequence in tests, while startup can
+  sync-confirmed receipt/Called/publisher-result sequence through its test-only future seam,
+  while startup can
   emit recovery Unknown records; neither path emits an abandonment/loss-summary event, and
   no coordinator-level append-fault, child-process crash, or disk-full campaign exists.
   A canonical Gate publication-stage payload and retained-state-bounded pure

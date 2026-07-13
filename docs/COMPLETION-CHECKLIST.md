@@ -37,10 +37,13 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   Gate/Crebain deployment remain outstanding.
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
   a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
-  coordinator orders local receipt/Called/caller-asserted terminal evidence and blocks
-  replacement after ambiguity, but no runnable worker binds one Called state to one
-  transport call/result. The frame remains copyable and exactly-once submission is not
-  enforced.
+  coordinator orders local receipt/Called/terminal evidence and blocks replacement after
+  ambiguity. Its off-by-default binding rejects a concrete publisher whose exact route
+  differs from the actor realm/session before frame access or invocation, then consumes a
+  matched publisher around one awaited call and returns that capability only after local
+  `Ok` plus terminal journal success; result/cancellation tests use a fake future rather than a live session. No
+  runnable worker selects it, the frame remains copyable through lower-level APIs, and
+  exactly-once submission is not enforced.
 
 ## Policy
 

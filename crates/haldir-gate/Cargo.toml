@@ -15,6 +15,11 @@ workspace = true
 [features]
 default = []
 real-ncp = ["haldir-ncp08/real-ncp"]
+live-zenoh = [
+    "real-ncp",
+    "dep:haldir-transport-zenoh",
+    "haldir-transport-zenoh/live-zenoh",
+]
 
 [[bin]]
 name = "haldir-gate"
@@ -31,6 +36,7 @@ haldir-ncp08.workspace = true
 haldir-reference-plant.workspace = true
 haldir-evidence.workspace = true
 haldir-durable.workspace = true
+haldir-transport-zenoh = { workspace = true, optional = true }
 getrandom.workspace = true
 
 [dev-dependencies]

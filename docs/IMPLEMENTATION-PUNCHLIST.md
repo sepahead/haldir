@@ -92,9 +92,11 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **H6** Reason-code hard/soft classification; deny-precedence; bounded reason vec keeps
   hard denies first; short-circuit yields identical outcome+reasons.
 - `[x]` **H7** Slew reference = last **published** command, updated only after the
-  caller asserts modeled publication returned-ok; the internal coordinator journals that
-  assertion but does not bind it to a publisher result. Preparation/output allocation alone
-  does not mutate history;
+  direct modeled actor caller asserts publication returned-ok. The internal coordinator's
+  off-by-default live binding instead rejects a publisher outside the actor's exact
+  realm/session route before invocation, consumes a matched strict publisher around one
+  await, and journals the observed local result; tests substitute a test-only future and no
+  runnable service selects it. Preparation/output allocation alone does not mutate history;
   duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.

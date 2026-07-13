@@ -83,11 +83,19 @@ withholds public mutable actor/journal access. This prevents report/raw-ID autho
 substitution. The internal consuming coordinator retains the whole aggregate across the
 future in-crate caller's possession of the called typestate; any journal error, clock
 regression, state mismatch, or post-sync ambiguity returns no usable runtime. It appends a
-terminal local-return assertion before resolving actor history/state, but the current API
-does not bind that assertion to an actual publisher invocation. `returned_ok` therefore
-means only that a trusted future in-crate caller asserted local `Ok`; `returned_error`
-remains delivery-ambiguous and yields no replacement runtime. Exposed frame bytes can still
-be copied or resubmitted by that caller.
+terminal local-return record before resolving actor history/state. With Gate's
+off-by-default `live-zenoh` feature, production coordinator code can borrow the frame only
+after the concrete strict publisher's exact route matches the route derived from the actor
+realm/session; mismatch is terminally recorded before frame access or invocation. For a
+match, the frame is borrowed for one awaited invocation. `returned_ok` means that publisher
+returned local `Ok` and the terminal append synced; it is not delivery.
+`returned_error` covers both definite strict-publisher preflight rejection and a
+delivery-ambiguous local transport error, and yields neither a replacement runtime nor the
+publisher capability. If the await is cancelled, no return result was observed, so the
+already-synced Called tail remains for restart classification. The ordering tests use a
+test-only future seam, and no runnable service or live invocation selects the concrete
+method. Lower-level actor/frame and publisher constructors still permit copying or
+resubmission outside this coordinator binding.
 
 On reopen, dangling Called tails become linked Unknown records. If replay contains any
 Called/ReturnedOk/ReturnedError/Unknown trace, the coordinator refuses every new decision
@@ -99,10 +107,12 @@ refusal, and a common trustworthy clock origin across startup, journal events, a
 coordinator is not established. Prepared cancellation or pre-call rejection releases unused
 journal reservation and returns the still-reserved permit but leaves the already-journaled
 Prepared trace, so retained trace capacity is not reclaimed and no abandonment/loss-summary
-event is emitted. Coordinator-level OS append ambiguity, child-process crash, async
-cancellation, panic, queue-worker, and transport tests remain absent; lower journal layers
-test their own append ambiguity and reopen behavior. This is not transport invocation,
-delivery, receiver inactivity, or application evidence (`CL-GATE-LIFECYCLE-01`).
+event is emitted. Pending-future cancellation through the test seam is covered;
+coordinator-level OS terminal-append ambiguity, child-process crash, live-session
+cancellation/timeout, panic, queue-worker, and transport tests remain absent. Lower journal
+layers test their own append ambiguity and reopen behavior. This is not transport
+invocation, delivery, receiver inactivity, or application evidence
+(`CL-GATE-LIFECYCLE-01`).
 
 ## Honesty rules
 

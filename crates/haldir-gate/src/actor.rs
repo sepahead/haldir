@@ -728,6 +728,16 @@ impl VehicleActor {
         self.gate_boot_id
     }
 
+    #[cfg(feature = "live-zenoh")]
+    pub(crate) const fn realm(&self) -> &AsciiId<64> {
+        &self.realm
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    pub(crate) const fn ncp_session(&self) -> &NcpSessionIdentityV1 {
+        &self.session
+    }
+
     pub(crate) const fn gate_signer_kid(&self) -> &KeyId {
         &self.gate_signer.kid
     }

@@ -64,13 +64,24 @@ through the Called boundary with its receipt digest intact. The strict
 `FinalCommandPublisher` still deliberately rejects modeled non-JSON bytes and accepts only
 upstream-validated NCP JSON.
 
-No runnable service yet requires the exact selection or binds one coordinator Called state
-to the actual publisher future/result. Any future live service profile must reject
-`ModeledP0` before durable startup or authority exposure and select
-`ExactNcpV0_8Json`; it must not rely on Cargo feature unification or a default. The retained
-synthetic campaign proves the exact final-command/controller-intent ACL subset using valid
-pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not that service binding
-or application. Even a local Zenoh success would not prove delivery or application.
+Gate's off-by-default `live-zenoh` feature now provides a crate-private consuming binding
+from one durable coordinator Called state to one awaited invocation of the concrete
+`FinalCommandPublisher`. Coordinator construction derives the exact pinned command route
+from its actor realm/session; a publisher for any other route is terminally rejected before
+frame access or invocation. A matched publisher capability is returned only after local
+publisher `Ok` and linked terminal journal success; a publisher error is journaled
+conservatively and does not return the capability. Dropping the future while it is pending leaves durable
+Called, which the tested restart path closes as `UnknownAfterPublish`. Tests exercise the
+result and cancellation ordering through a test-only future seam; they do not open a live
+Zenoh session or execute the concrete method.
+
+No runnable service yet selects that binding or requires exact mode. A future live service
+profile must reject `ModeledP0` before durable startup or authority exposure and select
+`ExactNcpV0_8Json`; it must not rely on Cargo feature unification, strict-publisher
+preflight rejection, or a default. The retained synthetic campaign proves the exact
+final-command/controller-intent ACL subset using valid pinned-NCP JSON and remote callbacks
+(`CL-LIVE-TRANSPORT-01`), but not the service binding or application. Even a local Zenoh
+success would not prove delivery or application.
 
 ## Deferred upstream capabilities (increment 1)
 
