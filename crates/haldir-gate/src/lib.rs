@@ -39,7 +39,13 @@ pub use startup::{
 #[cfg(test)]
 mod e2e {
     use super::*;
-    use core::num::{NonZeroU32, NonZeroU64};
+    use crate::startup::publication_coordinator::{
+        CallTransition, DecideError, DecisionTransition, DecisionUnavailable,
+        DurableCalledPublication, DurablePreparedPublication, JournaledReturnedError,
+        JournaledReturnedOk, OutputCapacityPermit, OutputCapacityPool, PublicationCoordinator,
+        ReadyDecision,
+    };
+    use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
     use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
     use haldir_contracts::cbor::Limits;
@@ -62,7 +68,7 @@ mod e2e {
         KinematicStateFixedV1, StateUncertaintyFixedV1, TrustedStateSnapshotV1,
         VerifiedSourceStateV1,
     };
-    use haldir_core::time::MonoInstant;
+    use haldir_core::time::{MonoInstant, MonotonicClock};
     use haldir_crypto::{
         ExpectedContext, KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
         sign_message, verify_and_decode,
@@ -71,11 +77,15 @@ mod e2e {
         Anchor, AnchorProtection, DurableError, GenerationAnchor, SnapshotBinding, SnapshotStorage,
         StorageMacKey, StoreId,
     };
+    use haldir_evidence::gate_journal::RecoveredGateJournal;
+    use haldir_evidence::journal::JournalBounds;
+    use haldir_evidence::manager::{JournalLimits, JournalOpenOptions, RecoveryCaptureLimits};
+    use haldir_evidence::publication::PublicationTraceState;
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
     use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
     use std::collections::BTreeMap;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::{Arc, Mutex};
 
     const INTENT_KEY: &str = "veh/uav-1/haldir/intent/survey-v1";
@@ -674,6 +684,679 @@ mod e2e {
             down_mm_s: 0,
             requested_validity_ms: NonZeroU32::new(300).unwrap(),
         }
+    }
+
+    static COORDINATOR_DIRECTORY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    struct CoordinatorTestDirectory(std::path::PathBuf);
+
+    impl CoordinatorTestDirectory {
+        fn new() -> Self {
+            let sequence = COORDINATOR_DIRECTORY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "haldir-publication-coordinator-test-{}-{sequence}",
+                std::process::id()
+            ));
+            std::fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+    }
+
+    impl Drop for CoordinatorTestDirectory {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    struct SharedClockState {
+        nanoseconds: AtomicU64,
+        scripted_samples: Mutex<std::collections::VecDeque<u64>>,
+    }
+
+    #[derive(Clone)]
+    struct SharedClock(Arc<SharedClockState>);
+
+    impl SharedClock {
+        fn new(start: MonoInstant) -> Self {
+            Self(Arc::new(SharedClockState {
+                nanoseconds: AtomicU64::new(start.as_nanos()),
+                scripted_samples: Mutex::new(std::collections::VecDeque::new()),
+            }))
+        }
+
+        fn advance_ms(&self, milliseconds: u64) {
+            self.0
+                .nanoseconds
+                .fetch_add(milliseconds.saturating_mul(1_000_000), Ordering::SeqCst);
+        }
+
+        fn set_ns(&self, nanoseconds: u64) {
+            self.0.nanoseconds.store(nanoseconds, Ordering::SeqCst);
+        }
+
+        fn script_samples(&self, samples: impl IntoIterator<Item = MonoInstant>) {
+            let mut scripted = self.0.scripted_samples.lock().unwrap();
+            scripted.extend(samples.into_iter().map(MonoInstant::as_nanos));
+        }
+    }
+
+    impl MonotonicClock for SharedClock {
+        fn now(&self) -> MonoInstant {
+            let scripted = self.0.scripted_samples.lock().unwrap().pop_front();
+            if let Some(nanoseconds) = scripted {
+                self.0.nanoseconds.store(nanoseconds, Ordering::SeqCst);
+                MonoInstant::from_nanos(nanoseconds)
+            } else {
+                MonoInstant::from_nanos(self.0.nanoseconds.load(Ordering::SeqCst))
+            }
+        }
+    }
+
+    struct CoordinatorFixture {
+        coordinator: PublicationCoordinator<SharedClock>,
+        clock: SharedClock,
+        output_pool: OutputCapacityPool,
+        ctrl_sk: SigningKey,
+        admission_digest: DigestV1,
+        _directory: CoordinatorTestDirectory,
+    }
+
+    fn coordinator_journal_limits() -> JournalLimits {
+        let segment_bounds = JournalBounds::new(128 * 1024, 8, 32 * 1024).unwrap();
+        JournalLimits::new(segment_bounds, 32, 4 * 1024 * 1024).unwrap()
+    }
+
+    const fn coordinator_capture_limits(max_records: u64) -> RecoveryCaptureLimits {
+        RecoveryCaptureLimits::new(max_records, 4 * 1024 * 1024)
+    }
+
+    fn coordinator_fixture(max_recovery_records: u64) -> CoordinatorFixture {
+        coordinator_fixture_with_counter(max_recovery_records, None)
+    }
+
+    fn coordinator_fixture_with_counter(
+        max_recovery_records: u64,
+        next_decision: Option<u64>,
+    ) -> CoordinatorFixture {
+        let mut fixture = setup();
+        if let Some(next_decision) = next_decision {
+            fixture.actor.force_next_decision_for_test(next_decision);
+        }
+        let directory = CoordinatorTestDirectory::new();
+        let journal_directory = directory.0.join("journal");
+        let lock = std::fs::File::create(directory.0.join("instance.lock")).unwrap();
+        let limits = coordinator_journal_limits();
+        let capture_limits = coordinator_capture_limits(max_recovery_records);
+        let max_traces = NonZeroUsize::new(
+            usize::try_from(max_recovery_records)
+                .unwrap_or(usize::MAX)
+                .max(1),
+        )
+        .unwrap();
+        let options = JournalOpenOptions::new(
+            fixture.actor.gate_id().clone(),
+            fixture.actor.gate_boot_id(),
+            fixture.now.as_nanos(),
+            limits,
+        );
+        let journal = {
+            let signer = fixture.actor.journal_signer();
+            let verifier = fixture
+                .actor
+                .journal_verifier(NonZeroUsize::new(32 * 1024).unwrap());
+            RecoveredGateJournal::provision_new(
+                journal_directory,
+                options,
+                &signer,
+                capture_limits,
+                verifier,
+                max_traces,
+            )
+            .unwrap()
+        };
+        let bound = RunningGate::bind_publication_journal_for_test(
+            fixture.actor,
+            journal,
+            0,
+            GateOutputEpoch::new(uuid(5)),
+            lock,
+        )
+        .unwrap();
+        let clock = SharedClock::new(fixture.now);
+        let coordinator = PublicationCoordinator::new(bound, clock.clone()).unwrap();
+        let output_pool = OutputCapacityPool::new(NonZeroUsize::new(1).unwrap());
+        CoordinatorFixture {
+            coordinator,
+            clock,
+            output_pool,
+            ctrl_sk: fixture.ctrl_sk,
+            admission_digest: fixture.admission_digest,
+            _directory: directory,
+        }
+    }
+
+    fn signed_coordinator_intent(fixture: &CoordinatorFixture, sequence: u64) -> Vec<u8> {
+        let record = admission_record();
+        let intent = build_intent(
+            fixture.admission_digest,
+            &record,
+            sequence,
+            velocity(sequence, 400),
+        );
+        sign_intent(&fixture.ctrl_sk, &intent)
+    }
+
+    fn output_permit(fixture: &CoordinatorFixture) -> OutputCapacityPermit {
+        fixture.output_pool.try_reserve().unwrap()
+    }
+
+    struct RestartedCoordinatorFixture {
+        bound: JournalBoundRunningGate,
+        clock: SharedClock,
+        effective_validity_ms: u32,
+        prior_decision_boot: GateBootId,
+        prior_decision_id: DecisionId,
+        _directory: CoordinatorTestDirectory,
+    }
+
+    fn reopen_publication_directory(
+        directory: CoordinatorTestDirectory,
+        effective_validity_ms: u32,
+        prior_decision_boot: GateBootId,
+        prior_decision_id: DecisionId,
+        expected_state: PublicationTraceState,
+        expected_unknown_events: usize,
+    ) -> RestartedCoordinatorFixture {
+        let ctrl_sk = SigningKey::from_seed([1; 32]);
+        let mission_sk = SigningKey::from_seed([2; 32]);
+        let gate_sk = SigningKey::from_seed([3; 32]);
+        let (mut config, _, _) = gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        config.gate_boot_id = GateBootId::new([10; 16]);
+        config.output_epoch = GateOutputEpoch::new(uuid(6));
+        let actor = VehicleActor::new(config).unwrap();
+        let restart_at = MonoInstant::from_nanos(2_000_000_000);
+        let options = JournalOpenOptions::new(
+            actor.gate_id().clone(),
+            actor.gate_boot_id(),
+            restart_at.as_nanos(),
+            coordinator_journal_limits(),
+        );
+        let (journal, recovery_unknown_events) = {
+            let signer = actor.journal_signer();
+            let verifier = actor.journal_verifier(NonZeroUsize::new(32 * 1024).unwrap());
+            RecoveredGateJournal::open_existing_with_recovery_unknowns(
+                directory.0.join("journal"),
+                options,
+                &signer,
+                Some(&signer),
+                coordinator_capture_limits(64),
+                verifier,
+                NonZeroUsize::new(64).unwrap(),
+            )
+            .unwrap()
+        };
+        assert_eq!(recovery_unknown_events, expected_unknown_events);
+        let lock = std::fs::File::create(directory.0.join("restart.lock")).unwrap();
+        let bound = RunningGate::bind_publication_journal_for_test(
+            actor,
+            journal,
+            recovery_unknown_events,
+            GateOutputEpoch::new(uuid(6)),
+            lock,
+        )
+        .unwrap();
+        assert_eq!(
+            bound
+                .recovered_publication()
+                .state(prior_decision_boot, prior_decision_id),
+            Some(expected_state)
+        );
+        RestartedCoordinatorFixture {
+            bound,
+            clock: SharedClock::new(restart_at),
+            effective_validity_ms,
+            prior_decision_boot,
+            prior_decision_id,
+            _directory: directory,
+        }
+    }
+
+    fn restarted_bound_after_dropped_call() -> RestartedCoordinatorFixture {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let prior_decision_boot = prepared.decision().receipt.gate_boot_id;
+        let prior_decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        assert_eq!(
+            called.publication_trace_state(),
+            Some(PublicationTraceState::PublishCalled)
+        );
+        drop(called);
+        assert_eq!(fixture.output_pool.available(), 1);
+        reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            prior_decision_boot,
+            prior_decision_id,
+            PublicationTraceState::UnknownAfterPublish,
+            1,
+        )
+    }
+
+    #[test]
+    fn restart_requires_external_clearance_after_current_policy_diagnostic() {
+        let fixture = restarted_bound_after_dropped_call();
+        let start_ns = fixture.clock.now().as_nanos();
+        let diagnostic_offset_ms = fixture
+            .effective_validity_ms
+            .max(fixture.bound.actor().duty_history_window_ms());
+        let coordinator =
+            PublicationCoordinator::new(fixture.bound, fixture.clock.clone()).unwrap();
+        let current_policy_diagnostic_not_before =
+            MonoInstant::from_nanos(start_ns + u64::from(diagnostic_offset_ms) * 1_000_000);
+        assert_eq!(
+            coordinator.restart_clearance_diagnostic_not_before(),
+            Some(current_policy_diagnostic_not_before)
+        );
+        assert_eq!(
+            coordinator
+                .publication_trace_state(fixture.prior_decision_boot, fixture.prior_decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+
+        let output_pool = OutputCapacityPool::new(NonZeroUsize::new(1).unwrap());
+        let permit = output_pool.try_reserve().unwrap();
+        let error = match coordinator.decide(permit, b"ignored", INTENT_KEY) {
+            Err(error) => error,
+            Ok(_) => panic!("replacement decision escaped unresolved restart clearance"),
+        };
+        let (coordinator, permit, reason) = error.into_unavailable().unwrap();
+        assert_eq!(
+            reason,
+            DecisionUnavailable::RestartClearanceRequired {
+                observed_at: MonoInstant::from_nanos(start_ns),
+                current_policy_diagnostic_not_before,
+            }
+        );
+        assert_eq!(coordinator.actor().evidence().len(), 0);
+        assert_eq!(output_pool.available(), 0);
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+
+        let after_diagnostic = MonoInstant::from_nanos(
+            current_policy_diagnostic_not_before
+                .as_nanos()
+                .checked_add(1)
+                .unwrap(),
+        );
+        fixture.clock.set_ns(after_diagnostic.as_nanos());
+        let permit = output_pool.try_reserve().unwrap();
+        let error = match coordinator.decide(permit, b"ignored", INTENT_KEY) {
+            Err(error) => error,
+            Ok(_) => panic!("time alone incorrectly cleared transport/history recovery"),
+        };
+        let (coordinator, permit, reason) = error.into_unavailable().unwrap();
+        assert_eq!(
+            reason,
+            DecisionUnavailable::RestartClearanceRequired {
+                observed_at: after_diagnostic,
+                current_policy_diagnostic_not_before,
+            }
+        );
+        assert_eq!(coordinator.actor().evidence().len(), 0);
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+    }
+
+    #[test]
+    fn restart_diagnostic_horizon_overflow_consumes_the_bound_runtime() {
+        let fixture = restarted_bound_after_dropped_call();
+        fixture.clock.set_ns(u64::MAX);
+        assert!(matches!(
+            PublicationCoordinator::new(fixture.bound, fixture.clock),
+            Err(crate::startup::publication_coordinator::CoordinatorFatal::RestartDiagnosticHorizonOverflow)
+        ));
+    }
+
+    #[test]
+    fn local_sync_coordinator_orders_receipt_called_and_asserted_ok() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            Ok(DecisionTransition::NoPublication(_)) => panic!("expected prepared output"),
+            Err(_) => panic!("decision must be journaled"),
+        };
+        let decision_id = prepared.decision().receipt.decision_id;
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        assert_eq!(
+            prepared.publication_trace_state(),
+            Some(PublicationTraceState::Prepared)
+        );
+
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        assert!(!called.frame().bytes().is_empty());
+        assert_eq!(
+            called.decision().receipt.output_frame_digest,
+            Some(called.frame().digest())
+        );
+        assert_eq!(
+            called.publication_trace_state(),
+            Some(PublicationTraceState::PublishCalled)
+        );
+
+        let returned = called.record_asserted_returned_ok().unwrap();
+        let (coordinator, decision, terminal_digest, permit) = returned.into_parts();
+        assert_eq!(decision.receipt.decision_id, decision_id);
+        assert_ne!(
+            terminal_digest,
+            DigestV1::compute(DigestDomain::RawEnvelope, b"")
+        );
+        assert_eq!(output_pool.available(), 0);
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+        assert_eq!(
+            coordinator.publication_trace_state(decision_boot, decision_id),
+            Some(PublicationTraceState::PublishReturnedOk)
+        );
+        assert_eq!(
+            coordinator.actor().publication_state(),
+            PublicationState::Idle
+        );
+        drop(coordinator);
+        let restarted = reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::PublishReturnedOk,
+            0,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::PublishReturnedOk)
+        );
+    }
+
+    #[test]
+    fn local_sync_coordinator_records_asserted_error_without_replacement_runtime() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh call must pass"),
+        };
+        let returned = called.record_asserted_returned_error().unwrap();
+        let (decision, terminal_digest, permit) = returned.into_parts();
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
+        assert_ne!(
+            terminal_digest,
+            DigestV1::compute(DigestDomain::RawEnvelope, b"")
+        );
+        assert_eq!(output_pool.available(), 0);
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+        let restarted = reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::PublishReturnedError,
+            0,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::PublishReturnedError)
+        );
+    }
+
+    #[test]
+    fn prepared_cancel_releases_capacity_without_claiming_a_call() {
+        let fixture = coordinator_fixture(4);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let second_envelope = signed_coordinator_intent(&fixture, 2);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_id = prepared.decision().receipt.decision_id;
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let ready = prepared.cancel().unwrap();
+        let (coordinator, _, permit) = ready.into_parts();
+        assert_eq!(output_pool.available(), 0);
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+        assert_eq!(
+            coordinator.publication_trace_state(decision_boot, decision_id),
+            Some(PublicationTraceState::Prepared)
+        );
+        assert_eq!(
+            coordinator.actor().publication_state(),
+            PublicationState::Idle
+        );
+        let second_permit = output_pool.try_reserve().unwrap();
+        let second = match coordinator.decide(second_permit, &second_envelope, "wrong/actual/key") {
+            Ok(DecisionTransition::NoPublication(ready)) => ready,
+            _ => panic!("cancelled reservation capacity was not released"),
+        };
+        let (_, second_decision, second_permit) = second.into_parts();
+        assert_eq!(second_decision.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(output_pool.available(), 0);
+        drop(second_permit);
+        assert_eq!(output_pool.available(), 1);
+    }
+
+    #[test]
+    fn expired_pre_call_validation_exposes_no_frame_and_returns_ready() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        fixture.clock.advance_ms(21);
+        let (ready, reason) = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Rejected { ready, reason } => (ready, reason),
+            CallTransition::Called(_) => panic!("deadline-expired bytes became accessible"),
+        };
+        assert_eq!(reason, PublicationError::DeadlineElapsed);
+        let decision_id = ready.decision().receipt.decision_id;
+        let decision_boot = ready.decision().receipt.gate_boot_id;
+        let (coordinator, _, permit) = ready.into_parts();
+        assert_eq!(output_pool.available(), 0);
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+        assert_eq!(
+            coordinator.publication_trace_state(decision_boot, decision_id),
+            Some(PublicationTraceState::Prepared)
+        );
+        assert_eq!(
+            coordinator.actor().publication_state(),
+            PublicationState::Idle
+        );
+    }
+
+    #[test]
+    fn post_sync_deadline_failure_recovers_durable_called_as_unknown() {
+        let fixture = coordinator_fixture(64);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let prepared = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("expected prepared output"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let validation_at = fixture.clock.now();
+        let exposure_at = validation_at.checked_add_ms(21).unwrap();
+        fixture.clock.script_samples([validation_at, exposure_at]);
+
+        assert!(matches!(
+            prepared.enter_called_boundary(),
+            Err(
+                crate::startup::publication_coordinator::CoordinatorFatal::Publication(
+                    PublicationError::DeadlineElapsed
+                )
+            )
+        ));
+        assert_eq!(output_pool.available(), 1);
+
+        let restarted = reopen_publication_directory(
+            fixture._directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::UnknownAfterPublish,
+            1,
+        );
+        assert_eq!(
+            restarted
+                .bound
+                .recovered_publication()
+                .state(decision_boot, decision_id),
+            Some(PublicationTraceState::UnknownAfterPublish)
+        );
+    }
+
+    #[test]
+    fn three_record_capacity_is_reserved_before_actor_mutation() {
+        let fixture = coordinator_fixture(2);
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let error = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Err(error) => error,
+            Ok(_) => panic!("two records cannot cover the three-stage lifecycle"),
+        };
+        let (coordinator, permit, reason) = error.into_unavailable().unwrap();
+        assert!(matches!(reason, DecisionUnavailable::JournalCapacity(_)));
+        assert_eq!(output_pool.available(), 0);
+        drop(permit);
+        assert_eq!(output_pool.available(), 1);
+        assert_eq!(coordinator.actor().evidence().len(), 0);
+        assert_eq!(
+            coordinator.actor().publication_state(),
+            PublicationState::Idle
+        );
+    }
+
+    #[test]
+    fn cached_terminal_decision_is_not_appended_as_a_duplicate_record() {
+        let fixture = coordinator_fixture_with_counter(3, Some(u64::MAX));
+        let envelope = signed_coordinator_intent(&fixture, 1);
+        let output_pool = fixture.output_pool.clone();
+        let permit = output_permit(&fixture);
+        let first = match fixture.coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::NoPublication(ready)) => ready,
+            _ => panic!("counter exhaustion must journal one terminal error"),
+        };
+        let (coordinator, first_decision, first_permit) = first.into_parts();
+        assert_eq!(first_decision.outcome, DecisionOutcomeV1::Error);
+        assert_eq!(output_pool.available(), 0);
+        drop(first_permit);
+        assert_eq!(output_pool.available(), 1);
+        assert_eq!(coordinator.actor().evidence().len(), 1);
+
+        let second_permit = output_pool.try_reserve().unwrap();
+        let second = match coordinator.decide(second_permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::NoPublication(ready)) => ready,
+            _ => panic!("cached terminal receipt must return without a duplicate append"),
+        };
+        let (coordinator, second_decision, second_permit) = second.into_parts();
+        assert_eq!(
+            second_decision.signed_receipt,
+            first_decision.signed_receipt
+        );
+        assert_eq!(output_pool.available(), 0);
+        drop(second_permit);
+        assert_eq!(output_pool.available(), 1);
+        assert_eq!(coordinator.actor().evidence().len(), 1);
+    }
+
+    #[test]
+    fn output_capacity_pool_enforces_its_exact_bound_and_drop_release() {
+        let pool = OutputCapacityPool::new(NonZeroUsize::new(2).unwrap());
+        let first = pool.try_reserve().unwrap();
+        let second = pool.try_reserve().unwrap();
+        assert_eq!(pool.available(), 0);
+        assert!(pool.try_reserve().is_none());
+
+        drop(first);
+        assert_eq!(pool.available(), 1);
+        let replacement = pool.try_reserve().unwrap();
+        assert_eq!(pool.available(), 0);
+
+        drop(second);
+        drop(replacement);
+        assert_eq!(pool.available(), 2);
+    }
+
+    #[test]
+    fn coordinator_clock_regression_is_fatal_and_releases_output_capacity() {
+        let fixture = coordinator_fixture(64);
+        let initial_ns = fixture.clock.now().as_nanos();
+        fixture.clock.set_ns(initial_ns - 1);
+        let permit = output_permit(&fixture);
+
+        assert!(matches!(
+            fixture.coordinator.decide(permit, b"ignored", INTENT_KEY),
+            Err(crate::startup::publication_coordinator::DecideError::Fatal(
+                crate::startup::publication_coordinator::CoordinatorFatal::ClockRegression
+            ))
+        ));
+        assert_eq!(fixture.output_pool.available(), 1);
+    }
+
+    #[test]
+    fn local_sync_coordinator_typestates_remain_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<PublicationCoordinator<SharedClock>>();
+        assert_send::<DurablePreparedPublication<SharedClock>>();
+        assert_send::<DurableCalledPublication<SharedClock>>();
+        assert_send::<ReadyDecision<SharedClock>>();
+        assert_send::<JournaledReturnedOk<SharedClock>>();
+        assert_send::<JournaledReturnedError>();
+        assert_send::<DecisionTransition<SharedClock>>();
+        assert_send::<CallTransition<SharedClock>>();
+        assert_send::<DecideError<SharedClock>>();
+        assert_send::<OutputCapacityPermit>();
+        assert_send::<OutputCapacityPool>();
     }
 
     #[test]

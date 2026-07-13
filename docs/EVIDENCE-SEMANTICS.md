@@ -9,9 +9,14 @@ The canonical linked stage payload and a retained-state-bounded pure reducer now
 (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`). The staged durable-startup path now replays
 those records and emits a signed, linked successor-boot `UnknownAfterPublish` for every
 recovered dangling `PublishCalled` before returning the bound runtime
-(`CL-GATE-JOURNAL-BINDING-01`). The live actor path still does not append the initial
-prepared/called/return sequence, so this closes already-durable ambiguity at startup;
-it is not yet a complete live publication pipeline.
+(`CL-GATE-JOURNAL-BINDING-01`). A crate-private consuming coordinator now owns that
+bound runtime and one monotonic clock through an exact receipt -> `PublishCalled` ->
+local-return lifecycle (`CL-GATE-LIFECYCLE-01`). It reserves all three maximum-sized
+journal units and requires a non-cloneable slot minted by a bounded permit pool before
+the actor can allocate a decision/output sequence. Only the called typestate exposes frame
+bytes, after the linked Called append was locally `sync_data`-confirmed and post-sync actor
+checks pass. This remains an internal tested mechanism, not a selected queue, service,
+publisher worker, transport pipeline, or coordinator-bound singleton pool.
 
 ## Each producer signs only what it observed
 
@@ -74,9 +79,30 @@ truncation or pending-artifact removal can occur earlier. Its action is reported
 successful open or semantic-replay rejection; another later recovery failure can return
 without an exact action report. The
 manager and replay state cannot be extracted separately, and the bound aggregate
-withholds mutable actor/journal access. This prevents report/raw-ID authority
-substitution. It remains a startup ambiguity-closure path, not a runnable service or a
-live receipt/Called/return coordinator.
+withholds public mutable actor/journal access. This prevents report/raw-ID authority
+substitution. The internal consuming coordinator retains the whole aggregate across the
+future in-crate caller's possession of the called typestate; any journal error, clock
+regression, state mismatch, or post-sync ambiguity returns no usable runtime. It appends a
+terminal local-return assertion before resolving actor history/state, but the current API
+does not bind that assertion to an actual publisher invocation. `returned_ok` therefore
+means only that a trusted future in-crate caller asserted local `Ok`; `returned_error`
+remains delivery-ambiguous and yields no replacement runtime. Exposed frame bytes can still
+be copied or resubmitted by that caller.
+
+On reopen, dangling Called tails become linked Unknown records. If replay contains any
+Called/ReturnedOk/ReturnedError/Unknown trace, the coordinator refuses every new decision
+until a future authenticated transport/session/plant/history clearance mechanism exists.
+For diagnostics it computes a timestamp from coordinator construction plus the larger of
+the maximum such trace validity and the new actor's current duty-history window. That value
+is not authoritative for the prior boot's policy/history, reaching it does not clear the
+refusal, and a common trustworthy clock origin across startup, journal events, and the
+coordinator is not established. Prepared cancellation or pre-call rejection releases unused
+journal reservation and returns the still-reserved permit but leaves the already-journaled
+Prepared trace, so retained trace capacity is not reclaimed and no abandonment/loss-summary
+event is emitted. Coordinator-level OS append ambiguity, child-process crash, async
+cancellation, panic, queue-worker, and transport tests remain absent; lower journal layers
+test their own append ambiguity and reopen behavior. This is not transport invocation,
+delivery, receiver inactivity, or application evidence (`CL-GATE-LIFECYCLE-01`).
 
 ## Honesty rules
 
@@ -86,5 +112,6 @@ live receipt/Called/return coordinator.
 - A signed receipt does not prove physical actuation.
 - A durable restart represents a recovered dangling `PUBLISH_CALLED` as
   `UNKNOWN_AFTER_PUBLISH`, never as success, failure, or non-delivery. The current
-  in-memory actor still lacks the live durable record sequence needed to create that
-  dangling evidence through the bound runtime itself.
+  crate-private coordinator can create and recover that locally sync-confirmed
+  sequence, but no runnable service yet makes the path mandatory or proves a real
+  publisher call.

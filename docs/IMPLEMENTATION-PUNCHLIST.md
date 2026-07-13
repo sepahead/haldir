@@ -70,9 +70,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   enforcement and public process state as `FAULT_LATCHED`. P0 receives a supplied
   `MonoInstant`; real clock-read failure handling belongs to the future runtime.
 - `[x]` **B14** Evidence outage never turns DENY into ALLOW (direction test).
-  A bounded, locked signed-segment directory manager is also unit tested, but the
-  Gate actor does not select it and no runtime crash/disk-full campaign exists
-  (`CL-EVIDENCE-MANAGER-01`, `CL-DURABLE-01`).
+  A bounded, locked signed-segment directory manager is also unit tested and the private
+  bound coordinator selects it for ordered lifecycle mutation. Direct actors and runnable
+  services do not make that path mandatory, and no coordinator append-fault, disk-full,
+  or child-process crash campaign exists (`CL-GATE-LIFECYCLE-01`, `CL-DURABLE-01`).
 - `[x]` **B15** Reference plant has exactly one command ingress; zero application from any
   non-Gate principal; safe action is plant-owned (Gate only requests).
 
@@ -91,7 +92,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **H6** Reason-code hard/soft classification; deny-precedence; bounded reason vec keeps
   hard denies first; short-circuit yields identical outcome+reasons.
 - `[x]` **H7** Slew reference = last **published** command, updated only after the
-  caller reports modeled publication returned-ok; preparation/output allocation alone
+  caller asserts modeled publication returned-ok; the internal coordinator journals that
+  assertion but does not bind it to a publisher result. Preparation/output allocation alone
   does not mutate history;
   duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
@@ -114,8 +116,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **H15** `haldir-contracts` does NOT depend on `haldir-ncp08`; `NcpSessionIdentityV1`/
   `NcpSourceRefV1` are Haldir's own stable types.
 - `[~]` **H16** Controller-influenced TTL is clamped by the full min-set. The P0
-  single-thread actor denies allocation failure before frame construction, but a real
-  reserved publish queue and `ALLOW_NOT_PUBLISHED_OVERLOAD` evidence require the live runtime.
+  single-thread actor denies allocation failure before frame construction. The internal
+  coordinator requires a sealed bounded-pool permit and three logical journal units before
+  actor mutation, but it is not bound to a canonical pool or actual queue/worker and emits
+  no overload loss-summary evidence.
 - `[x]` **H17** 1:1 Haldir-UUID `gate_output_epoch` ↔ wire `stream.epoch`; conversion labeled
   `FIXED_POINT_TO_NCP_FLOAT_V1` with sampled monotonicity/finiteness/bounds/round-trip
   property tests plus an explicitly ignored exhaustive full-i32 sweep. NCP's JSON-safe

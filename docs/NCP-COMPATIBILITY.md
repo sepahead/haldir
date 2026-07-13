@@ -54,12 +54,16 @@ wildcard is the reviewed pinned-NCP `{realm}/rpc/*` propagation declaration for
 `declare_queryable`; query and reply grants remain the four exact NCP RPC routes, and
 no Haldir extension route is widened.
 
-The current in-process Gate still selects `AclOnlyAdapter`, and no runnable service
-coordinates actor preparation with the transport. The retained synthetic campaign
-proves the exact final-command/controller-intent ACL subset using valid pinned-NCP JSON
-and remote callbacks (`CL-LIVE-TRANSPORT-01`), but it does not select the exact adapter
-inside Gate or prove application. Selecting the adapter/transport in a two-phase runnable
-service remains a later gate; local Zenoh call results are never delivery evidence.
+The internal lifecycle coordinator receives actor-produced `ExactNcpCommandFrame`, but
+`VehicleActor` still hardcodes `AclOnlyAdapter`. Despite the common wrapper type, those
+modeled non-JSON bytes are deliberately rejected by `FinalCommandPublisher`; its precheck
+accepts only upstream-validated NCP JSON. A runnable service therefore cannot wire the
+current actor output directly to the strict publisher. It must select or inject
+`RealNcp08Adapter` before output construction and bind one coordinator Called state to the
+actual publisher result. The retained synthetic campaign proves the exact final-command/
+controller-intent ACL subset using valid pinned-NCP JSON and remote callbacks
+(`CL-LIVE-TRANSPORT-01`), but not that runtime selection or application. Even a local Zenoh
+success would not prove delivery or application.
 
 ## Deferred upstream capabilities (increment 1)
 

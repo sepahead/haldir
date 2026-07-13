@@ -93,7 +93,7 @@ pub trait JournalVerifier {
     ///
     /// Implementations must be deterministic and side-effect-free. This method
     /// also runs before append capacity and commit are known, so success is not a
-    /// durable-append callback and must never advance a reducer.
+    /// confirmed-append callback and must never advance a reducer.
     fn validate_record(
         &self,
         identity: &SegmentIdentity,
@@ -1052,7 +1052,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     }
 
     /// Release every unused unit in a reservation after publication is
-    /// cancelled before the corresponding durable call evidence.
+    /// cancelled before the corresponding locally sync-confirmed call evidence.
     ///
     /// # Errors
     /// Returns on poison/quiescence, a token from another manager, or an
@@ -1112,8 +1112,8 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
 
     /// Append one record against a manager-owned reservation.
     ///
-    /// One reservation unit is consumed only after the append is durably
-    /// confirmed by the segment primitive. Every error retains the unit; an
+    /// One reservation unit is consumed only after local append and `sync_data`
+    /// are confirmed by the segment primitive. Every error retains the unit; an
     /// ambiguous append poisons the manager and requires recovery.
     ///
     /// # Errors

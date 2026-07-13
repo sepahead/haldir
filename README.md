@@ -50,7 +50,7 @@ trust, controller/backend admission, challenge-bound mission leases with anti-ro
 bounded authority/session/stream/replay state machines with restart semantics, a
 fixed-point deterministic policy engine, a deterministic reference plant with staged
 evidence, an opaque single-slot prepare/call typestate that gates first command access
-on actor revalidation and charges history only on caller-reported modeled returned-ok
+on actor revalidation and charges history only on caller-asserted modeled returned-ok
 (`CL-PUBLICATION-STATE-01`), the Gate-owned NCP v0.8.0 modeled output adapter plus an
 opt-in exact upstream conformance adapter (`CL-NCP-REAL-01`), a bounded evidence
 spool that holds the Gate-signed decision receipts, a bounded locked Unix
@@ -60,7 +60,13 @@ and manager-affine conservative logical capacity reservations
 publication replay (`CL-GATE-JOURNAL-REPLAY-01`), a staged fused current-boot journal
 binding that closes recovered dangling calls with signed successor-boot
 `UnknownAfterPublish` records before returning the runtime
-(`CL-GATE-JOURNAL-BINDING-01`), canonical linked publication-stage
+(`CL-GATE-JOURNAL-BINDING-01`), a crate-private consuming lifecycle coordinator that
+requires a non-cloneable slot from a bounded permit pool, reserves three logical journal
+units before decision/output allocation, locally sync-orders the exact receipt,
+`PublishCalled`, and caller-asserted local-return record around frame exposure, and
+keeps a restarted Gate fail-closed when any called-or-later history needs external
+clearance
+(`CL-GATE-LIFECYCLE-01`), canonical linked publication-stage
 payload/reduction primitives (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), and
 authenticated snapshot/generation-anchor primitives with commit-before-mutation
 anti-rollback tests,
@@ -72,8 +78,13 @@ commit is unavailable.
 The startup library explicitly provisions or opens those paths, but no service package
 loads protected secrets or a deployed external non-rewindable anchor. The direct
 `VehicleActor` profile still selects the lossy in-process spool, while the new bound type
-deliberately exposes no live mutation yet. End-to-end crash durability therefore remains out of
-P0 (`CL-DURABLE-01`). The composed Gate runtime has its 13-stage decision pipeline,
+remains externally read-only and no runnable service selects its internal coordinator.
+Positive coordinator composition currently uses a test-only binder around a preactivated
+actor. The concrete permit pool is a bounded slot primitive, but no canonical service-wide
+pool, queue, publisher worker, or transport binding is selected; terminal methods accept
+unverified in-crate assertions, and cancellation/rejection leaves unreclaimed Prepared
+evidence. End-to-end crash durability remains out of P0 (`CL-DURABLE-01`). The composed
+Gate runtime has its 13-stage decision pipeline,
 and a deterministic adversarial range + end-to-end
 acceptance campaign.
 

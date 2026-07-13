@@ -86,7 +86,8 @@ pub enum JournalError {
     ChainMismatch,
     /// The supplied signing/verifying key did not match the bound signer identity.
     SignerMismatch,
-    /// A write was issued but its durable completion is unknown; recover before retry.
+    /// A write was issued but local append/`sync_data` completion is unknown;
+    /// recover before retry.
     CommitAmbiguous,
     /// The segment header is malformed or has a bad checksum.
     CorruptHeader,
@@ -766,7 +767,7 @@ impl ActiveEvidenceSegment {
         self.segment_bytes
     }
 
-    /// Number of durably appended complete records.
+    /// Number of locally sync-confirmed complete records.
     #[must_use]
     pub const fn record_count(&self) -> u64 {
         self.record_count

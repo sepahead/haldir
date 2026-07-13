@@ -24,12 +24,12 @@ use std::collections::BTreeMap;
 pub enum PublicationTraceState {
     /// The signed decision prepared bytes but did not expose them.
     Prepared,
-    /// The Gate durably entered the write-ahead boundary after which bytes may be
+    /// The Gate recorded the write-ahead boundary after which bytes may be
     /// exposed; transport invocation and delivery remain unknown.
     PublishCalled,
-    /// The cooperative publisher reported a local successful return.
+    /// A cooperative caller asserted a local successful return.
     PublishReturnedOk,
-    /// The cooperative publisher reported an error/timeout.
+    /// A cooperative caller asserted an error/timeout.
     PublishReturnedError,
     /// A distinct claimed recovery boot marked a dangling called tail unknown.
     UnknownAfterPublish,
@@ -276,10 +276,33 @@ impl PublicationStageReducer {
             .map(|trace| trace.state)
     }
 
+    /// Largest effective-validity duration among traces that crossed the recorded
+    /// `PublishCalled` write-ahead boundary.
+    ///
+    /// Prepared-only traces are excluded because their exact bytes were never
+    /// exposed. Local returned-ok/error and recovery-unknown terminals remain
+    /// included: none proves that a receiver stopped applying the command. This
+    /// duration alone is not a remaining-lifetime or restart-readiness proof.
+    #[must_use]
+    pub(crate) fn maximum_potentially_active_validity_ms(&self) -> Option<NonZeroU32> {
+        self.traces
+            .values()
+            .filter_map(|trace| match trace.state {
+                PublicationTraceState::Prepared => None,
+                PublicationTraceState::PublishCalled
+                | PublicationTraceState::PublishReturnedOk
+                | PublicationTraceState::PublishReturnedError
+                | PublicationTraceState::UnknownAfterPublish => {
+                    Some(trace.binding.effective_validity_ms)
+                }
+            })
+            .max()
+    }
+
     /// Build conservative recovery events for every distinct-boot dangling call.
     ///
     /// This does not mutate the reducer. Each returned payload must be signed,
-    /// durably appended, and then fed back through [`Self::apply_event`]. Prepared
+    /// locally sync-confirmed, and then fed back through [`Self::apply_event`]. Prepared
     /// tails are intentionally absent because their bytes were never exposed.
     ///
     /// The caller must independently establish that `recovery_boot_id` is the
@@ -408,6 +431,34 @@ mod tests {
             stage,
             observed_mono_ns: 110,
         }
+    }
+
+    fn register_called_trace(
+        reducer: &mut PublicationStageReducer,
+        decision: u8,
+        validity_ms: u32,
+        decided_mono_ns: u64,
+        called_mono_ns: u64,
+        prepared_envelope: &[u8],
+        called_envelope: &[u8],
+    ) {
+        let mut prepared = receipt();
+        prepared.decision_id = DecisionId::new([decision; 16]);
+        prepared.received_mono_ns = decided_mono_ns.saturating_sub(1);
+        prepared.decided_mono_ns = decided_mono_ns;
+        prepared.effective_validity_ms = Some(validity_ms);
+        reducer
+            .register_prepared(&prepared, prepared_envelope)
+            .unwrap();
+
+        let prepared_digest = DigestV1::compute(DigestDomain::RawEnvelope, prepared_envelope);
+        let mut called = event(PublishStageV1::PublishCalled, prepared_digest);
+        called.decision_id = prepared.decision_id;
+        called.effective_validity_ms = NonZeroU32::new(validity_ms).unwrap();
+        called.prepared_receipt_envelope_digest = prepared_digest;
+        called.predecessor_envelope_digest = prepared_digest;
+        called.observed_mono_ns = called_mono_ns;
+        reducer.apply_event(&called, called_envelope).unwrap();
     }
 
     #[test]
@@ -607,6 +658,82 @@ mod tests {
             reducer.state(GateBootId::new([2; 16]), DecisionId::new([1; 16])),
             Some(PublicationTraceState::UnknownAfterPublish)
         );
+    }
+
+    #[test]
+    fn maximum_potentially_active_validity_ignores_prepared_and_selects_called_maximum() {
+        let mut reducer = PublicationStageReducer::new(3).unwrap();
+        let mut prepared_only = receipt();
+        prepared_only.effective_validity_ms = Some(900);
+        reducer
+            .register_prepared(&prepared_only, b"prepared-only")
+            .unwrap();
+        assert_eq!(reducer.maximum_potentially_active_validity_ms(), None);
+
+        register_called_trace(
+            &mut reducer,
+            2,
+            200,
+            110,
+            120,
+            b"prepared-200",
+            b"called-200",
+        );
+        register_called_trace(
+            &mut reducer,
+            3,
+            500,
+            130,
+            140,
+            b"prepared-500",
+            b"called-500",
+        );
+
+        assert_eq!(
+            reducer.maximum_potentially_active_validity_ms(),
+            NonZeroU32::new(500)
+        );
+    }
+
+    #[test]
+    fn every_local_or_recovery_terminal_remains_potentially_active() {
+        for terminal in [
+            PublishStageV1::PublishReturnedOk,
+            PublishStageV1::PublishReturnedError,
+            PublishStageV1::UnknownAfterPublish,
+        ] {
+            let mut reducer = PublicationStageReducer::new(1).unwrap();
+            register_called_trace(
+                &mut reducer,
+                1,
+                17,
+                100,
+                110,
+                PREPARED_ENVELOPE,
+                CALLED_ENVELOPE,
+            );
+
+            if terminal == PublishStageV1::UnknownAfterPublish {
+                let unknown = reducer
+                    .unknown_after_publish_events(GateBootId::new([9; 16]), 111)
+                    .unwrap()
+                    .pop()
+                    .unwrap();
+                reducer.apply_event(&unknown, b"signed-unknown").unwrap();
+            } else {
+                let called_digest = DigestV1::compute(DigestDomain::RawEnvelope, CALLED_ENVELOPE);
+                let mut event = event(terminal, called_digest);
+                event.effective_validity_ms = NonZeroU32::new(17).unwrap();
+                event.observed_mono_ns = 111;
+                reducer.apply_event(&event, b"signed-terminal").unwrap();
+            }
+
+            assert_eq!(
+                reducer.maximum_potentially_active_validity_ms(),
+                NonZeroU32::new(17),
+                "terminal {terminal:?} must not imply receiver inactivity"
+            );
+        }
     }
 
     #[test]

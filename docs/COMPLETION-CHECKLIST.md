@@ -35,9 +35,11 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   JSON, frozen-corpus, differential, and tamper tests (`CL-NCP-REAL-01`). Selecting
   that path in a live Gate/Crebain deployment remains outstanding.
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
-  a new sequence (`output_stream`, `haldir-ncp08` tests). There is no runnable retry
-  coordinator; reported post-call errors deliberately block actor-issued replacement,
-  while the cooperative publisher remains trusted not to resubmit copied bytes.
+  a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
+  coordinator orders local receipt/Called/caller-asserted terminal evidence and blocks
+  replacement after ambiguity, but no runnable worker binds one Called state to one
+  transport call/result. The frame remains copyable and exactly-once submission is not
+  enforced.
 
 ## Policy
 
@@ -65,8 +67,11 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 ## Evidence and operations
 
 - **PARTIAL** — Decisions are reconstructable from bounded Gate-signed receipts and
-  digest-separated domains. `UNKNOWN_AFTER_PUBLISH` exists in the shared vocabulary,
-  but publication stages are not yet durably appended/reduced across crash tails.
+  digest-separated domains. The internal coordinator locally append-and-`sync_data`-
+  confirms publication stages, and startup reduces a recovered dangling Called trace to
+  linked Unknown. Positive composition is test-only; mandatory service selection,
+  Prepared abandonment/reclamation, coordinator fault injection, child-process crash,
+  and power-loss behavior remain absent.
 - **YES** — Evidence storage bounded; tamper/chain-break detected; full-spool drop
   never flips a decision.
 - **PARTIAL** — The retained live mTLS/ACL campaign proves only the pinned synthetic

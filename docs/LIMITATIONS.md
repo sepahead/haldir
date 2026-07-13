@@ -48,27 +48,42 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
 - **Exact NCP adapter is not the selected live Gate path.** The off-by-default
   `real-ncp` feature compiles the exact pinned `ncp-core` v0.8.0 revision and its
   frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). The in-process Gate
-  still selects the dependency-light modeled adapter, and no Zenoh transport is wired
+  still hardcodes the dependency-light modeled adapter. Its modeled bytes are not the
+  pinned-NCP JSON accepted by the strict Zenoh publisher, and no Zenoh transport is wired
   to the actor or plant. Exact wire conformance therefore does not prove runtime
   publication, acceptance, application, or ACL exclusivity.
-- **Publication typestate is modeled and in-memory.** The reference actor now keeps
+- **Publication lifecycle coordination is internal and caller-asserted.** The actor keeps
   one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
   non-cloneable; exact bytes become accessible only after the actor rechecks authority,
   causal state, the safety-margin deadline, and checked active-horizon arithmetic.
   A crate-private split keeps a validated call opaque across journal sync and repeats
   all safety checks at the post-sync exposure instant; failure exposes no frame,
   fault-latches, and conservatively retains `PublishCalled`.
-  Preparation/cancellation does not charge published-command history; caller-reported
-  modeled returned-ok charges it once, and a reported error/timeout consumes the
+  Preparation/cancellation does not charge published-command history; caller-asserted
+  modeled returned-ok charges it once, and an asserted error/timeout consumes the
   resolver, fault-latches, and blocks actor-issued replacement output
-  (`CL-PUBLICATION-STATE-01`). The split is not yet selected by a bound live coordinator,
-  so prepared/called/return transitions are not yet appended through the runtime's durable evidence
-  manager, a dropped token requires process recovery, and the actor cannot prove that a
-  caller actually invoked transport, invoked it only once, refrained from copying/resubmitting
-  exposed bytes, or that a receiver accepted the frame. The staged startup path can now
-  close an already-durable dangling call as successor-boot `UnknownAfterPublish`, but the
-  live actor path cannot yet create that durable call sequence. This is not a publication
-  or delivery claim.
+  (`CL-PUBLICATION-STATE-01`). A separate crate-private consuming coordinator now owns a
+  fused startup/journal aggregate, requires a sealed permit issued by a bounded pool,
+  reserves three logical journal units before decision mutation, and locally
+  `sync_data`-orders the receipt, linked Called, and caller-asserted terminal record around
+  frame exposure (`CL-GATE-LIFECYCLE-01`). Only its Called state exposes the frame, and a
+  fatal transition returns no runtime. The pool is not authenticated as one canonical
+  service queue, however, and positive composition uses a test-only binder around an
+  already-active actor. No production control plane, queue, worker, or publisher selects
+  the coordinator. Called is a pre-exposure ambiguity boundary, not evidence that a local
+  transport call began; the frame is copyable, terminal methods accept unverified in-crate
+  assertions, and bytes can sit or be resubmitted after the last actor recheck.
+
+  Restart converts a dangling Called tail to linked `UnknownAfterPublish`, then any
+  recovered Called-or-later history blocks decisions indefinitely because no authenticated
+  transport/session/plant/history clearance API exists. The construction-time maximum of
+  recovered validity and the new actor's current duty window produces only a diagnostic
+  timestamp, not an authoritative reconstruction of prior policy/history; elapsed time does
+  not clear it. Cancellation/pre-call rejection leaves a locally sync-confirmed Prepared
+  trace, so retained trace/journal bounds can eventually quiesce without an
+  abandonment or loss-summary record. Coordinator-level append-fault, async cancellation,
+  child-process crash, shared clock-origin, and power-loss tests are absent. This is not a
+  transport invocation, publication, receiver-inactivity, delivery, or application claim.
 - **NEST / Engram controllers.** No neural runtime is present. Admission checks
   digest equality only; **no backend behavioural conformance** (running NEST /
   Norse / Rockpool / XyloSim) is performed. Admission levels A1–A6 are structural
@@ -129,7 +144,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   safe path-based standard-library APIs, and does not claim macOS `F_FULLFSYNC`,
   power-loss, network/FAT/overlay filesystem, or adversarial directory-rewind
   guarantees. A same-filesystem anchor cannot close `CL-DURABLE-01`.
-- **Durable evidence manager is not selected by the Gate actor.**
+- **Durable evidence lifecycle is not selected by a runnable Gate service.**
   `haldir-evidence::journal` unit-tests a bounded Unix segment format with
   CRC32C-framed opaque records, Gate/boot/key/sequence/previous-digest headers,
   checked genesis/successor construction, signed segment-content digests,
@@ -148,8 +163,9 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   reservations protect one future segment slot plus maximum header/record/footer bytes
   per unit from ordinary appends and rotations. They reserve configured logical quota,
   not physical filesystem blocks or successful future I/O. The staged
-  `RunningGate` journal binding now uses that single-owner-compatible shape, but exposes
-  no live mutation yet. The manager still
+  `RunningGate` journal binding now uses that single-owner-compatible shape. A private
+  child coordinator can mutate the fused actor/manager only as one consuming aggregate;
+  public callers still receive read-only views. The manager still
   assumes one writer and a trusted local parent directory; it has no Gate `TrustStore`
   policy selected by the runtime, automatic retention, OS fault-injection/child-process
   crash proof, or power-loss claim. An assurance-only stateless Gate adapter and
@@ -162,7 +178,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   do not prove a durable Gate boot. An opt-in fused startup API now derives the current
   journal Gate/boot/signer from the actual `RunningGate`, keeps the manager and
   same-verifier replay inseparable, rejects a mismatched or current-boot-resurrected
-  tail, and withholds mutable actor/journal access (`CL-GATE-JOURNAL-BINDING-01`). On
+  tail, and withholds public mutable actor/journal access (`CL-GATE-JOURNAL-BINDING-01`). On
   restart it plans, signs, verifies, and semantic-previews every dangling call's linked
   current-boot `UnknownAfterPublish`, then checks future capture and conservative journal
   quota before prior-tail closure/current-segment creation. Semantic/current-boot-freshness
@@ -176,9 +192,10 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   only with freshly provisioned durable Gate state, and restart requires open, but the
   selected journal path itself is not yet committed into the durable Gate configuration.
   Direct `VehicleActor` construction and the in-process spool remain available, and no
-  runnable service selects the bound path. Startup can emit recovery Unknown records but
-  cannot emit a live receipt/Called/return sequence or loss-summary event, and no
-  child-process crash/disk-full campaign exists.
+  runnable service selects the bound path. The private coordinator can create a locally
+  sync-confirmed receipt/Called/caller-asserted-return sequence in tests, while startup can
+  emit recovery Unknown records; neither path emits an abandonment/loss-summary event, and
+  no coordinator-level append-fault, child-process crash, or disk-full campaign exists.
   A canonical Gate publication-stage payload and retained-state-bounded pure
   identity/link/transition reducer are now tested
   (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), including construction
@@ -189,8 +206,9 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   binding, supplied-value/envelope correspondence, or the envelope size/work bound;
   themselves observe ordered recovered manager records, authenticate the current boot,
   reserve lifecycle capacity, append anything, or alter startup/actor state. The separate
-  Gate startup binding now closes recovered dangling calls only after authenticated replay
-  and bounded precommit. No live runtime or child-process crash-durability claim follows.
+  Gate startup binding closes recovered dangling calls only after authenticated replay and
+  bounded precommit; its private lifecycle child adds the narrowly bounded local ordering in
+  `CL-GATE-LIFECYCLE-01`. No runnable runtime or child-process crash-durability claim follows.
   Therefore evidence crash durability remains unproven under `CL-DURABLE-01`.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,

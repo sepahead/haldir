@@ -12,6 +12,7 @@ use haldir_contracts::ids::KeyId;
 use haldir_contracts::ids::{DecisionId, GateBootId, GateId, GateOutputEpoch, VehicleId};
 use haldir_contracts::intent::HaldirIntentV1;
 use haldir_contracts::lease::MissionLeaseV1;
+use haldir_contracts::publication::PublicationStageEventV1;
 use haldir_contracts::receipt::{
     DecisionOutcomeV1, DecisionReasonCodeV1 as R, DecisionReceiptV1, PublishStageV1,
     TransformationRelationV1,
@@ -133,7 +134,7 @@ pub enum PublicationState {
         /// Decision that owns the slot.
         decision_id: DecisionId,
     },
-    /// The cooperative caller reported crossing the modeled side-effect boundary.
+    /// The actor entered its pre-side-effect Called write-ahead boundary.
     PublishCalled {
         /// Decision that owns the slot.
         decision_id: DecisionId,
@@ -162,9 +163,10 @@ pub enum PublicationError {
 /// Opaque, non-cloneable proof that exact output was prepared.
 ///
 /// This type intentionally exposes no frame or plant-command accessor. The only
-/// route to those values is [`VehicleActor::mark_publish_called`], which consumes
-/// this token and revalidates the actor-owned safety context when issuing the
-/// first-access capability. The cooperative caller must invoke the side effect
+/// public route to those values is [`VehicleActor::mark_publish_called`], which
+/// consumes this token and revalidates the actor-owned safety context when issuing
+/// the first-access capability. The private lifecycle coordinator instead uses the
+/// split validation/commit seam. The cooperative caller must invoke the side effect
 /// immediately and must not copy/resubmit exposed bytes.
 #[must_use = "dropping a prepared publication leaves the actor slot occupied"]
 pub struct PreparedPublication {
@@ -200,9 +202,10 @@ impl PreparedPublication {
 /// Opaque, non-cloneable proof that a prepared publication passed the initial
 /// call-boundary checks without exposing its frame.
 ///
-/// The journal coordinator owns this token while it durably records the
-/// `PublishCalled` write-ahead event. Only the crate-private commit step can
-/// consume it and reveal the existing public called-publication capability.
+/// The journal coordinator owns this token while it locally appends and
+/// `sync_data`-confirms the `PublishCalled` write-ahead event. Only the
+/// crate-private commit step can consume it and reveal the existing public
+/// called-publication capability.
 #[derive(Debug)]
 #[must_use = "a validated publication call must be committed or retained"]
 pub(crate) struct ValidatedPublicationCall {
@@ -215,7 +218,7 @@ impl ValidatedPublicationCall {
     }
 }
 
-/// Opaque, non-cloneable proof that the publication side effect may be invoked.
+/// Opaque, non-cloneable proof that the actor entered its pre-side-effect Called state.
 ///
 /// The exact frame is accessible only in this state. After the transport call,
 /// the token must be consumed by `mark_publish_returned_ok` or
@@ -241,7 +244,7 @@ impl PublishCalledPublication {
         self.decision_id
     }
 
-    /// Borrow the exact immutable frame after the side-effect boundary is crossed.
+    /// Borrow the exact immutable frame after the actor's Called boundary is crossed.
     #[must_use]
     pub const fn frame(&self) -> &ExactNcpCommandFrame {
         &self.frame
@@ -278,6 +281,11 @@ impl DecisionRecord {
     /// Consume the decision and take its opaque prepared-publication token.
     #[must_use]
     pub fn into_prepared_publication(mut self) -> Option<PreparedPublication> {
+        self.prepared_publication.take()
+    }
+
+    /// Move the opaque prepared token out while retaining the journal receipt.
+    pub(crate) fn take_prepared_publication(&mut self) -> Option<PreparedPublication> {
         self.prepared_publication.take()
     }
 }
@@ -444,7 +452,7 @@ pub struct VehicleActor {
 }
 
 /// Single owner of the Gate application private key after configuration has
-/// been validated. Future journal coordination can use short-lived borrows of
+/// been validated. Internal journal coordination uses short-lived borrows of
 /// this capability without creating a second private-key owner.
 struct GateApplicationSigner {
     kid: KeyId,
@@ -457,6 +465,16 @@ impl GateApplicationSigner {
             receipt,
             DecisionReceiptV1::KIND,
             DecisionReceiptV1::SCHEMA_MAJOR,
+            &self.kid,
+            &self.key,
+        )
+    }
+
+    fn sign_publication_stage(&self, event: &PublicationStageEventV1) -> Vec<u8> {
+        sign_message(
+            event,
+            PublicationStageEventV1::KIND,
+            PublicationStageEventV1::SCHEMA_MAJOR,
             &self.kid,
             &self.key,
         )
@@ -712,6 +730,24 @@ impl VehicleActor {
         self.gate_signer.journal_signer()
     }
 
+    /// Current policy's rolling non-hold duty window. This does not recover the
+    /// prior boot's policy or history.
+    pub(crate) const fn duty_history_window_ms(&self) -> u32 {
+        self.policy.duty_window_ms
+    }
+
+    pub(crate) fn sign_publication_stage(&self, event: &PublicationStageEventV1) -> Vec<u8> {
+        self.gate_signer.sign_publication_stage(event)
+    }
+
+    /// Exact cached terminal counter-exhaustion decision, if the actor can no
+    /// longer mint decisions. Reading it performs no actor or evidence mutation.
+    pub(crate) fn cached_terminal_decision(&self) -> Option<DecisionRecord> {
+        self.terminal_decision
+            .as_ref()
+            .map(TerminalDecisionRecord::to_record)
+    }
+
     pub(crate) fn journal_verifier(&self, max_envelope_bytes: NonZeroUsize) -> GateJournalVerifier {
         GateJournalVerifier::new(
             self.gate_id.clone(),
@@ -751,15 +787,16 @@ impl VehicleActor {
         Ok(())
     }
 
-    /// Report crossing the in-memory reference publication-call boundary.
+    /// Enter the actor's in-memory Called write-ahead boundary before transport.
     ///
     /// This consumes the only prepared token and rechecks monotonic time, process
     /// state, authorization revision, ACL publication authority, causal-state
     /// digest, publication deadline, lease horizon, and checked horizon arithmetic.
     /// Exact frame bytes become accessible only in the returned token. The caller is
     /// part of the P0 trusted computing base and must invoke once without an
-    /// intervening actor mutation. This method is not durable publication evidence;
-    /// crash-surviving stage journaling belongs to the later service slice.
+    /// intervening actor mutation. This public shortcut is not durable publication
+    /// evidence; the crate-private startup coordinator uses the split validation/
+    /// commit seam to order its local journal boundary before exposure.
     ///
     /// # Errors
     /// Returns a [`PublicationError`] without exposing the frame if the token is
@@ -797,10 +834,10 @@ impl VehicleActor {
         Ok(ValidatedPublicationCall { prepared })
     }
 
-    /// Commit a durably confirmed call boundary and reveal the exact frame.
+    /// Commit a locally sync-confirmed write-ahead call boundary and reveal the frame.
     ///
-    /// The state advances before the post-sync checks. If fsync delay made the
-    /// prepared authority stale, the durable `PublishCalled` boundary remains
+    /// The state advances before the post-sync checks. If sync delay made the
+    /// prepared authority stale, the recorded `PublishCalled` boundary remains
     /// represented conservatively and the actor fault-latches without exposing
     /// bytes.
     pub(crate) fn commit_publish_call(

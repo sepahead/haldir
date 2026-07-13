@@ -38,6 +38,13 @@ use crate::actor::{
     GateConfig, GateConfigError, GateStartupError, VehicleActor, validate_static_config,
 };
 
+#[path = "publication_coordinator.rs"]
+#[allow(
+    dead_code,
+    reason = "internal lifecycle scaffold has no production service caller yet"
+)]
+pub(crate) mod publication_coordinator;
+
 const ENTROPY_BYTES: usize = 48;
 const BOOT_ENTROPY_BYTES: usize = 32;
 const LOCAL_SNAPSHOT_OVERHEAD_ALLOWANCE: usize = 1024;
@@ -233,8 +240,9 @@ pub struct RunningGate {
 /// A durable-started Gate fused with the exact journal manager and publication
 /// replay produced during the same bounded open operation.
 ///
-/// Restart Unknown emission is completed before construction. Mutable actor and
-/// journal access remains withheld until the live lifecycle coordinator exists.
+/// Restart Unknown emission is completed before construction. Public mutable actor
+/// and journal access remains withheld; only the private child lifecycle mechanism
+/// can consume both together.
 pub struct JournalBoundRunningGate {
     journal: RecoveredGateJournal,
     gate: RunningGate,
@@ -321,6 +329,33 @@ impl From<GateJournalOpenError> for JournalBindingError {
 }
 
 impl RunningGate {
+    #[cfg(test)]
+    pub(crate) fn bind_publication_journal_for_test(
+        actor: VehicleActor,
+        journal: RecoveredGateJournal,
+        recovery_unknown_events: usize,
+        output_epoch: GateOutputEpoch,
+        instance_lock: File,
+    ) -> Result<JournalBoundRunningGate, JournalBindingError> {
+        let gate_boot_id = actor.gate_boot_id();
+        Self {
+            actor,
+            report: StartupReport {
+                provisioned: true,
+                recovery: None,
+                boot_commit: CommitReceipt {
+                    generation: 1,
+                    snapshot_digest: [0; 32],
+                },
+                anchor_protection: AnchorProtection::EphemeralTest,
+                gate_boot_id,
+                output_epoch,
+            },
+            _instance_lock: instance_lock,
+        }
+        .bind_publication_journal_with_recovery_count(journal, recovery_unknown_events)
+    }
+
     /// Started vehicle actor.
     #[must_use]
     pub const fn actor(&self) -> &VehicleActor {
@@ -502,7 +537,8 @@ impl JournalBoundRunningGate {
         self.journal.active_identity()
     }
 
-    /// Read-only publication state rebuilt before current authority exposure.
+    /// Read-only publication state rebuilt before current authority exposure and
+    /// then updated only by the private consuming lifecycle mechanism.
     #[must_use]
     pub const fn recovered_publication(&self) -> &RecoveredPublicationState {
         self.journal.publication()
@@ -515,7 +551,7 @@ impl JournalBoundRunningGate {
         self.journal.recovery_report()
     }
 
-    /// Number of dangling prior-boot calls closed durably as
+    /// Number of dangling prior-boot calls locally sync-closed as
     /// `UnknownAfterPublish` before this runtime became observable.
     #[must_use]
     pub const fn recovery_unknown_events(&self) -> usize {

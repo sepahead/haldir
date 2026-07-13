@@ -47,7 +47,7 @@ Those stronger properties remain explicitly unproven or out of scope under
 | 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy and boundary/property tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`). |
 | 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
 | 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, and always-on pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`); valid exact JSON also traverses the synthetic live campaign, but the Gate runtime still does not select the exact frame adapter (`CL-LIVE-TRANSPORT-01`). |
-| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, a post-sync-revalidated single-slot publication seam, canonical linked publication-stage primitives, a bounded locked evidence manager with ordered recovery snapshots and conservative manager-affine logical reservations, an assurance-only Gate COSE adapter/fresh replay, and a fused `RunningGate` restart path that precommit-appends successor-boot Unknown records for recovered dangling calls exist (`CL-CONFIG-01`, `CL-PUBLICATION-STATE-01`, `CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`, `CL-GATE-JOURNAL-REPLAY-01`, `CL-GATE-JOURNAL-BINDING-01`, `CL-DURABLE-STARTUP-DEV-01`, `CL-EVIDENCE-MANAGER-01`); service/package loading, bounded async queues, durable canonical journal-path selection, live receipt/Called/return reservation coordination, and child-process crash-tested runtime recovery do not (`CL-DURABLE-01`). |
+| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, signed receipts, post-sync-revalidated publication seam, canonical linked stages, bounded locked manager/reservations, assurance Gate replay, and fused restart Unknown emission exist. An internal consuming coordinator now requires a sealed bounded-pool permit, reserves three logical lifecycle records before actor mutation, locally append-and-`sync_data`-orders receipt/Called/caller-asserted terminal transitions, and blocks indefinitely after recovered called-or-later history pending external clearance (`CL-GATE-LIFECYCLE-01`). Positive composition remains test-only. Missing gates include production control-plane/lease/state wiring, a canonical service-wide pool and bounded async worker, actual publisher/result binding, exact-adapter/strict-transport selection, canonical journal-path binding, Prepared abandonment/retention/loss summary, coordinator append-fault injection, and child-process crash recovery (`CL-DURABLE-01`). |
 | 11 — secure Zenoh and ACL proof | Partial | Exact routes, a TLS-only Zenoh 1.9 boundary, bounded ingress, typed exact-command publication, and an immutable-image/default-deny/direction-specific ACL package are statically tested (`CL-TRANSPORT-BOUNDARY-01`). The retained ephemeral-PKI campaign receiver-observes the fixed final-command/controller-intent subset across all configured principals (`CL-LIVE-TRANSPORT-01`). Runnable Gate wiring, certificate lifecycle/reconnect, the full operation/route matrix, production credential custody, and bypass inventory remain open. |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
@@ -92,10 +92,12 @@ Those stronger properties remain explicitly unproven or out of scope under
    service, preserving the stable Haldir semantic contracts.
 3. **Time/restart/evidence:** prove crash recovery, boot-id uniqueness, and terminal
    evidence semantics under fault injection.
-4. **Operations/security:** wire the strict transport into a single-owner Gate
-   service using the now-tested in-memory single-slot publication typestate; make
-   `PublishCalled` durable/recoverable, then run the remaining operation/route matrix,
-   reconnect/revocation/expiry tests, and bypass inventory.
+4. **Operations/security:** wire the internal coordinator into a single-owner service
+   with control-plane/lease/state ingress and one bounded publisher worker; select the
+   exact adapter, bind each Called typestate to the actual publisher result, design
+   authenticated restart clearance covering transport/session retirement and recovered
+   policy history, then test timeout/panic/cancellation, append ambiguity, reconnect,
+   crash, the remaining operation/route matrix, and bypass inventory.
 5. **Research/release honesty:** integrate Crebain then Engram in that order, run the
    registered campaigns, and create an experimental release only after every stronger
    claim has direct evidence.

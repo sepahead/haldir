@@ -14,7 +14,7 @@ use crate::manager::{
     RecoveryPrecommitPlan,
 };
 use crate::publication::{PublicationReductionError, PublicationStageReducer};
-use core::num::{NonZeroU64, NonZeroUsize};
+use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use haldir_contracts::cbor::{CanonicalMessage, Limits, from_canonical_bytes};
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::ids::{DecisionId, GateBootId, GateId};
@@ -174,7 +174,7 @@ pub struct VerifiedGateRecord {
 
 /// Opaque read-only publication state rebuilt from one complete recovery
 /// snapshot. The underlying reducer is intentionally not exposed: future live
-/// mutation must require a separately verified, durably committed record path.
+/// mutation must require a separately verified, locally sync-confirmed record path.
 pub struct RecoveredPublicationState {
     reducer: PublicationStageReducer,
     replayed_segments: usize,
@@ -614,8 +614,8 @@ impl RecoveredGateJournal {
         })
     }
 
-    /// Release unused reservation units before any corresponding durable
-    /// publication-call boundary has committed.
+    /// Release unused reservation units before any corresponding recorded
+    /// publication-call boundary has been locally sync-confirmed.
     ///
     /// # Errors
     /// Returns on a foreign/corrupt reservation or unusable manager. No capture
@@ -645,7 +645,7 @@ impl RecoveredGateJournal {
 
     /// Verify and semantic-preview one closed-vocabulary Gate envelope, append
     /// it against a retained reservation, and install the candidate publication
-    /// state only after confirmed durability.
+    /// state only after the local append and `sync_data` are confirmed.
     ///
     /// # Errors
     /// Returns without reducer mutation on trust/schema/order/capture or manager
@@ -713,7 +713,7 @@ impl RecoveredGateJournal {
         Ok(())
     }
 
-    /// Consume this fused journal while durably closing every recovered dangling
+    /// Consume this fused journal while locally sync-closing every recovered dangling
     /// publication call under the manager-created current segment boot.
     ///
     /// The complete deterministic batch is signed, statelessly verified,
@@ -729,7 +729,7 @@ impl RecoveredGateJournal {
     /// provenance, including empty or non-publication segments. The caller must
     /// establish durable Gate-startup authority at a higher layer.
     ///
-    /// `UnknownAfterPublish` means the prior process crossed its durable
+    /// `UnknownAfterPublish` means the prior process crossed its recorded
     /// write-ahead boundary but left no terminal local-return record. It does not
     /// claim that transport was invoked or that any receiver accepted the bytes.
     ///
@@ -913,6 +913,19 @@ impl RecoveredPublicationState {
         decision_id: DecisionId,
     ) -> Option<crate::publication::PublicationTraceState> {
         self.reducer.state(decision_gate_boot_id, decision_id)
+    }
+
+    /// Largest effective-validity duration among recovered traces that crossed
+    /// the recorded `PublishCalled` write-ahead boundary.
+    ///
+    /// This conservatively includes local returned-ok/error and recovery-unknown
+    /// terminals because none proves receiver inactivity. Prepared-only traces are
+    /// excluded. The value is a duration bound, not a remaining-lifetime or
+    /// restart-readiness proof; a caller must establish an appropriate trusted
+    /// time anchor and any receiver/plant-specific safety horizon separately.
+    #[must_use]
+    pub fn maximum_potentially_active_validity_ms(&self) -> Option<NonZeroU32> {
+        self.reducer.maximum_potentially_active_validity_ms()
     }
 
     /// Number of authenticated recovered segments included in the rebuild.
@@ -1574,6 +1587,10 @@ mod tests {
         );
         assert_eq!(reducer.replayed_segments(), 1);
         assert_eq!(reducer.replayed_records(), 4);
+        assert_eq!(
+            reducer.maximum_potentially_active_validity_ms(),
+            NonZeroU32::new(10)
+        );
         assert!(reducer.contains_recovered_boot(GateBootId::new([1; 16])));
         assert_eq!(
             reducer
@@ -2116,6 +2133,12 @@ mod tests {
                 .publication()
                 .state(GateBootId::new([1; 16]), prepared.decision_id),
             Some(PublicationTraceState::UnknownAfterPublish)
+        );
+        assert_eq!(
+            recovered
+                .publication()
+                .maximum_potentially_active_validity_ms(),
+            NonZeroU32::new(10)
         );
         drop(recovered);
 
