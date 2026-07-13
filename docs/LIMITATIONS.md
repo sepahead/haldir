@@ -138,6 +138,16 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   injection/child-process crash proof, or power-loss claim. The actor still uses its
   in-process spool and does not select this manager or emit recovery/loss-summary events,
   and no child-process crash/disk-full campaign exists.
+  A canonical Gate publication-stage payload and retained-state-bounded pure
+  identity/link/transition reducer are now tested
+  (`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), including construction
+  of a distinct-boot `UnknownAfterPublish` payload for a dangling call. Boot IDs are
+  random, so the planning helper's not-previously-seen check does not authenticate
+  later/current boot provenance, and generic replay permits multiple Unknown events
+  from one claimed recovery boot. The primitives do not verify COSE, Gate-role signer
+  binding, supplied-value/envelope correspondence, or the envelope size/work bound;
+  observe ordered recovered manager records; reserve lifecycle capacity; append anything;
+  or alter startup/actor state. No runtime crash-durability claim follows.
   Therefore evidence crash durability remains unproven under `CL-DURABLE-01`.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,

@@ -5,9 +5,10 @@
 Publication is never atomic with a receipt, so evidence uses stages, not a false
 `executed` flag. `PublishStageV1` (in `haldir-contracts`) defines the vocabulary,
 including `UNKNOWN_AFTER_PUBLISH` for a crash between publish and acknowledgement.
-The P0 actor does not yet durably append or recover publication-stage transitions,
-so it cannot yet emit that crash-tail stage; the enum is the shared vocabulary for
-the later durable reducer, not evidence that reducer already exists.
+The canonical linked stage payload and a retained-state-bounded pure reducer now exist
+(`CL-PUBLICATION-EVIDENCE-PRIMITIVE-01`), but the P0 actor/manager/startup do not yet
+sign, append, replay, or recover those transitions. The runtime therefore cannot yet
+emit a crash-tail stage; the tested reducer is a prerequisite, not evidence of wiring.
 
 ## Each producer signs only what it observed
 

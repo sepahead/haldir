@@ -9,6 +9,7 @@ use crate::ids::*;
 use crate::intent::HaldirIntentV1;
 use crate::lease::MissionLeaseV1;
 use crate::limits::{ContractVersion, MissionLeaseLimitsV1};
+use crate::publication::PublicationStageEventV1;
 use crate::receipt::{
     DecisionOutcomeV1, DecisionReasonCodeV1, DecisionReceiptV1, PublishStageV1,
     TransformationRelationV1,
@@ -224,6 +225,29 @@ fn receipt() -> DecisionReceiptV1 {
     }
 }
 
+fn publication_stage() -> PublicationStageEventV1 {
+    PublicationStageEventV1 {
+        schema_major: 1,
+        schema_minor: 0,
+        decision_id: DecisionId::new([1; 16]),
+        gate_id: GateId::new("gate-1").unwrap(),
+        decision_gate_boot_id: GateBootId::new([9; 16]),
+        producer_gate_boot_id: GateBootId::new([9; 16]),
+        vehicle_id: VehicleId::new("uav-1").unwrap(),
+        ncp_session: sess(),
+        gate_output_stream: NcpStreamPositionV1 {
+            epoch: GateOutputEpoch::new(uuid(5)),
+            seq: OutputSeq::new(nz64(1)),
+        },
+        output_frame_digest: dig(15),
+        effective_validity_ms: nz32(280),
+        prepared_receipt_envelope_digest: dig(16),
+        predecessor_envelope_digest: dig(16),
+        stage: PublishStageV1::PublishCalled,
+        observed_mono_ns: 1250,
+    }
+}
+
 fn status() -> GateStatusV1 {
     GateStatusV1 {
         gate_id: GateId::new("gate-1").unwrap(),
@@ -259,6 +283,7 @@ fn all_contracts_roundtrip() {
     rt(&intent());
     rt(&revocation());
     rt(&receipt());
+    rt(&publication_stage());
     rt(&status());
 }
 

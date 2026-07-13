@@ -36,6 +36,7 @@ pub mod ids;
 pub mod intent;
 pub mod lease;
 pub mod limits;
+pub mod publication;
 pub mod receipt;
 pub mod revocation;
 pub mod scalar;
@@ -63,6 +64,7 @@ mod fuzz_smoke {
     use crate::challenge::GateChallengeV1;
     use crate::intent::HaldirIntentV1;
     use crate::lease::MissionLeaseV1;
+    use crate::publication::PublicationStageEventV1;
     use crate::receipt::DecisionReceiptV1;
     use proptest::prelude::*;
 
@@ -76,6 +78,7 @@ mod fuzz_smoke {
             let _ = from_canonical_bytes::<MissionLeaseV1>(&bytes, Limits::LARGE);
             let _ = from_canonical_bytes::<GateChallengeV1>(&bytes, Limits::LARGE);
             let _ = from_canonical_bytes::<DecisionReceiptV1>(&bytes, Limits::LARGE);
+            let _ = from_canonical_bytes::<PublicationStageEventV1>(&bytes, Limits::LARGE);
         }
 
         #[test]
