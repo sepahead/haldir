@@ -128,12 +128,15 @@ mod tests {
     }
 
     #[test]
-    fn live_runtime_uses_the_zenoh_compatible_scheduler() -> Result<(), &'static str> {
+    fn live_runtime_supplies_zenoh_scheduler_and_timer() -> Result<(), &'static str> {
         let runtime = support::development_runtime().map_err(|_| "runtime creation failed")?;
         assert_eq!(
             runtime.handle().runtime_flavor(),
             tokio::runtime::RuntimeFlavor::MultiThread
         );
+        runtime.block_on(async {
+            tokio::time::sleep(std::time::Duration::ZERO).await;
+        });
         Ok(())
     }
 

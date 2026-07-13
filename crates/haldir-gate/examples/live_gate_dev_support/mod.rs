@@ -154,6 +154,7 @@ impl std::error::Error for SmokeError {}
 pub fn development_runtime() -> Result<tokio::runtime::Runtime, SmokeError> {
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(1)
+        .enable_time()
         .build()
         .map_err(|_| SmokeError::runtime_creation())
 }
