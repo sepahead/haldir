@@ -1,0 +1,11 @@
+**
+!Cargo.toml
+!Cargo.lock
+!crates/
+!crates/**
+!tools/
+!tools/haldir-ctl/
+!tools/haldir-ctl/**
+!tools/live-secure-zenoh/
+!tools/live-secure-zenoh/Dockerfile
+!tools/live-secure-zenoh/Dockerfile.dockerignore

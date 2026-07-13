@@ -87,6 +87,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
       - name: Verify source pins
         run: python3 tools/verify-pins.py
       - name: Verify immutable CI and formal-tool pins
@@ -95,8 +97,9 @@ jobs:
         run: python3 tools/verify-evidence.py
       - name: Verify offline secure Zenoh configuration profile
         run: |
-          python3 -m unittest tools/test_secure_zenoh.py
+          python3 -m unittest tools/test_secure_zenoh.py tools/test_live_secure_zenoh.py
           python3 tools/verify-secure-zenoh.py
+          python3 tools/verify-live-secure-zenoh.py
       - name: Forbidden-claim drift check
         run: python3 tools/verify-claims.py
       - name: cargo-deny

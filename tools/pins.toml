@@ -26,6 +26,14 @@ version = "1.9.0"
 default_features = false
 features = ["transport_tls"]
 
+[live_transport]
+# Official Rust 1.96.0 Bookworm multi-platform index used only to compile and
+# run the disposable receiver-observed ACL probe inside the Docker network.
+probe_builder_image = "docker.io/library/rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc"
+# Exact router image is duplicated from the source profile so pin verification
+# can reject a harness/profile split before a live campaign is attempted.
+router_image = "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f"
+
 [dependencies]
 # All pinned in Cargo.lock; justification in docs/DEPENDENCY-RATIONALE.md.
 ed25519-compact = "2.2"

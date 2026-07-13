@@ -55,7 +55,7 @@ pub enum SecureZenohError {
     SessionOpen,
     /// Zenoh returned an error while explicitly closing the session.
     SessionClose,
-    /// The exact intent subscriber could not be declared.
+    /// The exact intent subscriber could not be declared or undeclared.
     Subscribe,
     /// The local Zenoh publication call returned an error.
     Publish,
@@ -173,6 +173,15 @@ impl SecureZenohSession {
     /// Returns on file/config validation or Zenoh session-open failure.
     pub async fn open_file(path: impl AsRef<Path>) -> Result<Self, SecureZenohError> {
         Self::open(SecureClientConfig::from_file(path)?).await
+    }
+
+    /// Return this session's Zenoh identifier for operational correlation.
+    ///
+    /// The identifier is not an authenticated application principal and must
+    /// not be used for authorization. The raw Zenoh session remains private.
+    #[must_use]
+    pub fn zid(&self) -> String {
+        self.session.zid().to_string()
     }
 
     /// Close this client's Zenoh session.
@@ -377,6 +386,35 @@ impl IntentIngress {
     #[must_use]
     pub fn counters(&self) -> IngressCounters {
         self.counters.clone()
+    }
+
+    /// Undeclare the transport callback, then drain every event already in the
+    /// bounded handoff queue.
+    ///
+    /// Awaiting undeclaration drops the Zenoh callback before the drain starts,
+    /// so the returned vector is a quiescent snapshot. Its length cannot exceed
+    /// the configured queue capacity (which is itself hard-capped).
+    ///
+    /// # Errors
+    /// Returns when Zenoh cannot explicitly undeclare the subscriber.
+    pub async fn undeclare_and_drain(
+        self,
+    ) -> Result<(Vec<IntentIngressEvent>, IngressCountersSnapshot), SecureZenohError> {
+        let Self {
+            mut receiver,
+            counters,
+            _subscriber,
+        } = self;
+        _subscriber
+            .undeclare()
+            .await
+            .map_err(|_| SecureZenohError::Subscribe)?;
+        receiver.close();
+        let mut events = Vec::with_capacity(receiver.len());
+        while let Some(event) = receiver.recv().await {
+            events.push(event);
+        }
+        Ok((events, counters.snapshot()))
     }
 }
 

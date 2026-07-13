@@ -175,6 +175,38 @@ def main() -> None:
                 f"{sorted(forbidden)!r}"
             )
 
+    live_transport = pins.get("live_transport", {})
+    probe_builder_image = live_transport.get("probe_builder_image", "")
+    router_image = live_transport.get("router_image", "")
+    image_pin = re.compile(r"[a-z0-9./_-]+@sha256:[0-9a-f]{64}")
+    if image_pin.fullmatch(probe_builder_image) is None:
+        fail("live_transport.probe_builder_image must be an immutable digest")
+    if image_pin.fullmatch(router_image) is None:
+        fail("live_transport.router_image must be an immutable digest")
+    profile = json.loads(
+        (ROOT / "deploy" / "secure-reference-v1" / "profile.json").read_text()
+    )
+    if profile.get("router", {}).get("image") != router_image:
+        fail("live transport router pin differs from the secure-reference profile")
+    dockerfile = (
+        ROOT / "tools" / "live-secure-zenoh" / "Dockerfile"
+    ).read_text()
+    from_images = re.findall(r"^FROM\s+(\S+)", dockerfile, re.MULTILINE)
+    if from_images != [probe_builder_image, probe_builder_image]:
+        fail("every live probe Dockerfile stage must use the pinned builder image")
+    if dockerfile.lstrip().startswith("# syntax="):
+        fail("live probe Dockerfile must not select a mutable frontend tag")
+    dockerignore = (
+        ROOT / "tools" / "live-secure-zenoh" / "Dockerfile.dockerignore"
+    ).read_text()
+    if not dockerignore.startswith("**\n") or "!target" in dockerignore:
+        fail("live probe Docker context must default-deny and exclude target")
+    runner_source = (ROOT / "tools" / "live_secure_zenoh.py").read_text()
+    for image in (probe_builder_image, router_image):
+        digest = image.rsplit("@", maxsplit=1)[1]
+        if runner_source.count(digest) != 1:
+            fail("live campaign runner image constants differ from tools/pins.toml")
+
     descriptor = (ROOT / ".ncp-consumer").read_text()
     expected_descriptor_suffix = f"v0.8.0 {commit}"
     if descriptor.count(expected_descriptor_suffix) != 2:
