@@ -90,8 +90,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   boundary tests assert the `==limit` outcome.
 - `[x]` **H6** Reason-code hard/soft classification; deny-precedence; bounded reason vec keeps
   hard denies first; short-circuit yields identical outcome+reasons.
-- `[x]` **H7** Slew reference = last **published** command, updated only at output allocation;
-  duty under clock rollback → fault/DENY, never wraparound.
+- `[x]` **H7** Slew reference = last **published** command, updated only after the
+  caller reports modeled publication returned-ok; preparation/output allocation alone
+  does not mutate history;
+  duty under clock rollback → fault/ERROR, never wraparound.
 - `[x]` **H8** `AclExclusiveV1` and `NcpLeaseV1` stay distinct variants; no `has_authority`
   bool; under PRE_AUTHORITY the wire `authority.term`/`lease_id` are ABSENT.
 - `[x]` **H9** COSE content-type ⇔ payload kind ⇔ external-AAD domain all agree; negatives for

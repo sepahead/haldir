@@ -2,8 +2,9 @@
 //! authorization runtime with explicit side-effect boundaries.
 //!
 //! The end-to-end path is: trusted state + signed controller intent -> the
-//! 13-stage [`actor::VehicleActor::decide_intent`] pipeline -> Gate-authored NCP
-//! command -> the deterministic reference plant -> staged evidence. This is the P0
+//! 13-stage [`actor::VehicleActor::decide_intent`] pipeline -> opaque prepared
+//! output -> explicit modeled publication call -> deterministic reference plant ->
+//! staged evidence. This is the P0
 //! `assurance-reference-v1` profile: in-process, deterministic, no live transport,
 //! no neural runtime, no physical hardware (see `docs/LIMITATIONS.md`).
 #![forbid(unsafe_code)]
@@ -25,7 +26,8 @@ pub mod startup;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub use actor::{
-    DecisionRecord, GateConfig, GateConfigError, GateError, GateStartupError, VehicleActor,
+    DecisionRecord, GateConfig, GateConfigError, GateError, GateStartupError, PreparedPublication,
+    PublicationError, PublicationState, PublishCalledPublication, VehicleActor,
 };
 pub use startup::{
     DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, LocalStartupConfig,
@@ -688,10 +690,20 @@ mod e2e {
             "reasons: {:?}",
             out.receipt.reason_codes.as_slice()
         );
-        let cmd = out.plant_command.expect("plant command");
+        let prepared = out
+            .into_prepared_publication()
+            .expect("prepared publication");
+        let called = f
+            .actor
+            .mark_publish_called(prepared, f.now)
+            .expect("reference publication called");
+        let cmd = called.reference_plant_command().clone();
 
         let mut plant = ReferencePlant::new(PlantConfig::default());
         plant.ingest(cmd).expect("plant accepts Gate command");
+        f.actor
+            .mark_publish_returned_ok(called, f.now)
+            .expect("reference publication returned ok");
         plant.run(15);
         assert!(
             plant
@@ -708,6 +720,352 @@ mod e2e {
     }
 
     #[test]
+    fn preparation_does_not_seed_published_slew_history() {
+        let mut f = setup();
+        let rec = admission_record();
+        let first = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let first = f.actor.decide_intent(&first, INTENT_KEY, f.now);
+        let prepared = first
+            .into_prepared_publication()
+            .expect("first output prepared");
+        let debug = format!("{prepared:?}");
+        assert!(!debug.contains("frame"));
+        assert!(!debug.contains("plant_command"));
+        f.actor
+            .cancel_prepared_publication(prepared)
+            .expect("unexposed preparation cancels");
+
+        // At the same instant, a prior published velocity would permit zero slew.
+        // The larger command remains eligible because cancellation never exposed
+        // bytes and therefore must not seed published-command history.
+        let second = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 2, velocity(2, 800)),
+        );
+        let second = f.actor.decide_intent(&second, INTENT_KEY, f.now);
+        assert_eq!(second.outcome, DecisionOutcomeV1::Allow);
+        let prepared = second
+            .into_prepared_publication()
+            .expect("second output prepared");
+        f.actor
+            .cancel_prepared_publication(prepared)
+            .expect("cleanup preparation");
+    }
+
+    #[test]
+    fn successful_publication_seeds_slew_history_exactly_once() {
+        let mut f = setup();
+        let rec = admission_record();
+        let first = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let first = f.actor.decide_intent(&first, INTENT_KEY, f.now);
+        let prepared = first
+            .into_prepared_publication()
+            .expect("first output prepared");
+        let called = f
+            .actor
+            .mark_publish_called(prepared, f.now)
+            .expect("publication called");
+        let mut plant = ReferencePlant::new(PlantConfig::default());
+        plant
+            .ingest(called.reference_plant_command().clone())
+            .expect("reference receiver accepted");
+        f.actor
+            .mark_publish_returned_ok(called, f.now)
+            .expect("publication returned ok");
+        assert_eq!(f.actor.publication_state(), PublicationState::Idle);
+
+        let second = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 2, velocity(2, 800)),
+        );
+        let second = f.actor.decide_intent(&second, INTENT_KEY, f.now);
+        assert_eq!(second.outcome, DecisionOutcomeV1::Deny);
+        assert!(
+            second
+                .receipt
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::DenySlew)
+        );
+        assert!(!second.has_prepared_publication());
+    }
+
+    #[test]
+    fn second_prepare_is_overload_until_the_single_slot_is_resolved() {
+        let mut f = setup();
+        let rec = admission_record();
+        let first = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let first = f.actor.decide_intent(&first, INTENT_KEY, f.now);
+        let prepared = first
+            .into_prepared_publication()
+            .expect("first output prepared");
+        assert!(matches!(
+            f.actor.publication_state(),
+            PublicationState::Prepared { .. }
+        ));
+
+        let second = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 2, velocity(2, 400)),
+        );
+        let second = f.actor.decide_intent(&second, INTENT_KEY, f.now);
+        assert_eq!(second.outcome, DecisionOutcomeV1::Deny);
+        assert!(
+            second
+                .receipt
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::DenyOverload)
+        );
+        f.actor
+            .cancel_prepared_publication(prepared)
+            .expect("first slot still owns cancellation");
+    }
+
+    #[test]
+    fn publication_tokens_are_bound_to_their_originating_actor() {
+        let rec = admission_record();
+        let mut first = setup();
+        let mut second = setup();
+
+        let first_env = sign_intent(
+            &first.ctrl_sk,
+            &build_intent(first.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let first_prepared = first
+            .actor
+            .decide_intent(&first_env, INTENT_KEY, first.now)
+            .into_prepared_publication()
+            .expect("first actor prepared output");
+        let second_env = sign_intent(
+            &second.ctrl_sk,
+            &build_intent(second.admission_digest, &rec, 1, velocity(1, 800)),
+        );
+        let second_prepared = second
+            .actor
+            .decide_intent(&second_env, INTENT_KEY, second.now)
+            .into_prepared_publication()
+            .expect("second actor prepared output");
+
+        // Both actors intentionally share the fixture boot id and per-actor
+        // decision counter, so DecisionId alone would collide here.
+        assert_eq!(first_prepared.decision_id(), second_prepared.decision_id());
+        assert!(matches!(
+            second.actor.mark_publish_called(first_prepared, second.now),
+            Err(PublicationError::StateMismatch)
+        ));
+        assert!(matches!(
+            second.actor.publication_state(),
+            PublicationState::Prepared { .. }
+        ));
+        second
+            .actor
+            .cancel_prepared_publication(second_prepared)
+            .expect("originating actor still resolves its own slot");
+    }
+
+    #[test]
+    fn unresolved_publication_blocks_lease_replacement() {
+        let mut f = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = f
+            .actor
+            .decide_intent(&env, INTENT_KEY, f.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        assert_eq!(
+            f.actor.accept_lease_env(&[], f.now),
+            Err(GateError::PublicationPending)
+        );
+
+        let called = f
+            .actor
+            .mark_publish_called(prepared, f.now)
+            .expect("publication called");
+        assert_eq!(
+            f.actor.accept_lease_env(&[], f.now),
+            Err(GateError::PublicationPending)
+        );
+        f.actor
+            .mark_publish_returned_ok(called, f.now)
+            .expect("publication resolved");
+        assert_ne!(
+            f.actor.accept_lease_env(&[], f.now),
+            Err(GateError::PublicationPending)
+        );
+    }
+
+    #[test]
+    fn changed_authority_or_causal_state_cannot_expose_prepared_bytes() {
+        let rec = admission_record();
+
+        let mut revoked = setup();
+        let env = sign_intent(
+            &revoked.ctrl_sk,
+            &build_intent(revoked.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = revoked
+            .actor
+            .decide_intent(&env, INTENT_KEY, revoked.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        revoked.actor.revoke_active_lease();
+        assert!(matches!(
+            revoked.actor.mark_publish_called(prepared, revoked.now),
+            Err(PublicationError::AuthorizationChanged)
+        ));
+        assert_eq!(revoked.actor.publication_state(), PublicationState::Idle);
+
+        let mut changed_state = setup();
+        let env = sign_intent(
+            &changed_state.ctrl_sk,
+            &build_intent(changed_state.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = changed_state
+            .actor
+            .decide_intent(&env, INTENT_KEY, changed_state.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        changed_state
+            .actor
+            .set_trusted_state(trusted_state(changed_state.now))
+            .expect("newer causal state");
+        assert!(matches!(
+            changed_state
+                .actor
+                .mark_publish_called(prepared, changed_state.now),
+            Err(PublicationError::CausalStateChanged)
+        ));
+        assert_eq!(
+            changed_state.actor.publication_state(),
+            PublicationState::Idle
+        );
+    }
+
+    #[test]
+    fn delayed_call_is_rejected_and_reported_failure_blocks_replacement_output() {
+        let mut boundary = setup();
+        let rec = admission_record();
+        let env = sign_intent(
+            &boundary.ctrl_sk,
+            &build_intent(boundary.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = boundary
+            .actor
+            .decide_intent(&env, INTENT_KEY, boundary.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let exact_deadline = boundary
+            .now
+            .checked_add_ms(20)
+            .expect("fixture time is representable");
+        let called = boundary
+            .actor
+            .mark_publish_called(prepared, exact_deadline)
+            .expect("safety-margin boundary is inclusive");
+        boundary
+            .actor
+            .mark_publish_returned_ok(called, exact_deadline)
+            .expect("boundary publication resolved");
+
+        let mut delayed = setup();
+        let env = sign_intent(
+            &delayed.ctrl_sk,
+            &build_intent(delayed.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = delayed
+            .actor
+            .decide_intent(&env, INTENT_KEY, delayed.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let too_late = MonoInstant::from_nanos(
+            delayed
+                .now
+                .as_nanos()
+                .checked_add(20_000_001)
+                .expect("fixture time is representable"),
+        );
+        assert!(matches!(
+            delayed.actor.mark_publish_called(prepared, too_late),
+            Err(PublicationError::DeadlineElapsed)
+        ));
+        assert_eq!(delayed.actor.publication_state(), PublicationState::Idle);
+        let next = sign_intent(
+            &delayed.ctrl_sk,
+            &build_intent(delayed.admission_digest, &rec, 2, velocity(2, 400)),
+        );
+        let next = delayed.actor.decide_intent(&next, INTENT_KEY, too_late);
+        assert_eq!(next.outcome, DecisionOutcomeV1::Allow);
+        assert_eq!(
+            next.receipt
+                .gate_output_stream
+                .as_ref()
+                .expect("next output stream")
+                .seq
+                .get(),
+            2,
+            "expired prepared output sequence is never reused"
+        );
+        delayed
+            .actor
+            .cancel_prepared_publication(
+                next.into_prepared_publication()
+                    .expect("next output prepared"),
+            )
+            .expect("next output cleanup");
+
+        let mut failed = setup();
+        let env = sign_intent(
+            &failed.ctrl_sk,
+            &build_intent(failed.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let prepared = failed
+            .actor
+            .decide_intent(&env, INTENT_KEY, failed.now)
+            .into_prepared_publication()
+            .expect("output prepared");
+        let called = failed
+            .actor
+            .mark_publish_called(prepared, failed.now)
+            .expect("publication called");
+        assert!(!called.frame().bytes().is_empty());
+        let decision_id = called.decision_id();
+        failed
+            .actor
+            .mark_publish_returned_error(called)
+            .expect("ambiguous return fault-latches");
+        assert_eq!(
+            failed.actor.publication_state(),
+            PublicationState::PublishCalled { decision_id }
+        );
+        assert_eq!(
+            failed.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+
+        let next = sign_intent(
+            &failed.ctrl_sk,
+            &build_intent(failed.admission_digest, &rec, 2, velocity(2, 400)),
+        );
+        let next = failed.actor.decide_intent(&next, INTENT_KEY, failed.now);
+        assert_eq!(next.outcome, DecisionOutcomeV1::Error);
+        assert!(!next.has_prepared_publication());
+    }
+
+    #[test]
     fn tampered_intent_denies_and_produces_no_command() {
         let mut f = setup();
         let rec = admission_record();
@@ -717,7 +1075,10 @@ mod e2e {
         env[mid] ^= 0x01;
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(out.plant_command.is_none(), "deny must produce no output");
+        assert!(
+            !out.has_prepared_publication(),
+            "deny must produce no output"
+        );
     }
 
     #[test]
@@ -730,7 +1091,7 @@ mod e2e {
             .actor
             .decide_intent(&env, "veh/uav-1/haldir/intent/OTHER", f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]
@@ -746,7 +1107,7 @@ mod e2e {
         // identical intent (same seq) is a replay -> deny, no output
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]
@@ -761,7 +1122,7 @@ mod e2e {
         let env = sign_intent(&f.ctrl_sk, &intent);
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]
@@ -772,7 +1133,7 @@ mod e2e {
         let env = sign_intent(&f.ctrl_sk, &intent);
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]
@@ -786,7 +1147,7 @@ mod e2e {
         let env = sign_intent(&f.ctrl_sk, &intent);
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]
@@ -811,7 +1172,7 @@ mod e2e {
         );
         let out = f.actor.decide_intent(&env2, INTENT_KEY, earlier);
         assert_eq!(out.outcome, DecisionOutcomeV1::Error);
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
         assert!(
             out.receipt
                 .reason_codes
@@ -853,7 +1214,7 @@ mod e2e {
         );
         let out = f.actor.decide_intent(&env2, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]
@@ -878,7 +1239,7 @@ mod e2e {
                 .as_slice()
                 .contains(&DecisionReasonCodeV1::DenyScopeMismatch)
         );
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]
@@ -900,7 +1261,7 @@ mod e2e {
                 .as_slice()
                 .contains(&DecisionReasonCodeV1::ErrorInternalFault)
         );
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
 
         // The reserved terminal receipt is replayed byte-for-byte after
         // exhaustion. It is one decision, not a stream of new decisions that
@@ -943,7 +1304,7 @@ mod e2e {
                 .as_slice()
                 .contains(&DecisionReasonCodeV1::DenyNoPublicationAuthority)
         );
-        assert!(out.plant_command.is_none());
+        assert!(!out.has_prepared_publication());
     }
 
     #[test]

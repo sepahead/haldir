@@ -40,9 +40,19 @@ use haldir_state::{
     ControllerReplayState, GateOutputStreamState, GateProcessMachine, LeaseAcceptContext,
     LeaseAcceptError, LeaseTermStore, RevisionCounter, accept_lease,
 };
+use std::sync::Arc;
 
 const MAX_RETIRED: usize = 16;
 const INTENT_SIZE_LIMIT: usize = 16 * 1024;
+
+fn checked_publication_horizon(
+    called_at: MonoInstant,
+    effective_validity_ms: u32,
+) -> Result<MonoInstant, PublicationError> {
+    called_at
+        .checked_add_ms(u64::from(effective_validity_ms))
+        .ok_or(PublicationError::ArithmeticOverflow)
+}
 
 /// A gate-level error for authority-establishment operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +65,8 @@ pub enum GateError {
     Lease(&'static str),
     /// The gate is fault-latched.
     Faulted,
+    /// A prepared/called publication must be resolved before authority changes.
+    PublicationPending,
 }
 
 /// A cross-field configuration validation failure.
@@ -106,8 +118,126 @@ impl From<GateConfigError> for GateStartupError {
     }
 }
 
+/// The actor's single-slot publication state.
+///
+/// A prepared output is not a publication capability until the actor transitions
+/// it to [`PublicationState::PublishCalled`]. Keeping exactly one slot prevents
+/// out-of-order publication of independently prepared output sequence numbers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicationState {
+    /// No output is awaiting publication resolution.
+    Idle,
+    /// Exact output bytes were prepared but are not externally accessible.
+    Prepared {
+        /// Decision that owns the slot.
+        decision_id: DecisionId,
+    },
+    /// The cooperative caller reported crossing the modeled side-effect boundary.
+    PublishCalled {
+        /// Decision that owns the slot.
+        decision_id: DecisionId,
+    },
+}
+
+/// A rejected publication-state transition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicationError {
+    /// The token does not own the actor's current publication slot.
+    StateMismatch,
+    /// Authority changed after the output was prepared.
+    AuthorizationChanged,
+    /// The trusted causal state changed after the output was prepared.
+    CausalStateChanged,
+    /// The bounded publication-call deadline elapsed before the side effect.
+    DeadlineElapsed,
+    /// A publication horizon could not be represented exactly.
+    ArithmeticOverflow,
+    /// Plant-publication authority is no longer present.
+    PublicationAuthorityLost,
+    /// The actor is fault-latched or detected a monotonic-clock regression.
+    Faulted,
+}
+
+/// Opaque, non-cloneable proof that exact output was prepared.
+///
+/// This type intentionally exposes no frame or plant-command accessor. The only
+/// route to those values is [`VehicleActor::mark_publish_called`], which consumes
+/// this token and revalidates the actor-owned safety context when issuing the
+/// first-access capability. The cooperative caller must invoke the side effect
+/// immediately and must not copy/resubmit exposed bytes.
+#[must_use = "dropping a prepared publication leaves the actor slot occupied"]
+pub struct PreparedPublication {
+    owner: Arc<()>,
+    decision_id: DecisionId,
+    captured_revision: u64,
+    state_snapshot_digest: DigestV1,
+    latest_call_at: MonoInstant,
+    frame: ExactNcpCommandFrame,
+    plant_command: PlantCommand,
+    plant_action: PlantAction,
+    effective_validity_ms: u32,
+}
+
+impl core::fmt::Debug for PreparedPublication {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("PreparedPublication")
+            .field("decision_id", &self.decision_id)
+            .field("latest_call_at", &self.latest_call_at)
+            .finish_non_exhaustive()
+    }
+}
+
+impl PreparedPublication {
+    /// Decision that owns this prepared output.
+    #[must_use]
+    pub const fn decision_id(&self) -> DecisionId {
+        self.decision_id
+    }
+}
+
+/// Opaque, non-cloneable proof that the publication side effect may be invoked.
+///
+/// The exact frame is accessible only in this state. After the transport call,
+/// the token must be consumed by `mark_publish_returned_ok` or
+/// `mark_publish_returned_error`. The resolver token cannot be cloned, but the
+/// cooperative caller/publisher remains trusted not to copy and resubmit exposed
+/// bytes; closing that service boundary is a later slice.
+#[derive(Debug)]
+#[must_use = "a called publication must be resolved as returned-ok or error/timeout"]
+pub struct PublishCalledPublication {
+    owner: Arc<()>,
+    decision_id: DecisionId,
+    frame: ExactNcpCommandFrame,
+    plant_command: PlantCommand,
+    plant_action: PlantAction,
+    called_at: MonoInstant,
+    active_until: MonoInstant,
+}
+
+impl PublishCalledPublication {
+    /// Decision that owns this called publication.
+    #[must_use]
+    pub const fn decision_id(&self) -> DecisionId {
+        self.decision_id
+    }
+
+    /// Borrow the exact immutable frame after the side-effect boundary is crossed.
+    #[must_use]
+    pub const fn frame(&self) -> &ExactNcpCommandFrame {
+        &self.frame
+    }
+
+    /// Borrow the deterministic reference-plant command for simulated receivers.
+    #[must_use]
+    pub const fn reference_plant_command(&self) -> &PlantCommand {
+        &self.plant_command
+    }
+}
+
 /// The result of processing one intent.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
+#[must_use = "a decision may contain a prepared publication that must be resolved"]
 pub struct DecisionRecord {
     /// The decision receipt (the value form; canonically re-encodable).
     pub receipt: DecisionReceiptV1,
@@ -116,17 +246,47 @@ pub struct DecisionRecord {
     pub signed_receipt: Vec<u8>,
     /// The decision outcome.
     pub outcome: DecisionOutcomeV1,
-    /// The prepared exact NCP frame (only on ALLOW).
-    pub frame: Option<ExactNcpCommandFrame>,
-    /// The plant command derived from the frame (only on ALLOW).
-    pub plant_command: Option<PlantCommand>,
+    prepared_publication: Option<PreparedPublication>,
 }
 
 impl DecisionRecord {
-    /// Whether the decision allowed and produced output.
+    /// Whether the decision allowed and prepared an opaque publication token.
     #[must_use]
-    pub fn allowed(&self) -> bool {
-        self.outcome == DecisionOutcomeV1::Allow && self.plant_command.is_some()
+    pub fn has_prepared_publication(&self) -> bool {
+        self.outcome == DecisionOutcomeV1::Allow && self.prepared_publication.is_some()
+    }
+
+    /// Consume the decision and take its opaque prepared-publication token.
+    #[must_use]
+    pub fn into_prepared_publication(mut self) -> Option<PreparedPublication> {
+        self.prepared_publication.take()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TerminalDecisionRecord {
+    receipt: DecisionReceiptV1,
+    signed_receipt: Vec<u8>,
+    outcome: DecisionOutcomeV1,
+}
+
+impl TerminalDecisionRecord {
+    fn from_record(record: &DecisionRecord) -> Self {
+        debug_assert!(!record.has_prepared_publication());
+        Self {
+            receipt: record.receipt.clone(),
+            signed_receipt: record.signed_receipt.clone(),
+            outcome: record.outcome,
+        }
+    }
+
+    fn to_record(&self) -> DecisionRecord {
+        DecisionRecord {
+            receipt: self.receipt.clone(),
+            signed_receipt: self.signed_receipt.clone(),
+            outcome: self.outcome,
+            prepared_publication: None,
+        }
     }
 }
 
@@ -254,7 +414,9 @@ pub struct VehicleActor {
     revision: RevisionCounter,
     process: GateProcessMachine,
     next_decision: u64,
-    terminal_decision: Option<DecisionRecord>,
+    terminal_decision: Option<TerminalDecisionRecord>,
+    publication_state: PublicationState,
+    publication_owner: Arc<()>,
     local_cap_ms: u32,
     last_seen_mono: Option<MonoInstant>,
     gate_signer: SigningKey,
@@ -465,6 +627,8 @@ impl VehicleActor {
             process,
             next_decision: 0,
             terminal_decision: None,
+            publication_state: PublicationState::Idle,
+            publication_owner: Arc::new(()),
             local_cap_ms: cfg.local_cap_ms,
             last_seen_mono: None,
             gate_signer: cfg.gate_signer,
@@ -484,20 +648,204 @@ impl VehicleActor {
         &self.evidence
     }
 
+    /// Current single-slot publication state.
+    #[must_use]
+    pub const fn publication_state(&self) -> PublicationState {
+        self.publication_state
+    }
+
+    /// Cancel an output that was prepared but whose bytes were never exposed.
+    ///
+    /// Cancellation consumes the non-cloneable token, returns the slot to idle,
+    /// and does not update published-command history.
+    ///
+    /// # Errors
+    /// Returns [`PublicationError::StateMismatch`] if the token does not own the
+    /// current prepared slot.
+    pub fn cancel_prepared_publication(
+        &mut self,
+        prepared: PreparedPublication,
+    ) -> Result<(), PublicationError> {
+        if !Arc::ptr_eq(&self.publication_owner, &prepared.owner)
+            || self.publication_state
+                != (PublicationState::Prepared {
+                    decision_id: prepared.decision_id,
+                })
+        {
+            return Err(PublicationError::StateMismatch);
+        }
+        self.publication_state = PublicationState::Idle;
+        Ok(())
+    }
+
+    /// Report crossing the in-memory reference publication-call boundary.
+    ///
+    /// This consumes the only prepared token and rechecks monotonic time, process
+    /// state, authorization revision, ACL publication authority, causal-state
+    /// digest, publication deadline, lease horizon, and checked horizon arithmetic.
+    /// Exact frame bytes become accessible only in the returned token. The caller is
+    /// part of the P0 trusted computing base and must invoke once without an
+    /// intervening actor mutation. This method is not durable publication evidence;
+    /// crash-surviving stage journaling belongs to the later service slice.
+    ///
+    /// # Errors
+    /// Returns a [`PublicationError`] without exposing the frame if the token is
+    /// stale, the actor context changed, the safety-margin deadline elapsed, or
+    /// the full active horizon cannot be represented exactly.
+    pub fn mark_publish_called(
+        &mut self,
+        prepared: PreparedPublication,
+        called_at: MonoInstant,
+    ) -> Result<PublishCalledPublication, PublicationError> {
+        let expected_state = PublicationState::Prepared {
+            decision_id: prepared.decision_id,
+        };
+        if !Arc::ptr_eq(&self.publication_owner, &prepared.owner)
+            || self.publication_state != expected_state
+        {
+            return Err(PublicationError::StateMismatch);
+        }
+
+        let reject = |actor: &mut Self, error| {
+            actor.publication_state = PublicationState::Idle;
+            Err(error)
+        };
+
+        if self.fault.is_latched() || !self.mono_ok(called_at) {
+            return reject(self, PublicationError::Faulted);
+        }
+        if self.revision.get() != prepared.captured_revision {
+            return reject(self, PublicationError::AuthorizationChanged);
+        }
+        if !self.process.is_active() {
+            return reject(self, PublicationError::AuthorizationChanged);
+        }
+        if !self.publication.authorizes_acl_only_publication() {
+            return reject(self, PublicationError::PublicationAuthorityLost);
+        }
+        let Some(state) = &self.trusted_state else {
+            return reject(self, PublicationError::CausalStateChanged);
+        };
+        if state.canonical_digest() != prepared.state_snapshot_digest {
+            return reject(self, PublicationError::CausalStateChanged);
+        }
+        if called_at > prepared.latest_call_at {
+            return reject(self, PublicationError::DeadlineElapsed);
+        }
+        let Some(lease) = &self.lease else {
+            return reject(self, PublicationError::AuthorizationChanged);
+        };
+        if lease.remaining_ms(called_at) < u64::from(prepared.effective_validity_ms) {
+            return reject(self, PublicationError::DeadlineElapsed);
+        }
+        let active_until =
+            match checked_publication_horizon(called_at, prepared.effective_validity_ms) {
+                Ok(end) => end,
+                Err(error) => return reject(self, error),
+            };
+
+        self.publication_state = PublicationState::PublishCalled {
+            decision_id: prepared.decision_id,
+        };
+        Ok(PublishCalledPublication {
+            owner: prepared.owner,
+            decision_id: prepared.decision_id,
+            frame: prepared.frame,
+            plant_command: prepared.plant_command,
+            plant_action: prepared.plant_action,
+            called_at,
+            active_until,
+        })
+    }
+
+    /// Resolve a called reference publication as locally successful.
+    ///
+    /// Published-command slew/duty history is committed exactly once here, using
+    /// the call instant rather than the later return instant. The consumed token
+    /// and actor slot prevent duplicate accounting.
+    ///
+    /// # Errors
+    /// Returns [`PublicationError::StateMismatch`] for a token that does not own
+    /// the called slot, or [`PublicationError::Faulted`] if `returned_at` regresses
+    /// the actor's monotonic clock. A reported success is still conservatively
+    /// charged before a regression fault is latched.
+    pub fn mark_publish_returned_ok(
+        &mut self,
+        called: PublishCalledPublication,
+        returned_at: MonoInstant,
+    ) -> Result<(), PublicationError> {
+        if !Arc::ptr_eq(&self.publication_owner, &called.owner)
+            || self.publication_state
+                != (PublicationState::PublishCalled {
+                    decision_id: called.decision_id,
+                })
+        {
+            return Err(PublicationError::StateMismatch);
+        }
+
+        let window_start = MonoInstant::from_nanos(
+            called
+                .called_at
+                .as_nanos()
+                .saturating_sub(u64::from(self.policy.duty_window_ms).saturating_mul(1_000_000)),
+        );
+        match called.plant_action {
+            PlantAction::Hold => self.history.record_hold(called.called_at),
+            PlantAction::Velocity(velocity) => self.history.record_velocity(
+                velocity,
+                called.called_at,
+                called.active_until,
+                window_start,
+            ),
+        }
+        self.publication_state = PublicationState::Idle;
+
+        if !self.mono_ok(returned_at) {
+            return Err(PublicationError::Faulted);
+        }
+        Ok(())
+    }
+
+    /// Resolve a called reference publication as error/timeout.
+    ///
+    /// Once exact bytes were exposed the outcome is ambiguous: the actor faults
+    /// and deliberately retains `PublishCalled`, so it cannot issue replacement
+    /// output in the same process. The cooperative publisher remains responsible
+    /// for not resubmitting copied bytes.
+    ///
+    /// # Errors
+    /// Returns [`PublicationError::StateMismatch`] if the token does not own the
+    /// current called slot.
+    pub fn mark_publish_returned_error(
+        &mut self,
+        called: PublishCalledPublication,
+    ) -> Result<(), PublicationError> {
+        if !Arc::ptr_eq(&self.publication_owner, &called.owner)
+            || self.publication_state
+                != (PublicationState::PublishCalled {
+                    decision_id: called.decision_id,
+                })
+        {
+            return Err(PublicationError::StateMismatch);
+        }
+        self.latch_fault("PUBLISH_RETURNED_ERROR_OR_TIMEOUT");
+        Ok(())
+    }
+
     /// Latch both representations of a terminal process fault and invalidate any
     /// in-flight authorization snapshot. Keeping this transition in one helper
     /// prevents the public process state from disagreeing with the enforcement
     /// latch.
     fn latch_fault(&mut self, reason: &'static str) {
         if !self.fault.is_latched() {
-            self.revision.bump();
+            let _ = self.revision.bump();
         }
         self.fault.latch(reason);
         self.process.latch_fault();
     }
 
     /// Detect a monotonic-clock regression (spec T5/B13, punch-list BUG-2). A
-    /// backward `now` while ACTIVE latches a fault and denies rather than extending
+    /// backward `now` while ACTIVE latches a fault and errors rather than extending
     /// a live lease's deadline; on success the last-seen instant is advanced.
     fn mono_ok(&mut self, now: MonoInstant) -> bool {
         if let Some(last) = self.last_seen_mono
@@ -524,7 +872,10 @@ impl VehicleActor {
         if self.replay.retire_active().is_err() {
             self.latch_fault("REPLAY_TOMBSTONE_FULL");
         }
-        self.revision.bump();
+        if self.revision.bump().is_none() {
+            self.latch_fault("AUTHORIZATION_REVISION_EXHAUSTED");
+            return;
+        }
         if self
             .process
             .transition(GateProcessStateV1::SessionBound)
@@ -594,10 +945,14 @@ impl VehicleActor {
     /// Accept a signed mission lease and become ACTIVE.
     ///
     /// # Errors
-    /// Returns a [`GateError`] if signature, admission, or acceptance fails.
+    /// Returns a [`GateError`] if a publication slot is unresolved or signature,
+    /// admission, or acceptance fails.
     pub fn accept_lease_env(&mut self, env: &[u8], now: MonoInstant) -> Result<(), GateError> {
         if self.fault.is_latched() {
             return Err(GateError::Faulted);
+        }
+        if self.publication_state != PublicationState::Idle {
+            return Err(GateError::PublicationPending);
         }
         if !self.mono_ok(now) {
             return Err(GateError::Faulted);
@@ -675,7 +1030,10 @@ impl VehicleActor {
         self.replay = ControllerReplayState::new(MAX_RETIRED);
         // Do not inherit a prior mission's slew reference into this lease.
         self.history.clear_slew_reference();
-        self.revision.bump();
+        if self.revision.bump().is_none() {
+            self.latch_fault("AUTHORIZATION_REVISION_EXHAUSTED");
+            return Err(GateError::Faulted);
+        }
         if self.process.transition(GateProcessStateV1::Active).is_err() {
             self.latch_fault("ACTIVATE_TRANSITION");
             return Err(GateError::Faulted);
@@ -735,8 +1093,7 @@ impl VehicleActor {
             } else {
                 DecisionOutcomeV1::Deny
             },
-            frame: None,
-            plant_command: None,
+            prepared_publication: None,
         }
     }
 
@@ -744,6 +1101,7 @@ impl VehicleActor {
     /// evidence spool. Journaling never changes the decision: an ALLOW is already
     /// committed to the returned frame, and a full spool drops only the export
     /// copy (a spool outage can never turn a DENY into an ALLOW).
+    #[must_use = "a decision may contain a prepared publication that must be resolved"]
     pub fn decide_intent(
         &mut self,
         env: &[u8],
@@ -751,12 +1109,12 @@ impl VehicleActor {
         now: MonoInstant,
     ) -> DecisionRecord {
         if let Some(record) = &self.terminal_decision {
-            return record.clone();
+            return record.to_record();
         }
         let record = self.decide_intent_inner(env, actual_key, now);
         let _ = self.evidence.append(&record.signed_receipt);
         if self.fault.reason() == Some("DECISION_ID_EXHAUSTED") {
-            self.terminal_decision = Some(record.clone());
+            self.terminal_decision = Some(TerminalDecisionRecord::from_record(&record));
         }
         record
     }
@@ -956,6 +1314,14 @@ impl VehicleActor {
         if !self.publication.authorizes_acl_only_publication() {
             return self.respond(&draft, R::DenyNoPublicationAuthority, now);
         }
+        if self.publication_state != PublicationState::Idle {
+            return self.respond(&draft, R::DenyOverload, now);
+        }
+        let Some(latest_call_at) =
+            now.checked_add_ms(u64::from(self.policy.publication_safety_margin_ms))
+        else {
+            return self.respond(&draft, R::DenyArithmeticOverflow, now);
+        };
         let out_seq = match self.output_stream.allocate() {
             Ok(s) => s,
             Err(_) => return self.respond(&draft, R::DenyOverload, now),
@@ -990,7 +1356,9 @@ impl VehicleActor {
             return self.respond(&draft, R::ErrorInternalFault, now);
         }
 
-        // Stage 13 — prepare plant command, update history (H7), emit ALLOW receipt
+        // Stage 13 — prepare an opaque publication token and emit ALLOW receipt.
+        // Published-command history is intentionally untouched until the caller
+        // reports a successful return from the modeled publication side effect.
         let plant_action = if frame.is_hold() {
             PlantAction::Hold
         } else {
@@ -1006,18 +1374,6 @@ impl VehicleActor {
             validity_ms: effective_validity_ms,
             output_frame_digest: frame.digest(),
         };
-        let window_start = MonoInstant::from_nanos(
-            now.as_nanos()
-                .saturating_sub(u64::from(self.policy.duty_window_ms) * 1_000_000),
-        );
-        let end = now
-            .checked_add_ms(u64::from(effective_validity_ms))
-            .unwrap_or(now);
-        match plant_action {
-            PlantAction::Hold => self.history.record_hold(now),
-            PlantAction::Velocity(v) => self.history.record_velocity(v, now, end, window_start),
-        }
-
         let mut receipt = draft.base();
         receipt.decision = DecisionOutcomeV1::Allow;
         // AllowPrepared, not AllowPublished: the Gate authorized and prepared the
@@ -1037,12 +1393,22 @@ impl VehicleActor {
         receipt.publish_stage = PublishStageV1::OutputPrepared;
 
         let signed = self.sign_receipt(&receipt);
+        self.publication_state = PublicationState::Prepared { decision_id };
         DecisionRecord {
             receipt,
             signed_receipt: signed,
             outcome: DecisionOutcomeV1::Allow,
-            frame: Some(frame),
-            plant_command: Some(plant_command),
+            prepared_publication: Some(PreparedPublication {
+                owner: Arc::clone(&self.publication_owner),
+                decision_id,
+                captured_revision: captured_rev,
+                state_snapshot_digest: state.canonical_digest(),
+                latest_call_at,
+                frame,
+                plant_command,
+                plant_action,
+                effective_validity_ms,
+            }),
         }
     }
 }
@@ -1097,6 +1463,30 @@ mod decision_id_tests {
             derive_decision_id(&second, 1)
         );
         assert_ne!(derive_decision_id(&first, 0), derive_decision_id(&first, 1));
+    }
+}
+
+#[cfg(test)]
+mod publication_horizon_tests {
+    use super::{PublicationError, checked_publication_horizon};
+    use haldir_core::time::MonoInstant;
+
+    #[test]
+    fn horizon_overflow_fails_instead_of_collapsing_to_zero_duty() {
+        let called_at = MonoInstant::from_nanos(u64::MAX - 500_000);
+        assert_eq!(
+            checked_publication_horizon(called_at, 1),
+            Err(PublicationError::ArithmeticOverflow)
+        );
+    }
+
+    #[test]
+    fn representable_horizon_is_exact() {
+        let called_at = MonoInstant::from_nanos(7);
+        assert_eq!(
+            checked_publication_horizon(called_at, 2),
+            Ok(MonoInstant::from_nanos(2_000_007))
+        );
     }
 }
 

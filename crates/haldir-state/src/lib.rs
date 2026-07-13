@@ -417,7 +417,7 @@ mod model {
     fn authorization_revision_bump_defeats_toctou() {
         let mut rev = RevisionCounter::new();
         let captured = rev.get();
-        rev.bump();
+        assert_eq!(rev.bump(), Some(2));
         assert_ne!(rev.get(), captured);
     }
 

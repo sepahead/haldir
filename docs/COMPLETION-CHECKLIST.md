@@ -8,8 +8,10 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 
 ## Authority
 
-- **YES** — Controller lacks every final plant-command credential. Controllers only
-  produce `HaldirIntentV1`; the modeled final frame is Gate-authored (`actor.rs`).
+- **PARTIAL** — In the modeled actor and retained synthetic ACL subset, controllers
+  produce only `HaldirIntentV1` and configured controller principals cannot publish the
+  final route; the final frame is Gate-authored. Runnable-service credential custody and
+  complete-mediation/bypass evidence remain absent.
 - **YES** — Gate alone originates final NCP frames (`haldir-ncp08`, `actor.rs` Stage 12).
 - **YES** — Mission lease, admission, policy, session, Gate output stream,
   controller intent stream, boot id, and ACL-exclusive publication are separate
@@ -24,20 +26,25 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 
 - **YES** — All Haldir authority objects canonical + signed (contracts + crypto).
 - **YES** — Parser/size limits before expensive work (ingress cap before verify).
-- **PARTIAL** — Actual route + principal bound: the actual key and application
-  signer are bound (`actor.rs` Stage 3); the *authenticated transport principal*
-  binding needs live mTLS (out of P0).
+- **PARTIAL** — Actual route + principal bound: the actual key and application signer
+  are bound in actor Stage 3, and the retained mTLS router campaign binds configured
+  certificate principals to its tested route subset. No runnable Gate passes an
+  authenticated transport identity into actor decisions.
 - **PARTIAL** — NCP stream/source/session semantics: the default Gate path remains
   modeled, while the optional exact-revision adapter passes upstream validated
   JSON, frozen-corpus, differential, and tamper tests (`CL-NCP-REAL-01`). Selecting
   that path in a live Gate/Crebain deployment remains outstanding.
-- **YES** — A retry is byte-identical and a new logical command is a new sequence
-  (`output_stream`, `haldir-ncp08` tests).
+- **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
+  a new sequence (`output_stream`, `haldir-ncp08` tests). There is no runnable retry
+  coordinator; reported post-call errors deliberately block actor-issued replacement,
+  while the cooperative publisher remains trusted not to resubmit copied bytes.
 
 ## Policy
 
 - **YES** — Policy is pure, fixed-point, deterministic, bounded, profile-specific.
-- **YES** — Stale/missing state and arithmetic errors are deny paths.
+- **YES** — Inside policy/`decide_intent`, stale/missing state and arithmetic errors are
+  no-output deny/error paths. Later publication-transition failures are separately
+  classified and never rewrite the signed prepared receipt.
 - **YES** — Limits intersected, not overwritten (lease ∩ policy).
 - **N/A** — Cedar is not enabled in P0 (native policy only).
 
@@ -57,12 +64,15 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 
 ## Evidence and operations
 
-- **YES** — Decisions reconstructable from bounded signed-shape events; digest
-  domains separated; `UNKNOWN_AFTER_PUBLISH` for crash tails.
+- **PARTIAL** — Decisions are reconstructable from bounded Gate-signed receipts and
+  digest-separated domains. `UNKNOWN_AFTER_PUBLISH` exists in the shared vocabulary,
+  but publication stages are not yet durably appended/reduced across crash tails.
 - **YES** — Evidence storage bounded; tamper/chain-break detected; full-spool drop
   never flips a decision.
-- **NO (out of P0)** — Live mTLS/ACL delivery matrix; p99/p99.9 latency; long-run
-  resource campaign.
+- **PARTIAL** — The retained live mTLS/ACL campaign proves only the pinned synthetic
+  command/intent subset (`CL-LIVE-TRANSPORT-01`). The remaining operation/route and
+  certificate-lifecycle matrix, p99/p99.9 latency, and long-run resource campaign are
+  still absent.
 - **PARTIAL** — Exact commits/lockfile pinned and `pins.toml`/`verify-pins.py`
   present; SBOM/provenance/reproducible-release is a release-phase task.
 - **YES** — Every push was normal and non-forced.

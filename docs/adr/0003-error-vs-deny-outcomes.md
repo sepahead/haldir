@@ -11,13 +11,15 @@ failing. Both must produce no output, but they mean very different things.
 
 ## Decision
 
-Route every no-output result through a single `respond()` helper keyed on whether
+Inside `decide_intent`, route every pre-preparation no-output result through a single `respond()` helper keyed on whether
 the reason code is an internal-fault code. Authorization refusals (bad signature,
 scope mismatch, expired lease, policy denial, rate limit) yield `DecisionOutcomeV1::Deny`
 with a `DECIDED_DENY` stage. Internal faults (fault latch, monotonic-clock
-regression, TOCTOU revision change, NCP build/validate failure, namespace/counter
+regression, an in-decision TOCTOU revision change, NCP build/validate failure, namespace/counter
 exhaustion) yield `DecisionOutcomeV1::Error` with a `DECIDED_ERROR` stage and an
 `ERROR_*` reason. Both paths still sign a receipt and emit no plant command.
+Publication-transition failures occur after the signed `AllowPrepared` receipt and
+are governed separately by `CL-PUBLICATION-STATE-01`; they do not rewrite that receipt.
 
 ## Consequences
 

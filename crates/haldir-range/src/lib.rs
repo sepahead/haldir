@@ -392,12 +392,24 @@ mod range {
         }
     }
 
-    /// Ingest a Gate-authored command into a fresh reference plant and run it.
+    /// Explicitly cross the modeled publication boundary, ingest the Gate-authored
+    /// command into a fresh reference plant, resolve local success, and run it.
     #[must_use]
-    pub fn drive_plant(record: &DecisionRecord, ticks: u64) -> Option<ReferencePlant> {
-        let cmd = record.plant_command.clone()?;
+    pub fn drive_plant(
+        actor: &mut VehicleActor,
+        record: DecisionRecord,
+        published_at: MonoInstant,
+        ticks: u64,
+    ) -> Option<ReferencePlant> {
+        let prepared = record.into_prepared_publication()?;
+        let called = actor.mark_publish_called(prepared, published_at).ok()?;
+        let cmd = called.reference_plant_command().clone();
         let mut plant = ReferencePlant::new(PlantConfig::default());
-        plant.ingest(cmd).ok()?;
+        if plant.ingest(cmd).is_err() {
+            let _ = actor.mark_publish_returned_error(called);
+            return None;
+        }
+        actor.mark_publish_returned_ok(called, published_at).ok()?;
         plant.run(ticks);
         Some(plant)
     }
@@ -411,10 +423,9 @@ mod range {
         /// Assert a decision denied and produced no plant application capability.
         fn assert_denied(rec: &DecisionRecord) {
             assert_eq!(rec.outcome, DecisionOutcomeV1::Deny);
-            assert!(rec.plant_command.is_none(), "deny must produce no output");
             assert!(
-                drive_plant(rec, 10).is_none(),
-                "no plant application on deny"
+                !rec.has_prepared_publication(),
+                "deny must produce no publication capability"
             );
         }
 
@@ -424,7 +435,8 @@ mod range {
             let env = s.sign(&s.intent(1, velocity(400)));
             let rec = s.decide(&env, INTENT_KEY);
             assert_eq!(rec.outcome, DecisionOutcomeV1::Allow);
-            let mut plant = drive_plant(&rec, 15).expect("plant driven");
+            let published_at = s.now;
+            let mut plant = drive_plant(&mut s.actor, rec, published_at, 15).expect("plant driven");
             assert!(
                 plant
                     .events()
@@ -481,15 +493,25 @@ mod range {
             let mut s = RangeScenario::new();
             // first intent must be sequence one, then a gap is allowed
             let env1 = s.sign(&s.intent(1, velocity(400)));
-            assert_eq!(
-                s.decide(&env1, INTENT_KEY).outcome,
-                DecisionOutcomeV1::Allow
-            );
+            let first = s.decide(&env1, INTENT_KEY);
+            assert_eq!(first.outcome, DecisionOutcomeV1::Allow);
+            s.actor
+                .cancel_prepared_publication(
+                    first
+                        .into_prepared_publication()
+                        .expect("first output prepared"),
+                )
+                .expect("first output cancelled before the next decision");
             let env3 = s.sign(&s.intent(3, velocity(400)));
-            assert_eq!(
-                s.decide(&env3, INTENT_KEY).outcome,
-                DecisionOutcomeV1::Allow
-            );
+            let third = s.decide(&env3, INTENT_KEY);
+            assert_eq!(third.outcome, DecisionOutcomeV1::Allow);
+            s.actor
+                .cancel_prepared_publication(
+                    third
+                        .into_prepared_publication()
+                        .expect("third output prepared"),
+                )
+                .expect("third output cancelled before the stale decision");
             // a now-lower sequence (2 <= last_seq 3) is stale
             let env2 = s.sign(&s.intent(2, velocity(400)));
             assert_denied(&s.decide(&env2, INTENT_KEY));

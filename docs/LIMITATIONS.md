@@ -51,6 +51,19 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   still selects the dependency-light modeled adapter, and no Zenoh transport is wired
   to the actor or plant. Exact wire conformance therefore does not prove runtime
   publication, acceptance, application, or ACL exclusivity.
+- **Publication typestate is modeled and in-memory.** The reference actor now keeps
+  one explicit `Idle -> Prepared -> PublishCalled` slot. Prepared output is opaque and
+  non-cloneable; exact bytes become accessible only after the actor rechecks authority,
+  causal state, the safety-margin deadline, and checked active-horizon arithmetic.
+  Preparation/cancellation does not charge published-command history; caller-reported
+  modeled returned-ok charges it once, and a reported error/timeout consumes the
+  resolver, fault-latches, and blocks actor-issued replacement output
+  (`CL-PUBLICATION-STATE-01`). The transition is not yet appended to the durable evidence
+  manager, a dropped token requires process recovery, and the actor cannot prove that a
+  caller actually invoked transport, invoked it only once, refrained from copying/resubmitting
+  exposed bytes, or that a receiver accepted the frame. Crash recovery
+  of a dangling call as `UnknownAfterPublish` remains unimplemented, so this is not a
+  durable publication or delivery claim.
 - **NEST / Engram controllers.** No neural runtime is present. Admission checks
   digest equality only; **no backend behavioural conformance** (running NEST /
   Norse / Rockpool / XyloSim) is performed. Admission levels A1–A6 are structural

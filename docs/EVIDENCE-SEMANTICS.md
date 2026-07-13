@@ -5,6 +5,9 @@
 Publication is never atomic with a receipt, so evidence uses stages, not a false
 `executed` flag. `PublishStageV1` (in `haldir-contracts`) defines the vocabulary,
 including `UNKNOWN_AFTER_PUBLISH` for a crash between publish and acknowledgement.
+The P0 actor does not yet durably append or recover publication-stage transitions,
+so it cannot yet emit that crash-tail stage; the enum is the shared vocabulary for
+the later durable reducer, not evidence that reducer already exists.
 
 ## Each producer signs only what it observed
 
@@ -38,4 +41,6 @@ remote collector. The spool is not a lossy transport plane.
   `accepted` / `applied`.
 - `applied` and `observed response` are reference-plant model values in P0.
 - A signed receipt does not prove physical actuation.
-- Ambiguous crash tails are represented as `UNKNOWN_AFTER_PUBLISH`, not guessed.
+- A future durable reducer must represent ambiguous crash tails as
+  `UNKNOWN_AFTER_PUBLISH`, not guess; the current in-memory actor fault-latches an
+  explicitly reported error/timeout but cannot recover a process-crash tail.

@@ -15,8 +15,9 @@ pub struct PublishedInterval {
 }
 
 /// Bounded history the policy consults for slew and duty. The gate updates it
-/// only at output allocation (H7): the slew reference is the last **published**
-/// command, never the last requested/denied one.
+/// only after the caller reports modeled publication returned-ok (H7): the slew
+/// reference is the last **published** command, never the last
+/// requested/denied/prepared one.
 ///
 /// `active_intervals` is kept as a sorted set of **disjoint** intervals — the
 /// union of the possibly-active published non-hold horizons (H-P02/H-P03).
