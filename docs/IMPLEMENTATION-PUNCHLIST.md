@@ -53,22 +53,26 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   wrapper derives a Gate-bound ID from checked counter + injected entropy, persists the
   last ID, rejects a mismatched authenticated Gate binding, and returns a non-cloneable
   booted-store capability only after commit; the actor's recovered constructor consumes
-  that capability and requires its boot ID in configuration. **Not wired
-  in P0:** no runnable startup provisions/selects an external anchor, so end-to-end
-  cross-restart protection is not established (see `docs/LIMITATIONS.md`).
+  that capability and requires its boot ID in configuration. The startup library now
+  validates profile/entropy before durable access, retains the instance lock, and
+  explicitly provisions or opens development-local state. **Still absent:** a service
+  package and deployed external non-rewindable anchor, so end-to-end cross-restart
+  protection is not established (see `docs/LIMITATIONS.md`).
 - `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,
-  separate-key authenticated snapshots, external-anchor reconciliation, Unix
+  an unambiguous versioned `(logical issuer, vehicle)` term namespace with a
+  conservative legacy-scope upgrade read, separate-key authenticated snapshots,
+  generation-anchor reconciliation, anchor assurance classification, Unix
   temp→file-sync→rename→directory-sync mechanics, and Gate injection/fault latching
-  are unit tested. **Not wired in P0:** runnable startup selection, a deployed external
-  non-rewindable anchor, and child-process crash evidence; therefore the live Gate still
+  are unit tested. Development-local startup is wired, but a deployed external
+  non-rewindable anchor and child-process crash evidence are absent; therefore the Gate still
   cannot claim cross-restart protection.
 - `[~]` **B13** Monotonic-clock regression while ACTIVE now coherently latches both
   enforcement and public process state as `FAULT_LATCHED`. P0 receives a supplied
   `MonoInstant`; real clock-read failure handling belongs to the future runtime.
 - `[x]` **B14** Evidence outage never turns DENY into ALLOW (direction test).
-  A bounded signed-segment/tail-recovery primitive is also unit tested, but the
-  Gate does not select it and no runtime crash/disk-full campaign exists
-  (`CL-EVIDENCE-SEGMENT-PRIMITIVE-01`, `CL-DURABLE-01`).
+  A bounded, locked signed-segment directory manager is also unit tested, but the
+  Gate actor does not select it and no runtime crash/disk-full campaign exists
+  (`CL-EVIDENCE-MANAGER-01`, `CL-DURABLE-01`).
 - `[x]` **B15** Reference plant has exactly one command ingress; zero application from any
   non-Gate principal; safe action is plant-owned (Gate only requests).
 
@@ -96,11 +100,12 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   `state_snapshot_digest` (per-kind prefix so digest domains cannot collide).
 - `[x]` **H11** Structural limits enforced DURING decode; strict ASCII security IDs; reject
   seq 0 / malformed UUID.
-- `[~]` **H12** Lease acceptance commits through an injected term-store interface before
-  consuming the challenge or exposing ACTIVE state; an unavailable durable commit
-  latches `FAULT_LATCHED` and grants no lease. The default P0 constructor remains
-  in-memory, and runnable durable provisioning plus crash recovery are not implemented
-  (`CL-DURABLE-01`).
+- `[~]` **H12** Lease acceptance reads the maximum of the canonical and legacy term
+  namespaces, then commits through an injected term-store interface before consuming
+  the challenge or exposing ACTIVE state; an unavailable durable commit latches
+  `FAULT_LATCHED` and grants no lease. The default P0 constructor remains
+  in-memory. An explicit development-local startup path exists, but the deployed external
+  anchor and crash campaign required by `CL-DURABLE-01` do not.
 - `[x]` **H13** Wall-clock jumps don't move a live lease deadline; far-future `controller_t_ns`
   no effect; `controller_t_ns` never becomes final `t`.
 - `[x]` **H14** Handoff changes only mission authority; Gate keeps its own output epoch/seq.

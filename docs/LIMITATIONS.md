@@ -65,11 +65,27 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   `begin_boot` verifies the authenticated Gate binding and durably commits a fresh
   `BootContext`; the configured boot ID must match that capability. Lease terms commit
   through the injected store before authority becomes active, and an unavailable commit
-  terminally faults the actor. The HMAC/envelope/anchor mechanism,
+  terminally faults the actor. The term namespace is versioned canonical CBOR over the
+  logical issuer ID and vehicle ID, with the old delimiter-based namespace retained as
+  a conservative read-only migration floor. Realm, Gate incarnation, session/output
+  epoch, and issuer signing-key ID do not reset that high-water within one store. Because
+  the next write upgrades the durable payload shape to v2, a pre-v2 executable rejects
+  the rewritten state instead of silently falling back to the stale legacy floor.
+  Operational rollback must still restore a compatible binary and its authenticated
+  state as one reviewed unit. Durable stores are provisioned and authenticated for one
+  Gate ID, so no cross-store or
+  cross-Gate transfer of a vehicle's high-water is implemented or claimed. Changing the
+  logical issuer ID selects a new namespace; this state primitive does not authorize or
+  prove a mission-authority identity migration. The
+  HMAC/envelope/anchor mechanism,
   Unix atomic-file backend, boot-ID binding/repeat latch, durable anti-rollback wrapper,
-  injection checks, and failure ordering are unit tested (`CL-DURABLE-PRIMITIVE-01`).
-  No runnable service provisions the storage key, entropy, file path, or an external
-  non-rewindable anchor, and no child-process kill matrix has established old-or-new
+  injection checks, failure ordering, and explicit development-local startup are unit
+  tested (`CL-DURABLE-PRIMITIVE-01`, `CL-DURABLE-STARTUP-DEV-01`). The local anchor is
+  checksummed but unauthenticated, rewritable with the snapshot, and classified
+  `LocalRewritable`; interrupted two-backend genesis provisioning fails closed and needs
+  operator repair (`CL-LOCAL-ANCHOR-DEV-01`). No service package loads/protects the
+  storage key or selects a deployed external non-rewindable anchor, and no child-process
+  kill matrix has established old-or-new
   behavior under actual crashes. Therefore end-to-end **cross-restart** rollback
   protection of B11/B12 remains **NOT established**.
 - **Filesystem/platform durability scope.** `AtomicFileSnapshot` uses a same-directory
@@ -79,22 +95,27 @@ be represented as *validated*, *secure*, *complete-mediation*, or *hardware*.
   safe path-based standard-library APIs, and does not claim macOS `F_FULLFSYNC`,
   power-loss, network/FAT/overlay filesystem, or adversarial directory-rewind
   guarantees. A same-filesystem anchor cannot close `CL-DURABLE-01`.
-- **Durable evidence segment primitive is not the Gate journal.**
+- **Durable evidence manager is not selected by the Gate actor.**
   `haldir-evidence::journal` unit-tests a bounded Unix segment format with
   CRC32C-framed opaque records, Gate/boot/key/sequence/previous-digest headers,
   checked genesis/successor construction, signed segment-content digests,
   Ed25519 footers, strict completed-corruption rejection,
   and truncation of only an insufficient final record/footer tail
-  (`CL-EVIDENCE-SEGMENT-PRIMITIVE-01`). It assumes one writer and a trusted local
-  parent directory. Directory discovery, cross-file chain recovery, global retention,
-  locking, and trust-store resolution of the header KID/public key require the
-  manager layer. The actor still uses its in-process spool; it does not select,
-  rotate, reserve capacity within, or emit recovery/loss-summary events through
-  this file primitive, and no child-process crash/disk-full campaign exists.
+  (`CL-EVIDENCE-SEGMENT-PRIMITIVE-01`). The manager adds explicit provision/open,
+  a retained checked lock, strict chain discovery, injected signer/record verification,
+  old-tail signer recovery, rotation, global caps, and exact-record retry queries
+  (`CL-EVIDENCE-MANAGER-01`). It still assumes one writer and a trusted local parent
+  directory; it has no Gate `TrustStore` policy adapter, automatic retention, OS fault-
+  injection/child-process crash proof, or power-loss claim. The actor still uses its
+  in-process spool and does not select this manager or emit recovery/loss-summary events,
+  and no child-process crash/disk-full campaign exists.
   Therefore evidence crash durability remains unproven under `CL-DURABLE-01`.
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,
-  key binding, and any future NCP lease's session/output epoch (`CL-CONFIG-01`).
+  key binding, and any future NCP lease's session/output epoch (`CL-CONFIG-01`). The
+  startup library additionally permits only the current ACL profile, but it accepts an
+  already-constructed evidence value; it does not load or verify a live ACL package
+  (`CL-DURABLE-STARTUP-DEV-01`).
   The current ACL-only evidence type carries no session/output epoch or expected
   route/principal digest, so configuration validation cannot establish live final-key
   exclusivity; that remains `CL-LIVE-TRANSPORT-01`.
