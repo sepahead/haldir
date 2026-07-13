@@ -172,29 +172,14 @@ impl GateConfig {
     /// Gate receipt signer is not bound to its trusted identity and key, or a
     /// future NCP publication lease is scoped to another session or output epoch.
     pub fn validate(&self) -> Result<(), GateConfigError> {
-        if self.local_cap_ms == 0 {
-            return Err(GateConfigError::LocalCapZero);
-        }
-
-        let signer_record = self
-            .trust
-            .resolve(&self.gate_signer_kid)
-            .ok_or(GateConfigError::GateSignerKidUnknown)?;
-        if self.revocations.is_key_revoked(&self.gate_signer_kid) {
-            return Err(GateConfigError::GateSignerKidRevoked);
-        }
-        if signer_record.role != KeyRole::GateApplication {
-            return Err(GateConfigError::GateSignerRoleMismatch);
-        }
-        if signer_record.class != KeyClass::Assurance {
-            return Err(GateConfigError::GateSignerNotAssurance);
-        }
-        if signer_record.subject.as_deref() != Some(self.gate_id.as_str()) {
-            return Err(GateConfigError::GateSignerSubjectMismatch);
-        }
-        if signer_record.verifying_key.to_bytes() != self.gate_signer.verifying_key().to_bytes() {
-            return Err(GateConfigError::GateSignerPublicKeyMismatch);
-        }
+        validate_static_config(
+            &self.gate_id,
+            &self.trust,
+            &self.revocations,
+            self.local_cap_ms,
+            &self.gate_signer,
+            &self.gate_signer_kid,
+        )?;
 
         if let PlantPublicationAuthorityStateV1::NcpLeaseV1(lease) = &self.publication {
             if lease.session != self.session {
@@ -207,6 +192,40 @@ impl GateConfig {
 
         Ok(())
     }
+}
+
+pub(crate) fn validate_static_config(
+    gate_id: &GateId,
+    trust: &TrustStore,
+    revocations: &RevocationSnapshot,
+    local_cap_ms: u32,
+    gate_signer: &SigningKey,
+    gate_signer_kid: &KeyId,
+) -> Result<(), GateConfigError> {
+    if local_cap_ms == 0 {
+        return Err(GateConfigError::LocalCapZero);
+    }
+
+    let signer_record = trust
+        .resolve(gate_signer_kid)
+        .ok_or(GateConfigError::GateSignerKidUnknown)?;
+    if revocations.is_key_revoked(gate_signer_kid) {
+        return Err(GateConfigError::GateSignerKidRevoked);
+    }
+    if signer_record.role != KeyRole::GateApplication {
+        return Err(GateConfigError::GateSignerRoleMismatch);
+    }
+    if signer_record.class != KeyClass::Assurance {
+        return Err(GateConfigError::GateSignerNotAssurance);
+    }
+    if signer_record.subject.as_deref() != Some(gate_id.as_str()) {
+        return Err(GateConfigError::GateSignerSubjectMismatch);
+    }
+    if signer_record.verifying_key.to_bytes() != gate_signer.verifying_key().to_bytes() {
+        return Err(GateConfigError::GateSignerPublicKeyMismatch);
+    }
+
+    Ok(())
 }
 
 /// The per-vehicle decision actor.

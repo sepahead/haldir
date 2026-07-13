@@ -27,5 +27,6 @@ haldir-ncp08.workspace = true
 haldir-reference-plant.workspace = true
 haldir-evidence.workspace = true
 haldir-durable.workspace = true
+getrandom.workspace = true
 
 [dev-dependencies]

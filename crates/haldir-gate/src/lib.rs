@@ -19,12 +19,18 @@
 )]
 
 pub mod actor;
+pub mod startup;
 
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub use actor::{
     DecisionRecord, GateConfig, GateConfigError, GateError, GateStartupError, VehicleActor,
+};
+pub use startup::{
+    DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, LocalStartupConfig,
+    OsEntropy, RunningGate, StartupProfile, StartupReport, StartupStateConfig, StateOpenMode,
+    start_local, start_with_backends,
 };
 
 #[cfg(test)]

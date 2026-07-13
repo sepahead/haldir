@@ -214,6 +214,7 @@ dependencies = [
 name = "haldir-gate"
 version = "0.1.0-experimental"
 dependencies = [
+ "getrandom 0.2.17",
  "haldir-admission",
  "haldir-contracts",
  "haldir-core",
