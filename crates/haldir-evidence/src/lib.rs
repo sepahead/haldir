@@ -21,6 +21,7 @@
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 
 pub mod journal;
+pub mod manager;
 
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

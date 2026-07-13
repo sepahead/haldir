@@ -1,0 +1,1589 @@
+//! Bounded single-writer directory orchestration for evidence segments.
+//!
+//! The manager owns the directory lock, verifies the complete on-disk chain,
+//! closes a recovered prior-boot tail, and rotates segments without retrying a
+//! record after an ambiguous commit. It inherits the segment primitive's narrow
+//! Unix process-crash scope; it does not claim power-loss durability or an
+//! external non-rewindable witness.
+
+use core::num::NonZeroU64;
+use haldir_contracts::ids::{GateBootId, GateId, KeyId};
+use haldir_crypto::{SigningKey, VerifyingKey};
+use sha2::{Digest, Sha256};
+use std::collections::BTreeSet;
+use std::ffi::OsStr;
+use std::fs::{self, File, OpenOptions, TryLockError};
+use std::path::{Path, PathBuf};
+
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
+
+use crate::journal::{
+    ActiveEvidenceSegment, CompletedSegment, JournalBounds, JournalError, OpenRecoveryStatus,
+    PENDING_CREATION_PREFIX, RecoveredEvidenceSegment, SegmentIdentity,
+};
+
+const LOCK_FILE_NAME: &str = ".haldir-evidence.lock";
+const SEGMENT_PREFIX: &str = "segment-";
+const SEGMENT_DIGITS: usize = 20;
+const RECORD_DIGEST_DOMAIN: &[u8] = b"haldir.evidence.record-digest.v1\0";
+
+/// Stable digest of one exact opaque evidence envelope.
+///
+/// The manager rejects the same bytes twice across the complete retained
+/// journal. After an ambiguous append or process crash, callers can recompute
+/// this value and query the recovered manager before deciding whether to retry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EvidenceRecordDigest([u8; 32]);
+
+impl EvidenceRecordDigest {
+    /// Domain-separated digest of the exact record bytes.
+    #[must_use]
+    pub fn compute(record: &[u8]) -> Self {
+        let mut hasher = Sha256::new();
+        hasher.update(RECORD_DIGEST_DOMAIN);
+        hasher.update(
+            u64::try_from(record.len())
+                .unwrap_or(u64::MAX)
+                .to_be_bytes(),
+        );
+        hasher.update(record);
+        Self(hasher.finalize().into())
+    }
+
+    /// Digest bytes for persistence or comparison by an orchestrator.
+    #[must_use]
+    pub const fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+/// Verification failure reported by a journal consumer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum JournalVerificationError {
+    /// The header signer was not trusted for this segment identity.
+    UnknownSigner,
+    /// An opaque record failed the consumer's canonical/signature validation.
+    InvalidRecord,
+}
+
+/// Resolves segment signing keys and validates every opaque record.
+pub trait JournalVerifier {
+    /// Resolve the header identity to its trusted verifying key.
+    fn resolve_signer(
+        &self,
+        identity: &SegmentIdentity,
+    ) -> Result<VerifyingKey, JournalVerificationError>;
+
+    /// Validate one recovered or newly submitted opaque record.
+    fn validate_record(
+        &self,
+        identity: &SegmentIdentity,
+        record: &[u8],
+    ) -> Result<(), JournalVerificationError>;
+}
+
+/// Directory-manager failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum JournalManagerError {
+    /// A segment primitive operation failed.
+    Journal(JournalError),
+    /// Consumer key or record validation failed.
+    Verification(JournalVerificationError),
+    /// Another manager retains the directory's exclusive lock.
+    LockHeld,
+    /// Existing journal state was required but absent.
+    Missing,
+    /// Provisioning was requested for a directory that already held state.
+    AlreadyProvisioned,
+    /// Initial segment publication was interrupted and requires operator repair.
+    IncompleteProvisioning,
+    /// The directory path or an I/O operation failed.
+    Storage,
+    /// A directory entry was not the lock file or a canonical segment filename.
+    UnexpectedEntry,
+    /// Two headers claimed the same segment sequence.
+    DuplicateSequence,
+    /// A sequence advanced beyond the next required value.
+    SequenceGap,
+    /// A sequence or previous digest rewound to older completed state.
+    Rewind,
+    /// The previous digest did not name the immediately preceding segment.
+    Fork,
+    /// More than one open segment, or an open segment before the tail, was found.
+    MultipleActive,
+    /// A segment claimed another Gate identity.
+    GateMismatch,
+    /// An open recovered tail had no supplied matching historical signer.
+    TailSignerUnavailable,
+    /// The configured global journal limit has quiesced further appends.
+    Quiesced,
+    /// A commit-ambiguous operation requires full recovery before reuse.
+    Poisoned,
+    /// The exact record bytes already exist in the retained journal.
+    DuplicateRecord,
+    /// An append-related write may or may not have committed these exact bytes.
+    /// Reopen and query [`EvidenceJournalManager::contains_record`] before retrying.
+    AppendCommitAmbiguous {
+        /// Digest of the exact attempted record bytes.
+        record_digest: EvidenceRecordDigest,
+    },
+    /// The checked segment-sequence namespace is exhausted.
+    SequenceExhausted,
+}
+
+impl From<JournalError> for JournalManagerError {
+    fn from(error: JournalError) -> Self {
+        Self::Journal(error)
+    }
+}
+
+impl From<JournalVerificationError> for JournalManagerError {
+    fn from(error: JournalVerificationError) -> Self {
+        Self::Verification(error)
+    }
+}
+
+/// Whole-journal limits. Completed segments are never deleted automatically.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JournalLimits {
+    segment: JournalBounds,
+    max_segments: usize,
+    max_total_bytes: u64,
+}
+
+impl JournalLimits {
+    /// Construct nonzero global limits around one segment profile.
+    ///
+    /// # Errors
+    /// Returns [`JournalManagerError::Quiesced`] for unusable limits.
+    pub fn new(
+        segment: JournalBounds,
+        max_segments: usize,
+        max_total_bytes: u64,
+    ) -> Result<Self, JournalManagerError> {
+        if max_segments == 0 || max_total_bytes == 0 {
+            return Err(JournalManagerError::Quiesced);
+        }
+        Ok(Self {
+            segment,
+            max_segments,
+            max_total_bytes,
+        })
+    }
+
+    /// Per-segment bounds.
+    #[must_use]
+    pub const fn segment(self) -> JournalBounds {
+        self.segment
+    }
+}
+
+/// Gate application signer bound into newly created segment headers.
+pub struct JournalSigner {
+    kid: KeyId,
+    key: SigningKey,
+}
+
+/// Identity, time, and bounds for opening the journal for one Gate boot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JournalOpenOptions {
+    gate_id: GateId,
+    gate_boot_id: GateBootId,
+    created_mono_ns: u64,
+    limits: JournalLimits,
+}
+
+impl JournalOpenOptions {
+    /// Describe the current boot and the complete directory limits.
+    #[must_use]
+    pub const fn new(
+        gate_id: GateId,
+        gate_boot_id: GateBootId,
+        created_mono_ns: u64,
+        limits: JournalLimits,
+    ) -> Self {
+        Self {
+            gate_id,
+            gate_boot_id,
+            created_mono_ns,
+            limits,
+        }
+    }
+}
+
+impl JournalSigner {
+    /// Bind a key identifier to its private signing key.
+    #[must_use]
+    pub fn new(kid: KeyId, key: SigningKey) -> Self {
+        Self { kid, key }
+    }
+}
+
+/// Deterministic result of opening and reconciling a journal directory.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JournalRecoveryReport {
+    /// Segment files discovered before recovery created the current tail.
+    pub discovered_segments: usize,
+    /// Completed segments after any recovered tail was closed.
+    pub completed_segments: usize,
+    /// Complete records validated while recovering existing segments.
+    pub recovered_records: u64,
+    /// Bytes removed from an insufficient final frame/footer tail.
+    pub truncated_tail_bytes: u64,
+    /// Whether recovery closed an open prior tail before starting this boot.
+    pub closed_active_tail: bool,
+    /// Whether recovery discarded one unpublished atomic-creation artifact.
+    pub discarded_pending_creation: bool,
+    /// New active sequence, absent when global limits caused quiescence.
+    pub active_sequence: Option<NonZeroU64>,
+    /// Actual segment bytes after recovery and current-tail creation.
+    pub total_bytes: u64,
+    /// Whether global limits prevent further mutation.
+    pub quiesced: bool,
+}
+
+/// Single-writer bounded evidence journal.
+pub struct EvidenceJournalManager<V> {
+    directory: PathBuf,
+    _lock_file: File,
+    verifier: V,
+    signer: JournalSigner,
+    gate_id: GateId,
+    gate_boot_id: GateBootId,
+    limits: JournalLimits,
+    active: Option<ActiveEvidenceSegment>,
+    last_completed: Option<CompletedSegment>,
+    segment_count: usize,
+    total_bytes: u64,
+    record_digests: BTreeSet<EvidenceRecordDigest>,
+    poisoned: bool,
+    quiesced: bool,
+}
+
+impl<V: JournalVerifier> EvidenceJournalManager<V> {
+    /// Explicitly provision an empty dedicated directory and create genesis.
+    ///
+    /// Existing segment, lock, or interrupted-publication state is never
+    /// overwritten or adopted as a fresh journal.
+    ///
+    /// # Errors
+    /// Returns [`JournalManagerError::AlreadyProvisioned`] for any existing
+    /// journal state, or another validation/storage error.
+    pub fn provision_new(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: JournalSigner,
+        verifier: V,
+    ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
+        Self::open_inner(
+            directory.into(),
+            OpenMode::ProvisionNew,
+            options,
+            signer,
+            None,
+            verifier,
+        )
+    }
+
+    /// Open, verify, and recover an existing dedicated journal directory.
+    ///
+    /// Any recovered open tail is validated and footer-completed only with the
+    /// separately supplied historical signer when its KID and public key match
+    /// exactly. An unpublished atomic-creation artifact may be discarded; the
+    /// manager never deletes completed segments or repairs gaps/forks.
+    ///
+    /// # Errors
+    /// Returns on lock contention, unexpected entries, chain/identity failure,
+    /// invalid records/signers, storage failure, or ambiguous tail completion.
+    pub fn open_existing(
+        directory: impl Into<PathBuf>,
+        options: JournalOpenOptions,
+        signer: JournalSigner,
+        recovered_tail_signer: Option<&JournalSigner>,
+        verifier: V,
+    ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
+        Self::open_inner(
+            directory.into(),
+            OpenMode::OpenExisting,
+            options,
+            signer,
+            recovered_tail_signer,
+            verifier,
+        )
+    }
+
+    fn open_inner(
+        directory: PathBuf,
+        mode: OpenMode,
+        options: JournalOpenOptions,
+        signer: JournalSigner,
+        recovered_tail_signer: Option<&JournalSigner>,
+        verifier: V,
+    ) -> Result<(Self, JournalRecoveryReport), JournalManagerError> {
+        let JournalOpenOptions {
+            gate_id,
+            gate_boot_id,
+            created_mono_ns,
+            limits,
+        } = options;
+        let directory = prepare_directory(directory, mode)?;
+        let lock_file = lock_directory(&directory, mode)?;
+        let (entries, pending_creation) = discover_segments(&directory, limits.max_segments)?;
+        match mode {
+            OpenMode::ProvisionNew if !entries.is_empty() || pending_creation.is_some() => {
+                return Err(JournalManagerError::AlreadyProvisioned);
+            }
+            OpenMode::OpenExisting if entries.is_empty() && pending_creation.is_some() => {
+                return Err(JournalManagerError::IncompleteProvisioning);
+            }
+            OpenMode::OpenExisting if entries.is_empty() => {
+                return Err(JournalManagerError::Missing);
+            }
+            _ => {}
+        }
+        let discarded_pending_creation = if let Some(path) = pending_creation {
+            fs::remove_file(path).map_err(|_| JournalManagerError::Storage)?;
+            sync_directory(&directory)?;
+            true
+        } else {
+            false
+        };
+        let discovered_segments = entries.len();
+        let mut seen_sequences = BTreeSet::new();
+        let mut completed_digests = BTreeSet::new();
+        let mut expected_sequence = 1u64;
+        let mut completed_segments = 0usize;
+        let mut recovered_records = 0u64;
+        let mut truncated_tail_bytes = 0u64;
+        let mut total_bytes = 0u64;
+        let mut last_completed: Option<CompletedSegment> = None;
+        let mut recovered_active: Option<(ActiveEvidenceSegment, OpenRecoveryStatus)> = None;
+        let mut record_digests = BTreeSet::new();
+
+        for (index, entry) in entries.iter().enumerate() {
+            let identity = ActiveEvidenceSegment::inspect_identity(&entry.path, limits.segment)?;
+            if identity.gate_id != gate_id {
+                return Err(JournalManagerError::GateMismatch);
+            }
+            let header_sequence = identity.segment_sequence.get();
+            if !seen_sequences.insert(header_sequence) {
+                return Err(JournalManagerError::DuplicateSequence);
+            }
+            classify_sequence(entry.sequence, expected_sequence)?;
+            classify_sequence(header_sequence, expected_sequence)?;
+            if entry.sequence != header_sequence {
+                return Err(if header_sequence < entry.sequence {
+                    JournalManagerError::Rewind
+                } else {
+                    JournalManagerError::SequenceGap
+                });
+            }
+
+            match &last_completed {
+                None if identity.previous_completed_digest != [0; 32] => {
+                    return Err(JournalManagerError::Fork);
+                }
+                Some(previous)
+                    if identity.previous_completed_digest != previous.segment_digest() =>
+                {
+                    if completed_digests.contains(&identity.previous_completed_digest) {
+                        return Err(JournalManagerError::Rewind);
+                    }
+                    return Err(JournalManagerError::Fork);
+                }
+                _ => {}
+            }
+
+            let verifying_key = verifier.resolve_signer(&identity)?;
+            if verifying_key.to_bytes() != identity.signer_public_key {
+                return Err(JournalManagerError::Verification(
+                    JournalVerificationError::UnknownSigner,
+                ));
+            }
+            let recovered = ActiveEvidenceSegment::recover(
+                &entry.path,
+                &identity,
+                limits.segment,
+                &verifying_key,
+            )?;
+            match recovered {
+                RecoveredEvidenceSegment::Completed(completed) => {
+                    validate_records(
+                        &verifier,
+                        completed.identity(),
+                        completed.records(),
+                        &mut record_digests,
+                    )?;
+                    recovered_records = recovered_records
+                        .checked_add(completed.record_count())
+                        .ok_or(JournalManagerError::Quiesced)?;
+                    total_bytes = total_bytes
+                        .checked_add(completed.segment_bytes())
+                        .ok_or(JournalManagerError::Quiesced)?;
+                    completed_digests.insert(completed.segment_digest());
+                    completed_segments = completed_segments
+                        .checked_add(1)
+                        .ok_or(JournalManagerError::Quiesced)?;
+                    last_completed = Some(completed);
+                }
+                RecoveredEvidenceSegment::Active { segment, status } => {
+                    if index + 1 != entries.len() || recovered_active.is_some() {
+                        return Err(JournalManagerError::MultipleActive);
+                    }
+                    validate_records(
+                        &verifier,
+                        segment.identity(),
+                        segment.records(),
+                        &mut record_digests,
+                    )?;
+                    recovered_records = recovered_records
+                        .checked_add(segment.record_count())
+                        .ok_or(JournalManagerError::Quiesced)?;
+                    total_bytes = total_bytes
+                        .checked_add(
+                            u64::try_from(segment.segment_bytes())
+                                .map_err(|_| JournalManagerError::Quiesced)?,
+                        )
+                        .ok_or(JournalManagerError::Quiesced)?;
+                    if let OpenRecoveryStatus::TruncatedTail { removed_bytes } = status {
+                        truncated_tail_bytes = removed_bytes;
+                    }
+                    recovered_active = Some((segment, status));
+                }
+            }
+            expected_sequence = expected_sequence
+                .checked_add(1)
+                .ok_or(JournalManagerError::SequenceExhausted)?;
+        }
+
+        let mut closed_active_tail = false;
+        if let Some((active, _)) = recovered_active {
+            let tail_signer =
+                recovered_tail_signer.ok_or(JournalManagerError::TailSignerUnavailable)?;
+            ensure_matching_signer(&verifier, active.identity(), tail_signer)?;
+            let active_bytes =
+                u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
+            let closed = active
+                .close(&tail_signer.kid, &tail_signer.key)
+                .map_err(map_commit_error)?;
+            total_bytes = total_bytes
+                .checked_sub(active_bytes)
+                .and_then(|bytes| bytes.checked_add(closed.segment_bytes()))
+                .ok_or(JournalManagerError::Quiesced)?;
+            completed_digests.insert(closed.segment_digest());
+            completed_segments = completed_segments
+                .checked_add(1)
+                .ok_or(JournalManagerError::Quiesced)?;
+            last_completed = Some(closed);
+            closed_active_tail = true;
+        }
+
+        let mut manager = Self {
+            directory,
+            _lock_file: lock_file,
+            verifier,
+            signer,
+            gate_id,
+            gate_boot_id,
+            limits,
+            active: None,
+            last_completed,
+            segment_count: discovered_segments,
+            total_bytes,
+            record_digests,
+            poisoned: false,
+            quiesced: false,
+        };
+        manager.start_next_segment(created_mono_ns, None)?;
+        let active_sequence = manager
+            .active
+            .as_ref()
+            .map(|segment| segment.identity().segment_sequence);
+        let report = JournalRecoveryReport {
+            discovered_segments,
+            completed_segments,
+            recovered_records,
+            truncated_tail_bytes,
+            closed_active_tail,
+            discarded_pending_creation,
+            active_sequence,
+            total_bytes: manager.total_bytes,
+            quiesced: manager.quiesced,
+        };
+        Ok((manager, report))
+    }
+
+    /// Append exactly once, rotating first only after the segment reports that a
+    /// fresh segment can accommodate the record.
+    ///
+    /// # Errors
+    /// Returns on validation, permanent record bounds, global-cap quiescence, or
+    /// a commit-ambiguous operation. A commit ambiguity permanently poisons this
+    /// manager instance.
+    pub fn append(
+        &mut self,
+        record: &[u8],
+        rotation_created_mono_ns: u64,
+    ) -> Result<(), JournalManagerError> {
+        if self.poisoned {
+            return Err(JournalManagerError::Poisoned);
+        }
+        if self.quiesced {
+            return Err(JournalManagerError::Quiesced);
+        }
+        let record_digest = EvidenceRecordDigest::compute(record);
+        if self.record_digests.contains(&record_digest) {
+            return Err(JournalManagerError::DuplicateRecord);
+        }
+        let classification = {
+            let active = self.active.as_ref().ok_or(JournalManagerError::Quiesced)?;
+            self.verifier.validate_record(active.identity(), record)?;
+            active.preflight_append(record.len())
+        };
+        match classification {
+            Ok(frame_bytes) => {
+                if !fits_total(
+                    self.total_bytes,
+                    frame_bytes,
+                    ActiveEvidenceSegment::footer_bytes(),
+                    self.limits.max_total_bytes,
+                ) {
+                    self.quiesce()?;
+                    return Err(JournalManagerError::Quiesced);
+                }
+                let active = self.active.as_mut().ok_or(JournalManagerError::Quiesced)?;
+                match active.append(record) {
+                    Ok(()) => {
+                        self.total_bytes = self
+                            .total_bytes
+                            .checked_add(
+                                u64::try_from(frame_bytes)
+                                    .map_err(|_| JournalManagerError::Quiesced)?,
+                            )
+                            .ok_or(JournalManagerError::Quiesced)?;
+                        self.record_digests.insert(record_digest);
+                        Ok(())
+                    }
+                    Err(JournalError::CommitAmbiguous) => {
+                        self.poisoned = true;
+                        Err(JournalManagerError::AppendCommitAmbiguous { record_digest })
+                    }
+                    Err(error) => Err(error.into()),
+                }
+            }
+            Err(JournalError::RotationRequired) => {
+                let frame_bytes = ActiveEvidenceSegment::framed_record_bytes(record.len())?;
+                self.rotate_and_append(record, record_digest, rotation_created_mono_ns, frame_bytes)
+            }
+            Err(JournalError::CommitAmbiguous | JournalError::Poisoned) => {
+                self.poisoned = true;
+                Err(JournalManagerError::Poisoned)
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    /// Whether global capacity has quiesced further appends.
+    #[must_use]
+    pub const fn is_quiesced(&self) -> bool {
+        self.quiesced
+    }
+
+    /// Current active sequence, absent after quiescence or ambiguous commit.
+    #[must_use]
+    pub fn active_sequence(&self) -> Option<NonZeroU64> {
+        self.active
+            .as_ref()
+            .map(|segment| segment.identity().segment_sequence)
+    }
+
+    /// Whether recovery or this confirmed manager instance contains the exact
+    /// record bytes. A poisoned instance cannot answer; reopen it first.
+    ///
+    /// # Errors
+    /// Returns [`JournalManagerError::Poisoned`] while an I/O outcome is unknown.
+    pub fn contains_record(
+        &self,
+        digest: EvidenceRecordDigest,
+    ) -> Result<bool, JournalManagerError> {
+        if self.poisoned {
+            Err(JournalManagerError::Poisoned)
+        } else {
+            Ok(self.record_digests.contains(&digest))
+        }
+    }
+
+    /// Gracefully footer-complete the active tail.
+    ///
+    /// # Errors
+    /// Returns on a poisoned manager or footer commit failure.
+    pub fn finish(mut self) -> Result<Option<CompletedSegment>, JournalManagerError> {
+        if self.poisoned {
+            return Err(JournalManagerError::Poisoned);
+        }
+        let Some(active) = self.active.take() else {
+            return Ok(None);
+        };
+        active
+            .close(&self.signer.kid, &self.signer.key)
+            .map(Some)
+            .map_err(map_commit_error)
+    }
+
+    fn rotate_and_append(
+        &mut self,
+        record: &[u8],
+        record_digest: EvidenceRecordDigest,
+        created_mono_ns: u64,
+        frame_bytes: usize,
+    ) -> Result<(), JournalManagerError> {
+        let active = self.active.take().ok_or(JournalManagerError::Quiesced)?;
+        let active_bytes =
+            u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
+        let completed = match active.close(&self.signer.kid, &self.signer.key) {
+            Ok(completed) => completed,
+            Err(JournalError::CommitAmbiguous) => {
+                self.poisoned = true;
+                return Err(JournalManagerError::AppendCommitAmbiguous { record_digest });
+            }
+            Err(error) => return Err(error.into()),
+        };
+        self.total_bytes = self
+            .total_bytes
+            .checked_sub(active_bytes)
+            .and_then(|bytes| bytes.checked_add(completed.segment_bytes()))
+            .ok_or(JournalManagerError::Quiesced)?;
+        self.last_completed = Some(completed);
+
+        if let Err(error) = self.start_next_segment(created_mono_ns, Some(frame_bytes)) {
+            return Err(if error == JournalManagerError::Poisoned {
+                JournalManagerError::AppendCommitAmbiguous { record_digest }
+            } else {
+                error
+            });
+        }
+        if self.quiesced {
+            return Err(JournalManagerError::Quiesced);
+        }
+        let active = self.active.as_mut().ok_or(JournalManagerError::Quiesced)?;
+        self.verifier.validate_record(active.identity(), record)?;
+        match active.append(record) {
+            Ok(()) => {
+                self.total_bytes = self
+                    .total_bytes
+                    .checked_add(
+                        u64::try_from(frame_bytes).map_err(|_| JournalManagerError::Quiesced)?,
+                    )
+                    .ok_or(JournalManagerError::Quiesced)?;
+                self.record_digests.insert(record_digest);
+                Ok(())
+            }
+            Err(JournalError::CommitAmbiguous) => {
+                self.poisoned = true;
+                Err(JournalManagerError::AppendCommitAmbiguous { record_digest })
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn start_next_segment(
+        &mut self,
+        created_mono_ns: u64,
+        pending_frame_bytes: Option<usize>,
+    ) -> Result<(), JournalManagerError> {
+        let sequence = match &self.last_completed {
+            Some(previous) => previous
+                .identity()
+                .segment_sequence
+                .get()
+                .checked_add(1)
+                .and_then(NonZeroU64::new)
+                .ok_or(JournalManagerError::SequenceExhausted)?,
+            None => NonZeroU64::new(1).ok_or(JournalManagerError::SequenceExhausted)?,
+        };
+        let previous_completed_digest = self
+            .last_completed
+            .as_ref()
+            .map_or([0; 32], CompletedSegment::segment_digest);
+        let identity = SegmentIdentity {
+            gate_id: self.gate_id.clone(),
+            gate_boot_id: self.gate_boot_id,
+            segment_sequence: sequence,
+            previous_completed_digest,
+            created_mono_ns,
+            signer_kid: self.signer.kid.clone(),
+            signer_public_key: self.signer.key.verifying_key().to_bytes(),
+        };
+        ensure_matching_signer(&self.verifier, &identity, &self.signer)?;
+        let minimum = ActiveEvidenceSegment::minimum_complete_bytes(&identity)?;
+        let required = minimum
+            .checked_add(pending_frame_bytes.unwrap_or(0))
+            .ok_or(JournalManagerError::Quiesced)?;
+        if self.segment_count >= self.limits.max_segments
+            || !fits_total(self.total_bytes, required, 0, self.limits.max_total_bytes)
+        {
+            self.quiesced = true;
+            return Ok(());
+        }
+
+        let path = self.directory.join(segment_file_name(sequence));
+        let segment = match &self.last_completed {
+            Some(previous) => {
+                ActiveEvidenceSegment::create_next(path, identity, self.limits.segment, previous)
+            }
+            None => ActiveEvidenceSegment::create_new(path, identity, self.limits.segment),
+        };
+        let segment = match segment {
+            Ok(segment) => segment,
+            Err(
+                JournalError::Storage | JournalError::AlreadyExists | JournalError::CommitAmbiguous,
+            ) => {
+                self.poisoned = true;
+                return Err(JournalManagerError::Poisoned);
+            }
+            Err(error) => return Err(error.into()),
+        };
+        self.total_bytes = self
+            .total_bytes
+            .checked_add(
+                u64::try_from(segment.segment_bytes())
+                    .map_err(|_| JournalManagerError::Quiesced)?,
+            )
+            .ok_or(JournalManagerError::Quiesced)?;
+        self.segment_count = self
+            .segment_count
+            .checked_add(1)
+            .ok_or(JournalManagerError::Quiesced)?;
+        self.active = Some(segment);
+        Ok(())
+    }
+
+    fn quiesce(&mut self) -> Result<(), JournalManagerError> {
+        let Some(active) = self.active.take() else {
+            self.quiesced = true;
+            return Ok(());
+        };
+        let active_bytes =
+            u64::try_from(active.segment_bytes()).map_err(|_| JournalManagerError::Quiesced)?;
+        match active.close(&self.signer.kid, &self.signer.key) {
+            Ok(completed) => {
+                self.total_bytes = self
+                    .total_bytes
+                    .checked_sub(active_bytes)
+                    .and_then(|bytes| bytes.checked_add(completed.segment_bytes()))
+                    .ok_or(JournalManagerError::Quiesced)?;
+                self.last_completed = Some(completed);
+                self.quiesced = true;
+                Ok(())
+            }
+            Err(JournalError::CommitAmbiguous) => {
+                self.poisoned = true;
+                Err(JournalManagerError::Poisoned)
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+}
+
+struct SegmentEntry {
+    sequence: u64,
+    path: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OpenMode {
+    ProvisionNew,
+    OpenExisting,
+}
+
+fn prepare_directory(path: PathBuf, mode: OpenMode) -> Result<PathBuf, JournalManagerError> {
+    match fs::symlink_metadata(&path) {
+        Ok(metadata) if metadata.file_type().is_dir() => Ok(path),
+        Ok(_) => Err(JournalManagerError::Storage),
+        Err(error)
+            if error.kind() == std::io::ErrorKind::NotFound && mode == OpenMode::ProvisionNew =>
+        {
+            fs::create_dir(&path).map_err(|_| JournalManagerError::Storage)?;
+            Ok(path)
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Err(JournalManagerError::Missing)
+        }
+        Err(_) => Err(JournalManagerError::Storage),
+    }
+}
+
+fn lock_directory(directory: &Path, mode: OpenMode) -> Result<File, JournalManagerError> {
+    let path = directory.join(LOCK_FILE_NAME);
+    let mut options = OpenOptions::new();
+    options.read(true).write(true);
+    if mode == OpenMode::ProvisionNew {
+        options.create_new(true);
+    }
+    #[cfg(unix)]
+    options.mode(0o600);
+    let file = match options.open(&path) {
+        Ok(file) => file,
+        Err(error)
+            if error.kind() == std::io::ErrorKind::AlreadyExists
+                && mode == OpenMode::ProvisionNew =>
+        {
+            return Err(JournalManagerError::AlreadyProvisioned);
+        }
+        Err(error)
+            if error.kind() == std::io::ErrorKind::NotFound && mode == OpenMode::OpenExisting =>
+        {
+            return Err(JournalManagerError::Missing);
+        }
+        Err(_) => return Err(JournalManagerError::Storage),
+    };
+    let path_metadata = fs::symlink_metadata(&path).map_err(|_| JournalManagerError::Storage)?;
+    let opened_metadata = file.metadata().map_err(|_| JournalManagerError::Storage)?;
+    if !path_metadata.file_type().is_file() || !opened_metadata.file_type().is_file() {
+        return Err(JournalManagerError::Storage);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if path_metadata.dev() != opened_metadata.dev()
+            || path_metadata.ino() != opened_metadata.ino()
+        {
+            return Err(JournalManagerError::Storage);
+        }
+    }
+    match file.try_lock() {
+        Ok(()) => {
+            if mode == OpenMode::ProvisionNew {
+                file.sync_all().map_err(|_| JournalManagerError::Storage)?;
+                sync_directory(directory)?;
+            }
+            Ok(file)
+        }
+        Err(TryLockError::WouldBlock) => Err(JournalManagerError::LockHeld),
+        Err(TryLockError::Error(_)) => Err(JournalManagerError::Storage),
+    }
+}
+
+fn discover_segments(
+    directory: &Path,
+    max_segments: usize,
+) -> Result<(Vec<SegmentEntry>, Option<PathBuf>), JournalManagerError> {
+    let mut entries = Vec::new();
+    let mut pending_path = None;
+    for entry in fs::read_dir(directory).map_err(|_| JournalManagerError::Storage)? {
+        let entry = entry.map_err(|_| JournalManagerError::Storage)?;
+        let name = entry.file_name();
+        if name == OsStr::new(LOCK_FILE_NAME) {
+            continue;
+        }
+        let file_type = entry
+            .file_type()
+            .map_err(|_| JournalManagerError::Storage)?;
+        if !file_type.is_file() {
+            return Err(JournalManagerError::UnexpectedEntry);
+        }
+        if let Some(remainder) = name
+            .to_str()
+            .and_then(|name| name.strip_prefix(PENDING_CREATION_PREFIX))
+        {
+            if pending_path.is_some() || parse_segment_file_name(OsStr::new(remainder)).is_err() {
+                return Err(JournalManagerError::UnexpectedEntry);
+            }
+            pending_path = Some(entry.path());
+            continue;
+        }
+        let sequence = parse_segment_file_name(&name)?;
+        if entries.len() >= max_segments {
+            return Err(JournalManagerError::Quiesced);
+        }
+        entries.push(SegmentEntry {
+            sequence,
+            path: entry.path(),
+        });
+    }
+    entries.sort_by_key(|entry| entry.sequence);
+    Ok((entries, pending_path))
+}
+
+fn sync_directory(directory: &Path) -> Result<(), JournalManagerError> {
+    #[cfg(unix)]
+    {
+        File::open(directory)
+            .and_then(|file| file.sync_all())
+            .map_err(|_| JournalManagerError::Storage)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = directory;
+        Err(JournalManagerError::Journal(JournalError::Unsupported))
+    }
+}
+
+fn parse_segment_file_name(name: &OsStr) -> Result<u64, JournalManagerError> {
+    let text = name.to_str().ok_or(JournalManagerError::UnexpectedEntry)?;
+    let digits = text
+        .strip_prefix(SEGMENT_PREFIX)
+        .ok_or(JournalManagerError::UnexpectedEntry)?;
+    if digits.len() != SEGMENT_DIGITS || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(JournalManagerError::UnexpectedEntry);
+    }
+    let sequence = digits
+        .parse::<u64>()
+        .map_err(|_| JournalManagerError::UnexpectedEntry)?;
+    if sequence == 0
+        || segment_file_name(NonZeroU64::new(sequence).ok_or(JournalManagerError::UnexpectedEntry)?)
+            != text
+    {
+        return Err(JournalManagerError::UnexpectedEntry);
+    }
+    Ok(sequence)
+}
+
+fn segment_file_name(sequence: NonZeroU64) -> String {
+    format!("{SEGMENT_PREFIX}{:0SEGMENT_DIGITS$}", sequence.get())
+}
+
+fn classify_sequence(actual: u64, expected: u64) -> Result<(), JournalManagerError> {
+    if actual < expected {
+        Err(JournalManagerError::Rewind)
+    } else if actual > expected {
+        Err(JournalManagerError::SequenceGap)
+    } else {
+        Ok(())
+    }
+}
+
+fn validate_records<V: JournalVerifier>(
+    verifier: &V,
+    identity: &SegmentIdentity,
+    records: &[Vec<u8>],
+    record_digests: &mut BTreeSet<EvidenceRecordDigest>,
+) -> Result<(), JournalManagerError> {
+    for record in records {
+        verifier.validate_record(identity, record)?;
+        if !record_digests.insert(EvidenceRecordDigest::compute(record)) {
+            return Err(JournalManagerError::DuplicateRecord);
+        }
+    }
+    Ok(())
+}
+
+fn ensure_matching_signer<V: JournalVerifier>(
+    verifier: &V,
+    identity: &SegmentIdentity,
+    signer: &JournalSigner,
+) -> Result<(), JournalManagerError> {
+    let resolved = verifier.resolve_signer(identity)?;
+    let supplied = signer.key.verifying_key().to_bytes();
+    if identity.signer_kid != signer.kid
+        || identity.signer_public_key != supplied
+        || resolved.to_bytes() != supplied
+    {
+        return Err(JournalManagerError::Verification(
+            JournalVerificationError::UnknownSigner,
+        ));
+    }
+    Ok(())
+}
+
+fn fits_total(current: u64, add: usize, reserve: usize, maximum: u64) -> bool {
+    let Ok(add) = u64::try_from(add) else {
+        return false;
+    };
+    let Ok(reserve) = u64::try_from(reserve) else {
+        return false;
+    };
+    current
+        .checked_add(add)
+        .and_then(|bytes| bytes.checked_add(reserve))
+        .is_some_and(|bytes| bytes <= maximum)
+}
+
+fn map_commit_error(error: JournalError) -> JournalManagerError {
+    if error == JournalError::CommitAmbiguous {
+        JournalManagerError::Poisoned
+    } else {
+        JournalManagerError::Journal(error)
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    struct TestDirectory(PathBuf);
+
+    impl TestDirectory {
+        fn new() -> Self {
+            let sequence = TEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "haldir-evidence-manager-test-{}-{sequence}",
+                std::process::id()
+            ));
+            fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+
+        fn journal(&self) -> PathBuf {
+            self.0.join("journal")
+        }
+    }
+
+    impl Drop for TestDirectory {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    struct TestVerifier {
+        signer: VerifyingKey,
+        kid: KeyId,
+        reject: Option<Vec<u8>>,
+    }
+
+    impl JournalVerifier for TestVerifier {
+        fn resolve_signer(
+            &self,
+            identity: &SegmentIdentity,
+        ) -> Result<VerifyingKey, JournalVerificationError> {
+            if identity.signer_kid != self.kid
+                || identity.signer_public_key != self.signer.to_bytes()
+            {
+                return Err(JournalVerificationError::UnknownSigner);
+            }
+            VerifyingKey::from_bytes(self.signer.to_bytes())
+                .map_err(|_| JournalVerificationError::UnknownSigner)
+        }
+
+        fn validate_record(
+            &self,
+            _identity: &SegmentIdentity,
+            record: &[u8],
+        ) -> Result<(), JournalVerificationError> {
+            if self.reject.as_deref() == Some(record) {
+                return Err(JournalVerificationError::InvalidRecord);
+            }
+            Ok(())
+        }
+    }
+
+    struct RotatingVerifier {
+        signers: Vec<(KeyId, VerifyingKey)>,
+    }
+
+    impl JournalVerifier for RotatingVerifier {
+        fn resolve_signer(
+            &self,
+            identity: &SegmentIdentity,
+        ) -> Result<VerifyingKey, JournalVerificationError> {
+            self.signers
+                .iter()
+                .find(|(kid, key)| {
+                    kid == &identity.signer_kid && key.to_bytes() == identity.signer_public_key
+                })
+                .and_then(|(_, key)| VerifyingKey::from_bytes(key.to_bytes()).ok())
+                .ok_or(JournalVerificationError::UnknownSigner)
+        }
+
+        fn validate_record(
+            &self,
+            _identity: &SegmentIdentity,
+            _record: &[u8],
+        ) -> Result<(), JournalVerificationError> {
+            Ok(())
+        }
+    }
+
+    fn kid() -> KeyId {
+        KeyId::new(vec![3, 0xab, 3]).unwrap()
+    }
+
+    fn signer() -> JournalSigner {
+        JournalSigner::new(kid(), SigningKey::from_seed([3; 32]))
+    }
+
+    fn verifier() -> TestVerifier {
+        TestVerifier {
+            signer: SigningKey::from_seed([3; 32]).verifying_key(),
+            kid: kid(),
+            reject: None,
+        }
+    }
+
+    fn gate() -> GateId {
+        GateId::new("gate-1").unwrap()
+    }
+
+    fn limits(max_records: u64, max_segments: usize) -> JournalLimits {
+        JournalLimits::new(
+            JournalBounds::new(4096, max_records, 1024).unwrap(),
+            max_segments,
+            64 * 1024,
+        )
+        .unwrap()
+    }
+
+    fn options(boot: u8, limits: JournalLimits) -> JournalOpenOptions {
+        JournalOpenOptions::new(gate(), GateBootId::new([boot; 16]), u64::from(boot), limits)
+    }
+
+    fn open(
+        directory: &Path,
+        boot: u8,
+        limits: JournalLimits,
+    ) -> Result<(EvidenceJournalManager<TestVerifier>, JournalRecoveryReport), JournalManagerError>
+    {
+        let recovered_tail_signer = signer();
+        if directory.exists() {
+            EvidenceJournalManager::open_existing(
+                directory,
+                options(boot, limits),
+                signer(),
+                Some(&recovered_tail_signer),
+                verifier(),
+            )
+        } else {
+            EvidenceJournalManager::provision_new(
+                directory,
+                options(boot, limits),
+                signer(),
+                verifier(),
+            )
+        }
+    }
+
+    fn seed_lock(directory: &Path) {
+        fs::write(directory.join(LOCK_FILE_NAME), []).unwrap();
+    }
+
+    #[test]
+    fn open_existing_never_creates_missing_or_empty_state() {
+        let directory = TestDirectory::new();
+        let missing = directory.journal();
+        let result = EvidenceJournalManager::open_existing(
+            &missing,
+            options(1, limits(4, 4)),
+            signer(),
+            None,
+            verifier(),
+        );
+        assert!(matches!(result, Err(JournalManagerError::Missing)));
+        assert!(!missing.exists());
+
+        fs::create_dir(&missing).unwrap();
+        let empty = EvidenceJournalManager::open_existing(
+            &missing,
+            options(1, limits(4, 4)),
+            signer(),
+            None,
+            verifier(),
+        );
+        assert!(matches!(empty, Err(JournalManagerError::Missing)));
+        assert!(fs::read_dir(&missing).unwrap().next().is_none());
+    }
+
+    #[test]
+    fn provision_new_is_explicit_and_never_overwrites_interrupted_genesis() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let (manager, report) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, limits(4, 4)),
+            signer(),
+            verifier(),
+        )
+        .unwrap();
+        assert_eq!(report.discovered_segments, 0);
+        drop(manager);
+        assert!(matches!(
+            EvidenceJournalManager::provision_new(
+                &journal,
+                options(1, limits(4, 4)),
+                signer(),
+                verifier(),
+            ),
+            Err(JournalManagerError::AlreadyProvisioned)
+        ));
+
+        let interrupted = directory.0.join("interrupted");
+        fs::create_dir(&interrupted).unwrap();
+        seed_lock(&interrupted);
+        let final_name = segment_file_name(NonZeroU64::new(1).unwrap());
+        let pending = interrupted.join(format!("{PENDING_CREATION_PREFIX}{final_name}"));
+        fs::write(&pending, b"partial genesis").unwrap();
+        assert!(matches!(
+            EvidenceJournalManager::open_existing(
+                &interrupted,
+                options(1, limits(4, 4)),
+                signer(),
+                None,
+                verifier(),
+            ),
+            Err(JournalManagerError::IncompleteProvisioning)
+        ));
+        assert!(pending.exists());
+    }
+
+    #[test]
+    fn retained_file_lock_excludes_a_second_manager() {
+        let directory = TestDirectory::new();
+        let (first, _) = open(&directory.journal(), 1, limits(4, 4)).unwrap();
+
+        let second = open(&directory.journal(), 2, limits(4, 4));
+
+        assert!(matches!(second, Err(JournalManagerError::LockHeld)));
+        drop(first);
+    }
+
+    #[test]
+    fn contiguous_recovery_closes_old_boot_tail_and_starts_new_boot() {
+        let directory = TestDirectory::new();
+        let (mut first, _) = open(&directory.journal(), 1, limits(4, 4)).unwrap();
+        first.append(b"one", 1).unwrap();
+        drop(first);
+
+        let (second, report) = open(&directory.journal(), 2, limits(4, 4)).unwrap();
+
+        assert!(report.closed_active_tail);
+        assert_eq!(report.completed_segments, 1);
+        assert_eq!(report.recovered_records, 1);
+        assert_eq!(second.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    #[test]
+    fn sequence_gap_is_rejected() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        fs::create_dir(&journal).unwrap();
+        seed_lock(&journal);
+        let key = SigningKey::from_seed([3; 32]);
+        let identity = identity(1, [0; 32], 1, &key);
+        ActiveEvidenceSegment::create_new(
+            journal.join(segment_file_name(NonZeroU64::new(2).unwrap())),
+            identity,
+            limits(4, 4).segment,
+        )
+        .unwrap();
+
+        assert!(matches!(
+            open(&journal, 2, limits(4, 4)),
+            Err(JournalManagerError::SequenceGap)
+        ));
+    }
+
+    #[test]
+    fn previous_digest_fork_is_rejected() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let alternate = directory.0.join("alternate");
+        fs::create_dir(&journal).unwrap();
+        fs::create_dir(&alternate).unwrap();
+        seed_lock(&journal);
+        let key = SigningKey::from_seed([3; 32]);
+        let first = ActiveEvidenceSegment::create_new(
+            journal.join(segment_file_name(NonZeroU64::new(1).unwrap())),
+            identity(1, [0; 32], 1, &key),
+            limits(4, 4).segment,
+        )
+        .unwrap()
+        .close(&kid(), &key)
+        .unwrap();
+        let alternate_first = ActiveEvidenceSegment::create_new(
+            alternate.join("first"),
+            identity(1, [0; 32], 1, &key),
+            limits(4, 4).segment,
+        )
+        .unwrap();
+        let mut alternate_first = alternate_first;
+        alternate_first.append(b"different").unwrap();
+        let alternate_first = alternate_first.close(&kid(), &key).unwrap();
+        let second_identity = identity(2, alternate_first.segment_digest(), 1, &key);
+        ActiveEvidenceSegment::create_next(
+            journal.join(segment_file_name(NonZeroU64::new(2).unwrap())),
+            second_identity,
+            limits(4, 4).segment,
+            &alternate_first,
+        )
+        .unwrap();
+        drop(first);
+
+        assert!(matches!(
+            open(&journal, 2, limits(4, 4)),
+            Err(JournalManagerError::Fork)
+        ));
+    }
+
+    #[test]
+    fn unexpected_directory_entry_is_rejected() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        fs::create_dir(&journal).unwrap();
+        seed_lock(&journal);
+        fs::write(journal.join("unexpected"), b"x").unwrap();
+
+        assert!(matches!(
+            open(&journal, 1, limits(4, 4)),
+            Err(JournalManagerError::UnexpectedEntry)
+        ));
+    }
+
+    #[test]
+    fn global_segment_cap_quiesces_without_deleting() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let (mut manager, _) = open(&journal, 1, limits(1, 1)).unwrap();
+        manager.append(b"one", 1).unwrap();
+
+        assert_eq!(
+            manager.append(b"two", 2),
+            Err(JournalManagerError::Quiesced)
+        );
+        assert!(manager.is_quiesced());
+        assert!(
+            journal
+                .join(segment_file_name(NonZeroU64::new(1).unwrap()))
+                .is_file()
+        );
+        assert!(
+            !journal
+                .join(segment_file_name(NonZeroU64::new(2).unwrap()))
+                .exists()
+        );
+    }
+
+    #[test]
+    fn global_byte_cap_footer_completes_then_quiesces_without_deleting() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let key = SigningKey::from_seed([3; 32]);
+        let bounds = JournalBounds::new(4096, 4, 1024).unwrap();
+        let maximum = ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key))
+            .unwrap()
+            .checked_add(ActiveEvidenceSegment::framed_record_bytes(b"one".len()).unwrap())
+            .unwrap();
+        let limits = JournalLimits::new(bounds, 4, u64::try_from(maximum).unwrap()).unwrap();
+        let (mut manager, _) = open(&journal, 1, limits).unwrap();
+        manager.append(b"one", 1).unwrap();
+
+        assert_eq!(
+            manager.append(b"two", 2),
+            Err(JournalManagerError::Quiesced)
+        );
+        assert!(manager.is_quiesced());
+        let path = journal.join(segment_file_name(NonZeroU64::new(1).unwrap()));
+        let identity = ActiveEvidenceSegment::inspect_identity(&path, bounds).unwrap();
+        let recovered =
+            ActiveEvidenceSegment::recover(path, &identity, bounds, &key.verifying_key()).unwrap();
+        let RecoveredEvidenceSegment::Completed(completed) = recovered else {
+            panic!("quiescence must complete the retained tail");
+        };
+        assert_eq!(completed.records(), &[b"one".to_vec()]);
+    }
+
+    #[test]
+    fn permanent_record_error_is_classified_before_global_capacity() {
+        let directory = TestDirectory::new();
+        let key = SigningKey::from_seed([3; 32]);
+        let bounds = JournalBounds::new(4096, 4, 3).unwrap();
+        let maximum =
+            ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key)).unwrap();
+        let limits = JournalLimits::new(bounds, 4, u64::try_from(maximum).unwrap()).unwrap();
+        let (mut manager, _) = open(&directory.journal(), 1, limits).unwrap();
+
+        assert_eq!(
+            manager.append(b"four", 1),
+            Err(JournalManagerError::Journal(JournalError::RecordTooLarge))
+        );
+        assert!(!manager.is_quiesced());
+    }
+
+    #[test]
+    fn rotation_appends_the_pending_record_exactly_once() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let (mut manager, _) = open(&journal, 1, limits(1, 3)).unwrap();
+        manager.append(b"one", 1).unwrap();
+        manager.append(b"two", 2).unwrap();
+        manager.finish().unwrap();
+
+        let mut occurrences = 0usize;
+        for sequence in 1..=2 {
+            let path = journal.join(segment_file_name(NonZeroU64::new(sequence).unwrap()));
+            let identity =
+                ActiveEvidenceSegment::inspect_identity(&path, limits(1, 3).segment).unwrap();
+            let recovered = ActiveEvidenceSegment::recover(
+                path,
+                &identity,
+                limits(1, 3).segment,
+                &SigningKey::from_seed([3; 32]).verifying_key(),
+            )
+            .unwrap();
+            let RecoveredEvidenceSegment::Completed(completed) = recovered else {
+                panic!("finished segments must be completed");
+            };
+            occurrences += completed
+                .records()
+                .iter()
+                .filter(|record| record.as_slice() == b"two")
+                .count();
+        }
+        assert_eq!(occurrences, 1);
+    }
+
+    #[test]
+    fn exact_record_digest_prevents_duplicate_retry_across_recovery() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let digest = EvidenceRecordDigest::compute(b"one");
+        let (mut first, _) = open(&journal, 1, limits(4, 4)).unwrap();
+        first.append(b"one", 1).unwrap();
+        assert_eq!(first.contains_record(digest), Ok(true));
+        assert_eq!(
+            first.append(b"one", 1),
+            Err(JournalManagerError::DuplicateRecord)
+        );
+        drop(first);
+
+        let (mut recovered, _) = open(&journal, 2, limits(4, 4)).unwrap();
+        assert_eq!(recovered.contains_record(digest), Ok(true));
+        assert_eq!(
+            recovered.append(b"one", 2),
+            Err(JournalManagerError::DuplicateRecord)
+        );
+    }
+
+    #[test]
+    fn invalid_record_and_signer_are_rejected() {
+        let directory = TestDirectory::new();
+        let mut rejecting = verifier();
+        rejecting.reject = Some(b"bad".to_vec());
+        let (mut manager, _) = EvidenceJournalManager::provision_new(
+            directory.journal(),
+            options(1, limits(4, 4)),
+            signer(),
+            rejecting,
+        )
+        .unwrap();
+        assert_eq!(
+            manager.append(b"bad", 1),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::InvalidRecord
+            ))
+        );
+        drop(manager);
+
+        let wrong = TestVerifier {
+            signer: SigningKey::from_seed([4; 32]).verifying_key(),
+            kid: kid(),
+            reject: None,
+        };
+        let recovered_tail_signer = signer();
+        assert!(matches!(
+            EvidenceJournalManager::open_existing(
+                directory.journal(),
+                options(2, limits(4, 4)),
+                signer(),
+                Some(&recovered_tail_signer),
+                wrong,
+            ),
+            Err(JournalManagerError::Verification(
+                JournalVerificationError::UnknownSigner
+            ))
+        ));
+    }
+
+    #[test]
+    fn old_tail_requires_its_signer_before_current_key_rotation() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let old_kid = KeyId::new(vec![3, 0xa1, 1]).unwrap();
+        let old_key = SigningKey::from_seed([0xa1; 32]);
+        let new_kid = KeyId::new(vec![3, 0xb2, 1]).unwrap();
+        let new_key = SigningKey::from_seed([0xb2; 32]);
+        let verifier = || RotatingVerifier {
+            signers: vec![
+                (old_kid.clone(), old_key.verifying_key()),
+                (new_kid.clone(), new_key.verifying_key()),
+            ],
+        };
+        let old_signer = JournalSigner::new(old_kid.clone(), SigningKey::from_seed([0xa1; 32]));
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, limits(4, 4)),
+            old_signer,
+            verifier(),
+        )
+        .unwrap();
+        first.append(b"old", 1).unwrap();
+        drop(first);
+
+        let unavailable = EvidenceJournalManager::open_existing(
+            &journal,
+            options(2, limits(4, 4)),
+            JournalSigner::new(new_kid.clone(), SigningKey::from_seed([0xb2; 32])),
+            None,
+            verifier(),
+        );
+        assert!(matches!(
+            unavailable,
+            Err(JournalManagerError::TailSignerUnavailable)
+        ));
+        assert!(
+            !journal
+                .join(segment_file_name(NonZeroU64::new(2).unwrap()))
+                .exists()
+        );
+
+        let historical = JournalSigner::new(old_kid.clone(), SigningKey::from_seed([0xa1; 32]));
+        let (second, report) = EvidenceJournalManager::open_existing(
+            &journal,
+            options(2, limits(4, 4)),
+            JournalSigner::new(new_kid.clone(), SigningKey::from_seed([0xb2; 32])),
+            Some(&historical),
+            verifier(),
+        )
+        .unwrap();
+        assert!(report.closed_active_tail);
+        assert_eq!(second.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    #[test]
+    fn interrupted_unpublished_successor_is_discarded_during_recovery() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let (first, _) = open(&journal, 1, limits(4, 4)).unwrap();
+        drop(first);
+        let final_name = segment_file_name(NonZeroU64::new(2).unwrap());
+        let pending = journal.join(format!("{PENDING_CREATION_PREFIX}{final_name}"));
+        fs::write(&pending, b"partial header").unwrap();
+
+        let (manager, report) = open(&journal, 2, limits(4, 4)).unwrap();
+
+        assert!(report.discarded_pending_creation);
+        assert!(!pending.exists());
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(2));
+    }
+
+    fn identity(
+        sequence: u64,
+        previous: [u8; 32],
+        boot: u8,
+        signer: &SigningKey,
+    ) -> SegmentIdentity {
+        SegmentIdentity {
+            gate_id: gate(),
+            gate_boot_id: GateBootId::new([boot; 16]),
+            segment_sequence: NonZeroU64::new(sequence).unwrap(),
+            previous_completed_digest: previous,
+            created_mono_ns: u64::from(boot),
+            signer_kid: kid(),
+            signer_public_key: signer.verifying_key().to_bytes(),
+        }
+    }
+}

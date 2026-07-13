@@ -42,6 +42,7 @@ const FOOTER_FIXED_PREFIX: &[u8; 10] = b"HLDRFTR1\0\x01";
 const RECORD_CHAIN_DOMAIN: &[u8] = b"haldir.evidence.record-chain.v1\0";
 const SEGMENT_DIGEST_DOMAIN: &[u8] = b"haldir.evidence.segment-digest.v1\0";
 const FOOTER_SIGNATURE_DOMAIN: &[u8] = b"haldir.evidence.segment-footer-signature.v1\0";
+pub(crate) const PENDING_CREATION_PREFIX: &str = ".haldir-evidence.pending-";
 
 /// Evidence-journal format, bound, integrity, or storage failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -241,6 +242,62 @@ struct RecoveredContent<'a> {
 }
 
 impl ActiveEvidenceSegment {
+    /// Minimum complete on-disk size for a segment with this identity.
+    ///
+    /// This is useful to reserve footer capacity before a directory manager
+    /// creates the segment.
+    pub(crate) fn minimum_complete_bytes(
+        identity: &SegmentIdentity,
+    ) -> Result<usize, JournalError> {
+        encode_header(identity)?
+            .len()
+            .checked_add(FOOTER_LEN)
+            .ok_or(JournalError::Bounds)
+    }
+
+    /// Encoded on-disk size of one record frame.
+    pub(crate) fn framed_record_bytes(record_len: usize) -> Result<usize, JournalError> {
+        RECORD_PREFIX_LEN
+            .checked_add(record_len)
+            .and_then(|size| size.checked_add(RECORD_SUFFIX_LEN))
+            .ok_or(JournalError::Bounds)
+    }
+
+    /// Encoded signed-footer size.
+    pub(crate) const fn footer_bytes() -> usize {
+        FOOTER_LEN
+    }
+
+    /// Classify an append without issuing I/O and return its encoded frame size.
+    pub(crate) fn preflight_append(&self, record_len: usize) -> Result<usize, JournalError> {
+        if self.poisoned {
+            return Err(JournalError::Poisoned);
+        }
+        if record_len > self.bounds.max_record_bytes {
+            return Err(JournalError::RecordTooLarge);
+        }
+        let _ = u32::try_from(record_len).map_err(|_| JournalError::RecordTooLarge)?;
+        let frame_len = Self::framed_record_bytes(record_len)?;
+        let fresh_segment_bytes = encode_header(&self.identity)?
+            .len()
+            .checked_add(frame_len)
+            .and_then(|bytes| bytes.checked_add(FOOTER_LEN))
+            .ok_or(JournalError::Bounds)?;
+        if fresh_segment_bytes > self.bounds.max_segment_bytes {
+            return Err(JournalError::RecordCannotFitSegment);
+        }
+        if self.record_count >= self.bounds.max_records
+            || self
+                .segment_bytes
+                .checked_add(frame_len)
+                .and_then(|bytes| bytes.checked_add(FOOTER_LEN))
+                .is_none_or(|complete| complete > self.bounds.max_segment_bytes)
+        {
+            return Err(JournalError::RotationRequired);
+        }
+        Ok(frame_len)
+    }
+
     /// Create a new segment, write its checksummed header, and sync the file and
     /// containing directory before returning.
     ///
@@ -306,12 +363,13 @@ impl ActiveEvidenceSegment {
         #[cfg(unix)]
         {
             let parent = checked_parent(&path)?;
+            let pending_path = pending_creation_path(&path)?;
             let mut file = match OpenOptions::new()
                 .read(true)
                 .append(true)
                 .create_new(true)
                 .mode(0o600)
-                .open(&path)
+                .open(&pending_path)
             {
                 Ok(file) => file,
                 Err(error) if error.kind() == ErrorKind::AlreadyExists => {
@@ -319,9 +377,24 @@ impl ActiveEvidenceSegment {
                 }
                 Err(_) => return Err(JournalError::Storage),
             };
-            file.write_all(&header).map_err(|_| JournalError::Storage)?;
-            file.sync_all().map_err(|_| JournalError::Storage)?;
-            parent.sync_all().map_err(|_| JournalError::Storage)?;
+            if file.write_all(&header).is_err() || file.sync_all().is_err() {
+                remove_unpublished(&pending_path, &parent)?;
+                return Err(JournalError::Storage);
+            }
+            if let Err(error) = fs::hard_link(&pending_path, &path) {
+                remove_unpublished(&pending_path, &parent)?;
+                return Err(if error.kind() == ErrorKind::AlreadyExists {
+                    JournalError::AlreadyExists
+                } else {
+                    JournalError::Storage
+                });
+            }
+            if parent.sync_all().is_err() {
+                return Err(JournalError::CommitAmbiguous);
+            }
+            if fs::remove_file(&pending_path).is_err() || parent.sync_all().is_err() {
+                return Err(JournalError::CommitAmbiguous);
+            }
             Ok(Self::from_parts(
                 path,
                 identity,
@@ -524,32 +597,9 @@ impl ActiveEvidenceSegment {
     /// [`JournalError::CommitAmbiguous`] poisons this handle and requires recovery
     /// before the caller decides whether a retry is a duplicate.
     pub fn append(&mut self, record: &[u8]) -> Result<(), JournalError> {
-        if self.poisoned {
-            return Err(JournalError::Poisoned);
-        }
-        if record.len() > self.bounds.max_record_bytes {
-            return Err(JournalError::RecordTooLarge);
-        }
+        let frame_len = self.preflight_append(record.len())?;
         let frame = encode_record(record)?;
-        let fresh_segment_bytes = encode_header(&self.identity)?
-            .len()
-            .checked_add(frame.len())
-            .and_then(|bytes| bytes.checked_add(FOOTER_LEN))
-            .ok_or(JournalError::Bounds)?;
-        if fresh_segment_bytes > self.bounds.max_segment_bytes {
-            return Err(JournalError::RecordCannotFitSegment);
-        }
-        if self.record_count >= self.bounds.max_records {
-            return Err(JournalError::RotationRequired);
-        }
-        if self
-            .segment_bytes
-            .checked_add(frame.len())
-            .and_then(|bytes| bytes.checked_add(FOOTER_LEN))
-            .is_none_or(|complete| complete > self.bounds.max_segment_bytes)
-        {
-            return Err(JournalError::RotationRequired);
-        }
+        debug_assert_eq!(frame.len(), frame_len);
 
         #[cfg(unix)]
         {
@@ -653,6 +703,18 @@ impl ActiveEvidenceSegment {
     #[must_use]
     pub fn path(&self) -> &std::path::Path {
         &self.path
+    }
+
+    /// Header identity bound to this active segment.
+    #[must_use]
+    pub const fn identity(&self) -> &SegmentIdentity {
+        &self.identity
+    }
+
+    /// Current on-disk bytes, excluding the reserved footer.
+    #[must_use]
+    pub const fn segment_bytes(&self) -> usize {
+        self.segment_bytes
     }
 
     /// Number of durably appended complete records.
@@ -1088,6 +1150,23 @@ fn checked_parent(path: &Path) -> Result<File, JournalError> {
         return Err(JournalError::Storage);
     }
     Ok(directory)
+}
+
+#[cfg(unix)]
+fn pending_creation_path(path: &Path) -> Result<PathBuf, JournalError> {
+    let file_name = path.file_name().ok_or(JournalError::Storage)?;
+    let mut pending_name = std::ffi::OsString::from(PENDING_CREATION_PREFIX);
+    pending_name.push(file_name);
+    Ok(parent(path).join(pending_name))
+}
+
+#[cfg(unix)]
+fn remove_unpublished(path: &Path, parent: &File) -> Result<(), JournalError> {
+    match fs::remove_file(path) {
+        Ok(()) => parent.sync_all().map_err(|_| JournalError::CommitAmbiguous),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(_) => Err(JournalError::CommitAmbiguous),
+    }
 }
 
 #[cfg(unix)]
