@@ -21,6 +21,8 @@ use haldir_crypto::{SigningKey, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
+#[cfg(all(test, unix))]
+use std::cell::Cell;
 #[cfg(unix)]
 use std::fs::{self, File, OpenOptions};
 #[cfg(unix)]
@@ -43,6 +45,21 @@ const RECORD_CHAIN_DOMAIN: &[u8] = b"haldir.evidence.record-chain.v1\0";
 const SEGMENT_DIGEST_DOMAIN: &[u8] = b"haldir.evidence.segment-digest.v1\0";
 const FOOTER_SIGNATURE_DOMAIN: &[u8] = b"haldir.evidence.segment-footer-signature.v1\0";
 pub(crate) const PENDING_CREATION_PREFIX: &str = ".haldir-evidence.pending-";
+
+#[cfg(all(test, unix))]
+std::thread_local! {
+    static CREATE_PUBLICATION_COMMIT_AMBIGUOUS: Cell<bool> = const { Cell::new(false) };
+}
+
+#[cfg(all(test, unix))]
+pub(crate) fn inject_create_publication_commit_ambiguous_once() {
+    CREATE_PUBLICATION_COMMIT_AMBIGUOUS.with(|fault| fault.set(true));
+}
+
+#[cfg(all(test, unix))]
+fn take_create_publication_commit_ambiguous() -> bool {
+    CREATE_PUBLICATION_COMMIT_AMBIGUOUS.with(|fault| fault.replace(false))
+}
 
 /// Evidence-journal format, bound, integrity, or storage failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -303,7 +320,9 @@ impl ActiveEvidenceSegment {
     ///
     /// # Errors
     /// Returns on an existing path, unusable bounds/identity, unsupported
-    /// platform, or storage failure.
+    /// platform, or storage failure. [`JournalError::CommitAmbiguous`] means the
+    /// final path may have been published; recover the directory before making
+    /// another creation attempt.
     pub fn create_new(
         path: impl Into<PathBuf>,
         identity: SegmentIdentity,
@@ -388,6 +407,10 @@ impl ActiveEvidenceSegment {
                 } else {
                     JournalError::Storage
                 });
+            }
+            #[cfg(test)]
+            if take_create_publication_commit_ambiguous() {
+                return Err(JournalError::CommitAmbiguous);
             }
             if parent.sync_all().is_err() {
                 return Err(JournalError::CommitAmbiguous);

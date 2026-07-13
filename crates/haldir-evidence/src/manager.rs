@@ -595,6 +595,9 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
     /// Current active sequence, absent after quiescence or ambiguous commit.
     #[must_use]
     pub fn active_sequence(&self) -> Option<NonZeroU64> {
+        if self.poisoned || self.quiesced {
+            return None;
+        }
         self.active
             .as_ref()
             .map(|segment| segment.identity().segment_sequence)
@@ -1345,6 +1348,7 @@ mod tests {
             Err(JournalManagerError::Quiesced)
         );
         assert!(manager.is_quiesced());
+        assert_eq!(manager.active_sequence(), None);
         assert!(
             journal
                 .join(segment_file_name(NonZeroU64::new(1).unwrap()))
@@ -1391,8 +1395,10 @@ mod tests {
         let directory = TestDirectory::new();
         let key = SigningKey::from_seed([3; 32]);
         let bounds = JournalBounds::new(4096, 4, 3).unwrap();
-        let maximum =
-            ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key)).unwrap();
+        let maximum = ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key))
+            .unwrap()
+            .checked_add(ActiveEvidenceSegment::framed_record_bytes(b"one".len()).unwrap())
+            .unwrap();
         let limits = JournalLimits::new(bounds, 4, u64::try_from(maximum).unwrap()).unwrap();
         let (mut manager, _) = open(&directory.journal(), 1, limits).unwrap();
 
@@ -1400,7 +1406,42 @@ mod tests {
             manager.append(b"four", 1),
             Err(JournalManagerError::Journal(JournalError::RecordTooLarge))
         );
+        manager.append(b"one", 2).unwrap();
         assert!(!manager.is_quiesced());
+        assert_eq!(manager.active_sequence().map(NonZeroU64::get), Some(1));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn ambiguous_successor_publication_permanently_poisoned_manager_cannot_mutate() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let (mut manager, _) = open(&journal, 1, limits(1, 3)).unwrap();
+        manager.append(b"one", 1).unwrap();
+        crate::journal::inject_create_publication_commit_ambiguous_once();
+
+        assert_eq!(
+            manager.append(b"two", 2),
+            Err(JournalManagerError::AppendCommitAmbiguous {
+                record_digest: EvidenceRecordDigest::compute(b"two"),
+            })
+        );
+        assert_eq!(manager.active_sequence(), None);
+
+        let successor_name = segment_file_name(NonZeroU64::new(2).unwrap());
+        let successor = journal.join(&successor_name);
+        let pending = journal.join(format!("{PENDING_CREATION_PREFIX}{successor_name}"));
+        let bytes_before_rejected_append =
+            (fs::read(&successor).unwrap(), fs::read(&pending).unwrap());
+
+        assert_eq!(
+            manager.append(b"three", 3),
+            Err(JournalManagerError::Poisoned)
+        );
+        assert_eq!(
+            (fs::read(successor).unwrap(), fs::read(pending).unwrap()),
+            bytes_before_rejected_append
+        );
     }
 
     #[test]
