@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "T000",
+  "requirement_id": "HALDIR-0.9-T000",
+  "status": "verified",
+  "implementation": {
+    "commit": "da40bd8494f894c48add09fc26ce19b161ad91c8",
+    "tree": "c19f63c57f1fd8736246a9d9b94e2feb8830787d",
+    "author": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "commit_signature": "ssh-ed25519"
+  },
+  "github_ci": {
+    "run_id": 29314709743,
+    "url": "https://github.com/sepahead/haldir/actions/runs/29314709743",
+    "conclusion": "success",
+    "jobs": [
+      "feature-matrix",
+      "supply-chain",
+      "build-test",
+      "macos-compile",
+      "clean-build",
+      "interop"
+    ],
+    "log": {
+      "path": "release/0.9.0/evidence/t000-ci-da40bd8.log.gz",
+      "compression": "gzip",
+      "gzip_timestamp": 0,
+      "uncompressed_sha256": "6f1cbb5f34e1fe9d97164c2e56017703761283c3fd0cb51e04dd058635027a87",
+      "uncompressed_bytes": 488929,
+      "uncompressed_lines": 3845
+    }
+  },
+  "github_formal": {
+    "run_id": 29314709777,
+    "url": "https://github.com/sepahead/haldir/actions/runs/29314709777",
+    "conclusion": "success",
+    "log": {
+      "path": "release/0.9.0/evidence/t000-formal-da40bd8.log.gz",
+      "compression": "gzip",
+      "gzip_timestamp": 0,
+      "uncompressed_sha256": "438db01bc9c64da276a34bc7eeeb533b3a4548b848cbfa7cc185275a498f4737",
+      "uncompressed_bytes": 36582,
+      "uncompressed_lines": 267
+    }
+  },
+  "review": {
+    "self_reviewed_by": "Sepehr Mahmoudian",
+    "independent_reviewer": null,
+    "independent_review_required_for_t000": false
+  },
+  "residual_risks": [
+    "This verification closes the immutable starting-cut task, not the final 0.9 release ceremony.",
+    "The handoff package is bound by digest but is not duplicated in the repository."
+  ]
+}

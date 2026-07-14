@@ -24,7 +24,7 @@
       "dependencies": [
 
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence": [
         {
           "kind": "normative_requirement",
@@ -43,6 +43,21 @@
           "kind": "complete_log",
           "path": "release/0.9.0/evidence/baseline-p0r.log.gz",
           "sha256_uncompressed": "2528ee0ecf99eb096c1a159a9f342b32781fc41f87120ce0f7996b118e3edd09"
+        },
+        {
+          "kind": "exact_commit_verification",
+          "path": "release/0.9.0/evidence/t000-verification.json",
+          "commit": "da40bd8494f894c48add09fc26ce19b161ad91c8"
+        },
+        {
+          "kind": "github_ci",
+          "run_id": 29314709743,
+          "conclusion": "success"
+        },
+        {
+          "kind": "github_formal",
+          "run_id": 29314709777,
+          "conclusion": "success"
         }
       ],
       "ten_lens_review": {

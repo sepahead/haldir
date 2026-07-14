@@ -38,6 +38,9 @@ Evidence:
   complete output of `bash tools/p0r-exit-gate.sh` on that untouched commit.
 - [`baseline-p0r.json`](../../../release/0.9.0/evidence/baseline-p0r.json) records the
   command, uncompressed digest, byte/line counts, and successful exit status.
+- [`t000-verification.json`](../../../release/0.9.0/evidence/t000-verification.json)
+  binds the signed implementation commit to successful exact-commit GitHub CI and
+  TLA+ runs and their complete retained logs.
 
 ## Evidence discipline
 
@@ -46,4 +49,3 @@ negative tests, the exact commands and results, immutable source/dependency iden
 a ten-lens review, and a residual-risk statement. External reviews, penetration tests,
 and supervisor approvals must be performed by real named people; repository authors
 must not manufacture those records.
-

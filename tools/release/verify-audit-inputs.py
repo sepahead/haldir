@@ -196,6 +196,52 @@ def _verify_baseline(manifest: dict[str, Any], repo: Path) -> None:
         raise AuditError("AUDIT_BASELINE_DIGEST_RECORD_MISMATCH")
 
 
+def _verify_retained_log(repo: Path, record: dict[str, Any], marker: bytes, commit: str) -> None:
+    path = repo / record["path"]
+    payload = read_bounded_gzip(path)
+    if len(payload) != record.get("uncompressed_bytes"):
+        raise AuditError("AUDIT_VERIFICATION_LOG_SIZE_MISMATCH")
+    if len(payload.splitlines()) != record.get("uncompressed_lines"):
+        raise AuditError("AUDIT_VERIFICATION_LOG_LINES_MISMATCH")
+    expected = _require_hex(record.get("uncompressed_sha256"), HEX64, "verification.log.sha256")
+    if _sha256(payload) != expected:
+        raise AuditError("AUDIT_VERIFICATION_LOG_DIGEST_MISMATCH")
+    if commit.encode("ascii") not in payload or marker not in payload:
+        raise AuditError("AUDIT_VERIFICATION_LOG_MARKER_MISSING")
+
+
+def _verify_t000(repo: Path) -> None:
+    record = _load_json(repo / "release/0.9.0/evidence/t000-verification.json", MAX_MANIFEST_BYTES)
+    if record.get("task_id") != "T000" or record.get("requirement_id") != "HALDIR-0.9-T000":
+        raise AuditError("AUDIT_T000_IDENTITY_INVALID")
+    if record.get("status") != "verified":
+        raise AuditError("AUDIT_T000_NOT_VERIFIED")
+    implementation = record.get("implementation")
+    if not isinstance(implementation, dict):
+        raise AuditError("AUDIT_T000_IMPLEMENTATION_INVALID")
+    commit = _require_hex(implementation.get("commit"), HEX40, "t000.commit")
+    tree = _require_hex(implementation.get("tree"), HEX40, "t000.tree")
+    if _git(repo, "rev-parse", f"{commit}^{{tree}}").decode().strip() != tree:
+        raise AuditError("AUDIT_T000_TREE_MISMATCH")
+    commit_object = _git(repo, "cat-file", "commit", commit)
+    if b"gpgsig -----BEGIN SSH SIGNATURE-----" not in commit_object:
+        raise AuditError("AUDIT_T000_COMMIT_UNSIGNED")
+
+    ci = record.get("github_ci")
+    formal = record.get("github_formal")
+    if not isinstance(ci, dict) or ci.get("run_id") != 29314709743 or ci.get("conclusion") != "success":
+        raise AuditError("AUDIT_T000_CI_INVALID")
+    if not isinstance(formal, dict) or formal.get("run_id") != 29314709777 or formal.get("conclusion") != "success":
+        raise AuditError("AUDIT_T000_FORMAL_INVALID")
+    _verify_retained_log(repo, ci["log"], b"verify-audit-inputs: OK", commit)
+    _verify_retained_log(
+        repo,
+        formal["log"],
+        b"Model checking completed. No error has been found.",
+        commit,
+    )
+
+
 def verify(manifest_path: Path, repo: Path) -> None:
     """Verify one audit manifest against immutable objects in ``repo``."""
 
@@ -219,6 +265,7 @@ def verify(manifest_path: Path, repo: Path) -> None:
     _verify_handoff(manifest)
     _verify_source_bound_files(manifest, repo, commit)
     _verify_baseline(manifest, repo)
+    _verify_t000(repo)
 
     publication = manifest.get("repository_publication_state")
     if publication != {"remote_tags": [], "github_releases": []}:
@@ -239,4 +286,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
