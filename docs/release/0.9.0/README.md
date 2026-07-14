@@ -42,6 +42,17 @@ Evidence:
   binds the signed implementation commit to successful exact-commit GitHub CI and
   TLA+ runs and their complete retained logs.
 
+## HALDIR-0.9-T001 — normative authority model
+
+The [normative authority contract](AUTHORITY-CONTRACT.md) defines plant-command
+creation, identifies `gate` as the sole Haldir principal authorized to create a
+plant command in the claimed secure-reference profile, and separates decision
+outcomes from semantic plant actions. Its
+[`authority-model.json`](../../../release/0.9.0/authority-model.json) mirror is
+checked against the deployment profile, retained live ACL matrix, current closed
+Rust vocabularies, Gate construction order, and requirement ledger. Complete
+mediation and downstream plant effects remain `NOT_CLAIMED`.
+
 ## Evidence discipline
 
 Task closure requires a stable SHALL/SHALL NOT requirement, applicable positive and

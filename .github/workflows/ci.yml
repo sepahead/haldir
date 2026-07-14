@@ -97,6 +97,10 @@ jobs:
         run: |
           python3 -m unittest tools/release/test_verify_audit_inputs.py
           python3 tools/release/verify-audit-inputs.py
+      - name: Verify normative 0.9 authority model
+        run: |
+          python3 -m unittest tools/release/test_verify_authority_model.py
+          python3 tools/release/verify-authority-model.py
       - name: Verify evidence layout
         run: python3 tools/verify-evidence.py
       - name: Verify secure Zenoh profiles and retained live evidence

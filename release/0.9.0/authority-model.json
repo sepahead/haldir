@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0.0",
+  "requirement_id": "HALDIR-0.9-T001",
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian"
+  },
+  "normative_document": {
+    "path": "docs/release/0.9.0/AUTHORITY-CONTRACT.md",
+    "sha256": "3059cda55c382a629be7698c52b618bf59048a7356748b1ded437fa0f9609759"
+  },
+  "claimed_profile": {
+    "profile_id": "haldir-secure-reference-v1",
+    "compatibility": "PRE_AUTHORITY_ACL_ONLY",
+    "protected_route_name": "final_command",
+    "protected_route": "haldir-ncp/session/uav-1/command",
+    "plant_command_definition": "exact_frame_intended_for_plant_consumption_on_protected_final_route",
+    "command_shaped_data_is_authority": false,
+    "unauthorized_final_route_frame_is_plant_command": true,
+    "sole_haldir_principal": {
+      "principal_id": "gate",
+      "role": "gate",
+      "certificate_common_name": "haldir-gate.secure-reference-v1",
+      "application_key_role": "GATE_APPLICATION"
+    },
+    "authority_conjunction": [
+      "gate_active_and_not_fault_latched",
+      "bounded_canonical_authenticated_controller_intent",
+      "route_session_lease_admission_and_trusted_state_match",
+      "deterministic_policy_allow_with_useful_validity",
+      "authorization_revision_unchanged",
+      "acl_exclusive_publication_authority_current",
+      "new_gate_owned_output_position",
+      "fresh_gate_owned_frame_built_and_exactly_validated",
+      "opaque_publication_transition_binds_route_bytes_and_digest"
+    ],
+    "non_gate_principals": [
+      "admission-authority",
+      "controller-a",
+      "controller-b",
+      "lifecycle",
+      "mission-authority",
+      "observer",
+      "robot-crebain"
+    ]
+  },
+  "decision_action_separation": {
+    "decision_outcomes": [
+      "ALLOW",
+      "DENY",
+      "ERROR"
+    ],
+    "plant_actions": [
+      "HOLD",
+      "VELOCITY_LOCAL_NED"
+    ],
+    "allow_hold": "creates_bounded_zero_velocity_plant_command",
+    "deny_or_error": "creates_no_plant_command",
+    "decision_named_hold_or_estop": false,
+    "haldir_originated_estop": "NOT_CLAIMED"
+  },
+  "prohibited_authority_expansion": [
+    "controller_intent_is_not_plant_command",
+    "serialization_is_not_authorization",
+    "controller_bytes_are_not_forwarded",
+    "advisory_evidence_cannot_grant_or_widen_authority",
+    "consumer_receipt_cannot_retroactively_grant_authority",
+    "failed_or_missing_conjunct_has_no_fallback"
+  ],
+  "claim_scope": {
+    "normative_authority_rule": "FROZEN",
+    "implementation_enforcement": "PARTIAL",
+    "complete_mediation": "NOT_CLAIMED",
+    "delivery": "NOT_CLAIMED",
+    "plant_acceptance": "NOT_CLAIMED",
+    "plant_application": "NOT_CLAIMED",
+    "physical_system_safety": "NOT_CLAIMED",
+    "production_deployment_security": "NOT_CLAIMED",
+    "other_deployment_modes": "DEFERRED_TO_HALDIR-0.9-T005"
+  },
+  "evidence_sources": {
+    "deployment_profile": "deploy/secure-reference-v1/profile.json",
+    "retained_live_acl_result": "evidence/11-secure-zenoh-live/result.json",
+    "decision_contract": "crates/haldir-contracts/src/receipt.rs",
+    "action_contract": "crates/haldir-contracts/src/action.rs",
+    "publication_authority_contract": "crates/haldir-contracts/src/status.rs",
+    "key_role_contract": "crates/haldir-crypto/src/role.rs",
+    "gate_decision_pipeline": "crates/haldir-gate/src/actor.rs",
+    "runtime_semantics_tests": "crates/haldir-gate/src/lib.rs",
+    "expected_gate_positive_cases": [
+      "final-positive-pre",
+      "final-positive-post"
+    ],
+    "expected_non_gate_denial_cases": [
+      "final-denied-admission-authority",
+      "final-denied-controller-a",
+      "final-denied-controller-b",
+      "final-denied-lifecycle",
+      "final-denied-mission-authority",
+      "final-denied-observer",
+      "final-denied-robot-crebain"
+    ]
+  }
+}

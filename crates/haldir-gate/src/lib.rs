@@ -108,14 +108,16 @@ mod e2e {
     };
     use haldir_evidence::publication::PublicationTraceState;
     use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
-    use haldir_reference_plant::{PlantConfig, PlantEventKind, ReferencePlant};
+    use haldir_reference_plant::{PlantAction, PlantConfig, PlantEventKind, ReferencePlant};
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
     #[cfg(feature = "live-zenoh")]
     use haldir_transport_zenoh::{
         HARD_MAX_INTENT_BYTES, HaldirKeys, IngressCountersSnapshot, IngressLimits,
         IntentIngressEvent, MAX_HALDIR_ROUTE_BYTES, SecureZenohError,
     };
-    use std::collections::{BTreeMap, VecDeque};
+    use std::collections::BTreeMap;
+    #[cfg(feature = "live-zenoh")]
+    use std::collections::VecDeque;
     use std::future::Future;
     use std::pin::Pin;
     use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -3979,6 +3981,61 @@ mod e2e {
                 .iter()
                 .any(|e| e.kind == PlantEventKind::ResponseObserved)
         );
+    }
+
+    #[test]
+    fn authority_contract_separates_hold_action_from_negative_decisions() {
+        let mut hold_fixture = setup();
+        let admission = admission_record();
+        let hold = RequestedActionV1::Hold {
+            requested_validity_ms: NonZeroU32::new(300).unwrap(),
+        };
+        let intent = build_intent(hold_fixture.admission_digest, &admission, 1, hold);
+        let envelope = sign_intent(&hold_fixture.ctrl_sk, &intent);
+        let allowed = hold_fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, hold_fixture.now);
+        assert_eq!(allowed.outcome, DecisionOutcomeV1::Allow);
+        assert_eq!(allowed.receipt.decision, DecisionOutcomeV1::Allow);
+        assert_eq!(
+            allowed.receipt.publish_stage,
+            PublishStageV1::OutputPrepared
+        );
+        let effective_validity_ms = allowed.receipt.effective_validity_ms.unwrap();
+        assert!((1..=300).contains(&effective_validity_ms));
+
+        let prepared = allowed
+            .into_prepared_publication()
+            .expect("ALLOW(HOLD) prepares one command");
+        let called = hold_fixture
+            .actor
+            .mark_publish_called(prepared, hold_fixture.now)
+            .expect("the current authority permits the prepared HOLD command");
+        assert!(called.frame().is_hold());
+        let command = called.reference_plant_command();
+        assert_eq!(command.action, PlantAction::Hold);
+        assert_eq!(command.action.velocity(), [0, 0, 0]);
+        assert_eq!(command.validity_ms, effective_validity_ms);
+        hold_fixture
+            .actor
+            .mark_publish_returned_ok(called, hold_fixture.now)
+            .unwrap();
+
+        let mut negative_fixture = setup();
+        let denied = negative_fixture
+            .actor
+            .decide_intent(&[], INTENT_KEY, negative_fixture.now);
+        assert_eq!(denied.outcome, DecisionOutcomeV1::Deny);
+        assert!(!denied.has_prepared_publication());
+
+        negative_fixture
+            .actor
+            .force_next_decision_for_test(u64::MAX);
+        let errored = negative_fixture
+            .actor
+            .decide_intent(&[], INTENT_KEY, negative_fixture.now);
+        assert_eq!(errored.outcome, DecisionOutcomeV1::Error);
+        assert!(!errored.has_prepared_publication());
     }
 
     #[test]

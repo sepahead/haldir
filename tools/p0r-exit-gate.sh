@@ -59,6 +59,8 @@ run "source pins"         python3 tools/verify-pins.py
 run "CI/formal pins"       python3 tools/verify-ci-pins.py
 run "release audit tests" python3 -m unittest tools/release/test_verify_audit_inputs.py
 run "release audit cut"   python3 tools/release/verify-audit-inputs.py
+run "release authority tests" python3 -m unittest tools/release/test_verify_authority_model.py
+run "release authority model" python3 tools/release/verify-authority-model.py
 run "evidence layout"     python3 tools/verify-evidence.py
 run "offline Zenoh profile tests" python3 -m unittest tools/test_secure_zenoh.py tools/test_live_secure_zenoh.py
 run "offline Zenoh profile" python3 tools/verify-secure-zenoh.py

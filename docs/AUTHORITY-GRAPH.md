@@ -1,5 +1,11 @@
 # Authority graph (P0)
 
+The normative Haldir 0.9 definition of plant-command creation and the sole
+authorized Haldir principal is
+[`docs/release/0.9.0/AUTHORITY-CONTRACT.md`](release/0.9.0/AUTHORITY-CONTRACT.md).
+This P0 graph is supporting design material and does not expand that contract's
+claim boundary.
+
 ## Authorities as capabilities (distinct key roles)
 
 `crates/haldir-crypto/src/role.rs` encodes the closed role set. No key signs more
