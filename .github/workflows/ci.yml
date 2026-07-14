@@ -101,6 +101,12 @@ jobs:
         run: |
           python3 -m unittest tools/release/test_verify_authority_model.py
           python3 tools/release/verify-authority-model.py
+      - name: Verify normative 0.9 protection model and evidence generator
+        run: |
+          python3 -m unittest tools/release/test_generate_task_evidence.py
+          python3 tools/release/verify-task-evidence.py --all-present
+          python3 -m unittest tools/release/test_verify_protection_model.py
+          python3 tools/release/verify-protection-model.py
       - name: Verify evidence layout
         run: python3 tools/verify-evidence.py
       - name: Verify secure Zenoh profiles and retained live evidence

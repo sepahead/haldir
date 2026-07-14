@@ -1,0 +1,2347 @@
+{
+  "schema_version": "1.0.0",
+  "requirement_id": "HALDIR-0.9-T002",
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian"
+  },
+  "normative_document": {
+    "path": "docs/release/0.9.0/PROTECTION-MODEL.md",
+    "sha256": "c707fba70d255575a7529f91270f7f7d8f742b47b905b38ddd2cd1ae84529029"
+  },
+  "scope": {
+    "profile_id": "haldir-secure-reference-v1",
+    "compatibility": "PRE_AUTHORITY_ACL_ONLY",
+    "realm": "haldir-ncp",
+    "session_id": "uav-1",
+    "ncp_protocol_pin": "v0.8.0",
+    "default_effect": "DENY",
+    "unlisted_authority": "FORBIDDEN"
+  },
+  "identity_namespaces": [
+    {
+      "namespace_id": "transport_principal",
+      "basis": "authenticated_mtls_identity_and_exact_router_acl_grant",
+      "standalone_plant_command_authority": false
+    },
+    {
+      "namespace_id": "certificate_common_name",
+      "basis": "profile_bound_transport_certificate_attribute",
+      "standalone_plant_command_authority": false
+    },
+    {
+      "namespace_id": "application_key_role",
+      "basis": "exact_kid_role_class_subject_and_public_key_after_cose_verification",
+      "standalone_plant_command_authority": false
+    },
+    {
+      "namespace_id": "logical_signed_subject",
+      "basis": "typed_identity_authenticated_then_matched_to_external_state",
+      "standalone_plant_command_authority": false
+    },
+    {
+      "namespace_id": "component_label",
+      "basis": "descriptive_process_crate_service_operator_or_component_name_only",
+      "standalone_plant_command_authority": false
+    }
+  ],
+  "subjects": {
+    "transport_principals": [
+      {
+        "principal_id": "admission-authority",
+        "role": "admission-authority",
+        "certificate_common_name": "haldir-admission-authority.secure-reference-v1",
+        "publish": [
+          "admission_record",
+          "admission_revocation"
+        ],
+        "subscribe": [
+          "gate_challenge",
+          "gate_status"
+        ],
+        "query": [],
+        "serve": []
+      },
+      {
+        "principal_id": "controller-a",
+        "role": "controller",
+        "certificate_common_name": "haldir-controller-a.secure-reference-v1",
+        "publish": [
+          "controller_a_intent"
+        ],
+        "subscribe": [
+          "state_pose",
+          "gate_challenge",
+          "gate_status"
+        ],
+        "query": [],
+        "serve": []
+      },
+      {
+        "principal_id": "controller-b",
+        "role": "controller",
+        "certificate_common_name": "haldir-controller-b.secure-reference-v1",
+        "publish": [
+          "controller_b_intent"
+        ],
+        "subscribe": [
+          "state_pose",
+          "gate_challenge",
+          "gate_status"
+        ],
+        "query": [],
+        "serve": []
+      },
+      {
+        "principal_id": "gate",
+        "role": "gate",
+        "certificate_common_name": "haldir-gate.secure-reference-v1",
+        "publish": [
+          "final_command",
+          "gate_challenge",
+          "decision_evidence",
+          "gate_status"
+        ],
+        "subscribe": [
+          "controller_a_intent",
+          "controller_b_intent",
+          "state_pose",
+          "session_status",
+          "mission_lease",
+          "mission_revocation",
+          "admission_record",
+          "admission_revocation",
+          "application_evidence"
+        ],
+        "query": [],
+        "serve": []
+      },
+      {
+        "principal_id": "lifecycle",
+        "role": "lifecycle",
+        "certificate_common_name": "haldir-lifecycle.secure-reference-v1",
+        "publish": [
+          "session_status"
+        ],
+        "subscribe": [
+          "gate_status"
+        ],
+        "query": [],
+        "serve": [
+          "rpc_open_session",
+          "rpc_step_request",
+          "rpc_run_request",
+          "rpc_close_session"
+        ]
+      },
+      {
+        "principal_id": "mission-authority",
+        "role": "mission-authority",
+        "certificate_common_name": "haldir-mission-authority.secure-reference-v1",
+        "publish": [
+          "mission_lease",
+          "mission_revocation"
+        ],
+        "subscribe": [
+          "gate_challenge",
+          "gate_status"
+        ],
+        "query": [],
+        "serve": []
+      },
+      {
+        "principal_id": "observer",
+        "role": "observer",
+        "certificate_common_name": "haldir-observer.secure-reference-v1",
+        "publish": [],
+        "subscribe": [
+          "final_command",
+          "state_pose",
+          "session_status",
+          "decision_evidence",
+          "gate_status",
+          "application_evidence"
+        ],
+        "query": [],
+        "serve": []
+      },
+      {
+        "principal_id": "robot-crebain",
+        "role": "robot",
+        "certificate_common_name": "haldir-robot-crebain.secure-reference-v1",
+        "publish": [
+          "state_pose",
+          "application_evidence"
+        ],
+        "subscribe": [
+          "final_command",
+          "session_status",
+          "gate_status"
+        ],
+        "query": [
+          "rpc_open_session",
+          "rpc_step_request",
+          "rpc_run_request",
+          "rpc_close_session"
+        ],
+        "serve": []
+      }
+    ],
+    "application_key_roles": [
+      "GATE_APPLICATION",
+      "CONTROLLER_INTENT",
+      "MISSION_AUTHORITY",
+      "ADMISSION_AUTHORITY",
+      "POLICY_AUTHORITY",
+      "REVOCATION_AUTHORITY",
+      "CREBAIN_EVIDENCE",
+      "DEPLOYMENT_AUTHORITY",
+      "DEVELOPMENT_ONLY"
+    ],
+    "application_role_bindings": [
+      {
+        "role": "GATE_APPLICATION",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [
+          {
+            "rust_type": "DecisionReceiptV1",
+            "kind": "haldir.decision_receipt",
+            "schema_major": 1,
+            "content_type": "application/haldir-decision_receipt+cbor",
+            "external_aad": "haldir.decision_receipt.v1",
+            "subject_binding": "DecisionReceiptV1.gate_id_equals_KeyRecord.subject_GateId"
+          },
+          {
+            "rust_type": "PublicationStageEventV1",
+            "kind": "haldir.publication_stage",
+            "schema_major": 1,
+            "content_type": "application/haldir-publication_stage+cbor",
+            "external_aad": "haldir.publication_stage.v1",
+            "subject_binding": "PublicationStageEventV1.gate_id_equals_KeyRecord.subject_GateId"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "ACTIVE_OBJECT_DOMAINS"
+      },
+      {
+        "role": "CONTROLLER_INTENT",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [
+          {
+            "rust_type": "HaldirIntentV1",
+            "kind": "haldir.intent",
+            "schema_major": 1,
+            "content_type": "application/haldir-intent+cbor",
+            "external_aad": "haldir.intent.v1",
+            "subject_binding": "HaldirIntentV1.controller_id_equals_KeyRecord.subject_ControllerId"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "ACTIVE_OBJECT_DOMAIN"
+      },
+      {
+        "role": "MISSION_AUTHORITY",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [
+          {
+            "rust_type": "MissionLeaseV1",
+            "kind": "haldir.mission_lease",
+            "schema_major": 1,
+            "content_type": "application/haldir-mission_lease+cbor",
+            "external_aad": "haldir.mission_lease.v1",
+            "subject_binding": "MissionLeaseV1.issuer_id_equals_KeyRecord.subject"
+          },
+          {
+            "rust_type": "AuthorityRevocationV1",
+            "kind": "haldir.authority_revocation",
+            "schema_major": 1,
+            "content_type": "application/haldir-authority_revocation+cbor",
+            "external_aad": "haldir.authority_revocation.v1",
+            "subject_binding": "AuthorityRevocationV1.issuer_id_equals_KeyRecord.subject"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "LEASE_ACTIVE_REVOCATION_DECLARED_ROLE_DOMAIN"
+      },
+      {
+        "role": "ADMISSION_AUTHORITY",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [
+          {
+            "rust_type": "AdmissionRecordV1",
+            "kind": "haldir.admission_record",
+            "schema_major": 1,
+            "content_type": "application/haldir-admission_record+cbor",
+            "external_aad": "haldir.admission_record.v1",
+            "subject_binding": "AdmissionRecordV1.issuer_id_equals_KeyRecord.subject"
+          },
+          {
+            "rust_type": "AuthorityRevocationV1",
+            "kind": "haldir.authority_revocation",
+            "schema_major": 1,
+            "content_type": "application/haldir-authority_revocation+cbor",
+            "external_aad": "haldir.authority_revocation.v1",
+            "subject_binding": "AuthorityRevocationV1.issuer_id_equals_KeyRecord.subject"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "LOADER_VERIFIED_RECORD_REVOCATION_DECLARED_ROLE_DOMAIN"
+      },
+      {
+        "role": "POLICY_AUTHORITY",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [],
+        "assurance_authority": false,
+        "implementation_status": "ROLE_RESERVED_POLICY_SIGNED_OBJECT_DOMAIN_NOT_IMPLEMENTED"
+      },
+      {
+        "role": "REVOCATION_AUTHORITY",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [
+          {
+            "rust_type": "AuthorityRevocationV1",
+            "kind": "haldir.authority_revocation",
+            "schema_major": 1,
+            "content_type": "application/haldir-authority_revocation+cbor",
+            "external_aad": "haldir.authority_revocation.v1",
+            "subject_binding": "AuthorityRevocationV1.issuer_id_equals_KeyRecord.subject"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "DECLARED_ROLE_DOMAIN"
+      },
+      {
+        "role": "CREBAIN_EVIDENCE",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [],
+        "assurance_authority": false,
+        "implementation_status": "ROLE_RESERVED_SIGNED_APPLICATION_EVIDENCE_DOMAIN_NOT_IMPLEMENTED"
+      },
+      {
+        "role": "DEPLOYMENT_AUTHORITY",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [
+          {
+            "rust_type": "DeploymentPackageV1",
+            "kind": "haldir.deployment_package",
+            "schema_major": 1,
+            "content_type": "application/haldir-deployment_package+cbor",
+            "external_aad": "haldir.deployment_package.v1",
+            "subject_binding": "DeploymentPackageV1.deployment_authority_id_equals_KeyRecord.subject"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "VERIFIER_PRIMITIVE_NOT_GATE_COMPOSED"
+      },
+      {
+        "role": "DEVELOPMENT_ONLY",
+        "allowed_key_classes": [
+          "DEVELOPMENT"
+        ],
+        "signed_objects": [],
+        "assurance_authority": false,
+        "implementation_status": "FORBIDDEN_IN_ASSURANCE_PROFILE"
+      }
+    ],
+    "logical_components": [
+      {
+        "subject_id": "gate_application",
+        "identity_basis": "GATE_APPLICATION_key_subject_equals_GateId",
+        "duties": [
+          "verify",
+          "authorize",
+          "allocate_output",
+          "construct_frame",
+          "validate_frame",
+          "record_evidence"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "CONSTRUCT_AFTER_FULL_CONJUNCTION"
+      },
+      {
+        "subject_id": "gate_transport",
+        "identity_basis": "gate_mtls_principal_CN_and_exact_ACL",
+        "duties": [
+          "authenticate_connect",
+          "publish_once"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "PUBLISH_EXACT_VALIDATED_FRAME"
+      },
+      {
+        "subject_id": "secure_transport_router",
+        "identity_basis": "deployment_owned_router_process_exact_profile_and_server_credentials",
+        "duties": [
+          "enforce_acl",
+          "route_transport"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "TRANSPORT_MEDIATOR_NOT_COMMAND_AUTHOR"
+      },
+      {
+        "subject_id": "controller",
+        "identity_basis": "CONTROLLER_INTENT_key_subject_and_actual_profile_route",
+        "duties": [
+          "sign",
+          "submit_intent"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "REQUEST_ONLY"
+      },
+      {
+        "subject_id": "mission_authority",
+        "identity_basis": "MISSION_AUTHORITY_key_subject_equals_issuer",
+        "duties": [
+          "sign",
+          "issue",
+          "revoke"
+        ],
+        "may_grant_or_widen_authority": true,
+        "plant_command_role": "BOUNDED_REQUEST_AUTHORITY_ONLY"
+      },
+      {
+        "subject_id": "admission_authority",
+        "identity_basis": "ADMISSION_AUTHORITY_key_and_verified_record",
+        "duties": [
+          "sign",
+          "issue",
+          "revoke"
+        ],
+        "may_grant_or_widen_authority": true,
+        "plant_command_role": "CONTROLLER_RELATION_ONLY"
+      },
+      {
+        "subject_id": "policy_authority",
+        "identity_basis": "POLICY_AUTHORITY_key_and_policy_digest",
+        "duties": [
+          "sign",
+          "issue"
+        ],
+        "may_grant_or_widen_authority": true,
+        "plant_command_role": "BOUND_POLICY_LIMITS_ONLY"
+      },
+      {
+        "subject_id": "revocation_authority",
+        "identity_basis": "REVOCATION_AUTHORITY_key_and_monotonic_revocation_epoch",
+        "duties": [
+          "sign",
+          "revoke"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "REMOVE_AUTHORITY_ONLY"
+      },
+      {
+        "subject_id": "deployment_authority",
+        "identity_basis": "DEPLOYMENT_AUTHORITY_key_subject_and_external_acceptance_policy",
+        "duties": [
+          "sign",
+          "issue"
+        ],
+        "may_grant_or_widen_authority": true,
+        "plant_command_role": "SELECT_DEPLOYMENT_INPUTS_ONLY"
+      },
+      {
+        "subject_id": "trusted_state_producer",
+        "identity_basis": "authenticated_source_provenance_required_but_not_currently_proven",
+        "duties": [
+          "observe"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "STATE_INPUT_ONLY"
+      },
+      {
+        "subject_id": "lifecycle_service",
+        "identity_basis": "lifecycle_mtls_principal_and_session_contract",
+        "duties": [
+          "lifecycle_rpc",
+          "observe"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "SESSION_METADATA_ONLY"
+      },
+      {
+        "subject_id": "plant_crebain",
+        "identity_basis": "robot_crebain_transport_plus_CREBAIN_EVIDENCE_when_verified",
+        "duties": [
+          "consume",
+          "accept",
+          "apply",
+          "record_evidence"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "DOWNSTREAM_CONSUMER"
+      },
+      {
+        "subject_id": "observer_auditor",
+        "identity_basis": "observer_transport_or_separately_authorized_audit_reader",
+        "duties": [
+          "observe",
+          "verify"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "READ_ONLY"
+      },
+      {
+        "subject_id": "provisioning_operator",
+        "identity_basis": "external_operator_identity_and_custody_not_currently_proven",
+        "duties": [
+          "configure",
+          "provision"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "OFFLINE_PROVISIONING_ONLY"
+      },
+      {
+        "subject_id": "external_generation_anchor",
+        "identity_basis": "independently_administered_non_rewindable_service_not_currently_deployed",
+        "duties": [
+          "compare_and_set_generation",
+          "recover"
+        ],
+        "may_grant_or_widen_authority": false,
+        "plant_command_role": "ANTI_ROLLBACK_ONLY"
+      }
+    ],
+    "subject_type_bindings": [
+      {
+        "subject_id": "gate_application",
+        "transport_principal_ids": [],
+        "application_key_roles": [
+          "GATE_APPLICATION"
+        ],
+        "logical_subject_types": [
+          "GateId",
+          "GateBootId"
+        ],
+        "binding_status": "APPLICATION_IDENTITY_ENFORCED_TRANSPORT_BINDING_UNPROVEN"
+      },
+      {
+        "subject_id": "gate_transport",
+        "transport_principal_ids": [
+          "gate"
+        ],
+        "application_key_roles": [],
+        "logical_subject_types": [
+          "PrincipalId",
+          "certificate_common_name"
+        ],
+        "binding_status": "PROFILE_EXACT_APPLICATION_BINDING_UNPROVEN"
+      },
+      {
+        "subject_id": "secure_transport_router",
+        "transport_principal_ids": [],
+        "application_key_roles": [],
+        "logical_subject_types": [
+          "component_label"
+        ],
+        "binding_status": "CONFIGURATION_AND_SYNTHETIC_EVIDENCE_ONLY"
+      },
+      {
+        "subject_id": "controller",
+        "transport_principal_ids": [
+          "controller-a",
+          "controller-b"
+        ],
+        "application_key_roles": [
+          "CONTROLLER_INTENT"
+        ],
+        "logical_subject_types": [
+          "ControllerId",
+          "ControllerInstanceId"
+        ],
+        "binding_status": "APPLICATION_SUBJECT_AND_ROUTE_CHECKED_END_TO_END_CUSTODY_UNPROVEN"
+      },
+      {
+        "subject_id": "mission_authority",
+        "transport_principal_ids": [
+          "mission-authority"
+        ],
+        "application_key_roles": [
+          "MISSION_AUTHORITY"
+        ],
+        "logical_subject_types": [
+          "MissionLeaseV1.issuer_id"
+        ],
+        "binding_status": "APPLICATION_SUBJECT_CHECKED_TRANSPORT_BINDING_UNPROVEN"
+      },
+      {
+        "subject_id": "admission_authority",
+        "transport_principal_ids": [
+          "admission-authority"
+        ],
+        "application_key_roles": [
+          "ADMISSION_AUTHORITY"
+        ],
+        "logical_subject_types": [
+          "AdmissionRecordV1.issuer_id"
+        ],
+        "binding_status": "APPLICATION_RECORD_CHECKED_TRANSPORT_BINDING_UNPROVEN"
+      },
+      {
+        "subject_id": "policy_authority",
+        "transport_principal_ids": [],
+        "application_key_roles": [
+          "POLICY_AUTHORITY"
+        ],
+        "logical_subject_types": [
+          "policy_package_signer_subject"
+        ],
+        "binding_status": "KEY_ROLE_PRIMITIVE_ONLY_NO_PROFILE_ROUTE"
+      },
+      {
+        "subject_id": "revocation_authority",
+        "transport_principal_ids": [],
+        "application_key_roles": [
+          "REVOCATION_AUTHORITY"
+        ],
+        "logical_subject_types": [
+          "AuthorityRevocationV1.issuer_id"
+        ],
+        "binding_status": "KEY_ROLE_PRIMITIVE_ONLY_NO_PROFILE_ROUTE"
+      },
+      {
+        "subject_id": "deployment_authority",
+        "transport_principal_ids": [],
+        "application_key_roles": [
+          "DEPLOYMENT_AUTHORITY"
+        ],
+        "logical_subject_types": [
+          "DeploymentPackageV1.deployment_authority_id"
+        ],
+        "binding_status": "SIGNED_PACKAGE_PRIMITIVE_NOT_GATE_COMPOSED"
+      },
+      {
+        "subject_id": "trusted_state_producer",
+        "transport_principal_ids": [
+          "robot-crebain"
+        ],
+        "application_key_roles": [],
+        "logical_subject_types": [
+          "VehicleId",
+          "NcpSourceRefV1"
+        ],
+        "binding_status": "REQUIRED_AUTHENTICATED_PROVENANCE_NOT_PROVEN"
+      },
+      {
+        "subject_id": "lifecycle_service",
+        "transport_principal_ids": [
+          "lifecycle"
+        ],
+        "application_key_roles": [],
+        "logical_subject_types": [
+          "NcpSessionIdentityV1"
+        ],
+        "binding_status": "PROFILE_EXACT_SESSION_PROVENANCE_NOT_END_TO_END_PROVEN"
+      },
+      {
+        "subject_id": "plant_crebain",
+        "transport_principal_ids": [
+          "robot-crebain"
+        ],
+        "application_key_roles": [
+          "CREBAIN_EVIDENCE"
+        ],
+        "logical_subject_types": [
+          "VehicleId",
+          "application_evidence_signer_subject"
+        ],
+        "binding_status": "DOWNSTREAM_BOUNDARY_APPLICATION_NOT_PROVEN"
+      },
+      {
+        "subject_id": "observer_auditor",
+        "transport_principal_ids": [
+          "observer"
+        ],
+        "application_key_roles": [],
+        "logical_subject_types": [],
+        "binding_status": "PROFILE_READ_ONLY_OR_EXTERNAL_AUDIT_AUTHORIZATION"
+      },
+      {
+        "subject_id": "provisioning_operator",
+        "transport_principal_ids": [],
+        "application_key_roles": [],
+        "logical_subject_types": [
+          "external_operator_identity"
+        ],
+        "binding_status": "IDENTITY_AND_CUSTODY_NOT_PROVEN"
+      },
+      {
+        "subject_id": "external_generation_anchor",
+        "transport_principal_ids": [],
+        "application_key_roles": [],
+        "logical_subject_types": [
+          "GenerationAnchor"
+        ],
+        "binding_status": "INTERFACE_ONLY_EXTERNAL_DEPLOYMENT_UNPROVEN"
+      }
+    ]
+  },
+  "resources": {
+    "route_resources": [
+      {
+        "resource_id": "route:admission_record",
+        "route_id": "admission_record",
+        "key": "haldir-ncp/session/uav-1/haldir/authority/admission/record",
+        "semantic_owner": "admission_authority",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "admission-authority"
+        ],
+        "subscribers": [
+          "gate"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:admission_revocation",
+        "route_id": "admission_revocation",
+        "key": "haldir-ncp/session/uav-1/haldir/authority/admission/revocation",
+        "semantic_owner": "admission_authority",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "admission-authority"
+        ],
+        "subscribers": [
+          "gate"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:application_evidence",
+        "route_id": "application_evidence",
+        "key": "haldir-ncp/session/uav-1/haldir/application",
+        "semantic_owner": "plant_crebain",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "robot-crebain"
+        ],
+        "subscribers": [
+          "gate",
+          "observer"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:controller_a_intent",
+        "route_id": "controller_a_intent",
+        "key": "haldir-ncp/session/uav-1/haldir/intent/controller-a",
+        "semantic_owner": "controller",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "controller-a"
+        ],
+        "subscribers": [
+          "gate"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:controller_b_intent",
+        "route_id": "controller_b_intent",
+        "key": "haldir-ncp/session/uav-1/haldir/intent/controller-b",
+        "semantic_owner": "controller",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "controller-b"
+        ],
+        "subscribers": [
+          "gate"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:decision_evidence",
+        "route_id": "decision_evidence",
+        "key": "haldir-ncp/session/uav-1/haldir/decision",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "gate"
+        ],
+        "subscribers": [
+          "observer"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:final_command",
+        "route_id": "final_command",
+        "key": "haldir-ncp/session/uav-1/command",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "gate"
+        ],
+        "subscribers": [
+          "observer",
+          "robot-crebain"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": true
+      },
+      {
+        "resource_id": "route:gate_challenge",
+        "route_id": "gate_challenge",
+        "key": "haldir-ncp/session/uav-1/haldir/challenge",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "gate"
+        ],
+        "subscribers": [
+          "admission-authority",
+          "controller-a",
+          "controller-b",
+          "mission-authority"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:gate_status",
+        "route_id": "gate_status",
+        "key": "haldir-ncp/session/uav-1/haldir/status",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "gate"
+        ],
+        "subscribers": [
+          "admission-authority",
+          "controller-a",
+          "controller-b",
+          "lifecycle",
+          "mission-authority",
+          "observer",
+          "robot-crebain"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:mission_lease",
+        "route_id": "mission_lease",
+        "key": "haldir-ncp/session/uav-1/haldir/authority/mission/lease",
+        "semantic_owner": "mission_authority",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "mission-authority"
+        ],
+        "subscribers": [
+          "gate"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:mission_revocation",
+        "route_id": "mission_revocation",
+        "key": "haldir-ncp/session/uav-1/haldir/authority/mission/revocation",
+        "semantic_owner": "mission_authority",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "mission-authority"
+        ],
+        "subscribers": [
+          "gate"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:rpc_close_session",
+        "route_id": "rpc_close_session",
+        "key": "haldir-ncp/rpc/close_session",
+        "semantic_owner": "lifecycle_service",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [],
+        "subscribers": [],
+        "queriers": [
+          "robot-crebain"
+        ],
+        "servers": [
+          "lifecycle"
+        ],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:rpc_open_session",
+        "route_id": "rpc_open_session",
+        "key": "haldir-ncp/rpc/open_session",
+        "semantic_owner": "lifecycle_service",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [],
+        "subscribers": [],
+        "queriers": [
+          "robot-crebain"
+        ],
+        "servers": [
+          "lifecycle"
+        ],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:rpc_run_request",
+        "route_id": "rpc_run_request",
+        "key": "haldir-ncp/rpc/run_request",
+        "semantic_owner": "lifecycle_service",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [],
+        "subscribers": [],
+        "queriers": [
+          "robot-crebain"
+        ],
+        "servers": [
+          "lifecycle"
+        ],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:rpc_step_request",
+        "route_id": "rpc_step_request",
+        "key": "haldir-ncp/rpc/step_request",
+        "semantic_owner": "lifecycle_service",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [],
+        "subscribers": [],
+        "queriers": [
+          "robot-crebain"
+        ],
+        "servers": [
+          "lifecycle"
+        ],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:session_status",
+        "route_id": "session_status",
+        "key": "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+        "semantic_owner": "lifecycle_service",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "lifecycle"
+        ],
+        "subscribers": [
+          "gate",
+          "observer",
+          "robot-crebain"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      },
+      {
+        "resource_id": "route:state_pose",
+        "route_id": "state_pose",
+        "key": "haldir-ncp/session/uav-1/sensor/pose",
+        "semantic_owner": "plant_crebain",
+        "runtime_custodian": "secure_transport_router",
+        "publishers": [
+          "robot-crebain"
+        ],
+        "subscribers": [
+          "controller-a",
+          "controller-b",
+          "gate",
+          "observer"
+        ],
+        "queriers": [],
+        "servers": [],
+        "command_effect": false
+      }
+    ],
+    "state_resources": [
+      {
+        "resource_id": "state:gate_application_signing_secret",
+        "semantic_owner": "provisioning_operator",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_SIGNING_AUTHORITY"
+      },
+      {
+        "resource_id": "state:controller_intent_signing_secrets",
+        "semantic_owner": "controller",
+        "runtime_custodian": "controller",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_CONTROLLER_INTENT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:mission_authority_signing_secret",
+        "semantic_owner": "mission_authority",
+        "runtime_custodian": "mission_authority",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_MISSION_ISSUANCE_AUTHORITY"
+      },
+      {
+        "resource_id": "state:admission_authority_signing_secret",
+        "semantic_owner": "admission_authority",
+        "runtime_custodian": "admission_authority",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_ADMISSION_ISSUANCE_AUTHORITY"
+      },
+      {
+        "resource_id": "state:policy_authority_signing_secret",
+        "semantic_owner": "policy_authority",
+        "runtime_custodian": "policy_authority",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_POLICY_ISSUANCE_AUTHORITY"
+      },
+      {
+        "resource_id": "state:revocation_authority_signing_secret",
+        "semantic_owner": "revocation_authority",
+        "runtime_custodian": "revocation_authority",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_REVOCATION_AUTHORITY"
+      },
+      {
+        "resource_id": "state:deployment_authority_signing_secret",
+        "semantic_owner": "deployment_authority",
+        "runtime_custodian": "deployment_authority",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_DEPLOYMENT_ISSUANCE_AUTHORITY"
+      },
+      {
+        "resource_id": "state:crebain_evidence_signing_secret",
+        "semantic_owner": "plant_crebain",
+        "runtime_custodian": "plant_crebain",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_APPLICATION_EVIDENCE_AUTHORITY"
+      },
+      {
+        "resource_id": "state:gate_transport_credentials",
+        "semantic_owner": "provisioning_operator",
+        "runtime_custodian": "gate_transport",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:controller_transport_credentials",
+        "semantic_owner": "controller",
+        "runtime_custodian": "controller",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_CONTROLLER_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:mission_authority_transport_credentials",
+        "semantic_owner": "mission_authority",
+        "runtime_custodian": "mission_authority",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_MISSION_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:admission_authority_transport_credentials",
+        "semantic_owner": "admission_authority",
+        "runtime_custodian": "admission_authority",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_ADMISSION_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:lifecycle_transport_credentials",
+        "semantic_owner": "lifecycle_service",
+        "runtime_custodian": "lifecycle_service",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_LIFECYCLE_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:observer_transport_credentials",
+        "semantic_owner": "observer_auditor",
+        "runtime_custodian": "observer_auditor",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_OBSERVER_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:plant_crebain_transport_credentials",
+        "semantic_owner": "plant_crebain",
+        "runtime_custodian": "plant_crebain",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_PLANT_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:router_transport_trust_and_credentials",
+        "semantic_owner": "provisioning_operator",
+        "runtime_custodian": "secure_transport_router",
+        "integrity": "MANDATORY",
+        "freshness": "CERTIFICATE_AND_CA_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_ROUTER_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:bootstrap_application_trust",
+        "semantic_owner": "provisioning_operator",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "PROVISIONED_SNAPSHOT_LIFECYCLE_BOUND",
+        "confidentiality": "PUBLIC_KEYS_AND_PROTECTED_CONFIGURATION",
+        "availability_failure": "VERIFY_OR_AUTHORIZE_DENY"
+      },
+      {
+        "resource_id": "state:revocation_snapshot",
+        "semantic_owner": "revocation_authority",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "MONOTONIC_EPOCH_REQUIRED",
+        "confidentiality": "PUBLIC_METADATA",
+        "availability_failure": "VERIFY_OR_AUTHORIZE_DENY"
+      },
+      {
+        "resource_id": "state:deployment_package_and_artifacts",
+        "semantic_owner": "deployment_authority",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "NONDECREASING_REVISION",
+        "confidentiality": "MIXED_NO_SECRETS_IN_PACKAGE",
+        "availability_failure": "DEPLOYMENT_START_DENY"
+      },
+      {
+        "resource_id": "state:admission_snapshot",
+        "semantic_owner": "admission_authority",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "REVOCATION_EPOCH_BOUND",
+        "confidentiality": "PUBLIC_SIGNED_METADATA",
+        "availability_failure": "INTENT_DENY"
+      },
+      {
+        "resource_id": "state:mission_lease_snapshot",
+        "semantic_owner": "mission_authority",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "BOOT_SESSION_TERM_AND_MONOTONIC_EXPIRY",
+        "confidentiality": "PUBLIC_SIGNED_METADATA",
+        "availability_failure": "INTENT_DENY"
+      },
+      {
+        "resource_id": "state:gate_challenge_state",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "CURRENT_GATE_BOOT_ONE_SHOT_MONOTONIC_EXPIRY",
+        "confidentiality": "PUBLIC_NONCE_WITH_PROTECTED_PENDING_SET",
+        "availability_failure": "LEASE_ACTIVATION_DENY"
+      },
+      {
+        "resource_id": "state:policy_snapshot",
+        "semantic_owner": "policy_authority",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "EXACT_DIGEST_AND_REVISION_POLICY",
+        "confidentiality": "PUBLIC_OR_DEPLOYMENT_METADATA",
+        "availability_failure": "INTENT_DENY"
+      },
+      {
+        "resource_id": "state:trusted_state_snapshot",
+        "semantic_owner": "trusted_state_producer",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "GATE_RECEIVE_AND_CAPTURE_MONOTONIC",
+        "confidentiality": "DEPLOYMENT_POLICY",
+        "availability_failure": "INTENT_DENY"
+      },
+      {
+        "resource_id": "state:ncp_session_identity",
+        "semantic_owner": "lifecycle_service",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "EXACT_SESSION_ID_GENERATION_PAIR",
+        "confidentiality": "PUBLIC_METADATA",
+        "availability_failure": "INTENT_DENY"
+      },
+      {
+        "resource_id": "state:gate_boot_and_output_namespace",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "FRESH_BOOT_AND_NEVER_REUSED_OUTPUT_POSITION",
+        "confidentiality": "PUBLIC_METADATA",
+        "availability_failure": "FAULT_OR_NO_OUTPUT"
+      },
+      {
+        "resource_id": "state:replay_usage_and_authorization_revision",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "STRICT_HIGH_WATER_AND_TOCTOU_RECHECK",
+        "confidentiality": "INTERNAL_METADATA",
+        "availability_failure": "FAULT_OR_INTENT_DENY"
+      },
+      {
+        "resource_id": "state:publication_capability_and_slot",
+        "semantic_owner": "gate_transport",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "CURRENT_ROUTE_SESSION_REVISION_AND_SINGLE_SLOT",
+        "confidentiality": "INTERNAL_CAPABILITY",
+        "availability_failure": "NO_OUTPUT"
+      },
+      {
+        "resource_id": "state:final_command_frame",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "gate_transport",
+        "integrity": "MANDATORY",
+        "freshness": "FRESH_OUTPUT_POSITION_AND_USEFUL_VALIDITY",
+        "confidentiality": "NOT_SECRET",
+        "availability_failure": "NO_OUTPUT"
+      },
+      {
+        "resource_id": "state:authenticated_durable_snapshot",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "MONOTONIC_GENERATION_TERM_EPOCH_AND_REVISION",
+        "confidentiality": "AUTHENTICATED_STATE",
+        "availability_failure": "START_OR_MUTATION_DENY"
+      },
+      {
+        "resource_id": "state:generation_anchor_head",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "external_generation_anchor",
+        "integrity": "MANDATORY",
+        "freshness": "MONOTONIC_GENERATION_AND_EXACT_ENVELOPE_DIGEST",
+        "confidentiality": "PUBLIC_AUTHENTICATED_METADATA",
+        "availability_failure": "START_OR_MUTATION_DENY"
+      },
+      {
+        "resource_id": "state:storage_mac_key",
+        "semantic_owner": "provisioning_operator",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "PROVISIONING_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "DURABLE_STATE_OPEN_DENY"
+      },
+      {
+        "resource_id": "state:evidence_journal_and_trace",
+        "semantic_owner": "gate_application",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "SIGNED_CHAINED_BOOT_LOCAL_ORDER",
+        "confidentiality": "DEPLOYMENT_RETENTION_POLICY",
+        "availability_failure": "QUIESCE_OR_DEGRADED_EVIDENCE_NO_AUTHORITY_EXPANSION"
+      },
+      {
+        "resource_id": "state:transport_profile_and_acl",
+        "semantic_owner": "deployment_authority",
+        "runtime_custodian": "secure_transport_router",
+        "integrity": "MANDATORY",
+        "freshness": "EXACT_DEPLOYMENT_PROFILE",
+        "confidentiality": "CONFIG_PUBLIC_CREDENTIALS_SECRET",
+        "availability_failure": "NO_TRANSPORT_AUTHORITY"
+      },
+      {
+        "resource_id": "state:plant_application_boundary",
+        "semantic_owner": "plant_crebain",
+        "runtime_custodian": "plant_crebain",
+        "integrity": "EXTERNAL_REQUIRED_NOT_PROVEN",
+        "freshness": "DOWNSTREAM_VALIDITY_AND_LOCAL_SAFE_MECHANISM",
+        "confidentiality": "EXTERNAL_POLICY",
+        "availability_failure": "NOT_A_HALDIR_AUTHORITY_FALLBACK"
+      }
+    ]
+  },
+  "actions": {
+    "transport_verbs": [
+      "publish",
+      "subscribe",
+      "query",
+      "serve"
+    ],
+    "authority_operations": [
+      "authenticate_connect",
+      "sign",
+      "verify",
+      "issue",
+      "revoke",
+      "configure",
+      "provision",
+      "submit_intent",
+      "observe",
+      "authorize",
+      "allocate_output",
+      "construct_frame",
+      "validate_frame",
+      "publish_once",
+      "consume",
+      "accept",
+      "apply",
+      "record_evidence",
+      "recover",
+      "compare_and_set_generation",
+      "lifecycle_rpc",
+      "enforce_acl",
+      "route_transport"
+    ],
+    "decision_outcomes": [
+      "ALLOW",
+      "DENY",
+      "ERROR"
+    ],
+    "plant_actions": [
+      "HOLD",
+      "VELOCITY_LOCAL_NED"
+    ],
+    "semantic_invariants": {
+      "allow_hold": "CREATES_BOUNDED_ZERO_VELOCITY_COMMAND",
+      "deny_or_error": "CREATES_NO_NEW_PLANT_COMMAND",
+      "haldir_estop": "NOT_CLAIMED",
+      "issuance_observation_or_evidence_implies_command_authority": false
+    }
+  },
+  "constraints": [
+    {
+      "constraint_id": "identity:exact_kid",
+      "category": "IDENTITY_CRYPTO",
+      "rule": "resolve_exactly_one_key_record_with_no_fallback_search"
+    },
+    {
+      "constraint_id": "identity:role_class_subject_key",
+      "category": "IDENTITY_CRYPTO",
+      "rule": "role_class_subject_and_public_key_all_match_expected_context"
+    },
+    {
+      "constraint_id": "identity:canonical_domain_signature",
+      "category": "IDENTITY_CRYPTO",
+      "rule": "canonical_payload_protected_headers_content_type_and_external_AAD_match"
+    },
+    {
+      "constraint_id": "identity:revocation",
+      "category": "IDENTITY_CRYPTO",
+      "rule": "key_and_authority_object_are_not_revoked_at_accepted_epoch"
+    },
+    {
+      "constraint_id": "scope:actual_signed_leased_route",
+      "category": "ROUTE_SCOPE",
+      "rule": "observed_intent_key_equals_signed_key_equals_lease_key"
+    },
+    {
+      "constraint_id": "scope:gate_boot",
+      "category": "ROUTE_SCOPE",
+      "rule": "gate_id_and_gate_boot_id_match_current_gate_incarnation"
+    },
+    {
+      "constraint_id": "scope:realm_vehicle",
+      "category": "ROUTE_SCOPE",
+      "rule": "realm_and_vehicle_match_selected_deployment_and_route"
+    },
+    {
+      "constraint_id": "scope:mission_phase",
+      "category": "ROUTE_SCOPE",
+      "rule": "mission_id_and_gate_owned_phase_match_lease_and_policy"
+    },
+    {
+      "constraint_id": "scope:session_pair",
+      "category": "ROUTE_SCOPE",
+      "rule": "session_id_and_generation_are_validated_as_one_inseparable_pair"
+    },
+    {
+      "constraint_id": "scope:controller_admission",
+      "category": "ROUTE_SCOPE",
+      "rule": "controller_id_key_admission_id_digest_bundle_and_backend_all_match"
+    },
+    {
+      "constraint_id": "scope:lease_policy",
+      "category": "ROUTE_SCOPE",
+      "rule": "lease_id_term_action_frame_source_and_policy_digest_all_match"
+    },
+    {
+      "constraint_id": "scope:source_causality",
+      "category": "ROUTE_SCOPE",
+      "rule": "source_key_frame_session_epoch_and_sequence_match_trusted_cache"
+    },
+    {
+      "constraint_id": "scope:controller_claims_consistency_only",
+      "category": "ROUTE_SCOPE",
+      "rule": "controller_declared_scope_source_session_time_and_digest_fields_never_create_trust"
+    },
+    {
+      "constraint_id": "ordering:typed_namespaces",
+      "category": "ORDERING_REPLAY",
+      "rule": "intent_source_output_boot_session_term_epoch_and_revision_namespaces_do_not_interconvert"
+    },
+    {
+      "constraint_id": "ordering:intent_replay",
+      "category": "ORDERING_REPLAY",
+      "rule": "controller_intent_epoch_and_sequence_are_fresh_and_consumed_per_policy"
+    },
+    {
+      "constraint_id": "ordering:source_advance",
+      "category": "ORDERING_REPLAY",
+      "rule": "trusted_state_source_and_capture_advance_strictly_without_replay_refresh"
+    },
+    {
+      "constraint_id": "ordering:output_unique",
+      "category": "ORDERING_REPLAY",
+      "rule": "gate_output_epoch_and_sequence_are_gate_owned_and_never_reused"
+    },
+    {
+      "constraint_id": "ordering:ratchets",
+      "category": "ORDERING_REPLAY",
+      "rule": "lease_terms_revocation_epochs_deployment_revisions_and_durable_generations_do_not_rewind"
+    },
+    {
+      "constraint_id": "bounds:decode_ingress_collections",
+      "category": "BOUNDED_RESOURCES",
+      "rule": "canonical_decode_message_route_queue_set_history_and_journal_inputs_are_bounded"
+    },
+    {
+      "constraint_id": "bounds:authority_intersection",
+      "category": "BOUNDED_RESOURCES",
+      "rule": "effective_limits_are_the_intersection_of_lease_policy_admission_NCP_and_plant_caps"
+    },
+    {
+      "constraint_id": "bounds:numeric_policy",
+      "category": "BOUNDED_RESOURCES",
+      "rule": "validity_components_norm_slew_duty_geofence_uncertainty_rate_and_total_are_checked"
+    },
+    {
+      "constraint_id": "bounds:checked_arithmetic",
+      "category": "BOUNDED_RESOURCES",
+      "rule": "overflow_regression_exhaustion_or_capacity_failure_denies_or_faults"
+    },
+    {
+      "constraint_id": "state:active_fresh_policy_allow",
+      "category": "STATE_TRANSITION",
+      "rule": "gate_is_active_not_faulted_state_is_fresh_and_policy_returns_ALLOW_with_useful_validity"
+    },
+    {
+      "constraint_id": "state:authorization_revision",
+      "category": "STATE_TRANSITION",
+      "rule": "authorization_revision_is_unchanged_at_the_TOCTOU_recheck"
+    },
+    {
+      "constraint_id": "state:publication_and_frame",
+      "category": "STATE_TRANSITION",
+      "rule": "current_publication_authority_fresh_output_allocation_and_exact_frame_validation_all_succeed"
+    },
+    {
+      "constraint_id": "state:single_opaque_publication",
+      "category": "STATE_TRANSITION",
+      "rule": "one_consuming_transition_binds_route_bytes_digest_deadline_and_evidence"
+    },
+    {
+      "constraint_id": "failure:no_new_command",
+      "category": "FAILURE_SEMANTICS",
+      "rule": "any_failed_or_missing_conjunct_produces_no_new_gate_authored_command"
+    },
+    {
+      "constraint_id": "failure:no_retroactive_erasure",
+      "category": "FAILURE_SEMANTICS",
+      "rule": "later_deny_error_expiry_or_evidence_does_not_prove_prior_exposure_was_unapplied"
+    }
+  ],
+  "time_domains": [
+    {
+      "time_domain_id": "gate_boot_monotonic",
+      "kind": "AUTHORITY_CLOCK",
+      "fields": [
+        "MonoInstant",
+        "receive_mono",
+        "captured_mono",
+        "accepted_at_mono",
+        "expires_at_mono",
+        "publication_observed_at",
+        "publication_deadline",
+        "publication_horizon",
+        "gate_t_ns"
+      ],
+      "field_inventory": "NAMED_EXAMPLES_CLASSIFIED_BY_GATE_CLOCK_ORIGIN",
+      "hot_path_authority": true,
+      "authority_uses": [
+        "lease_expiry",
+        "state_freshness",
+        "rate_duty_slew",
+        "publication_deadline",
+        "gate_output_time"
+      ],
+      "cross_boot_comparable": false,
+      "failure_behavior": "REGRESSION_OR_OVERFLOW_FAULTS_OR_DENIES"
+    },
+    {
+      "time_domain_id": "controller_local_provenance",
+      "kind": "PROVENANCE_CLOCK",
+      "fields": [
+        "controller_t_ns"
+      ],
+      "field_inventory": "EXHAUSTIVE_CURRENT_CONTROLLER_PROVENANCE_FIELDS",
+      "hot_path_authority": false,
+      "authority_uses": [],
+      "cross_boot_comparable": false,
+      "failure_behavior": "CANNOT_CREATE_FRESHNESS_VALIDITY_OR_OUTPUT_TIME"
+    },
+    {
+      "time_domain_id": "source_publisher_provenance",
+      "kind": "PROVENANCE_CLOCK",
+      "fields": [
+        "publisher_t_ns",
+        "source_t_ns"
+      ],
+      "field_inventory": "EXHAUSTIVE_CURRENT_SOURCE_PROVENANCE_FIELDS",
+      "hot_path_authority": false,
+      "authority_uses": [],
+      "cross_boot_comparable": false,
+      "failure_behavior": "CAUSAL_METADATA_ONLY"
+    },
+    {
+      "time_domain_id": "evidence_producer_boot_monotonic",
+      "kind": "EVIDENCE_ORDER_CLOCK",
+      "fields": [
+        "observed_mono_ns",
+        "created_mono_ns"
+      ],
+      "field_inventory": "NAMED_EXAMPLES_CLASSIFIED_BY_AUTHENTICATED_PRODUCER_BOOT",
+      "hot_path_authority": false,
+      "authority_uses": [],
+      "cross_boot_comparable": false,
+      "failure_behavior": "ORDER_ONLY_WITH_AUTHENTICATED_SIGNER_BOOT_AND_JOURNAL_PROVENANCE"
+    },
+    {
+      "time_domain_id": "wall_clock_utc",
+      "kind": "AUDIT_METADATA_CLOCK",
+      "fields": [
+        "certificate_time",
+        "release_time",
+        "audit_time"
+      ],
+      "field_inventory": "NAMED_EXAMPLES_NEVER_COMMAND_AUTHORITY",
+      "hot_path_authority": false,
+      "authority_uses": [],
+      "cross_boot_comparable": true,
+      "failure_behavior": "NEVER_AUTHORIZES_COMMAND_HOT_PATH"
+    },
+    {
+      "time_domain_id": "opaque_boot_session_and_stream_identities",
+      "kind": "NOT_A_CLOCK",
+      "fields": [
+        "GateBootId",
+        "session_generation",
+        "IntentEpoch",
+        "GateOutputEpoch",
+        "source_stream_epoch"
+      ],
+      "field_inventory": "EXHAUSTIVE_CURRENT_OPAQUE_ORDERING_IDENTITIES",
+      "hot_path_authority": false,
+      "authority_uses": [],
+      "cross_boot_comparable": false,
+      "failure_behavior": "EQUALITY_WITHIN_EXACT_TYPED_NAMESPACE_ONLY_NO_NUMERIC_ORDER"
+    },
+    {
+      "time_domain_id": "durable_logical_ratchets",
+      "kind": "LOGICAL_RATCHET_NOT_A_CLOCK",
+      "fields": [
+        "lease_term",
+        "revocation_epoch",
+        "deployment_revision",
+        "durable_generation"
+      ],
+      "field_inventory": "EXHAUSTIVE_CURRENT_DURABLE_RATCHETS",
+      "hot_path_authority": false,
+      "authority_uses": [
+        "same_scope_anti_rollback"
+      ],
+      "cross_boot_comparable": true,
+      "failure_behavior": "ORDER_ONLY_WITHIN_EXACT_TYPED_SUBJECT_SCOPE_AND_PERSISTED_HIGH_WATER"
+    },
+    {
+      "time_domain_id": "boot_or_epoch_scoped_logical_counters",
+      "kind": "LOGICAL_COUNTER_NOT_A_CLOCK",
+      "fields": [
+        "authorization_revision",
+        "IntentSeq",
+        "OutputSeq",
+        "SourceSeq",
+        "ChallengeSeq"
+      ],
+      "field_inventory": "EXHAUSTIVE_CURRENT_BOOT_OR_EPOCH_SCOPED_COUNTERS",
+      "hot_path_authority": false,
+      "authority_uses": [
+        "same_boot_or_epoch_ordering"
+      ],
+      "cross_boot_comparable": false,
+      "failure_behavior": "ORDER_ONLY_WITHIN_EXACT_GATE_BOOT_OR_MATCHING_TYPED_STREAM_EPOCH"
+    }
+  ],
+  "trust_roots": [
+    {
+      "root_id": "bootstrap_application_trust",
+      "category": "APPLICATION_CRYPTO",
+      "status": "ACTIVE_CALLER_SUPPLIED_PREVALIDATED",
+      "authority_scope": "exact_kid_role_class_subject_public_key_and_revocation_verification",
+      "not_proven": "certificate_chain_provenance_protected_loading_or_snapshot_freshness",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "deployment_acceptance_policy",
+      "category": "DEPLOYMENT",
+      "status": "IMPLEMENTED_PRIMITIVE_NOT_GATE_COMPOSED",
+      "authority_scope": "external_exact_authority_gate_realm_vehicle_class_runtime_and_wire_expectations",
+      "not_proven": "mandatory_root_selection_or_gate_startup_consumption_of_resolved_package",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "transport_mtls_router_acl",
+      "category": "TRANSPORT",
+      "status": "CONFIGURATION_AND_BOUNDED_SYNTHETIC_EVIDENCE",
+      "authority_scope": "exact_profile_principal_CN_and_directional_route_grants",
+      "not_proven": "production_custody_exclusive_custom_CA_global_handle_exclusivity_or_complete_mediation",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "gate_application_signer",
+      "category": "APPLICATION_CRYPTO",
+      "status": "ACTIVE_PROCESS_OWNED_PROTECTED_LOADER_UNPROVEN",
+      "authority_scope": "gate_receipt_and_publication_evidence_signing_after_subject_key_match",
+      "not_proven": "protected_secret_loading_rotation_HSM_or_application_transport_identity_custody_binding",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "gate_boot_monotonic_clock",
+      "category": "TIME",
+      "status": "ACTIVE_LOCAL_AUTHORITY_CLOCK",
+      "authority_scope": "current_boot_freshness_expiry_rate_duty_slew_and_publication_deadlines",
+      "not_proven": "hardware_clock_integrity_or_cross_process_origin_binding",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "configured_authority_snapshots",
+      "category": "RUNTIME_STATE",
+      "status": "ACTIVE_CALLER_SUPPLIED",
+      "authority_scope": "policy_admission_session_lease_publication_and_trusted_state_inputs",
+      "not_proven": "authenticated_fresh_ongoing_control_and_state_ingress",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "storage_mac_key",
+      "category": "DURABILITY",
+      "status": "IMPLEMENTED_PRIMITIVE_CALLER_SUPPLIED_SECRET",
+      "authority_scope": "authenticated_durable_snapshot_envelopes",
+      "not_proven": "protected_loader_backup_rotation_or_separation_from_snapshot_storage",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "external_generation_anchor",
+      "category": "DURABILITY",
+      "status": "INTERFACE_IMPLEMENTED_EXTERNAL_DEPLOYMENT_UNPROVEN",
+      "authority_scope": "non_rewindable_generation_compare_and_set_when_external_protection_is_selected",
+      "not_proven": "deployed_external_service_crash_power_loss_or_attacker_rewind_resistance",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "local_file_generation_anchor",
+      "category": "DURABILITY",
+      "status": "DEVELOPMENT_ONLY_REWRITABLE",
+      "authority_scope": "ordinary_process_crash_reconciliation_only",
+      "not_proven": "anti_rewind_against_shared_failure_domain_or_attacker",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "trusted_state_provenance",
+      "category": "RUNTIME_STATE",
+      "status": "REQUIRED_EXTERNAL_ROOT_UNPROVEN",
+      "authority_scope": "authenticated_vehicle_state_source_before_gate_receive_and_capture",
+      "not_proven": "current_live_input_is_caller_supplied_and_profile_labels_do_not_authenticate_samples",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "plant_firmware_and_local_safe_mechanism",
+      "category": "DOWNSTREAM_PLANT",
+      "status": "EXTERNAL_ASSUMPTION_NOT_CLAIMED",
+      "authority_scope": "downstream_validation_application_expiry_and_safe_behavior",
+      "not_proven": "crebain_firmware_actuator_path_complete_mediation_or_physical_safety",
+      "derivable_from_controller_fields": false
+    },
+    {
+      "root_id": "supply_chain_integrity_pins",
+      "category": "SUPPLY_CHAIN",
+      "status": "PINNED_INTEGRITY_NOT_RUNTIME_AUTHORITY",
+      "authority_scope": "NCP_v0_8_commit_dependencies_toolchain_router_image_and_artifact_identity",
+      "not_proven": "runtime_principal_authority_or_native_NCP_1_0_support",
+      "derivable_from_controller_fields": false
+    }
+  ],
+  "access_policy": {
+    "default_effect": "DENY",
+    "unlisted_subject_resource_action": "DENY",
+    "wildcard_authority_grants": false,
+    "role_name_inference": false,
+    "advisory_or_evidence_grants_authority": false,
+    "route_grants_source": "deploy/secure-reference-v1/profile.json",
+    "component_rule_semantics": "EACH_GRANT_IS_ONE_EXACT_RESOURCE_SET_TIMES_ONE_EXACT_OPERATION_SET",
+    "command_construction_subject": "gate_application",
+    "command_publication_subject": "gate_transport",
+    "command_consuming_subjects": [
+      "plant_crebain"
+    ],
+    "final_command_transition": {
+      "resource_id": "route:final_command",
+      "construction_subject": "gate_application",
+      "construction_operation": "construct_frame",
+      "publication_subject": "gate_transport",
+      "publication_operation": "publish_once",
+      "required_constraint_ids": [
+        "identity:exact_kid",
+        "identity:role_class_subject_key",
+        "identity:canonical_domain_signature",
+        "identity:revocation",
+        "scope:actual_signed_leased_route",
+        "scope:gate_boot",
+        "scope:realm_vehicle",
+        "scope:mission_phase",
+        "scope:session_pair",
+        "scope:controller_admission",
+        "scope:lease_policy",
+        "scope:source_causality",
+        "scope:controller_claims_consistency_only",
+        "ordering:typed_namespaces",
+        "ordering:intent_replay",
+        "ordering:source_advance",
+        "ordering:output_unique",
+        "ordering:ratchets",
+        "bounds:decode_ingress_collections",
+        "bounds:authority_intersection",
+        "bounds:numeric_policy",
+        "bounds:checked_arithmetic",
+        "state:active_fresh_policy_allow",
+        "state:authorization_revision",
+        "state:publication_and_frame",
+        "state:single_opaque_publication"
+      ],
+      "failure_constraint_id": "failure:no_new_command",
+      "post_exposure_constraint_id": "failure:no_retroactive_erasure"
+    },
+    "component_rules": [
+      {
+        "rule_id": "component:controller_intent_only",
+        "subject_id": "controller",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:controller_intent_signing_secrets"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:controller_transport_credentials"
+            ],
+            "operations": [
+              "authenticate_connect"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:controller_a_intent",
+              "route:controller_b_intent"
+            ],
+            "operations": [
+              "submit_intent"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:mission_objects_only",
+        "subject_id": "mission_authority",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:mission_authority_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:mission_authority_transport_credentials"
+            ],
+            "operations": [
+              "authenticate_connect"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:mission_lease_snapshot"
+            ],
+            "operations": [
+              "issue",
+              "revoke"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:mission_lease"
+            ],
+            "operations": [
+              "issue"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:mission_revocation"
+            ],
+            "operations": [
+              "revoke"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:admission_objects_only",
+        "subject_id": "admission_authority",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:admission_authority_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:admission_authority_transport_credentials"
+            ],
+            "operations": [
+              "authenticate_connect"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:admission_snapshot"
+            ],
+            "operations": [
+              "issue",
+              "revoke"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:admission_record"
+            ],
+            "operations": [
+              "issue"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:admission_revocation"
+            ],
+            "operations": [
+              "revoke"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:policy_objects_only",
+        "subject_id": "policy_authority",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:policy_authority_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:policy_snapshot"
+            ],
+            "operations": [
+              "issue"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:revocation_remove_only",
+        "subject_id": "revocation_authority",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:revocation_authority_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:revocation_snapshot"
+            ],
+            "operations": [
+              "revoke"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:deployment_select_only",
+        "subject_id": "deployment_authority",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:deployment_authority_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:deployment_package_and_artifacts",
+              "state:transport_profile_and_acl"
+            ],
+            "operations": [
+              "issue"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:gate_decision_and_construction",
+        "subject_id": "gate_application",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:gate_application_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:bootstrap_application_trust"
+            ],
+            "operations": [
+              "observe"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:revocation_snapshot",
+              "state:deployment_package_and_artifacts",
+              "state:admission_snapshot",
+              "state:mission_lease_snapshot",
+              "state:policy_snapshot"
+            ],
+            "operations": [
+              "verify"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:trusted_state_snapshot",
+              "state:ncp_session_identity"
+            ],
+            "operations": [
+              "observe"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:gate_challenge_state"
+            ],
+            "operations": [
+              "issue",
+              "revoke"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:gate_boot_and_output_namespace"
+            ],
+            "operations": [
+              "allocate_output"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:replay_usage_and_authorization_revision",
+              "state:publication_capability_and_slot"
+            ],
+            "operations": [
+              "authorize"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:final_command_frame"
+            ],
+            "operations": [
+              "construct_frame",
+              "validate_frame"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:evidence_journal_and_trace"
+            ],
+            "operations": [
+              "record_evidence"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:authenticated_durable_snapshot"
+            ],
+            "operations": [
+              "recover"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:gate_transport_publish_once",
+        "subject_id": "gate_transport",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:gate_transport_credentials"
+            ],
+            "operations": [
+              "authenticate_connect"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:publication_capability_and_slot"
+            ],
+            "operations": [
+              "consume"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:final_command_frame"
+            ],
+            "operations": [
+              "validate_frame"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:final_command"
+            ],
+            "operations": [
+              "publish_once"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:router_mediate_only",
+        "subject_id": "secure_transport_router",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:router_transport_trust_and_credentials",
+              "state:transport_profile_and_acl"
+            ],
+            "operations": [
+              "enforce_acl"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:admission_record",
+              "route:admission_revocation",
+              "route:application_evidence",
+              "route:controller_a_intent",
+              "route:controller_b_intent",
+              "route:decision_evidence",
+              "route:final_command",
+              "route:gate_challenge",
+              "route:gate_status",
+              "route:mission_lease",
+              "route:mission_revocation",
+              "route:rpc_close_session",
+              "route:rpc_open_session",
+              "route:rpc_run_request",
+              "route:rpc_step_request",
+              "route:session_status",
+              "route:state_pose"
+            ],
+            "operations": [
+              "route_transport"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:trusted_state_input_only",
+        "subject_id": "trusted_state_producer",
+        "grants": [
+          {
+            "resource_ids": [
+              "route:state_pose",
+              "state:trusted_state_snapshot"
+            ],
+            "operations": [
+              "observe"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:lifecycle_session_only",
+        "subject_id": "lifecycle_service",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:lifecycle_transport_credentials"
+            ],
+            "operations": [
+              "authenticate_connect"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:rpc_open_session",
+              "route:rpc_step_request",
+              "route:rpc_run_request",
+              "route:rpc_close_session"
+            ],
+            "operations": [
+              "lifecycle_rpc"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:session_status",
+              "state:ncp_session_identity"
+            ],
+            "operations": [
+              "issue"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:plant_consume_and_evidence",
+        "subject_id": "plant_crebain",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:crebain_evidence_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:plant_crebain_transport_credentials"
+            ],
+            "operations": [
+              "authenticate_connect"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:final_command"
+            ],
+            "operations": [
+              "consume"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:plant_application_boundary"
+            ],
+            "operations": [
+              "accept",
+              "apply"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:application_evidence"
+            ],
+            "operations": [
+              "record_evidence"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:observer_read_only",
+        "subject_id": "observer_auditor",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:observer_transport_credentials"
+            ],
+            "operations": [
+              "authenticate_connect"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:final_command"
+            ],
+            "operations": [
+              "observe"
+            ]
+          },
+          {
+            "resource_ids": [
+              "route:decision_evidence",
+              "route:application_evidence",
+              "state:evidence_journal_and_trace"
+            ],
+            "operations": [
+              "observe",
+              "verify"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:operator_provision_only",
+        "subject_id": "provisioning_operator",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:gate_application_signing_secret",
+              "state:gate_transport_credentials",
+              "state:router_transport_trust_and_credentials",
+              "state:bootstrap_application_trust",
+              "state:storage_mac_key",
+              "state:transport_profile_and_acl"
+            ],
+            "operations": [
+              "configure",
+              "provision"
+            ]
+          }
+        ]
+      },
+      {
+        "rule_id": "component:generation_anchor_ratchet_only",
+        "subject_id": "external_generation_anchor",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:generation_anchor_head"
+            ],
+            "operations": [
+              "compare_and_set_generation",
+              "recover"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "evidence_sources": {
+    "authority_model": "release/0.9.0/authority-model.json",
+    "deployment_profile": "deploy/secure-reference-v1/profile.json",
+    "secure_profile_renderer": "tools/secure_zenoh.py",
+    "key_role_contract": "crates/haldir-crypto/src/role.rs",
+    "cose_profile_contract": "crates/haldir-crypto/src/cose.rs",
+    "trust_contract": "crates/haldir-crypto/src/trust.rs",
+    "identity_contract": "crates/haldir-contracts/src/ids.rs",
+    "session_contract": "crates/haldir-contracts/src/session.rs",
+    "intent_contract": "crates/haldir-contracts/src/intent.rs",
+    "lease_contract": "crates/haldir-contracts/src/lease.rs",
+    "revocation_contract": "crates/haldir-contracts/src/revocation.rs",
+    "admission_record_contract": "crates/haldir-admission/src/record.rs",
+    "action_contract": "crates/haldir-contracts/src/action.rs",
+    "decision_contract": "crates/haldir-contracts/src/receipt.rs",
+    "publication_authority_contract": "crates/haldir-contracts/src/status.rs",
+    "publication_evidence_contract": "crates/haldir-contracts/src/publication.rs",
+    "time_contract": "crates/haldir-core/src/time.rs",
+    "trusted_state_contract": "crates/haldir-core/src/snapshot.rs",
+    "gate_pipeline_contract": "crates/haldir-gate/src/actor.rs",
+    "anti_rollback_contract": "crates/haldir-state/src/anti_rollback.rs",
+    "policy_contract": "crates/haldir-policy-native/src/decide.rs",
+    "deployment_contract": "crates/haldir-deployment/src/verify.rs",
+    "durable_contract": "crates/haldir-durable/src/snapshot.rs",
+    "local_anchor_contract": "crates/haldir-durable/src/local_anchor.rs",
+    "evidence_contract": "crates/haldir-evidence/src/publication.rs",
+    "migration_record": "docs/release/0.9.0/MIGRATION.md"
+  },
+  "claim_scope": {
+    "protection_inventory": "FROZEN",
+    "default_deny_model": "FROZEN",
+    "implementation_enforcement": "PARTIAL",
+    "protected_credential_custody": "NOT_CLAIMED",
+    "mandatory_deployment_package_consumption": "NOT_CLAIMED",
+    "authenticated_live_state_and_control_ingress": "NOT_CLAIMED",
+    "sealed_capabilities_and_global_handle_exclusivity": "NOT_CLAIMED",
+    "external_non_rewindable_durability": "NOT_CLAIMED",
+    "complete_mediation": "NOT_CLAIMED",
+    "delivery": "NOT_CLAIMED",
+    "plant_acceptance_and_application": "NOT_CLAIMED",
+    "physical_system_safety": "NOT_CLAIMED",
+    "production_deployment_security": "NOT_CLAIMED",
+    "native_ncp_1_0": "NOT_CLAIMED"
+  }
+}

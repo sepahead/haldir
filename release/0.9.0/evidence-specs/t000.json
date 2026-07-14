@@ -1,0 +1,84 @@
+{
+  "schema_version": "2.0.0",
+  "task_id": "T000",
+  "requirement_id": "HALDIR-0.9-T000",
+  "verification_scope": {
+    "positive": "The exact clean source cut, handoff checksums, dependency and toolchain inputs, NCP pin, deployment inputs, formal model, retained evidence, and publication state verify.",
+    "negative": "Handoff digest tampering, duplicate paths, source substitution, and failed baseline state are rejected.",
+    "boundary": "Manifest, Git output, baseline log, and exact-run logs have explicit byte or decompression limits.",
+    "adversarial": "Mutable names cannot replace peeled commits or digests, and an unsigned implementation commit cannot close the task.",
+    "regression": "The untouched baseline remains 19 passed and 0 failed with its exact retained digest.",
+    "metamorphic": "The immutable identities do not depend on filesystem discovery or mutable branch resolution during verification."
+  },
+  "review": {
+    "self_reviewed_by": "Sepehr Mahmoudian",
+    "independent_reviewer": "NOT_ASSIGNED",
+    "independent_review_required_for_task": "NO",
+    "independent_release_review_deferred_to": "HALDIR-0.9-T007"
+  },
+  "residual_risks": [
+    "This verification closes the immutable starting-cut task, not the final 0.9 release ceremony.",
+    "The handoff package is bound by digest but is not duplicated in the repository."
+  ],
+  "implementation_artifacts": [
+    {"path": ".github/workflows/ci.yml", "worktree_policy": "MAY_EVOLVE"},
+    {"path": ".github/workflows/formal.yml", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "docs/release/0.9.0/README.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "formal/HaldirAuthority.cfg", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "formal/HaldirAuthority.tla", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "justfile", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/audit-inputs.json", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/baseline-p0r.json", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/baseline-p0r.log.gz", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/t000-ci-da40bd8.log.gz", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/t000-formal-da40bd8.log.gz", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/t000-verification.json", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/requirements.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/p0r-exit-gate.sh", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/test_verify_audit_inputs.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/verify-audit-inputs.py", "worktree_policy": "MAY_EVOLVE"}
+  ],
+  "github": {
+    "repository": "sepahead/haldir",
+    "event": "push",
+    "branch": "main",
+    "ci": {
+      "workflow_name": "ci",
+      "workflow_path": ".github/workflows/ci.yml",
+      "workflow_id": 311605710,
+      "expected_jobs": [
+        "build-test",
+        "clean-build",
+        "feature-matrix",
+        "interop",
+        "macos-compile",
+        "supply-chain"
+      ],
+      "required_steps_by_job": {
+        "build-test": ["Cache cargo", "Clippy (deny warnings)", "Doc tests", "Docs build (deny warnings)", "Format check", "Install + verify pinned toolchain", "No generated-file drift", "Tests", "git diff --check"],
+        "clean-build": ["Cold build", "Install toolchain"],
+        "feature-matrix": ["Build no-default-features", "Clippy default features only", "Install toolchain"],
+        "interop": ["Independently verify COSE/CBOR vectors", "Install pinned toolchain", "Regenerate interop vectors (drift check)"],
+        "macos-compile": ["Build + test on macOS", "Install toolchain"],
+        "supply-chain": ["Forbidden-claim drift check", "Verify evidence layout", "Verify immutable 0.9 audit cut", "Verify immutable CI and formal-tool pins", "Verify secure Zenoh profiles and retained live evidence", "Verify source pins", "cargo-deny"]
+      },
+      "marker_job": "supply-chain",
+      "marker_step": "Verify immutable 0.9 audit cut",
+      "success_marker": "verify-audit-inputs: OK"
+    },
+    "formal": {
+      "workflow_name": "formal",
+      "workflow_path": ".github/workflows/formal.yml",
+      "workflow_id": 311703244,
+      "expected_jobs": [
+        "tlc-model-check"
+      ],
+      "required_steps_by_job": {
+        "tlc-model-check": ["Fetch pinned TLA+ tools", "Model-check HaldirAuthority", "Set up JRE", "Upload TLC log"]
+      },
+      "marker_job": "tlc-model-check",
+      "marker_step": "Model-check HaldirAuthority",
+      "success_marker": "Model checking completed. No error has been found."
+    }
+  }
+}

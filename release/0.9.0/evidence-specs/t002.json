@@ -1,0 +1,120 @@
+{
+  "schema_version": "2.0.0",
+  "task_id": "T002",
+  "requirement_id": "HALDIR-0.9-T002",
+  "verification_scope": {
+    "positive": "The closed subject, resource, action, constraint, time-domain, trust-root, and access inventories match the exact profile and Rust contracts.",
+    "negative": "Ownerless resources, unknown references, wildcard or default-allow authority, profile drift, and an unverified predecessor are rejected.",
+    "boundary": "Model, documents, profile, source contracts, requirement ledger, Git output, and decompressed exact-run logs have explicit bounds.",
+    "adversarial": "A second final publisher, route confusion, controller command escalation, controller-derived trust root, and provenance-clock escalation are rejected.",
+    "regression": "T001 vocabularies and the HOLD decision/action separation remain intact while native NCP 1.0 and complete mediation remain unclaimed.",
+    "metamorphic": "Reordering JSON profile objects or component access rules does not change the resulting grants."
+  },
+  "review": {
+    "self_reviewed_by": "Sepehr Mahmoudian",
+    "independent_reviewer": "NOT_ASSIGNED",
+    "independent_review_required_for_task": "NO",
+    "independent_release_review_deferred_to": "HALDIR-0.9-T007"
+  },
+  "residual_risks": [
+    "The inventory defines required ownership and grants but does not seal current public construction, session, publisher, or raw-event APIs.",
+    "Gate application and transport identities and credential custody are not proven end to end.",
+    "Trusted state and control inputs remain caller-supplied rather than an authenticated ongoing live control plane.",
+    "The external generation anchor, plant application boundary, complete mediation, delivery, physical safety, and production security remain unproven.",
+    "No independent human review is claimed by this task closure."
+  ],
+  "implementation_artifacts": [
+    {"path": ".github/workflows/ci.yml", "worktree_policy": "MAY_EVOLVE"},
+    {"path": ".github/workflows/formal.yml", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-admission/src/record.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/action.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/ids.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/intent.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/lease.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/publication.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/receipt.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/revocation.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/session.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/status.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-core/src/snapshot.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-core/src/time.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-crypto/src/cose.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-crypto/src/role.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-crypto/src/trust.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-deployment/src/verify.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-durable/src/local_anchor.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-durable/src/snapshot.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-evidence/src/publication.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-gate/src/actor.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-policy-native/src/decide.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-state/src/anti_rollback.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "deploy/secure-reference-v1/profile.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "docs/CLAIM-LEDGER.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "docs/release/0.9.0/MIGRATION.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "docs/release/0.9.0/PROTECTION-MODEL.md", "worktree_policy": "MUST_MATCH"},
+    {"path": "docs/release/0.9.0/README.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "formal/HaldirAuthority.cfg", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "formal/HaldirAuthority.tla", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "justfile", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/allowed-signers", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/authority-model.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/evidence-specs/README.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/evidence-specs/t000.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/evidence-specs/t001.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/evidence-specs/t002.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/protection-model.json", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/requirements.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/p0r-exit-gate.sh", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/generate-task-evidence.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/test_generate_task_evidence.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/test_verify_protection_model.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/verify-audit-inputs.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/verify-authority-model.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/verify-protection-model.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/verify-task-evidence.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/secure_zenoh.py", "worktree_policy": "MAY_EVOLVE"}
+  ],
+  "github": {
+    "repository": "sepahead/haldir",
+    "event": "push",
+    "branch": "main",
+    "ci": {
+      "workflow_name": "ci",
+      "workflow_path": ".github/workflows/ci.yml",
+      "workflow_id": 311605710,
+      "expected_jobs": [
+        "build-test",
+        "clean-build",
+        "feature-matrix",
+        "interop",
+        "macos-compile",
+        "supply-chain"
+      ],
+      "required_steps_by_job": {
+        "build-test": ["Cache cargo", "Clippy (deny warnings)", "Doc tests", "Docs build (deny warnings)", "Format check", "Install + verify pinned toolchain", "No generated-file drift", "Tests", "git diff --check"],
+        "clean-build": ["Cold build", "Install toolchain"],
+        "feature-matrix": ["Build no-default-features", "Clippy default features only", "Install toolchain"],
+        "interop": ["Independently verify COSE/CBOR vectors", "Install pinned toolchain", "Regenerate interop vectors (drift check)"],
+        "macos-compile": ["Build + test on macOS", "Install toolchain"],
+        "supply-chain": ["Forbidden-claim drift check", "Verify evidence layout", "Verify immutable 0.9 audit cut", "Verify immutable CI and formal-tool pins", "Verify normative 0.9 authority model", "Verify normative 0.9 protection model and evidence generator", "Verify secure Zenoh profiles and retained live evidence", "Verify source pins", "cargo-deny"]
+      },
+      "marker_job": "supply-chain",
+      "marker_step": "Verify normative 0.9 protection model and evidence generator",
+      "success_marker": "verify-protection-model: OK"
+    },
+    "formal": {
+      "workflow_name": "formal",
+      "workflow_path": ".github/workflows/formal.yml",
+      "workflow_id": 311703244,
+      "expected_jobs": [
+        "tlc-model-check"
+      ],
+      "required_steps_by_job": {
+        "tlc-model-check": ["Fetch pinned TLA+ tools", "Model-check HaldirAuthority", "Set up JRE", "Upload TLC log"]
+      },
+      "marker_job": "tlc-model-check",
+      "marker_step": "Model-check HaldirAuthority",
+      "success_marker": "Model checking completed. No error has been found."
+    }
+  }
+}

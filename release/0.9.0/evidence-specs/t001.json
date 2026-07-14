@@ -1,0 +1,95 @@
+{
+  "schema_version": "2.0.0",
+  "task_id": "T001",
+  "requirement_id": "HALDIR-0.9-T001",
+  "verification_scope": {
+    "positive": "The sole Gate profile publisher, exact authority conjunction, and ALLOW(HOLD) command path pass.",
+    "negative": "A second final publisher, missing denial evidence, DENY output, and ERROR output are rejected or absent.",
+    "boundary": "Every verifier input and decompressed log is bounded; the requested and effective HOLD validity are bounded.",
+    "adversarial": "Gate-role spoofing, normative-document digest substitution, malformed JSON, and oversized input are rejected.",
+    "regression": "Decision outcomes cannot absorb HOLD, and T001 cannot close unless T000 is verified.",
+    "metamorphic": "Reordering the JSON principal object does not change the authority result."
+  },
+  "review": {
+    "self_reviewed_by": "Sepehr Mahmoudian",
+    "independent_reviewer": "NOT_ASSIGNED",
+    "independent_review_required_for_task": "NO",
+    "independent_release_review_deferred_to": "HALDIR-0.9-T007"
+  },
+  "residual_risks": [
+    "Current lower-level construction and publication APIs remain public and are not complete-mediation evidence.",
+    "Gate application and transport credential custody is not yet bound end to end.",
+    "The retained live ACL matrix is synthetic and proves neither Crebain application nor physical safety.",
+    "No independent human review is claimed by this task closure."
+  ],
+  "implementation_artifacts": [
+    {"path": ".github/workflows/ci.yml", "worktree_policy": "MAY_EVOLVE"},
+    {"path": ".github/workflows/formal.yml", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/action.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/receipt.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-contracts/src/status.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-crypto/src/role.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-gate/src/actor.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "crates/haldir-gate/src/lib.rs", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "deploy/secure-reference-v1/profile.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "docs/AUTHORITY-GRAPH.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "docs/CLAIM-LEDGER.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "docs/release/0.9.0/AUTHORITY-CONTRACT.md", "worktree_policy": "MUST_MATCH"},
+    {"path": "docs/release/0.9.0/README.md", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "evidence/11-secure-zenoh-live/result.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "formal/HaldirAuthority.cfg", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "formal/HaldirAuthority.tla", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "justfile", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "release/0.9.0/authority-model.json", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/t001-ci-a1e43ce.log.gz", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/t001-formal-a1e43ce.log.gz", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/evidence/t001-verification.json", "worktree_policy": "MUST_MATCH"},
+    {"path": "release/0.9.0/requirements.json", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/p0r-exit-gate.sh", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/test_verify_authority_model.py", "worktree_policy": "MAY_EVOLVE"},
+    {"path": "tools/release/verify-authority-model.py", "worktree_policy": "MAY_EVOLVE"}
+  ],
+  "github": {
+    "repository": "sepahead/haldir",
+    "event": "push",
+    "branch": "main",
+    "ci": {
+      "workflow_name": "ci",
+      "workflow_path": ".github/workflows/ci.yml",
+      "workflow_id": 311605710,
+      "expected_jobs": [
+        "build-test",
+        "clean-build",
+        "feature-matrix",
+        "interop",
+        "macos-compile",
+        "supply-chain"
+      ],
+      "required_steps_by_job": {
+        "build-test": ["Cache cargo", "Clippy (deny warnings)", "Doc tests", "Docs build (deny warnings)", "Format check", "Install + verify pinned toolchain", "No generated-file drift", "Tests", "git diff --check"],
+        "clean-build": ["Cold build", "Install toolchain"],
+        "feature-matrix": ["Build no-default-features", "Clippy default features only", "Install toolchain"],
+        "interop": ["Independently verify COSE/CBOR vectors", "Install pinned toolchain", "Regenerate interop vectors (drift check)"],
+        "macos-compile": ["Build + test on macOS", "Install toolchain"],
+        "supply-chain": ["Forbidden-claim drift check", "Verify evidence layout", "Verify immutable 0.9 audit cut", "Verify immutable CI and formal-tool pins", "Verify normative 0.9 authority model", "Verify secure Zenoh profiles and retained live evidence", "Verify source pins", "cargo-deny"]
+      },
+      "marker_job": "supply-chain",
+      "marker_step": "Verify normative 0.9 authority model",
+      "success_marker": "verify-authority-model: OK"
+    },
+    "formal": {
+      "workflow_name": "formal",
+      "workflow_path": ".github/workflows/formal.yml",
+      "workflow_id": 311703244,
+      "expected_jobs": [
+        "tlc-model-check"
+      ],
+      "required_steps_by_job": {
+        "tlc-model-check": ["Fetch pinned TLA+ tools", "Model-check HaldirAuthority", "Set up JRE", "Upload TLC log"]
+      },
+      "marker_job": "tlc-model-check",
+      "marker_step": "Model-check HaldirAuthority",
+      "success_marker": "Model checking completed. No error has been found."
+    }
+  }
+}

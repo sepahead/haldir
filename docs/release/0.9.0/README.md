@@ -57,6 +57,37 @@ mediation and downstream plant effects remain `NOT_CLAIMED`.
 binds the signed implementation commit to its successful exact-commit CI and
 TLA+ runs and to the complete, digest-checked retained logs.
 
+## HALDIR-0.9-T002 — protection model
+
+The [normative protection model](PROTECTION-MODEL.md) closes the default-deny
+inventories of protected subjects, exact routes and internal state resources,
+actions, authorization constraints, time domains, and trust roots. Its
+[`protection-model.json`](../../../release/0.9.0/protection-model.json) mirror is
+checked against T001, all eight principals and all seventeen routes in the
+secure-reference profile, the nine current role/key-class/object/domain
+bindings, the fifteen logical subject/type mappings (including the router), the
+closed decision/action vocabularies, and the relevant Rust time, trust, identity,
+deployment, durable-state, and evidence semantics. The inventory explicitly
+keeps controller/source timestamps out of freshness authority, separates
+opaque IDs, boot/epoch-scoped counters, and same-scope cross-boot ratchets,
+binds the exact final-command
+constraint set and access tuples, and records current implementation
+enforcement as `PARTIAL`.
+
+The per-task [migration record](MIGRATION.md) states that T000–T002 introduce no
+Rust API or wire conversion while identifying the semantic/operator impact that
+must not be guessed. Exact-run closure JSON and complete logical aggregate and
+system job logs are generated from
+reviewed specifications by
+[`generate-task-evidence.py`](../../../tools/release/generate-task-evidence.py),
+not hand-edited.
+
+The checked-in generator is introduced by T002. The original T000 and T001
+closure JSON and gzip logs predate it and remain byte-for-byte unchanged; they
+are not retroactively relabeled as generated. T002 closure may add separately
+named `*-generated-*` supplements that bind those historical signed closure
+targets/runs to the signed T002 evidence-tool commit.
+
 ## Evidence discipline
 
 Task closure requires a stable SHALL/SHALL NOT requirement, applicable positive and

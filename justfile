@@ -71,6 +71,12 @@ verify-release-authority:
     python3 -m unittest tools/release/test_verify_authority_model.py
     python3 tools/release/verify-authority-model.py
 
+verify-release-protection:
+    python3 -m unittest tools/release/test_generate_task_evidence.py
+    python3 tools/release/verify-task-evidence.py --all-present
+    python3 -m unittest tools/release/test_verify_protection_model.py
+    python3 tools/release/verify-protection-model.py
+
 interop:
     tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT; cargo run -q -p haldir-crypto --example emit_interop_vectors >"$tmp"; diff -u tools/interop/vectors.json "$tmp"; python3 tools/interop/verify_cose.py tools/interop/vectors.json
 

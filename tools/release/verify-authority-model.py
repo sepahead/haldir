@@ -581,6 +581,7 @@ def _verify_requirements(requirements_path: Path, repo: Path) -> None:
         "release/0.9.0/authority-model.json",
         "tools/release/verify-authority-model.py",
         "tools/release/test_verify_authority_model.py",
+        "docs/release/0.9.0/MIGRATION.md",
         "crates/haldir-gate/src/lib.rs",
         "deploy/secure-reference-v1/profile.json",
         "evidence/11-secure-zenoh-live/result.json",

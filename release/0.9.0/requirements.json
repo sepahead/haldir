@@ -45,6 +45,11 @@
           "sha256_uncompressed": "2528ee0ecf99eb096c1a159a9f342b32781fc41f87120ce0f7996b118e3edd09"
         },
         {
+          "kind": "migration_record",
+          "path": "docs/release/0.9.0/MIGRATION.md",
+          "requirement_id": "HALDIR-0.9-T000"
+        },
+        {
           "kind": "exact_commit_verification",
           "path": "release/0.9.0/evidence/t000-verification.json",
           "commit": "da40bd8494f894c48add09fc26ce19b161ad91c8"
@@ -64,7 +69,7 @@
         "correctness_and_invariants": "The audit cut records the exact clean commit/tree and all supplied handoff file digests.",
         "safety_and_failure_behavior": "A failed checksum or baseline command is not represented as success; the recorded baseline exit status is zero.",
         "security_and_adversarial_behavior": "Mutable names are accompanied by immutable digests or peeled commits; no release authority is granted by this manifest.",
-        "determinism_and_reproducibility": "The complete baseline output is retained with an uncompressed SHA-256 and deterministic gzip metadata.",
+        "determinism_and_reproducibility": "The complete baseline output and original exact-run closure artifacts are retained byte-for-byte with recorded digests. They predate the T002 evidence generator and are not retroactively represented as generator output; T002 may add a separate supplemental record.",
         "performance_and_bounded_resources": "The manifest and baseline have explicit byte/line counts; T000 adds no runtime path.",
         "api_schema_and_compatibility": "The 0.9 Haldir label is separated from the independently versioned NCP 0.8 protocol pin.",
         "observability_and_provenance": "Source, toolchain, dependency, deployment, formal, evidence, author, and publication-state provenance are explicit.",
@@ -125,6 +130,11 @@
           "path": "evidence/11-secure-zenoh-live/result.json"
         },
         {
+          "kind": "migration_record",
+          "path": "docs/release/0.9.0/MIGRATION.md",
+          "requirement_id": "HALDIR-0.9-T001"
+        },
+        {
           "kind": "exact_commit_verification",
           "path": "release/0.9.0/evidence/t001-verification.json",
           "commit": "a1e43cef9633703ea9838df31aa6aec549830878"
@@ -144,7 +154,7 @@
         "correctness_and_invariants": "The operational definition counts unauthorized final-route bypass frames as plant commands, avoiding a tautological sole-authority claim; the normative rule identifies one logical Gate principal.",
         "safety_and_failure_behavior": "Every failed or absent authorization conjunct produces no Gate-authored command, while ALLOW(HOLD) remains a bounded zero-velocity command rather than a denial or physical-safety claim.",
         "security_and_adversarial_behavior": "The verifier rejects a second final publisher, a spoofed Gate role, missing non-Gate denial evidence, and decision/action vocabulary confusion; global bypass closure remains explicitly unclaimed.",
-        "determinism_and_reproducibility": "The closed JSON model, normative-document digest, exact profile route, retained case identifiers, and Rust source vocabularies are checked offline without mutable network inputs.",
+        "determinism_and_reproducibility": "The closed JSON model, normative-document digest, exact profile route, retained case identifiers, and Rust source vocabularies are checked offline. The original T001 closure JSON/logs predate the T002 generator, remain unchanged, and may be accompanied only by a distinct supplemental generated record.",
         "performance_and_bounded_resources": "The model, document, profile, evidence, requirement ledger, Git output, and compressed closure logs have explicit read or decompression limits; T001 adds no runtime control-path work.",
         "api_schema_and_compatibility": "The contract is limited to PRE_AUTHORITY_ACL_ONLY and distinguishes authenticated runtime principal, GATE_APPLICATION key role, publication evidence state, decision outcome, and semantic action.",
         "observability_and_provenance": "The model names the normative document, deployment profile, live ACL result, Rust contracts, Gate pipeline, author, and stable requirement identifier; exact-commit run evidence is required before verification.",
@@ -169,13 +179,91 @@
       "dependencies": [
         "T001"
       ],
-      "status": "open",
+      "status": "implemented",
       "evidence": [
-
+        {
+          "kind": "normative_requirement",
+          "path": "docs/release/0.9.0/PROTECTION-MODEL.md",
+          "anchor": "haldir-09-t002--protected-subjects-resources-actions-constraints-time-and-roots"
+        },
+        {
+          "kind": "machine_readable_model",
+          "path": "release/0.9.0/protection-model.json"
+        },
+        {
+          "kind": "claim_ledger_entry",
+          "path": "docs/CLAIM-LEDGER.md",
+          "claim_id": "CL-PROTECTION-MODEL-01"
+        },
+        {
+          "kind": "migration_record",
+          "path": "docs/release/0.9.0/MIGRATION.md",
+          "requirement_id": "HALDIR-0.9-T002"
+        },
+        {
+          "kind": "offline_verifier",
+          "path": "tools/release/verify-protection-model.py"
+        },
+        {
+          "kind": "positive_negative_boundary_adversarial_regression_state_and_metamorphic_tests",
+          "path": "tools/release/test_verify_protection_model.py"
+        },
+        {
+          "kind": "deterministic_evidence_generator_tests",
+          "path": "tools/release/test_generate_task_evidence.py"
+        },
+        {
+          "kind": "deterministic_evidence_generator",
+          "path": "tools/release/generate-task-evidence.py"
+        },
+        {
+          "kind": "deterministic_evidence_offline_verifier",
+          "path": "tools/release/verify-task-evidence.py"
+        },
+        {
+          "kind": "release_commit_allowed_signers",
+          "path": "release/0.9.0/allowed-signers",
+          "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU"
+        },
+        {
+          "kind": "deterministic_evidence_specification",
+          "path": "release/0.9.0/evidence-specs/t002.json"
+        },
+        {
+          "kind": "deployment_principal_route_matrix",
+          "path": "deploy/secure-reference-v1/profile.json"
+        },
+        {
+          "kind": "application_key_role_contract",
+          "path": "crates/haldir-crypto/src/role.rs"
+        },
+        {
+          "kind": "hot_path_time_contract",
+          "path": "crates/haldir-core/src/time.rs"
+        },
+        {
+          "kind": "trusted_state_time_and_provenance_contract",
+          "path": "crates/haldir-core/src/snapshot.rs"
+        }
       ],
-      "ten_lens_review": null,
+      "ten_lens_review": {
+        "correctness_and_invariants": "The model closes exact inventories for five identity namespaces, eight transport principals, nine role/key-class/object/domain bindings, fifteen logical components with exact type mappings, seventeen routes, thirty-five separately custodied state resources, twenty-three protected authority operations, twenty-eight constraints, eight time domains, and twelve roots; every resource owner and custodian resolves to a closed subject.",
+        "safety_and_failure_behavior": "Default deny, no-fallback constraints, fail-closed availability, and the no-retroactive-erasure rule prevent a failed input from becoming authority without pretending that denial cancels a previously exposed command.",
+        "security_and_adversarial_behavior": "Executable negatives reject a second final publisher, route confusion, wildcard/default-allow grants, any non-Gate construction/publication escalation, role/object/domain or subject/type drift, final-constraint removal, controller-derived roots, provenance-clock escalation, unknown or drifted resource custody, and unknown references.",
+        "determinism_and_reproducibility": "The canonical JSON mirror is bound to the normative document digest and checked offline against exact profile objects and closed Rust vocabularies; verified closure remains unavailable until exact-run artifacts are produced by the checked-in deterministic tooling.",
+        "performance_and_bounded_resources": "All verifier inputs, source reads, Git output, and decompressed logs have explicit ceilings; T002 adds no runtime hot-path allocation or timing claim, and later T019 retains the per-operation bounds obligation.",
+        "api_schema_and_compatibility": "The model distinguishes runtime profile, transport principal/CN, application key role, logical signed subject, and component label; it preserves NCP v0.8.0 and makes no native NCP 1.0 or wire/API-change claim.",
+        "observability_and_provenance": "Every modeled claim names its profile, normative digest, source contracts, exact role/object/domain and logical-type bindings, routes, owner/custodian, final-command constraint set, time semantics, root status, author, migration impact, and stable requirement identifier.",
+        "testing_and_independent_evidence": "Twenty-six model tests cover positive, malformed, negative, boundary, adversarial, state-transition, regression, and metamorphic behavior; twenty-three evidence-generator/verifier tests cover canonical output, exact Git/GitHub provenance, online archive coverage, retained complete aggregate/system job logs, bounds, path safety, and fail-closed metadata. A human independent review is neither claimed nor fabricated and remains due at T007.",
+        "documentation_and_operator_usability": "The normative document explains namespace and role/domain separation, resource custody, exact access-grant semantics, final-command constraints, authoritative/provenance/opaque/ratchet time, trust-root status, and exact NOT_CLAIMED boundaries; migration notes state concrete operator impact.",
+        "ecosystem_composition_and_governance": "The profile matrix is treated as a bounded configuration fixture, Crebain remains a downstream external boundary, advisory systems cannot widen authority, no cross-repository edits were required, and the release remains NO-GO."
+      },
       "residual_risks": [
-
+        "The inventory defines required ownership and grants but does not seal current public construction, session, publisher, or raw-event APIs.",
+        "Gate application and transport identities and credential custody are not proven end to end.",
+        "Trusted state and control inputs remain caller-supplied rather than an authenticated ongoing live control plane.",
+        "The external generation anchor, plant application boundary, complete mediation, delivery, physical safety, and production security remain unproven.",
+        "No independent human review is claimed by this task closure."
       ]
     },
     {
