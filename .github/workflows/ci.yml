@@ -93,6 +93,10 @@ jobs:
         run: python3 tools/verify-pins.py
       - name: Verify immutable CI and formal-tool pins
         run: python3 tools/verify-ci-pins.py
+      - name: Verify immutable 0.9 audit cut
+        run: |
+          python3 -m unittest tools/release/test_verify_audit_inputs.py
+          python3 tools/release/verify-audit-inputs.py
       - name: Verify evidence layout
         run: python3 tools/verify-evidence.py
       - name: Verify secure Zenoh profiles and retained live evidence

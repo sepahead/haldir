@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "source_commit": "1c8862ec93999506c285c0777c82394ebe8ab409",
+  "source_tree": "357406073f1f117c71eaaa5c910699aa220724e7",
+  "tree_clean_before_run": true,
+  "command": "bash tools/p0r-exit-gate.sh",
+  "exit_status": 0,
+  "summary": {
+    "passed": 19,
+    "failed": 0
+  },
+  "log": {
+    "path": "release/0.9.0/evidence/baseline-p0r.log.gz",
+    "compression": "gzip",
+    "gzip_timestamp": 0,
+    "uncompressed_sha256": "2528ee0ecf99eb096c1a159a9f342b32781fc41f87120ce0f7996b118e3edd09",
+    "uncompressed_bytes": 99209,
+    "uncompressed_lines": 1679
+  },
+  "result": "pass"
+}

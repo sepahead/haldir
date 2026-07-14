@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0.0",
+  "release_target": "0.9.0",
+  "captured_at_utc": "2026-07-14T07:23:20Z",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "source": {
+    "repository": "https://github.com/sepahead/haldir",
+    "remote": "git@github.com:sepahead/haldir.git",
+    "branch": "main",
+    "commit": "1c8862ec93999506c285c0777c82394ebe8ab409",
+    "tree": "357406073f1f117c71eaaa5c910699aa220724e7",
+    "tree_clean": true,
+    "origin_main_commit": "1c8862ec93999506c285c0777c82394ebe8ab409",
+    "submodules": []
+  },
+  "handoff": {
+    "package": "HALDIR_V1_0_STANDALONE_IMPLEMENTATION_HANDOFF",
+    "verified_against_supplied_checksum_manifest": true,
+    "files": [
+      {
+        "path": "HALDIR_V1_0_AGENT_TASK_LEDGER.yaml",
+        "sha256": "b77f64703f7c9528453783a1f25ecc86c179c741bca0b9e3034327d83633e8bd"
+      },
+      {
+        "path": "HALDIR_V1_0_ARCHITECTURE.md",
+        "sha256": "4b167dd0be9caa10bf4eb5f26f92025853cda044624b88c7fc9f5a967d0ba677"
+      },
+      {
+        "path": "HALDIR_V1_0_ARTIFACT_SHA256SUMS.txt",
+        "sha256": "1350e08bcdf65eac8f0be86272c133167efdd5462c0d19b18432b0207b210408"
+      },
+      {
+        "path": "HALDIR_V1_0_ARTIFACT_VALIDATION_REPORT.md",
+        "sha256": "100170daa81dcbbb6b0d6e1baed21c63992193d7469360eb235bec3e0de8524d"
+      },
+      {
+        "path": "HALDIR_V1_0_CORE_CONTRACT_SCHEMA.json",
+        "sha256": "fecff9e28dc65f8f24595c771b0393627f0b9ce838538ca7ed704fa2d1f6b43e"
+      },
+      {
+        "path": "HALDIR_V1_0_GO_NO_GO_CHECKLIST.md",
+        "sha256": "410ae84b8982c4c8cef768c26c3cd69439abbdaa5253f3234fe4e8ea8545eccf"
+      },
+      {
+        "path": "HALDIR_V1_0_MIGRATION_AND_ECOSYSTEM.md",
+        "sha256": "36d6eef8ab32c999cbb016e4531b85df000f96ff9345f459deb9e76ed3c51594"
+      },
+      {
+        "path": "HALDIR_V1_0_RELEASE_BLUEPRINT.md",
+        "sha256": "eff0e6eff85d71cde0df30d333f6dcf128c1c71b550b3052cc3c8e30b28a7bc8"
+      },
+      {
+        "path": "HALDIR_V1_0_RELEASE_MANIFEST_TEMPLATE.json",
+        "sha256": "e13df9209c574c3ff09b69a0919238ca988d478a1351301bd643558ddbbe3c68"
+      },
+      {
+        "path": "PACKAGE_INDEX.md",
+        "sha256": "4b4b0855e8725f591edea2e453de15d9e086b05e6217805fcfbc0704eabf1dd6"
+      }
+    ]
+  },
+  "toolchains": {
+    "rustc": {
+      "version": "1.96.0",
+      "commit": "ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96",
+      "host": "aarch64-apple-darwin",
+      "llvm": "22.1.2"
+    },
+    "cargo": {
+      "version": "1.96.0",
+      "commit": "30a34c6821b57de0aaec83a901aca39f88f6778c"
+    },
+    "python": "3.14.6",
+    "cargo_deny": "0.19.9",
+    "host": "Darwin 25.5.0 arm64"
+  },
+  "locked_inputs": {
+    "cargo_lock_sha256": "8767fc69ea7b90b374de6ca77e9d22dbfac0e3b1db236ea03d24f05470d2831f",
+    "rust_toolchain_sha256": "61d97acc9676fd1b6348a44dee3c372804b9a1e984385c7d73a2620b322d4927",
+    "dependency_policy_sha256": "08e563a6f20d8a5423b0a85a2c2183a9b3d82d0b40ca6efac0ab62976e863ae6"
+  },
+  "ncp": {
+    "repository": "https://github.com/sepahead/NCP",
+    "claimed_protocol": "0.8",
+    "package_version": "0.8.0",
+    "tag": "v0.8.0",
+    "tag_object": "54008b16ea0c195a4ccc9691cb533dd1153bf7f0",
+    "commit": "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e",
+    "dependency": "ncp-core",
+    "protocol_1_0_qualified": false
+  },
+  "deployment": {
+    "profile_path": "deploy/secure-reference-v1/profile.json",
+    "profile_sha256": "76a10873155ef5fe85f13117fdf6fcb6f3938399823cbb6af9bff523a3b54e06",
+    "readme_sha256": "5f928f1a7a326cae7eedcb8c7325607d4ef44ae6317720b633a67fc8e10ca51e"
+  },
+  "formal_model": {
+    "specification_sha256": "0ab0bc5826c356cab6e01555a32fbc489286988b575c62605e740b69c6e5e61e",
+    "configuration_sha256": "20651c85285170ac0bbd35b6f6b9c31597fd63b28e7678b72388033dbad3c58f"
+  },
+  "retained_evidence": [
+    {
+      "path": "evidence/11-secure-zenoh-live/manifest.json",
+      "sha256": "9b1904b7f9ec0fa2d46940c3ebc2db6255488ea7e563fa5df789d2a12d2d700d"
+    },
+    {
+      "path": "evidence/12-live-gate-dev-smoke/manifest.json",
+      "sha256": "798e9d0cef25d0e5e56955825c9f349fe1599954c97af22d4c553f04f422c337"
+    }
+  ],
+  "baseline": {
+    "command": "bash tools/p0r-exit-gate.sh",
+    "log": "release/0.9.0/evidence/baseline-p0r.log.gz",
+    "uncompressed_sha256": "2528ee0ecf99eb096c1a159a9f342b32781fc41f87120ce0f7996b118e3edd09",
+    "uncompressed_bytes": 99209,
+    "uncompressed_lines": 1679,
+    "exit_status": 0,
+    "passed_gates": 19,
+    "failed_gates": 0
+  },
+  "repository_publication_state": {
+    "remote_tags": [],
+    "github_releases": []
+  }
+}
+

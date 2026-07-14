@@ -1,0 +1,2327 @@
+{
+  "schema_version": "1.0.0",
+  "release_target": "0.9.0",
+  "author": "Sepehr Mahmoudian",
+  "source_handoff": {
+    "file": "HALDIR_V1_0_AGENT_TASK_LEDGER.yaml",
+    "sha256": "b77f64703f7c9528453783a1f25ecc86c179c741bca0b9e3034327d83633e8bd"
+  },
+  "execution_rule": "Execute in ID order. A task may be verified only after every dependency is verified or truthfully disposed as not_claimed where narrowing is permitted.",
+  "status_definitions": {
+    "open": "No closure claim.",
+    "implemented": "Normative artifact and implementation evidence exist, but the phase/full verification gate has not yet closed.",
+    "verified": "All applicable acceptance evidence and reviews pass.",
+    "not_claimed": "Optional capability is absent and every related public claim has been removed; this is not success for a core gate."
+  },
+  "tasks": [
+    {
+      "id": "T000",
+      "requirement_id": "HALDIR-0.9-T000",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Create an immutable audit manifest for source, dependencies, NCP revision, deployment assets and evidence.",
+      "priority": "release_blocker",
+      "dependencies": [
+
+      ],
+      "status": "implemented",
+      "evidence": [
+        {
+          "kind": "normative_requirement",
+          "path": "docs/release/0.9.0/README.md",
+          "anchor": "haldir-09-t000--immutable-audit-cut"
+        },
+        {
+          "kind": "audit_manifest",
+          "path": "release/0.9.0/audit-inputs.json"
+        },
+        {
+          "kind": "baseline_result",
+          "path": "release/0.9.0/evidence/baseline-p0r.json"
+        },
+        {
+          "kind": "complete_log",
+          "path": "release/0.9.0/evidence/baseline-p0r.log.gz",
+          "sha256_uncompressed": "2528ee0ecf99eb096c1a159a9f342b32781fc41f87120ce0f7996b118e3edd09"
+        }
+      ],
+      "ten_lens_review": {
+        "correctness_and_invariants": "The audit cut records the exact clean commit/tree and all supplied handoff file digests.",
+        "safety_and_failure_behavior": "A failed checksum or baseline command is not represented as success; the recorded baseline exit status is zero.",
+        "security_and_adversarial_behavior": "Mutable names are accompanied by immutable digests or peeled commits; no release authority is granted by this manifest.",
+        "determinism_and_reproducibility": "The complete baseline output is retained with an uncompressed SHA-256 and deterministic gzip metadata.",
+        "performance_and_bounded_resources": "The manifest and baseline have explicit byte/line counts; T000 adds no runtime path.",
+        "api_schema_and_compatibility": "The 0.9 Haldir label is separated from the independently versioned NCP 0.8 protocol pin.",
+        "observability_and_provenance": "Source, toolchain, dependency, deployment, formal, evidence, author, and publication-state provenance are explicit.",
+        "testing_and_independent_evidence": "The untouched P0-R gate passed 19 of 19 checks; independent review remains a later named gate and is not fabricated.",
+        "documentation_and_operator_usability": "The qualification README links each retained artifact and states the NO-GO posture.",
+        "ecosystem_composition_and_governance": "The NCP tag object and peeled commit are recorded; no cross-repository change or unsupported integration claim is made."
+      },
+      "residual_risks": [
+        "The audit manifest proves the starting cut, not the eventual 0.9 release commit.",
+        "External reviewer identity and approval are deliberately absent until a real reviewer acts."
+      ]
+    },
+    {
+      "id": "T001",
+      "requirement_id": "HALDIR-0.9-T001",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Write the normative authority model and identify the sole principal allowed to create plant commands.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T000"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T002",
+      "requirement_id": "HALDIR-0.9-T002",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Define protected subjects, resources, actions, constraints, time domains and trust roots.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T001"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T003",
+      "requirement_id": "HALDIR-0.9-T003",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Write the threat model for forged intents, stolen keys, replay, route confusion, stale state, rollback and denial of service.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T002"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T004",
+      "requirement_id": "HALDIR-0.9-T004",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Freeze 0.9 claims and explicitly separate reference-monitor guarantees from plant safety.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T003"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T005",
+      "requirement_id": "HALDIR-0.9-T005",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Define deployment profiles: NoAuthority, ExternalAuthority and HaldirGate.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T004"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T006",
+      "requirement_id": "HALDIR-0.9-T006",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Prohibit dynamic fallback or downgrade from HaldirGate.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T005"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T007",
+      "requirement_id": "HALDIR-0.9-T007",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Build a requirement-to-evidence ledger with named independent reviewers.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T006"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T008",
+      "requirement_id": "HALDIR-0.9-T008",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Set release-candidate change control and security embargo procedures.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T007"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T009",
+      "requirement_id": "HALDIR-0.9-T009",
+      "phase": 1,
+      "phase_title": "Freeze authority model, claims, threat model and immutable audit cut",
+      "title": "Remove or mark every unsupported production or safety claim.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T008"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T010",
+      "requirement_id": "HALDIR-0.9-T010",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Draw the trusted computing base and remove policy-irrelevant code from it.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T009"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T011",
+      "requirement_id": "HALDIR-0.9-T011",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Split pure decision logic from transport, filesystem, clocks, entropy and logging.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T010"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T012",
+      "requirement_id": "HALDIR-0.9-T012",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Represent authority, publisher and route ownership with move-only capabilities.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T011"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T013",
+      "requirement_id": "HALDIR-0.9-T013",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Make invalid configurations unrepresentable where practical.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T012"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T014",
+      "requirement_id": "HALDIR-0.9-T014",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Use closed enums rather than Booleans for all security-relevant modes.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T013"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T015",
+      "requirement_id": "HALDIR-0.9-T015",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Validate complete configuration before opening backends, files, locks or entropy sources.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T014"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T016",
+      "requirement_id": "HALDIR-0.9-T016",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Define deterministic error taxonomy and eliminate panic paths on untrusted input.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T015"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T017",
+      "requirement_id": "HALDIR-0.9-T017",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Audit unsafe code and forbid it in the TCB unless separately justified and verified.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T016"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T018",
+      "requirement_id": "HALDIR-0.9-T018",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Freeze the public Rust API only after reducing visibility and sealing internal traits.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T017"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T019",
+      "requirement_id": "HALDIR-0.9-T019",
+      "phase": 2,
+      "phase_title": "Minimize trusted computing base and stabilize type/capability architecture",
+      "title": "Document memory, time and allocation bounds for every TCB operation.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T018"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T020",
+      "requirement_id": "HALDIR-0.9-T020",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Specify canonical signing bytes independent of serializer map ordering.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T019"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T021",
+      "requirement_id": "HALDIR-0.9-T021",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Use explicit domain separation for intent, lease, receipt, challenge, profile and command signatures.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T020"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T022",
+      "requirement_id": "HALDIR-0.9-T022",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Bind signatures to protocol version, profile, deployment, epoch, session and key identifier.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T021"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T023",
+      "requirement_id": "HALDIR-0.9-T023",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Define supported algorithms and reject algorithm confusion and downgrade.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T022"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T024",
+      "requirement_id": "HALDIR-0.9-T024",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Implement constant-time verification where secret-dependent behavior exists.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T023"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T025",
+      "requirement_id": "HALDIR-0.9-T025",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Define key generation, storage, rotation, revocation, compromise and retirement procedures.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T024"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T026",
+      "requirement_id": "HALDIR-0.9-T026",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Separate controller, operator, Gate, deployment-authority and audit keys.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T025"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T027",
+      "requirement_id": "HALDIR-0.9-T027",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Add deterministic cross-language golden vectors for every signed object.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T026"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T028",
+      "requirement_id": "HALDIR-0.9-T028",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Test malformed encodings, duplicate keys, unknown fields and alternate representations.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T027"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T029",
+      "requirement_id": "HALDIR-0.9-T029",
+      "phase": 3,
+      "phase_title": "Finalize canonical cryptographic contracts and key lifecycle",
+      "title": "Commission an independent cryptographic design and implementation review.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T028"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T030",
+      "requirement_id": "HALDIR-0.9-T030",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Define controller identity and deployment admission as separate signed statements.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T029"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T031",
+      "requirement_id": "HALDIR-0.9-T031",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Bind an admitted controller to one exact intent route and permitted mission class.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T030"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T032",
+      "requirement_id": "HALDIR-0.9-T032",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Define mission lease subject, scope, validity interval, nonce, route and constraints.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T031"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T033",
+      "requirement_id": "HALDIR-0.9-T033",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Require freshness challenge/response before activation when the profile demands it.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T032"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T034",
+      "requirement_id": "HALDIR-0.9-T034",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Prevent lease transfer, widening, renewal-by-replay and cross-deployment reuse.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T033"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T035",
+      "requirement_id": "HALDIR-0.9-T035",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Define exact clock and monotonic-time assumptions for lease validation.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T034"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T036",
+      "requirement_id": "HALDIR-0.9-T036",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Specify behavior across restart, epoch rollover and clock discontinuity.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T035"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T037",
+      "requirement_id": "HALDIR-0.9-T037",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Add exhaustive boundary tests at not-before and expiry instants.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T036"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T038",
+      "requirement_id": "HALDIR-0.9-T038",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Create revocation and emergency invalidation paths with retained audit evidence.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T037"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T039",
+      "requirement_id": "HALDIR-0.9-T039",
+      "phase": 4,
+      "phase_title": "Finalize controller admission, mission lease and intent semantics",
+      "title": "Prove rejected admission or lease input cannot produce a lower publisher capability.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T038"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T040",
+      "requirement_id": "HALDIR-0.9-T040",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Write a normative deterministic policy specification independent of Rust code.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T039"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T041",
+      "requirement_id": "HALDIR-0.9-T041",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Define trusted-state ownership, update provenance, freshness and conflict handling.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T040"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T042",
+      "requirement_id": "HALDIR-0.9-T042",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Make every policy input explicit in the decision record.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T041"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T043",
+      "requirement_id": "HALDIR-0.9-T043",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Specify default deny, hold, estop and constraint-clamping behavior.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T042"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T044",
+      "requirement_id": "HALDIR-0.9-T044",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Define policy composition and prohibit order-dependent hidden widening.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T043"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T045",
+      "requirement_id": "HALDIR-0.9-T045",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Use exact arithmetic or bounded, reviewed numeric semantics for safety constraints.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T044"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T046",
+      "requirement_id": "HALDIR-0.9-T046",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Handle stale, missing, contradictory and future-dated trusted state explicitly.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T045"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T047",
+      "requirement_id": "HALDIR-0.9-T047",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Define rate limits, sequence windows and per-controller fairness without weakening denial.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T046"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T048",
+      "requirement_id": "HALDIR-0.9-T048",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Build exhaustive table tests for the finite policy surface.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T047"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T049",
+      "requirement_id": "HALDIR-0.9-T049",
+      "phase": 5,
+      "phase_title": "Finalize deterministic policy, trusted state and temporal behavior",
+      "title": "Add property tests proving monotonic non-widening under added restrictions.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T048"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T050",
+      "requirement_id": "HALDIR-0.9-T050",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Define canonical decision receipt schema and signing bytes.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T049"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T051",
+      "requirement_id": "HALDIR-0.9-T051",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Bind receipt to every consumed identity, intent, lease, state snapshot, profile and policy revision.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T050"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T052",
+      "requirement_id": "HALDIR-0.9-T052",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Ensure DENY, HOLD and ERROR receipts cannot contain a valid produced-command claim.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T051"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T053",
+      "requirement_id": "HALDIR-0.9-T053",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "On ALLOW, construct a new command rather than forwarding controller bytes.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T052"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T054",
+      "requirement_id": "HALDIR-0.9-T054",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Bind the command digest and Gate-owned stream position into the receipt.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T053"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T055",
+      "requirement_id": "HALDIR-0.9-T055",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Use NCP 1.0 normative command schemas and mode/TTL/ESTOP semantics.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T054"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T056",
+      "requirement_id": "HALDIR-0.9-T056",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Guarantee unique Gate command sequence within generation and epoch.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T055"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T057",
+      "requirement_id": "HALDIR-0.9-T057",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Define crash consistency between command publication and durable receipt evidence.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T056"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T058",
+      "requirement_id": "HALDIR-0.9-T058",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Prevent replay of old ALLOW receipts or commands after restart.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T057"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T059",
+      "requirement_id": "HALDIR-0.9-T059",
+      "phase": 6,
+      "phase_title": "Finalize decision receipts and Gate-owned NCP command construction",
+      "title": "Add cross-language receipt and command verification vectors.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T058"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T060",
+      "requirement_id": "HALDIR-0.9-T060",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Define one exact backend capability state machine from template to live owner.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T059"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T061",
+      "requirement_id": "HALDIR-0.9-T061",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Reject live templates unless the matching adapter and feature are compiled.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T060"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T062",
+      "requirement_id": "HALDIR-0.9-T062",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Derive ingress and publisher routes from the same verified session lineage.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T061"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T063",
+      "requirement_id": "HALDIR-0.9-T063",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Prove only the Gate publisher capability can access the final command route.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T062"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T064",
+      "requirement_id": "HALDIR-0.9-T064",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Prevent cloning or leakage of privileged publisher handles.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T063"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T065",
+      "requirement_id": "HALDIR-0.9-T065",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Bound ingress bytes, queues, outstanding controllers and processing time.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T064"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T066",
+      "requirement_id": "HALDIR-0.9-T066",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Specify cancellation, shutdown, wakeup and selected-event ownership precisely.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T065"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T067",
+      "requirement_id": "HALDIR-0.9-T067",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Test router reconnect, partial failure, delayed callbacks and duplicate delivery.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T066"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T068",
+      "requirement_id": "HALDIR-0.9-T068",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Retain real-router mTLS and ACL allow/deny evidence for every configured principal.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T067"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T069",
+      "requirement_id": "HALDIR-0.9-T069",
+      "phase": 7,
+      "phase_title": "Prove backend, route, publisher and session capability ownership",
+      "title": "Verify no observer, controller, Galadriel or ordinary Crebain principal can publish the final route.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T068"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T070",
+      "requirement_id": "HALDIR-0.9-T070",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Create a small formal transition system for startup, admission, activation, processing and shutdown.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T069"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T071",
+      "requirement_id": "HALDIR-0.9-T071",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "State invariants for sole authority, non-bypass, freshness, replay freedom and command causality.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T070"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T072",
+      "requirement_id": "HALDIR-0.9-T072",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Model adversarial ordering, crash points, cancellation and backend failure.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T071"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T073",
+      "requirement_id": "HALDIR-0.9-T073",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Model lease expiry and epoch/session rollover.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T072"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T074",
+      "requirement_id": "HALDIR-0.9-T074",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Model optional advisory evidence as restrict-only or record-only.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T073"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T075",
+      "requirement_id": "HALDIR-0.9-T075",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Run bounded and unbounded checks appropriate to the chosen formal tool.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T074"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T076",
+      "requirement_id": "HALDIR-0.9-T076",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Connect formal states to Rust types and transitions through traceable identifiers.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T075"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T077",
+      "requirement_id": "HALDIR-0.9-T077",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Generate implementation traces and compare them with model-allowed traces.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T076"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T078",
+      "requirement_id": "HALDIR-0.9-T078",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Require review of assumptions, abstractions and unmodeled environment behavior.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T077"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T079",
+      "requirement_id": "HALDIR-0.9-T079",
+      "phase": 8,
+      "phase_title": "Complete formal model, model checking and implementation refinement",
+      "title": "Archive model, tool versions, commands and complete results with the release.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T078"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T080",
+      "requirement_id": "HALDIR-0.9-T080",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Fuzz all decoders, signature boundaries, policy inputs and state-machine transitions.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T079"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T081",
+      "requirement_id": "HALDIR-0.9-T081",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Run mutation testing on default-deny, replay, expiry, route and command-production guards.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T080"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T082",
+      "requirement_id": "HALDIR-0.9-T082",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Prove bounded memory and CPU under hostile but authenticated traffic.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T081"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T083",
+      "requirement_id": "HALDIR-0.9-T083",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Test key compromise simulations and revocation propagation.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T082"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T084",
+      "requirement_id": "HALDIR-0.9-T084",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Test filesystem, entropy, clock, network and durable-log failure injection.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T083"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T085",
+      "requirement_id": "HALDIR-0.9-T085",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Eliminate secret material from logs, core dumps and error messages.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T084"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T086",
+      "requirement_id": "HALDIR-0.9-T086",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Generate SBOM, dependency policy, vulnerability scans and build provenance.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T085"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T087",
+      "requirement_id": "HALDIR-0.9-T087",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Run Miri, sanitizers and platform matrix for all TCB crates.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T086"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T088",
+      "requirement_id": "HALDIR-0.9-T088",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Create incident-response, emergency revocation and release-withdrawal procedures.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T087"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T089",
+      "requirement_id": "HALDIR-0.9-T089",
+      "phase": 9,
+      "phase_title": "Harden security, resource bounds and adversarial behavior",
+      "title": "Perform an external penetration and architecture review of the secure-reference profile.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T088"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T090",
+      "requirement_id": "HALDIR-0.9-T090",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Define NoAuthority as non-actuating and impossible to confuse with Haldir unavailability.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T089"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T091",
+      "requirement_id": "HALDIR-0.9-T091",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Define ExternalAuthority without importing or impersonating Haldir guarantees.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T090"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T092",
+      "requirement_id": "HALDIR-0.9-T092",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Make HaldirGate mandatory and non-bypassable once selected.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T091"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T093",
+      "requirement_id": "HALDIR-0.9-T093",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Keep Galadriel optional and record-only for initial 0.9 qualification.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T092"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T094",
+      "requirement_id": "HALDIR-0.9-T094",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Prove Galadriel absence or invalidity cannot change baseline ALLOW.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T093"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T095",
+      "requirement_id": "HALDIR-0.9-T095",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Use NCP 1.0 for Engram-facing and final plant-facing protocol boundaries where claimed.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T094"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T096",
+      "requirement_id": "HALDIR-0.9-T096",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Do not mandate NCP for Crebain internal communication.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T095"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T097",
+      "requirement_id": "HALDIR-0.9-T097",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Qualify exact downstream/upstream versions with immutable manifests.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T096"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T098",
+      "requirement_id": "HALDIR-0.9-T098",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Run full multi-process startup, authorization, command, expiry, estop and recovery drills.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T097"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T099",
+      "requirement_id": "HALDIR-0.9-T099",
+      "phase": 10,
+      "phase_title": "Qualify deployment, ecosystem and failure-recovery profiles",
+      "title": "Remove any ecosystem support claim without retained evidence.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T098"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T100",
+      "requirement_id": "HALDIR-0.9-T100",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Freeze semver policy for crates, contracts, policy revisions and deployment profiles.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T099"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T101",
+      "requirement_id": "HALDIR-0.9-T101",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Write a complete pre-0.9 migration guide and intentionally break insecure contracts.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T100"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T102",
+      "requirement_id": "HALDIR-0.9-T102",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Publish normative schemas, golden vectors and profile manifests.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T101"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T103",
+      "requirement_id": "HALDIR-0.9-T103",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Rewrite README with authority boundaries, quick start, threat model and honest limitations.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T102"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T104",
+      "requirement_id": "HALDIR-0.9-T104",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Write operator ceremonies for keys, admission, lease issuance, deployment and revocation.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T103"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T105",
+      "requirement_id": "HALDIR-0.9-T105",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Document every trusted assumption and environmental obligation.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T104"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T106",
+      "requirement_id": "HALDIR-0.9-T106",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Update GitHub description, topics, SECURITY, CITATION, CHANGELOG and release notes.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T105"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T107",
+      "requirement_id": "HALDIR-0.9-T107",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Make all examples and deployment renders reproducible in CI.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T106"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T108",
+      "requirement_id": "HALDIR-0.9-T108",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Define support, deprecation and emergency-patch policy.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T107"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T109",
+      "requirement_id": "HALDIR-0.9-T109",
+      "phase": 11,
+      "phase_title": "Finish API, documentation, migration, packaging and governance",
+      "title": "Require signed governance approval for policy or trust-root changes.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T108"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T110",
+      "requirement_id": "HALDIR-0.9-T110",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Run locked CI and formal checks on the exact release commit.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T109"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T111",
+      "requirement_id": "HALDIR-0.9-T111",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Commission an independent clean-room build, vector verification and deployment drill.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T110"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T112",
+      "requirement_id": "HALDIR-0.9-T112",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Perform final TCB diff and threat-model review.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T111"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T113",
+      "requirement_id": "HALDIR-0.9-T113",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Verify every requirement has evidence or is explicitly unclaimed.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T112"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T114",
+      "requirement_id": "HALDIR-0.9-T114",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Build signed source archives, binaries, SBOMs, checksums and attestations.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T113"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T115",
+      "requirement_id": "HALDIR-0.9-T115",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Rehearse crate publication, deployment rollback and key revocation.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T114"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T116",
+      "requirement_id": "HALDIR-0.9-T116",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Create and sign the 0.9 profile and release manifests.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T115"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T117",
+      "requirement_id": "HALDIR-0.9-T117",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Publish in dependency order and verify registry and GitHub assets.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T116"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T118",
+      "requirement_id": "HALDIR-0.9-T118",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Run post-release secure-reference install and end-to-end authorization tests.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T117"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    },
+    {
+      "id": "T119",
+      "requirement_id": "HALDIR-0.9-T119",
+      "phase": 12,
+      "phase_title": "Run independent assurance and release ceremony",
+      "title": "Record residual risks, operational monitoring and post-0.9 assurance schedule.",
+      "priority": "release_blocker",
+      "dependencies": [
+        "T118"
+      ],
+      "status": "open",
+      "evidence": [
+
+      ],
+      "ten_lens_review": null,
+      "residual_risks": [
+
+      ]
+    }
+  ]
+}
