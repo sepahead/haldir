@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "T001",
+  "requirement_id": "HALDIR-0.9-T001",
+  "status": "verified",
+  "implementation": {
+    "commit": "a1e43cef9633703ea9838df31aa6aec549830878",
+    "tree": "5bd753aaf9be2d1d073e2f921f3deeb47dca61d8",
+    "author": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "commit_signature": "ssh-ed25519"
+  },
+  "inputs": {
+    "cargo_lock_sha256": "8767fc69ea7b90b374de6ca77e9d22dbfac0e3b1db236ea03d24f05470d2831f",
+    "rust_toolchain_sha256": "61d97acc9676fd1b6348a44dee3c372804b9a1e984385c7d73a2620b322d4927",
+    "rustc": "1.96.0",
+    "ncp_tag": "v0.8.0",
+    "ncp_tag_object": "54008b16ea0c195a4ccc9691cb533dd1153bf7f0",
+    "ncp_commit": "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
+  },
+  "github_ci": {
+    "run_id": 29318945938,
+    "url": "https://github.com/sepahead/haldir/actions/runs/29318945938",
+    "head_sha": "a1e43cef9633703ea9838df31aa6aec549830878",
+    "conclusion": "success",
+    "jobs": [
+      "build-test",
+      "feature-matrix",
+      "macos-compile",
+      "clean-build",
+      "supply-chain",
+      "interop"
+    ],
+    "log": {
+      "path": "release/0.9.0/evidence/t001-ci-a1e43ce.log.gz",
+      "compression": "gzip",
+      "gzip_timestamp": 0,
+      "uncompressed_sha256": "c3cd2ecf8cca68e57072a8f6c2b1b34bcfcc97058aaf6f561b0c4d3fa661e052",
+      "uncompressed_bytes": 488823,
+      "uncompressed_lines": 3847
+    }
+  },
+  "github_formal": {
+    "run_id": 29318945937,
+    "url": "https://github.com/sepahead/haldir/actions/runs/29318945937",
+    "head_sha": "a1e43cef9633703ea9838df31aa6aec549830878",
+    "conclusion": "success",
+    "jobs": [
+      "tlc-model-check"
+    ],
+    "log": {
+      "path": "release/0.9.0/evidence/t001-formal-a1e43ce.log.gz",
+      "compression": "gzip",
+      "gzip_timestamp": 0,
+      "uncompressed_sha256": "7ef7250e47195729893295fd23ee5fe64a68ecf36d98098a2996b58c9904285c",
+      "uncompressed_bytes": 36585,
+      "uncompressed_lines": 267
+    }
+  },
+  "verification_scope": {
+    "positive": "The sole Gate profile publisher, exact authority conjunction, and ALLOW(HOLD) command path pass.",
+    "negative": "A second final publisher, missing denial evidence, DENY output, and ERROR output are rejected or absent.",
+    "boundary": "Every verifier input and decompressed log is bounded; the requested and effective HOLD validity are bounded.",
+    "adversarial": "Gate-role spoofing, normative-document digest substitution, malformed JSON, and oversized input are rejected.",
+    "regression": "Decision outcomes cannot absorb HOLD, and T001 cannot close unless T000 is verified.",
+    "metamorphic": "Reordering the JSON principal object does not change the authority result."
+  },
+  "review": {
+    "self_reviewed_by": "Sepehr Mahmoudian",
+    "independent_reviewer": null,
+    "independent_review_required_for_t001": false,
+    "independent_release_review_deferred_to": "HALDIR-0.9-T007"
+  },
+  "residual_risks": [
+    "Current lower-level construction and publication APIs remain public and are not complete-mediation evidence.",
+    "Gate application and transport credential custody is not yet bound end to end.",
+    "The retained live ACL matrix is synthetic and proves neither Crebain application nor physical safety.",
+    "No independent human review is claimed by this task closure."
+  ]
+}

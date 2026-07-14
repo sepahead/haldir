@@ -488,11 +488,15 @@ def _git(repo: Path, *arguments: str) -> bytes:
 def _verify_log(repo: Path, record: Any, commit: str, marker: bytes) -> None:
     if not isinstance(record, dict) or set(record) != {
         "path",
+        "compression",
+        "gzip_timestamp",
         "uncompressed_sha256",
         "uncompressed_bytes",
         "uncompressed_lines",
     }:
         raise AuthorityModelError("AUTHORITY_VERIFICATION_LOG_RECORD_INVALID")
+    if record.get("compression") != "gzip" or record.get("gzip_timestamp") != 0:
+        raise AuthorityModelError("AUTHORITY_VERIFICATION_LOG_COMPRESSION_INVALID")
     payload = _read_bounded_gzip(repo / record["path"])
     if len(payload) != record["uncompressed_bytes"] or len(payload.splitlines()) != record[
         "uncompressed_lines"

@@ -53,6 +53,10 @@ checked against the deployment profile, retained live ACL matrix, current closed
 Rust vocabularies, Gate construction order, and requirement ledger. Complete
 mediation and downstream plant effects remain `NOT_CLAIMED`.
 
+[`t001-verification.json`](../../../release/0.9.0/evidence/t001-verification.json)
+binds the signed implementation commit to its successful exact-commit CI and
+TLA+ runs and to the complete, digest-checked retained logs.
+
 ## Evidence discipline
 
 Task closure requires a stable SHALL/SHALL NOT requirement, applicable positive and

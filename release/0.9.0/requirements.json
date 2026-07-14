@@ -87,7 +87,7 @@
       "dependencies": [
         "T000"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence": [
         {
           "kind": "normative_requirement",
@@ -123,6 +123,21 @@
         {
           "kind": "retained_synthetic_live_acl_matrix",
           "path": "evidence/11-secure-zenoh-live/result.json"
+        },
+        {
+          "kind": "exact_commit_verification",
+          "path": "release/0.9.0/evidence/t001-verification.json",
+          "commit": "a1e43cef9633703ea9838df31aa6aec549830878"
+        },
+        {
+          "kind": "github_ci",
+          "run_id": 29318945938,
+          "conclusion": "success"
+        },
+        {
+          "kind": "github_formal",
+          "run_id": 29318945937,
+          "conclusion": "success"
         }
       ],
       "ten_lens_review": {
