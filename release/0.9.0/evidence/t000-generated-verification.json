@@ -1,0 +1,683 @@
+{
+  "evidence_tool": {
+    "allowed_signers": {
+      "path": "release/0.9.0/allowed-signers",
+      "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+    },
+    "author": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0",
+    "committer": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "evidence_spec": {
+      "path": "release/0.9.0/evidence-specs/t000.json",
+      "sha256": "a95301ddcc569c8d4e23100b8342b561c7681ad79692aeeb20e37129f8251258"
+    },
+    "generator": {
+      "path": "tools/release/generate-task-evidence.py",
+      "sha256": "c982cffec46b82b236684af37eac8e38151420ac724eb93c6f351018e65dacd7"
+    },
+    "signature": {
+      "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "format": "ssh",
+      "key_type": "ED25519",
+      "principal": "sepmhn@gmail.com"
+    },
+    "tree": "fb7bae3e14281e42886a55a3280b689611d390f8",
+    "verifier": {
+      "path": "tools/release/verify-task-evidence.py",
+      "sha256": "d0f7a4dcbeb222985a1dd01c0f851346f03706bd84adc694149e3c6b0ce78d51"
+    }
+  },
+  "generated_by": "tools/release/generate-task-evidence.py",
+  "github_ci": {
+    "api_url": "https://api.github.com/repos/sepahead/haldir/actions/runs/29314902824",
+    "attempt": 1,
+    "conclusion": "success",
+    "event": "push",
+    "head_branch": "main",
+    "head_sha": "5f7d183625a982741c51958e2d10bc12bb628ca0",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "job_id": 87026569102,
+        "name": "build-test",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install + verify pinned toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Cache cargo",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Format check",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Clippy (deny warnings)",
+            "number": 6,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Tests",
+            "number": 7,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Doc tests",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Docs build (deny warnings)",
+            "number": 9,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "git diff --check",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "No generated-file drift",
+            "number": 11,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Cache cargo",
+            "number": 21,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 22,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87026569107,
+        "name": "clean-build",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Cold build",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87026569132,
+        "name": "feature-matrix",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Build no-default-features",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Clippy default features only",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87026569197,
+        "name": "interop",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install pinned toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Regenerate interop vectors (drift check)",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Independently verify COSE/CBOR vectors",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87026569202,
+        "name": "macos-compile",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Build + test on macOS",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87026569200,
+        "name": "supply-chain",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Build EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify source pins",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify immutable CI and formal-tool pins",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify immutable 0.9 audit cut",
+            "number": 6,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify evidence layout",
+            "number": 7,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify secure Zenoh profiles and retained live evidence",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Forbidden-claim drift check",
+            "number": 9,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "cargo-deny",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 20,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 21,
+            "status": "completed"
+          }
+        ]
+      }
+    ],
+    "log": {
+      "compressed_bytes": 462890,
+      "compressed_sha256": "80a8e78c560460df20183f425f8e8edaddede95df025e32c81ea9d66c07a022a",
+      "compression": "canonical-gzip-stored-v1",
+      "format": "github-actions-complete-logical-job-logs-v1",
+      "gzip_timestamp": 0,
+      "logical_entries": 12,
+      "path": "release/0.9.0/evidence/t000-generated-ci-5f7d183625a982741c51958e2d10bc12bb628ca0-run29314902824-attempt1.log.gz",
+      "uncompressed_bytes": 462832,
+      "uncompressed_lines": 77,
+      "uncompressed_sha256": "85b781a4bc4e19f6ace1ac6d31b2caeae62ac15bb34b0ad1f37be6417b2f6173"
+    },
+    "repository": "sepahead/haldir",
+    "run_id": 29314902824,
+    "status": "completed",
+    "url": "https://github.com/sepahead/haldir/actions/runs/29314902824",
+    "workflow_id": 311605710,
+    "workflow_name": "ci",
+    "workflow_path": ".github/workflows/ci.yml"
+  },
+  "github_formal": {
+    "api_url": "https://api.github.com/repos/sepahead/haldir/actions/runs/29314902845",
+    "attempt": 1,
+    "conclusion": "success",
+    "event": "push",
+    "head_branch": "main",
+    "head_sha": "5f7d183625a982741c51958e2d10bc12bb628ca0",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "job_id": 87026568917,
+        "name": "tlc-model-check",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Set up JRE",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Fetch pinned TLA+ tools",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Model-check HaldirAuthority",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Upload TLC log",
+            "number": 6,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Set up JRE",
+            "number": 11,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 12,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 13,
+            "status": "completed"
+          }
+        ]
+      }
+    ],
+    "log": {
+      "compressed_bytes": 30703,
+      "compressed_sha256": "0c5354f075a639b5527741df3e591eb4d599795d994eebaeea8a8c52514efea8",
+      "compression": "canonical-gzip-stored-v1",
+      "format": "github-actions-complete-logical-job-logs-v1",
+      "gzip_timestamp": 0,
+      "logical_entries": 2,
+      "path": "release/0.9.0/evidence/t000-generated-formal-5f7d183625a982741c51958e2d10bc12bb628ca0-run29314902845-attempt1.log.gz",
+      "uncompressed_bytes": 30680,
+      "uncompressed_lines": 17,
+      "uncompressed_sha256": "3598a38a81dcb5fd54cf302bb748a00008b5b3d5e70adb4a27a877909ef9ed54"
+    },
+    "repository": "sepahead/haldir",
+    "run_id": 29314902845,
+    "status": "completed",
+    "url": "https://github.com/sepahead/haldir/actions/runs/29314902845",
+    "workflow_id": 311703244,
+    "workflow_name": "formal",
+    "workflow_path": ".github/workflows/formal.yml"
+  },
+  "implementation": {
+    "author": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "commit": "5f7d183625a982741c51958e2d10bc12bb628ca0",
+    "committer": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "signature": {
+      "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "format": "ssh",
+      "key_type": "ED25519",
+      "principal": "sepmhn@gmail.com"
+    },
+    "tree": "bf1db5d627a131066b90c9e4b3687b7795777bbc"
+  },
+  "implementation_artifacts": [
+    {
+      "bytes": 5338,
+      "git_blob": "b9133d444d2f0fb7e236127bf00c4f5e4ddad8c5",
+      "git_mode": "100644",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "a738fa02d2b1ca26cc71f1b91d56d79813d1909f7353d790669c78c39e11d692",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 1394,
+      "git_blob": "5e1a2dc76edf76a83873f4c5344ce2b54aebaddd",
+      "git_mode": "100644",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "3de8203531471e675ee03b535fb7c690527a7fd6922a9dd3edb4be32a83443b5",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 2848,
+      "git_blob": "dea0aff93ddf02659ade6d83c90b2565120aacbb",
+      "git_mode": "100644",
+      "path": "docs/release/0.9.0/README.md",
+      "sha256": "dc868dda0409dfe934de5e47251f14cf01196fe2bfc9d80363b0cf15bdc6a5cb",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 254,
+      "git_blob": "55901379ad37931ed8d381dc3194dd7c4f62c1f9",
+      "git_mode": "100644",
+      "path": "formal/HaldirAuthority.cfg",
+      "sha256": "20651c85285170ac0bbd35b6f6b9c31597fd63b28e7678b72388033dbad3c58f",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 6157,
+      "git_blob": "fea47ed6d60451d95aad3d2305aa3378213cf8d5",
+      "git_mode": "100644",
+      "path": "formal/HaldirAuthority.tla",
+      "sha256": "0ab0bc5826c356cab6e01555a32fbc489286988b575c62605e740b69c6e5e61e",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 1903,
+      "git_blob": "898d5f55cdfd08a6839aa21c110b5cc796986935",
+      "git_mode": "100644",
+      "path": "justfile",
+      "sha256": "c5a8ab2c92e7f0559ff357cea42dfce19b2930a1bd5d5e444a4cb112125949e5",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 4592,
+      "git_blob": "f15af3edfd33084758bf0fd0d6088ea4513b047f",
+      "git_mode": "100644",
+      "path": "release/0.9.0/audit-inputs.json",
+      "sha256": "813dc01829d62a72acf91a1ee73473136c5a4729dd593a4d12d9e57ba6bf8ffa",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 612,
+      "git_blob": "ab9c55b4297317aeb76e91c4fdf0749f696827f4",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence/baseline-p0r.json",
+      "sha256": "a555540d558abfd1a9027f051fbdfbd9e6b68388ac0a6eb11bb7d863b77e7556",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 15854,
+      "git_blob": "1a8c333a5f95ae31810adcc82885a56ff55529e0",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence/baseline-p0r.log.gz",
+      "sha256": "421ebc08e12087a9e3a70f164497f380c6ce2977b92b14ad068da13de790a19a",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 69139,
+      "git_blob": "35a0be0988a471b517348a540cbb6226602511b0",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence/t000-ci-da40bd8.log.gz",
+      "sha256": "71c7a8225be7602ab5c5118c980d56194015f91d9fb8aefa724164366f01737c",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 5930,
+      "git_blob": "83825d9977ddf36b2718e4da25f99c1a29c78793",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence/t000-formal-da40bd8.log.gz",
+      "sha256": "e5c5351ee81ce5bb3a14f186d959dac724d462f48dbc65e6e0d891002b3bc81e",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 1776,
+      "git_blob": "fa22d56fece28f822ec96702390e2e823a43ec43",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence/t000-verification.json",
+      "sha256": "f441e5eaec01d0c21a0abd7b4ff54518968889d0af226144ca1e09c106467e25",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 61422,
+      "git_blob": "3bec272f63de03eca6913eed3ec065c5ca01d4e7",
+      "git_mode": "100644",
+      "path": "release/0.9.0/requirements.json",
+      "sha256": "60d43c363969c486c1c606bf1541a078b03289146d07eb02aa44364c588f7d21",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 3092,
+      "git_blob": "beda446238b4f35bf904600d11755c5d51307168",
+      "git_mode": "100755",
+      "path": "tools/p0r-exit-gate.sh",
+      "sha256": "3162e8f81a3e3132c677130d6f71961725e8944b482eea149d5fed73115d6367",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 3483,
+      "git_blob": "c8d9197a4fba5f14840d19a77a9dd86a702295fc",
+      "git_mode": "100644",
+      "path": "tools/release/test_verify_audit_inputs.py",
+      "sha256": "0d827dcf2a627b02862f2afee4183cfd03e5f83aecd6b6d299bbc0e0e2820003",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 12430,
+      "git_blob": "00ac4a58c63299497a62d290162371f921e3023f",
+      "git_mode": "100644",
+      "path": "tools/release/verify-audit-inputs.py",
+      "sha256": "684cda3ebe88d1ae9ab9e9093ee07e4e321a5c41a183bbde1e55a217a3f59310",
+      "worktree_policy": "MAY_EVOLVE"
+    }
+  ],
+  "inputs": {
+    "cargo_lock_sha256": "8767fc69ea7b90b374de6ca77e9d22dbfac0e3b1db236ea03d24f05470d2831f",
+    "ncp_commit": "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e",
+    "ncp_tag": "v0.8.0",
+    "ncp_tag_object": "54008b16ea0c195a4ccc9691cb533dd1153bf7f0",
+    "rust_toolchain_sha256": "61d97acc9676fd1b6348a44dee3c372804b9a1e984385c7d73a2620b322d4927",
+    "rustc": "1.96.0"
+  },
+  "requirement_id": "HALDIR-0.9-T000",
+  "residual_risks": [
+    "This verification closes the immutable starting-cut task, not the final 0.9 release ceremony.",
+    "The handoff package is bound by digest but is not duplicated in the repository."
+  ],
+  "review": {
+    "independent_release_review_deferred_to": "HALDIR-0.9-T007",
+    "independent_review_required_for_task": "NO",
+    "independent_reviewer": "NOT_ASSIGNED",
+    "self_reviewed_by": "Sepehr Mahmoudian"
+  },
+  "schema_version": "2.0.0",
+  "status": "verified",
+  "task_id": "T000",
+  "verification_scope": {
+    "adversarial": "Mutable names cannot replace peeled commits or digests, and an unsigned implementation commit cannot close the task.",
+    "boundary": "Manifest, Git output, baseline log, and exact-run logs have explicit byte or decompression limits.",
+    "metamorphic": "The immutable identities do not depend on filesystem discovery or mutable branch resolution during verification.",
+    "negative": "Handoff digest tampering, duplicate paths, source substitution, and failed baseline state are rejected.",
+    "positive": "The exact clean source cut, handoff checksums, dependency and toolchain inputs, NCP pin, deployment inputs, formal model, retained evidence, and publication state verify.",
+    "regression": "The untouched baseline remains 19 passed and 0 failed with its exact retained digest."
+  }
+}

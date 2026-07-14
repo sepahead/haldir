@@ -1,0 +1,962 @@
+{
+  "evidence_tool": {
+    "allowed_signers": {
+      "path": "release/0.9.0/allowed-signers",
+      "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+    },
+    "author": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0",
+    "committer": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "evidence_spec": {
+      "path": "release/0.9.0/evidence-specs/t002.json",
+      "sha256": "44683757b6b1618842bda8fdb8fb40bd655266f695daf6c712778f88816edd8a"
+    },
+    "generator": {
+      "path": "tools/release/generate-task-evidence.py",
+      "sha256": "c982cffec46b82b236684af37eac8e38151420ac724eb93c6f351018e65dacd7"
+    },
+    "signature": {
+      "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "format": "ssh",
+      "key_type": "ED25519",
+      "principal": "sepmhn@gmail.com"
+    },
+    "tree": "fb7bae3e14281e42886a55a3280b689611d390f8",
+    "verifier": {
+      "path": "tools/release/verify-task-evidence.py",
+      "sha256": "d0f7a4dcbeb222985a1dd01c0f851346f03706bd84adc694149e3c6b0ce78d51"
+    }
+  },
+  "generated_by": "tools/release/generate-task-evidence.py",
+  "github_ci": {
+    "api_url": "https://api.github.com/repos/sepahead/haldir/actions/runs/29323892304",
+    "attempt": 1,
+    "conclusion": "success",
+    "event": "push",
+    "head_branch": "main",
+    "head_sha": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "job_id": 87055461962,
+        "name": "build-test",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install + verify pinned toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Cache cargo",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Format check",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Clippy (deny warnings)",
+            "number": 6,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Tests",
+            "number": 7,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Doc tests",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Docs build (deny warnings)",
+            "number": 9,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "git diff --check",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "No generated-file drift",
+            "number": 11,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Cache cargo",
+            "number": 21,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 22,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87055461995,
+        "name": "clean-build",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Cold build",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87055462009,
+        "name": "feature-matrix",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Build no-default-features",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Clippy default features only",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87055461983,
+        "name": "interop",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install pinned toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Regenerate interop vectors (drift check)",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Independently verify COSE/CBOR vectors",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87055461979,
+        "name": "macos-compile",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Build + test on macOS",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "conclusion": "success",
+        "job_id": 87055461986,
+        "name": "supply-chain",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Build EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify source pins",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify immutable CI and formal-tool pins",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify immutable 0.9 audit cut",
+            "number": 6,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify normative 0.9 authority model",
+            "number": 7,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify normative 0.9 protection model and evidence generator",
+            "number": 8,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify evidence layout",
+            "number": 9,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Verify secure Zenoh profiles and retained live evidence",
+            "number": 10,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Forbidden-claim drift check",
+            "number": 11,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "cargo-deny",
+            "number": 12,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 24,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 25,
+            "status": "completed"
+          }
+        ]
+      }
+    ],
+    "log": {
+      "compressed_bytes": 465130,
+      "compressed_sha256": "8492b766b5d3c58e7baf428c1a4533cd3d36d85b5de21feddcc16c78e5cecaf7",
+      "compression": "canonical-gzip-stored-v1",
+      "format": "github-actions-complete-logical-job-logs-v1",
+      "gzip_timestamp": 0,
+      "logical_entries": 12,
+      "path": "release/0.9.0/evidence/t002-generated-ci-b528678d19bb7a5f8f5ef40da88203a5f8fc86d0-run29323892304-attempt1.log.gz",
+      "uncompressed_bytes": 465072,
+      "uncompressed_lines": 77,
+      "uncompressed_sha256": "0063ea1db792e1654173f39982896c9d270bbee95310f8b3cfaad0db3e983324"
+    },
+    "repository": "sepahead/haldir",
+    "run_id": 29323892304,
+    "status": "completed",
+    "url": "https://github.com/sepahead/haldir/actions/runs/29323892304",
+    "workflow_id": 311605710,
+    "workflow_name": "ci",
+    "workflow_path": ".github/workflows/ci.yml"
+  },
+  "github_formal": {
+    "api_url": "https://api.github.com/repos/sepahead/haldir/actions/runs/29323892441",
+    "attempt": 1,
+    "conclusion": "success",
+    "event": "push",
+    "head_branch": "main",
+    "head_sha": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "job_id": 87055461692,
+        "name": "tlc-model-check",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Set up JRE",
+            "number": 3,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Fetch pinned TLA+ tools",
+            "number": 4,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Model-check HaldirAuthority",
+            "number": 5,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Upload TLC log",
+            "number": 6,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Set up JRE",
+            "number": 11,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 12,
+            "status": "completed"
+          },
+          {
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 13,
+            "status": "completed"
+          }
+        ]
+      }
+    ],
+    "log": {
+      "compressed_bytes": 30699,
+      "compressed_sha256": "4384a6205a7b20573d6b64a3464f197b1697dde3b5e74a2e60c79e3ecd1587c7",
+      "compression": "canonical-gzip-stored-v1",
+      "format": "github-actions-complete-logical-job-logs-v1",
+      "gzip_timestamp": 0,
+      "logical_entries": 2,
+      "path": "release/0.9.0/evidence/t002-generated-formal-b528678d19bb7a5f8f5ef40da88203a5f8fc86d0-run29323892441-attempt1.log.gz",
+      "uncompressed_bytes": 30676,
+      "uncompressed_lines": 17,
+      "uncompressed_sha256": "d4cf32b2b475e117c5944210acefac9aafd2b707aec10efe1fb352d1590ae9ec"
+    },
+    "repository": "sepahead/haldir",
+    "run_id": 29323892441,
+    "status": "completed",
+    "url": "https://github.com/sepahead/haldir/actions/runs/29323892441",
+    "workflow_id": 311703244,
+    "workflow_name": "formal",
+    "workflow_path": ".github/workflows/formal.yml"
+  },
+  "implementation": {
+    "author": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0",
+    "committer": "Sepehr Mahmoudian <sepmhn@gmail.com>",
+    "signature": {
+      "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "format": "ssh",
+      "key_type": "ED25519",
+      "principal": "sepmhn@gmail.com"
+    },
+    "tree": "fb7bae3e14281e42886a55a3280b689611d390f8"
+  },
+  "implementation_artifacts": [
+    {
+      "bytes": 5907,
+      "git_blob": "16dad1ea18a4998108a369d3baeff914ac6cafd3",
+      "git_mode": "100644",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "171618c83effa8579f492ad79a5e0df0a54a27f72a5b6d8989ffcbc5a5c8180b",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 1394,
+      "git_blob": "5e1a2dc76edf76a83873f4c5344ce2b54aebaddd",
+      "git_mode": "100644",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "3de8203531471e675ee03b535fb7c690527a7fd6922a9dd3edb4be32a83443b5",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 1869,
+      "git_blob": "216a4bf2671871ae64749f3c146de5d8e0f879a2",
+      "git_mode": "100644",
+      "path": "crates/haldir-admission/src/record.rs",
+      "sha256": "1b253ef550f59e536f2cb21d6e265061bfa3c5670003aa17f4bf65a281c07ed4",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 7134,
+      "git_blob": "a5c26057bee6a318f59009cfd9eed9aec1f05466",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/action.rs",
+      "sha256": "ffae24a9bad76e8f3ecb588c19246d7965a03f0708ce837e62c217d18507c1b5",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 6512,
+      "git_blob": "203fc56cf9e2880079e7243e7e4aaf4bf21ae7a8",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/ids.rs",
+      "sha256": "c03fec85a54ae80ab2229d6790aea15e200f1e701b9eca270151e885598bcae0",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 2259,
+      "git_blob": "a8ce97fa3479260b05e38c077d6d06b859710428",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/intent.rs",
+      "sha256": "91f64df6840003c57d674745ab430b294bb908187e32b705b018531206d8bad1",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 3068,
+      "git_blob": "9163816e75927fe7fa8374603efe02f8bd32f40a",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/lease.rs",
+      "sha256": "c173c29f3747591f94fd4ac906e397fec09c79d8f803186dacd5e8b217ad72b6",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 9728,
+      "git_blob": "f23d53296f6ff88caaaf83d331504b6a3e7c6ee9",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/publication.rs",
+      "sha256": "8eaa63988c768ad9e0f060c08029d17884f3798a6c97497755cc5f8f8e840c2b",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 7280,
+      "git_blob": "31ef6f28c53cd1c4cc2faa3fc3823a090a5f7d05",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/receipt.rs",
+      "sha256": "1a8bc21b6aedb44249efaaf7472eda1c52a650c76384050f2c154b3f0db8c64b",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 1796,
+      "git_blob": "b73e357c4ec49ce54c2034fe009043bed65c3709",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/revocation.rs",
+      "sha256": "0e2de84ebfc4432f4567babcb313486fe76281f1edfa36621c41dc033dba6923",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 1476,
+      "git_blob": "048a2221f1ca83f53ac4d3c3e886c3d6017d75fe",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/session.rs",
+      "sha256": "08544780e38a12acf00b528111f3671387ddf1aeb36a1fb93d9f62aac3450727",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 7091,
+      "git_blob": "0a84b918023eada8d19fa3b5c5a2e3a53ec2dda9",
+      "git_mode": "100644",
+      "path": "crates/haldir-contracts/src/status.rs",
+      "sha256": "eac50dd8512be5de575898797500e6e90f9620a5c761f7b8a66f850f2c8c3731",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 12504,
+      "git_blob": "0e2cb140fe89df7538619b37485c1e66b243ec9a",
+      "git_mode": "100644",
+      "path": "crates/haldir-core/src/snapshot.rs",
+      "sha256": "2dea39e9bff8e75f75c2b5028c1563a1ba0fb040de1cf56675ece44b95ff2b7b",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 1995,
+      "git_blob": "3b61b723d573e6bae31eed7bc8d2243f8d6188e4",
+      "git_mode": "100644",
+      "path": "crates/haldir-core/src/time.rs",
+      "sha256": "b2381877289e32e27d85b4dd4011375d1b9ae65fad889150e8069a2936f95529",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 9538,
+      "git_blob": "1b49f9967a58e03331e943194821ea8f35225d2a",
+      "git_mode": "100644",
+      "path": "crates/haldir-crypto/src/cose.rs",
+      "sha256": "f2ee70738ad7cb938c9e232712871b736921589f61eb517b5280b6159bd0d2d7",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 2061,
+      "git_blob": "840325e16a1331ab0f9ff13f0a1bc0fc7268f865",
+      "git_mode": "100644",
+      "path": "crates/haldir-crypto/src/role.rs",
+      "sha256": "a7405f59e5e583d48d94f61860323f436ff6dad7248f2dc001513a3d6de8b21c",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 3749,
+      "git_blob": "483586fe89fbf3f5ec1f3e5ccd133a92e85c7663",
+      "git_mode": "100644",
+      "path": "crates/haldir-crypto/src/trust.rs",
+      "sha256": "40a2b11a6539456b15abfcf79353720aabe822be64c9f59a569b75fcbf48a0a6",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 6544,
+      "git_blob": "b9f0d43688a082651d246cdee799bd38aad4cb5c",
+      "git_mode": "100644",
+      "path": "crates/haldir-deployment/src/verify.rs",
+      "sha256": "0beb83e7f76487445e1277f004ed7181a66cded553e77bd71ffea30d3e359575",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 12553,
+      "git_blob": "8388e7a95c50efe8fdf95ca264495a88df050ae7",
+      "git_mode": "100644",
+      "path": "crates/haldir-durable/src/local_anchor.rs",
+      "sha256": "5bd1c57ecd50dfc2e3bc67b817e6774fa69f5a58d98f93374e314737cc2cb879",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 29630,
+      "git_blob": "e7091c9961da6918cc8dc075c2adcba39f509267",
+      "git_mode": "100644",
+      "path": "crates/haldir-durable/src/snapshot.rs",
+      "sha256": "5f7e050eedb8d6e397fba4f2d56a746fe2e1f4eb2bfe5a7768827501d31bdbcc",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 35991,
+      "git_blob": "8f28876b68a8d1831c9f181bea24f7d13af74df2",
+      "git_mode": "100644",
+      "path": "crates/haldir-evidence/src/publication.rs",
+      "sha256": "a3cd58fe930b271c2ab27f90dffa67bfed8131f3273cb24aa3e93d0c8672a8c1",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 69648,
+      "git_blob": "c60f708d1c8ebf1a06d01b2abbff4ac30249e150",
+      "git_mode": "100644",
+      "path": "crates/haldir-gate/src/actor.rs",
+      "sha256": "cb58b5bd4aad4d58cc15348240a0d3fe68b99b5fbcf4cd25dcaf6c76d1c85459",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 9027,
+      "git_blob": "95bb8735a4f9c75d59aae8cfd1359389c90ec4c1",
+      "git_mode": "100644",
+      "path": "crates/haldir-policy-native/src/decide.rs",
+      "sha256": "24fa133783bb836c8fbf6d13c93e73e6dc75f0a6bff0cc89f08782c1e7cff648",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 41295,
+      "git_blob": "865175f4d3b70a2dbd7090ce2d22abee83679eb8",
+      "git_mode": "100644",
+      "path": "crates/haldir-state/src/anti_rollback.rs",
+      "sha256": "419c467ddbfc1285ea3cbcbeccc72dbfceea1626d29126598bef7b1954f40edf",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 4881,
+      "git_blob": "e69186b0a205ce6af149553ff2c23a25ff282318",
+      "git_mode": "100644",
+      "path": "deploy/secure-reference-v1/profile.json",
+      "sha256": "76a10873155ef5fe85f13117fdf6fcb6f3938399823cbb6af9bff523a3b54e06",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 55043,
+      "git_blob": "a80ad97c318d16a943c995b282af7c0fc2cee647",
+      "git_mode": "100644",
+      "path": "docs/CLAIM-LEDGER.md",
+      "sha256": "4371802d7983e65d5e7277a76879d2a43d8f7fbb095e109d146af524ff6c1d04",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 2115,
+      "git_blob": "1b480b84ffaf768795f8b85193fecb3b9e3714f1",
+      "git_mode": "100644",
+      "path": "docs/release/0.9.0/MIGRATION.md",
+      "sha256": "a6578968305781dbe9f67691e49f38f6af250194b615331ec37b30f1c72feca5",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 16426,
+      "git_blob": "611e4e65a59a36cb136648e0cd1d405783426145",
+      "git_mode": "100644",
+      "path": "docs/release/0.9.0/PROTECTION-MODEL.md",
+      "sha256": "c707fba70d255575a7529f91270f7f7d8f742b47b905b38ddd2cd1ae84529029",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 5476,
+      "git_blob": "3f233e4ce30045d95aaa535c8b59c598e699e08b",
+      "git_mode": "100644",
+      "path": "docs/release/0.9.0/README.md",
+      "sha256": "abe4dc3c9d89c137b8726c74b4d74e69e76a4c267baf965400ccd12a67cc02e0",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 254,
+      "git_blob": "55901379ad37931ed8d381dc3194dd7c4f62c1f9",
+      "git_mode": "100644",
+      "path": "formal/HaldirAuthority.cfg",
+      "sha256": "20651c85285170ac0bbd35b6f6b9c31597fd63b28e7678b72388033dbad3c58f",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 6157,
+      "git_blob": "fea47ed6d60451d95aad3d2305aa3378213cf8d5",
+      "git_mode": "100644",
+      "path": "formal/HaldirAuthority.tla",
+      "sha256": "0ab0bc5826c356cab6e01555a32fbc489286988b575c62605e740b69c6e5e61e",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 2335,
+      "git_blob": "97309d793788e0dcd56beab5753c158898b17763",
+      "git_mode": "100644",
+      "path": "justfile",
+      "sha256": "4633a855139a3fd799f20f099ed1dc5ab7d5fb6960ceb0880dbd03ef9565c0ca",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 98,
+      "git_blob": "7e563049b65dc6761e76b7d0c96c1cc10bd5c0dc",
+      "git_mode": "100644",
+      "path": "release/0.9.0/allowed-signers",
+      "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 3801,
+      "git_blob": "1f5956ddd5f79b7115281660ee2846aeeef7e4ca",
+      "git_mode": "100644",
+      "path": "release/0.9.0/authority-model.json",
+      "sha256": "28a474241c9328ce961efd15201b596afb83739ab3891e503114156839fbe13a",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 2122,
+      "git_blob": "1f09497be1f0eed18162e158000b863eb30954a4",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence-specs/README.md",
+      "sha256": "4ce7344ba08c8b02c7a3123e844b2eee459eece354d82a564a7f4c19bab1d7ec",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 4709,
+      "git_blob": "cec96d76aaa4e09179db10c24932ea13ba9946c1",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence-specs/t000.json",
+      "sha256": "a95301ddcc569c8d4e23100b8342b561c7681ad79692aeeb20e37129f8251258",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 5593,
+      "git_blob": "018e6c442e752098c2dfdfb22df1321bac64a313",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence-specs/t001.json",
+      "sha256": "430a2b20ac30d5b264b6e1eff93b432cf8074c64b61bdca68a6152d58a865bfd",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 8187,
+      "git_blob": "8d84fab72e6942d574c9f16ad9ceb47fc3849749",
+      "git_mode": "100644",
+      "path": "release/0.9.0/evidence-specs/t002.json",
+      "sha256": "44683757b6b1618842bda8fdb8fb40bd655266f695daf6c712778f88816edd8a",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 75546,
+      "git_blob": "2148a4c0badea722e2305ea2a904925f7fd2faa3",
+      "git_mode": "100644",
+      "path": "release/0.9.0/protection-model.json",
+      "sha256": "dc6e15322fcad2a89a8ef9cbc2fc459ee0a083c50f9bddf88e127c9908a59ced",
+      "worktree_policy": "MUST_MATCH"
+    },
+    {
+      "bytes": 73004,
+      "git_blob": "c1eda2392263fdbf989421298242c633cbc81b1c",
+      "git_mode": "100644",
+      "path": "release/0.9.0/requirements.json",
+      "sha256": "48438953d0b525f91f5735cd1552913b2639aa7db9b0a9d2396996593c287b53",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 3636,
+      "git_blob": "a0f29940976de07cb60c750fa42cafe279199393",
+      "git_mode": "100755",
+      "path": "tools/p0r-exit-gate.sh",
+      "sha256": "b26f8d37c8c6c330a14ec3955d2f7075e368d49903ca493ebaf000298714c2ee",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 59799,
+      "git_blob": "49d536ef6858b25372b05bc5318a6229b2e81340",
+      "git_mode": "100644",
+      "path": "tools/release/generate-task-evidence.py",
+      "sha256": "c982cffec46b82b236684af37eac8e38151420ac724eb93c6f351018e65dacd7",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 25217,
+      "git_blob": "309df5f689e644d1193bab7a2fa90b892bb30949",
+      "git_mode": "100644",
+      "path": "tools/release/test_generate_task_evidence.py",
+      "sha256": "4a5600ed5ced5f6d2a82e92cbb1527c4ec7f6a906a8e2375fd8f7cfd536839fe",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 16363,
+      "git_blob": "cb036b0a91c678e2bc37797e0dbb2c87b8bba23a",
+      "git_mode": "100644",
+      "path": "tools/release/test_verify_protection_model.py",
+      "sha256": "20cd035fd86754de1e328fb60d239b9dda06a863927c347584a10d42c0080604",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 12430,
+      "git_blob": "00ac4a58c63299497a62d290162371f921e3023f",
+      "git_mode": "100644",
+      "path": "tools/release/verify-audit-inputs.py",
+      "sha256": "684cda3ebe88d1ae9ab9e9093ee07e4e321a5c41a183bbde1e55a217a3f59310",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 27642,
+      "git_blob": "3d11bc9141ff7c311bf85c3eef399abd929071a8",
+      "git_mode": "100644",
+      "path": "tools/release/verify-authority-model.py",
+      "sha256": "0db82e411d81429649a1adc0482b75728ac0c3e1d10e6da55af27f00e2ed0ac3",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 57442,
+      "git_blob": "81a00740b504088e7cc90fdc25b3ef01de0f6515",
+      "git_mode": "100644",
+      "path": "tools/release/verify-protection-model.py",
+      "sha256": "daa917436f7574a02da444ca157a3886992c12f3ca52a5af0410219b192e3a05",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 6015,
+      "git_blob": "196139036765def26a41fe6b1fe5608c35a7c6f5",
+      "git_mode": "100644",
+      "path": "tools/release/verify-task-evidence.py",
+      "sha256": "d0f7a4dcbeb222985a1dd01c0f851346f03706bd84adc694149e3c6b0ce78d51",
+      "worktree_policy": "MAY_EVOLVE"
+    },
+    {
+      "bytes": 36105,
+      "git_blob": "c2bded6bbf8959a9cc6018b8f7fe21caed26fe70",
+      "git_mode": "100644",
+      "path": "tools/secure_zenoh.py",
+      "sha256": "55690543045f428a445b45e060cf43f7d912d5577e437707af6c14f72e5cd144",
+      "worktree_policy": "MAY_EVOLVE"
+    }
+  ],
+  "inputs": {
+    "cargo_lock_sha256": "8767fc69ea7b90b374de6ca77e9d22dbfac0e3b1db236ea03d24f05470d2831f",
+    "ncp_commit": "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e",
+    "ncp_tag": "v0.8.0",
+    "ncp_tag_object": "54008b16ea0c195a4ccc9691cb533dd1153bf7f0",
+    "rust_toolchain_sha256": "61d97acc9676fd1b6348a44dee3c372804b9a1e984385c7d73a2620b322d4927",
+    "rustc": "1.96.0"
+  },
+  "requirement_id": "HALDIR-0.9-T002",
+  "residual_risks": [
+    "The inventory defines required ownership and grants but does not seal current public construction, session, publisher, or raw-event APIs.",
+    "Gate application and transport identities and credential custody are not proven end to end.",
+    "Trusted state and control inputs remain caller-supplied rather than an authenticated ongoing live control plane.",
+    "The external generation anchor, plant application boundary, complete mediation, delivery, physical safety, and production security remain unproven.",
+    "No independent human review is claimed by this task closure."
+  ],
+  "review": {
+    "independent_release_review_deferred_to": "HALDIR-0.9-T007",
+    "independent_review_required_for_task": "NO",
+    "independent_reviewer": "NOT_ASSIGNED",
+    "self_reviewed_by": "Sepehr Mahmoudian"
+  },
+  "schema_version": "2.0.0",
+  "status": "verified",
+  "task_id": "T002",
+  "verification_scope": {
+    "adversarial": "A second final publisher, route confusion, controller command escalation, controller-derived trust root, and provenance-clock escalation are rejected.",
+    "boundary": "Model, documents, profile, source contracts, requirement ledger, Git output, and decompressed exact-run logs have explicit bounds.",
+    "metamorphic": "Reordering JSON profile objects or component access rules does not change the resulting grants.",
+    "negative": "Ownerless resources, unknown references, wildcard or default-allow authority, profile drift, and an unverified predecessor are rejected.",
+    "positive": "The closed subject, resource, action, constraint, time-domain, trust-root, and access inventories match the exact profile and Rust contracts.",
+    "regression": "T001 vocabularies and the HOLD decision/action separation remain intact while native NCP 1.0 and complete mediation remain unclaimed."
+  }
+}

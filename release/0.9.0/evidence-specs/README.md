@@ -36,7 +36,7 @@ member gzip and are not hand-edited. Verify any present supplements offline with
 
 The T000 and T001 specifications were added with the T002 evidence tool. Their
 original closure JSON/logs predate this generator, remain unchanged, and are not
-claimed as its output. Any later T000/T001 generated record is a separately
-named supplement whose `implementation.commit` is the historical signed closure target
-and whose `evidence_tool.commit` identifies the signed commit that first carried
-the tool and specification.
+claimed as its output. The T002 closure adds separately named T000/T001
+supplements whose `implementation.commit` is the historical signed closure
+target and whose `evidence_tool.commit` identifies the signed commit that first
+carried the tool and specification.

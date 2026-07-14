@@ -63,13 +63,36 @@
           "kind": "github_formal",
           "run_id": 29314709777,
           "conclusion": "success"
+        },
+        {
+          "kind": "deterministic_evidence_specification",
+          "path": "release/0.9.0/evidence-specs/t000.json"
+        },
+        {
+          "kind": "deterministic_evidence_generator",
+          "path": "tools/release/generate-task-evidence.py"
+        },
+        {
+          "kind": "deterministic_evidence_offline_verifier",
+          "path": "tools/release/verify-task-evidence.py"
+        },
+        {
+          "kind": "release_commit_allowed_signers",
+          "path": "release/0.9.0/allowed-signers",
+          "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU"
+        },
+        {
+          "kind": "generated_exact_commit_verification",
+          "path": "release/0.9.0/evidence/t000-generated-verification.json",
+          "implementation_commit": "5f7d183625a982741c51958e2d10bc12bb628ca0",
+          "evidence_tool_commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0"
         }
       ],
       "ten_lens_review": {
         "correctness_and_invariants": "The audit cut records the exact clean commit/tree and all supplied handoff file digests.",
         "safety_and_failure_behavior": "A failed checksum or baseline command is not represented as success; the recorded baseline exit status is zero.",
         "security_and_adversarial_behavior": "Mutable names are accompanied by immutable digests or peeled commits; no release authority is granted by this manifest.",
-        "determinism_and_reproducibility": "The complete baseline output and original exact-run closure artifacts are retained byte-for-byte with recorded digests. They predate the T002 evidence generator and are not retroactively represented as generator output; T002 may add a separate supplemental record.",
+        "determinism_and_reproducibility": "The complete baseline output and original exact-run closure artifacts remain byte-for-byte unchanged. A separately generated supplement now binds the signed T000 closure commit, its exact successful CI/formal attempts, sixteen implementation artifacts, and complete logical job logs to the signed T002 evidence-tool commit.",
         "performance_and_bounded_resources": "The manifest and baseline have explicit byte/line counts; T000 adds no runtime path.",
         "api_schema_and_compatibility": "The 0.9 Haldir label is separated from the independently versioned NCP 0.8 protocol pin.",
         "observability_and_provenance": "Source, toolchain, dependency, deployment, formal, evidence, author, and publication-state provenance are explicit.",
@@ -148,13 +171,36 @@
           "kind": "github_formal",
           "run_id": 29318945937,
           "conclusion": "success"
+        },
+        {
+          "kind": "deterministic_evidence_specification",
+          "path": "release/0.9.0/evidence-specs/t001.json"
+        },
+        {
+          "kind": "deterministic_evidence_generator",
+          "path": "tools/release/generate-task-evidence.py"
+        },
+        {
+          "kind": "deterministic_evidence_offline_verifier",
+          "path": "tools/release/verify-task-evidence.py"
+        },
+        {
+          "kind": "release_commit_allowed_signers",
+          "path": "release/0.9.0/allowed-signers",
+          "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU"
+        },
+        {
+          "kind": "generated_exact_commit_verification",
+          "path": "release/0.9.0/evidence/t001-generated-verification.json",
+          "implementation_commit": "395f78beb9aa3e987a00b8c8583cc97320626f42",
+          "evidence_tool_commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0"
         }
       ],
       "ten_lens_review": {
         "correctness_and_invariants": "The operational definition counts unauthorized final-route bypass frames as plant commands, avoiding a tautological sole-authority claim; the normative rule identifies one logical Gate principal.",
         "safety_and_failure_behavior": "Every failed or absent authorization conjunct produces no Gate-authored command, while ALLOW(HOLD) remains a bounded zero-velocity command rather than a denial or physical-safety claim.",
         "security_and_adversarial_behavior": "The verifier rejects a second final publisher, a spoofed Gate role, missing non-Gate denial evidence, and decision/action vocabulary confusion; global bypass closure remains explicitly unclaimed.",
-        "determinism_and_reproducibility": "The closed JSON model, normative-document digest, exact profile route, retained case identifiers, and Rust source vocabularies are checked offline. The original T001 closure JSON/logs predate the T002 generator, remain unchanged, and may be accompanied only by a distinct supplemental generated record.",
+        "determinism_and_reproducibility": "The closed JSON model, normative-document digest, exact profile route, retained case identifiers, and Rust source vocabularies are checked offline. The original T001 closure JSON/logs remain unchanged; a distinct generated supplement binds the signed T001 closure commit, its exact successful CI/formal attempts, twenty-five implementation artifacts, and complete logical job logs to the signed T002 evidence-tool commit.",
         "performance_and_bounded_resources": "The model, document, profile, evidence, requirement ledger, Git output, and compressed closure logs have explicit read or decompression limits; T001 adds no runtime control-path work.",
         "api_schema_and_compatibility": "The contract is limited to PRE_AUTHORITY_ACL_ONLY and distinguishes authenticated runtime principal, GATE_APPLICATION key role, publication evidence state, decision outcome, and semantic action.",
         "observability_and_provenance": "The model names the normative document, deployment profile, live ACL result, Rust contracts, Gate pipeline, author, and stable requirement identifier; exact-commit run evidence is required before verification.",
@@ -179,7 +225,7 @@
       "dependencies": [
         "T001"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence": [
         {
           "kind": "normative_requirement",
@@ -230,6 +276,12 @@
           "path": "release/0.9.0/evidence-specs/t002.json"
         },
         {
+          "kind": "generated_exact_commit_verification",
+          "path": "release/0.9.0/evidence/t002-generated-verification.json",
+          "implementation_commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0",
+          "evidence_tool_commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0"
+        },
+        {
           "kind": "deployment_principal_route_matrix",
           "path": "deploy/secure-reference-v1/profile.json"
         },
@@ -250,7 +302,7 @@
         "correctness_and_invariants": "The model closes exact inventories for five identity namespaces, eight transport principals, nine role/key-class/object/domain bindings, fifteen logical components with exact type mappings, seventeen routes, thirty-five separately custodied state resources, twenty-three protected authority operations, twenty-eight constraints, eight time domains, and twelve roots; every resource owner and custodian resolves to a closed subject.",
         "safety_and_failure_behavior": "Default deny, no-fallback constraints, fail-closed availability, and the no-retroactive-erasure rule prevent a failed input from becoming authority without pretending that denial cancels a previously exposed command.",
         "security_and_adversarial_behavior": "Executable negatives reject a second final publisher, route confusion, wildcard/default-allow grants, any non-Gate construction/publication escalation, role/object/domain or subject/type drift, final-constraint removal, controller-derived roots, provenance-clock escalation, unknown or drifted resource custody, and unknown references.",
-        "determinism_and_reproducibility": "The canonical JSON mirror is bound to the normative document digest and checked offline against exact profile objects and closed Rust vocabularies; verified closure remains unavailable until exact-run artifacts are produced by the checked-in deterministic tooling.",
+        "determinism_and_reproducibility": "The canonical JSON mirror is bound to the normative document digest and checked offline against exact profile objects and closed Rust vocabularies. The deterministic generator binds the signed implementation/tool commit, exact successful CI/formal attempts, forty-nine implementation artifacts, and invariant complete logical job logs.",
         "performance_and_bounded_resources": "All verifier inputs, source reads, Git output, and decompressed logs have explicit ceilings; T002 adds no runtime hot-path allocation or timing claim, and later T019 retains the per-operation bounds obligation.",
         "api_schema_and_compatibility": "The model distinguishes runtime profile, transport principal/CN, application key role, logical signed subject, and component label; it preserves NCP v0.8.0 and makes no native NCP 1.0 or wire/API-change claim.",
         "observability_and_provenance": "Every modeled claim names its profile, normative digest, source contracts, exact role/object/domain and logical-type bindings, routes, owner/custodian, final-command constraint set, time semantics, root status, author, migration impact, and stable requirement identifier.",

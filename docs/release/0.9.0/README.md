@@ -84,9 +84,10 @@ not hand-edited.
 
 The checked-in generator is introduced by T002. The original T000 and T001
 closure JSON and gzip logs predate it and remain byte-for-byte unchanged; they
-are not retroactively relabeled as generated. T002 closure may add separately
+are not retroactively relabeled as generated. T002 closure adds separately
 named `*-generated-*` supplements that bind those historical signed closure
-targets/runs to the signed T002 evidence-tool commit.
+targets/runs to the signed T002 evidence-tool commit, plus the generated T002
+record for its exact implementation CI and formal attempts.
 
 ## Evidence discipline
 
