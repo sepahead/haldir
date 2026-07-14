@@ -59,6 +59,8 @@ run "source pins"         python3 tools/verify-pins.py
 run "CI/formal pins"       python3 tools/verify-ci-pins.py
 run "release audit tests" python3 -m unittest tools/release/test_verify_audit_inputs.py
 run "release audit cut"   python3 tools/release/verify-audit-inputs.py
+run "current-head audit tests" python3 -m unittest tools/release/test_verify_current_audit.py
+run "current-head audit cut" python3 tools/release/verify-current-audit.py
 run "release authority tests" python3 -m unittest tools/release/test_verify_authority_model.py
 run "release authority model" python3 tools/release/verify-authority-model.py
 run "release evidence generator tests" python3 -m unittest tools/release/test_generate_task_evidence.py
@@ -67,8 +69,10 @@ run "release protection tests" python3 -m unittest tools/release/test_verify_pro
 run "release protection model" python3 tools/release/verify-protection-model.py
 run "evidence layout"     python3 tools/verify-evidence.py
 run "offline Zenoh profile tests" python3 -m unittest tools/test_secure_zenoh.py tools/test_live_secure_zenoh.py
+run "live Gate dev smoke tests" python3 -m unittest tools/test_live_gate_dev_smoke.py tools/test_live_gate_dev_smoke_verifier.py
 run "offline Zenoh profile" python3 tools/verify-secure-zenoh.py
 run "retained live Zenoh evidence" python3 tools/verify-live-secure-zenoh.py
+run "retained live Gate dev smoke" python3 tools/verify-live-gate-dev-smoke.py
 run "forbidden claims"    python3 tools/verify-claims.py
 run "generated vectors"   python3 tools/verify-generated.py
 run "interop (COSE/CBOR)" interop_gate

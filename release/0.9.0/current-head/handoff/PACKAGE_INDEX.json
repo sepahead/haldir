@@ -1,0 +1,41 @@
+{
+  "children": {
+    "NCP": {
+      "filename": "NCP_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+      "files": 23,
+      "sha256": "661c5a9bd6a62a8a973bc953fd45ba1a58d44592985c871fc6b039c9cbdd333b",
+      "tasks": 146
+    },
+    "crebain": {
+      "filename": "CREBAIN_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+      "files": 23,
+      "sha256": "c7c8a342e5a4b94c2d4c411299c63ed1c01163acff847d9bf7389ed8ea8c052a",
+      "tasks": 159
+    },
+    "galadriel": {
+      "filename": "GALADRIEL_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+      "files": 23,
+      "sha256": "41bd414e38e7f46a0417005d59e2b0c0eb5e139ec38cce632e006b60a750cd94",
+      "tasks": 116
+    },
+    "haldir": {
+      "filename": "HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+      "files": 23,
+      "sha256": "1de5cfc2a577621c24ef10e97fd2319799d02b602cfb3de54954928a0d988efe",
+      "tasks": 126
+    },
+    "pid-rs": {
+      "filename": "PID_RS_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+      "files": 47,
+      "sha256": "9fcdcaf1e5254942c8dbdf4cea3890f6a858674bd6fd613b14f353b2a60e4730",
+      "tasks": 159
+    }
+  },
+  "cross_repo": {
+    "filename": "SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip",
+    "files": 12,
+    "sha256": "ae06b5525537e88de4ae37aa49b40de01893061bdc3096bcf1059c5c6d71e3d4",
+    "tasks": 79
+  },
+  "prepared": "2026-07-14"
+}

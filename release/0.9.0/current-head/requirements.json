@@ -1,0 +1,3820 @@
+{
+  "schema_version": "1.0.0",
+  "project": "Haldir",
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "source_handoff": {
+    "archive_path": "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+    "archive_sha256": "1de5cfc2a577621c24ef10e97fd2319799d02b602cfb3de54954928a0d988efe",
+    "ledger_path_in_archive": "MASTER_TASK_LEDGER.yaml",
+    "ledger_sha256": "891601e322f453499fc7a3375728d43f7cfb0eaa193be5b96b1a5d6c7aae0f40",
+    "original_release_target": "1.0.0",
+    "original_frozen_commit": "9cf56e149a105026b072c9073d7e87b93103966e"
+  },
+  "approved_cut": {
+    "commit": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "tree": "8d8cdda01d25bc9f3c6a2911b2c4464f5c7505e5",
+    "errata_path": "release/0.9.0/current-head/HANDOFF-ERRATA.md"
+  },
+  "legacy_ledger": {
+    "path": "release/0.9.0/requirements.json",
+    "source_commit_sha256": "04454e6eeba74a1e36fccbfa7110437f3fffb00778ce019819852b7678b04b2d",
+    "task_namespace": "T000..T119",
+    "task_count": 120,
+    "closure_transfer_permitted": false
+  },
+  "task_identity": {
+    "namespace": "CH-T000..CH-T125",
+    "count": 126,
+    "dependency_model": "STRICT_SINGLE_CHAIN",
+    "source_ids_preserved": true,
+    "closure_requires_all_twenty_lenses": true
+  },
+  "overall_status": "NO_GO",
+  "tasks": [
+    {
+      "id": "CH-T000",
+      "source_task_id": "T000",
+      "source_record_sha256": "d0e0df15142a6017531a693e32707761d2b68bade5dac6bb4b9b191ce44218a4",
+      "phase": "P0 Audit and scope",
+      "title": "Freeze exact audit inputs and produce a signed immutable input manifest",
+      "source_scope": "entire repository and external dependencies",
+      "focus": "commit, tree, submodules, tags, toolchains, packages, models/data, papers, downstream heads",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T001",
+      "source_task_id": "T001",
+      "source_record_sha256": "005ee3e90e399f75e584f4aec57f3f727c5fc15580066518563b037ee5bbb3b4",
+      "phase": "P0 Audit and scope",
+      "title": "Reconcile Git tracked files, filesystem files, generated outputs, symlinks, binaries, and ignored release inputs",
+      "source_scope": "entire repository",
+      "focus": "complete source inventory",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T000"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T002",
+      "source_task_id": "T002",
+      "source_record_sha256": "3556d42ad367f1ecba0e1ac77bafa17e6bde15b064cc65dcc57abaeb57732bbc",
+      "phase": "P0 Audit and scope",
+      "title": "Complete language-classified line-by-line review packets and reviewer assignments",
+      "source_scope": "all text/code/config/docs",
+      "focus": "human review coverage",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T001"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T003",
+      "source_task_id": "T003",
+      "source_record_sha256": "817e1e52659919d03be0b3f1685bd3af318c0ac8454968ce11cc72abaad9f7b5",
+      "phase": "P0 Audit and scope",
+      "title": "Create public surface inventory and claim-tier ledger",
+      "source_scope": "exports, CLI, IPC, schemas, docs, packages, GitHub metadata",
+      "focus": "truthful scope",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T002"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T004",
+      "source_task_id": "T004",
+      "source_record_sha256": "acbadbb14e4999c00c1547200eeac60e4e6294dcdc4c0bcb35f9a5985692f44c",
+      "phase": "P0 Audit and scope",
+      "title": "Create threat, misuse, failure, and quirky-case register",
+      "source_scope": "all trust/scientific boundaries",
+      "focus": "adversarial model",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T003"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T005",
+      "source_task_id": "T005",
+      "source_record_sha256": "f174f4ec357823c3e4f4a93f7ef1afffe682f2b48a03b3bd51ed0f0dde785a8d",
+      "phase": "P0 Audit and scope",
+      "title": "Reproduce the unmodified baseline and archive every command/result",
+      "source_scope": "all supported profiles and platforms",
+      "focus": "baseline evidence",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T004"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T006",
+      "source_task_id": "T006",
+      "source_record_sha256": "f4e5fa2dee1b92db64a4e48e1486a3306bc5c300ae0974a7ab6795a755390d25",
+      "phase": "P0 Audit and scope",
+      "title": "Inventory TODO/FIXME/HACK/experimental/unimplemented/dormant and permissive fallback paths",
+      "source_scope": "all tracked text files",
+      "focus": "latent incompleteness",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T005"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T007",
+      "source_task_id": "T007",
+      "source_record_sha256": "7365456d40b96da67cc7c14572079cc65a9620a16c6bada5cb5bf252b255b740",
+      "phase": "P0 Audit and scope",
+      "title": "Inventory dependencies, features, code generators, licenses, assets, datasets, and supply-chain trust",
+      "source_scope": "build/package/deployment surfaces",
+      "focus": "dependency governance",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T006"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T008",
+      "source_task_id": "T008",
+      "source_record_sha256": "b06d1d0c15113493565b597932d4b440275f90b8dcdd8abf2080ce6b8f54b15e",
+      "phase": "P0 Audit and scope",
+      "title": "Create the requirement-to-code-to-test-to-evidence graph",
+      "source_scope": "all claims",
+      "focus": "traceability",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T007"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T009",
+      "source_task_id": "T009",
+      "source_record_sha256": "a46da873d5f2a0f214fff0a2f8a31681d8730a2665044a7b3150b2424978c6e0",
+      "phase": "P0 Audit and scope",
+      "title": "Freeze stable, experimental, unsupported, and removed 1.0 capability profiles",
+      "source_scope": "public contract",
+      "focus": "scope decision",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T008"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T010",
+      "source_task_id": "T010",
+      "source_record_sha256": "91ccff7bd64a29dac4999664a743fd642f5b5d9752b9a6ed25277be4f823da3e",
+      "phase": "Path group: Root authority and release contract",
+      "title": "Read and specify Root authority and release contract",
+      "source_scope": "README.md, AGENTS.md, Cargo.toml, Cargo.lock, rust-toolchain.toml, deny.toml, SECURITY.md, CHANGELOG.md",
+      "focus": "Authority graph, profiles, nonclaims, versions, features, TCB, commands, dependencies, and release truth.; language family=md/toml",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T009"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T011",
+      "source_task_id": "T011",
+      "source_record_sha256": "d87cb66f70454026eaac0f4efa56920ab1a0ba780752fe292891e7790f4c676a",
+      "phase": "Path group: Root authority and release contract",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Root authority and release contract",
+      "source_scope": "README.md, AGENTS.md, Cargo.toml, Cargo.lock, rust-toolchain.toml, deny.toml, SECURITY.md, CHANGELOG.md",
+      "focus": "Authority graph, profiles, nonclaims, versions, features, TCB, commands, dependencies, and release truth.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T010"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T012",
+      "source_task_id": "T012",
+      "source_record_sha256": "371c5861a9251b5e652be1b0c8e637295f2daf218185467d657ee92c5630cd55",
+      "phase": "Path group: Root authority and release contract",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Root authority and release contract",
+      "source_scope": "README.md, AGENTS.md, Cargo.toml, Cargo.lock, rust-toolchain.toml, deny.toml, SECURITY.md, CHANGELOG.md",
+      "focus": "Authority graph, profiles, nonclaims, versions, features, TCB, commands, dependencies, and release truth.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T011"
+      ],
+      "execution_wave": 0,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T013",
+      "source_task_id": "T013",
+      "source_record_sha256": "e078d41c1659b5ce1dd9697c6a59a7972e71d0187569da5c887c53fe1f519467",
+      "phase": "Path group: Root authority and release contract",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Root authority and release contract",
+      "source_scope": "README.md, AGENTS.md, Cargo.toml, Cargo.lock, rust-toolchain.toml, deny.toml, SECURITY.md, CHANGELOG.md",
+      "focus": "Authority graph, profiles, nonclaims, versions, features, TCB, commands, dependencies, and release truth.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T012"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T014",
+      "source_task_id": "T014",
+      "source_record_sha256": "786701a805bba598bf92b31f48b59818fa8bba29263af8ad00fa71bf58e22502",
+      "phase": "Path group: Root authority and release contract",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Root authority and release contract",
+      "source_scope": "README.md, AGENTS.md, Cargo.toml, Cargo.lock, rust-toolchain.toml, deny.toml, SECURITY.md, CHANGELOG.md",
+      "focus": "Authority graph, profiles, nonclaims, versions, features, TCB, commands, dependencies, and release truth.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T013"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T015",
+      "source_task_id": "T015",
+      "source_record_sha256": "c00029dae8d09406d6602ece355cf07de0a9b6fa5c5c039797c9e70f05d17fc2",
+      "phase": "Path group: Canonical contracts and vectors",
+      "title": "Read and specify Canonical contracts and vectors",
+      "source_scope": "crates/haldir-contracts/**, contracts/vectors/**",
+      "focus": "Objects, strict parsing, canonical signing bytes, version/schema/profile identities, negative vectors, migration, and generated parity.; language family=rust/json",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T014"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T016",
+      "source_task_id": "T016",
+      "source_record_sha256": "e1a8d82a2193f09bc232742e6b58c0719ee6f57231c71790110a5e23dadf6ac5",
+      "phase": "Path group: Canonical contracts and vectors",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Canonical contracts and vectors",
+      "source_scope": "crates/haldir-contracts/**, contracts/vectors/**",
+      "focus": "Objects, strict parsing, canonical signing bytes, version/schema/profile identities, negative vectors, migration, and generated parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T015"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T017",
+      "source_task_id": "T017",
+      "source_record_sha256": "6e32773581d96b05c85727a18595c3e652f7b83e72642820ad42d23111d8e6a0",
+      "phase": "Path group: Canonical contracts and vectors",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Canonical contracts and vectors",
+      "source_scope": "crates/haldir-contracts/**, contracts/vectors/**",
+      "focus": "Objects, strict parsing, canonical signing bytes, version/schema/profile identities, negative vectors, migration, and generated parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T016"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T018",
+      "source_task_id": "T018",
+      "source_record_sha256": "4db16846e30312d8c9914958312e3a133ab3181896ac8dc4c8744c1c4870a2e1",
+      "phase": "Path group: Canonical contracts and vectors",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Canonical contracts and vectors",
+      "source_scope": "crates/haldir-contracts/**, contracts/vectors/**",
+      "focus": "Objects, strict parsing, canonical signing bytes, version/schema/profile identities, negative vectors, migration, and generated parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T017"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T019",
+      "source_task_id": "T019",
+      "source_record_sha256": "56468b37ebb9dba2751f85a27a1e1eb3b89a7f6ca42fd43a873a222a61bd022d",
+      "phase": "Path group: Canonical contracts and vectors",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Canonical contracts and vectors",
+      "source_scope": "crates/haldir-contracts/**, contracts/vectors/**",
+      "focus": "Objects, strict parsing, canonical signing bytes, version/schema/profile identities, negative vectors, migration, and generated parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T018"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T020",
+      "source_task_id": "T020",
+      "source_record_sha256": "c5d29823e81de848b7da8e4d5d1ac5956ea9986040c6cf87fd6561f2f9d7b23f",
+      "phase": "Path group: Cryptography",
+      "title": "Read and specify Cryptography",
+      "source_scope": "crates/haldir-crypto/**",
+      "focus": "Algorithms, domain separation, canonical bytes, key roles, constant-time behavior, zeroization, rotation, revocation, compromise, and vectors.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T019"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T021",
+      "source_task_id": "T021",
+      "source_record_sha256": "f7a61b000ea20bb30f2210336771480d2ea7bb1ea0d7957f5779ea158a3cd04d",
+      "phase": "Path group: Cryptography",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Cryptography",
+      "source_scope": "crates/haldir-crypto/**",
+      "focus": "Algorithms, domain separation, canonical bytes, key roles, constant-time behavior, zeroization, rotation, revocation, compromise, and vectors.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T020"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T022",
+      "source_task_id": "T022",
+      "source_record_sha256": "d52b563c0a281eb210c71c1400869a43774ab4c21550ad74104bc899eefd893a",
+      "phase": "Path group: Cryptography",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Cryptography",
+      "source_scope": "crates/haldir-crypto/**",
+      "focus": "Algorithms, domain separation, canonical bytes, key roles, constant-time behavior, zeroization, rotation, revocation, compromise, and vectors.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T021"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T023",
+      "source_task_id": "T023",
+      "source_record_sha256": "56dd82869c9013716aa97e28787cc9cfefc600bc2ab583276399e580b8358be1",
+      "phase": "Path group: Cryptography",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Cryptography",
+      "source_scope": "crates/haldir-crypto/**",
+      "focus": "Algorithms, domain separation, canonical bytes, key roles, constant-time behavior, zeroization, rotation, revocation, compromise, and vectors.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T022"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T024",
+      "source_task_id": "T024",
+      "source_record_sha256": "9b8f982123cf537193617d07cf3912fcec74a3e9c462d6a87f644a1436e501cc",
+      "phase": "Path group: Cryptography",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Cryptography",
+      "source_scope": "crates/haldir-crypto/**",
+      "focus": "Algorithms, domain separation, canonical bytes, key roles, constant-time behavior, zeroization, rotation, revocation, compromise, and vectors.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T023"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T025",
+      "source_task_id": "T025",
+      "source_record_sha256": "1d47b8c69ed69ad34750eb5a893fbd88bff9530f59c0bc0cbabba9a030dc9942",
+      "phase": "Path group: Admission and controller identity",
+      "title": "Read and specify Admission and controller identity",
+      "source_scope": "crates/haldir-admission/**",
+      "focus": "Deployment admission, controller identity, exact routes, challenges, freshness, scope, revocation, and confused deputy resistance.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T024"
+      ],
+      "execution_wave": 1,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T026",
+      "source_task_id": "T026",
+      "source_record_sha256": "bef36c55a7ffeae1627e0884e67351be44f3f5cf02beeb1208d76b5e5dc74810",
+      "phase": "Path group: Admission and controller identity",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Admission and controller identity",
+      "source_scope": "crates/haldir-admission/**",
+      "focus": "Deployment admission, controller identity, exact routes, challenges, freshness, scope, revocation, and confused deputy resistance.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T025"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T027",
+      "source_task_id": "T027",
+      "source_record_sha256": "6c4fc5d61b0bdbb30b4911da4da972521e543b6181b40d0451cc02d2bc3b378b",
+      "phase": "Path group: Admission and controller identity",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Admission and controller identity",
+      "source_scope": "crates/haldir-admission/**",
+      "focus": "Deployment admission, controller identity, exact routes, challenges, freshness, scope, revocation, and confused deputy resistance.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T026"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T028",
+      "source_task_id": "T028",
+      "source_record_sha256": "21f6f683a6e1a3e5dcc60ed39e01066beecaa1fab199fd2717b77365d720f824",
+      "phase": "Path group: Admission and controller identity",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Admission and controller identity",
+      "source_scope": "crates/haldir-admission/**",
+      "focus": "Deployment admission, controller identity, exact routes, challenges, freshness, scope, revocation, and confused deputy resistance.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T027"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T029",
+      "source_task_id": "T029",
+      "source_record_sha256": "63933180310d71133bb08bc809e2e3ac07cece5466580497b4afe24904865cd1",
+      "phase": "Path group: Admission and controller identity",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Admission and controller identity",
+      "source_scope": "crates/haldir-admission/**",
+      "focus": "Deployment admission, controller identity, exact routes, challenges, freshness, scope, revocation, and confused deputy resistance.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T028"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T030",
+      "source_task_id": "T030",
+      "source_record_sha256": "b4903b9f01d6b7fe5e99ae3239208f283329c237627f16212dca3824521bf1fa",
+      "phase": "Path group: Pure core and capabilities",
+      "title": "Read and specify Pure core and capabilities",
+      "source_scope": "crates/haldir-core/**",
+      "focus": "TCB boundary, capability ownership, errors, no I/O, invalid-state elimination, deterministic behavior, panic/resource limits, and public API.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T029"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T031",
+      "source_task_id": "T031",
+      "source_record_sha256": "32412e295fac691748b6292a0e6baefcccd647d074a3db9920f4b4ddba6ce4e9",
+      "phase": "Path group: Pure core and capabilities",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Pure core and capabilities",
+      "source_scope": "crates/haldir-core/**",
+      "focus": "TCB boundary, capability ownership, errors, no I/O, invalid-state elimination, deterministic behavior, panic/resource limits, and public API.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T030"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T032",
+      "source_task_id": "T032",
+      "source_record_sha256": "3c98ae15868d3aeaf27333aa0301b7519bcace8a1a08fdbac87c8d51bf54b1b3",
+      "phase": "Path group: Pure core and capabilities",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Pure core and capabilities",
+      "source_scope": "crates/haldir-core/**",
+      "focus": "TCB boundary, capability ownership, errors, no I/O, invalid-state elimination, deterministic behavior, panic/resource limits, and public API.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T031"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T033",
+      "source_task_id": "T033",
+      "source_record_sha256": "8667d24cba511774814301518cba59729c7f8855d88a372c6d3737917dcae97d",
+      "phase": "Path group: Pure core and capabilities",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Pure core and capabilities",
+      "source_scope": "crates/haldir-core/**",
+      "focus": "TCB boundary, capability ownership, errors, no I/O, invalid-state elimination, deterministic behavior, panic/resource limits, and public API.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T032"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T034",
+      "source_task_id": "T034",
+      "source_record_sha256": "360ee045f9f367162abfa2e9e7fa008eb3c151cb1894ed1bda3992e231131632",
+      "phase": "Path group: Pure core and capabilities",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Pure core and capabilities",
+      "source_scope": "crates/haldir-core/**",
+      "focus": "TCB boundary, capability ownership, errors, no I/O, invalid-state elimination, deterministic behavior, panic/resource limits, and public API.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T033"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T035",
+      "source_task_id": "T035",
+      "source_record_sha256": "46dd78e19ec10b346fe13e71a00d3b17b5eb35790b5c834f084d500be19b85b6",
+      "phase": "Path group: Numeric ranges and constraints",
+      "title": "Read and specify Numeric ranges and constraints",
+      "source_scope": "crates/haldir-range/**",
+      "focus": "Units, intervals, inclusive/exclusive endpoints, exact arithmetic, overflow, non-finites, clamping, and non-widening.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T034"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T036",
+      "source_task_id": "T036",
+      "source_record_sha256": "ab669bb4a2bf21c13a296d79a332c55afbac03d5d9a392a34947c3058e68d805",
+      "phase": "Path group: Numeric ranges and constraints",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Numeric ranges and constraints",
+      "source_scope": "crates/haldir-range/**",
+      "focus": "Units, intervals, inclusive/exclusive endpoints, exact arithmetic, overflow, non-finites, clamping, and non-widening.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T035"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T037",
+      "source_task_id": "T037",
+      "source_record_sha256": "7a4f75ec9fa7a50f74e53b0f41cb21e0664c862f4d067c4db472d0044f901397",
+      "phase": "Path group: Numeric ranges and constraints",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Numeric ranges and constraints",
+      "source_scope": "crates/haldir-range/**",
+      "focus": "Units, intervals, inclusive/exclusive endpoints, exact arithmetic, overflow, non-finites, clamping, and non-widening.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T036"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T038",
+      "source_task_id": "T038",
+      "source_record_sha256": "98b7da5f7cba5aef197c7d5e6a29ce8920233ebf4e4bd88434926cbf8ac230ee",
+      "phase": "Path group: Numeric ranges and constraints",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Numeric ranges and constraints",
+      "source_scope": "crates/haldir-range/**",
+      "focus": "Units, intervals, inclusive/exclusive endpoints, exact arithmetic, overflow, non-finites, clamping, and non-widening.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T037"
+      ],
+      "execution_wave": 2,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T039",
+      "source_task_id": "T039",
+      "source_record_sha256": "3c3196efbce422008ceddf2039c00c56cf0d69218a9f102632bab39979b98f31",
+      "phase": "Path group: Numeric ranges and constraints",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Numeric ranges and constraints",
+      "source_scope": "crates/haldir-range/**",
+      "focus": "Units, intervals, inclusive/exclusive endpoints, exact arithmetic, overflow, non-finites, clamping, and non-widening.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T038"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T040",
+      "source_task_id": "T040",
+      "source_record_sha256": "022dc34b6ea6934f81540aaa589d092cb832bc0482163bc13ca84fc0f8af42d5",
+      "phase": "Path group: Trusted state and executable model",
+      "title": "Read and specify Trusted state and executable model",
+      "source_scope": "crates/haldir-state/**",
+      "focus": "State provenance, sessions/generations/epochs/sequences, replay, transitions, restart, lifecycle, model correspondence, and freshness.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T039"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T041",
+      "source_task_id": "T041",
+      "source_record_sha256": "f44a3fe26b6d5b397d2382feacfe35c3058ddfdc28c687353f025cb1eeb5b580",
+      "phase": "Path group: Trusted state and executable model",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Trusted state and executable model",
+      "source_scope": "crates/haldir-state/**",
+      "focus": "State provenance, sessions/generations/epochs/sequences, replay, transitions, restart, lifecycle, model correspondence, and freshness.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T040"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T042",
+      "source_task_id": "T042",
+      "source_record_sha256": "b7eb5a9b14fa75a23cbe7e736379a8a477c2b87e51a5755aeed155f7af4f2a54",
+      "phase": "Path group: Trusted state and executable model",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Trusted state and executable model",
+      "source_scope": "crates/haldir-state/**",
+      "focus": "State provenance, sessions/generations/epochs/sequences, replay, transitions, restart, lifecycle, model correspondence, and freshness.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T041"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T043",
+      "source_task_id": "T043",
+      "source_record_sha256": "d8d862509a35f64828c9e203f21a42dba979a334b4ebc5c421936be57a2b98dc",
+      "phase": "Path group: Trusted state and executable model",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Trusted state and executable model",
+      "source_scope": "crates/haldir-state/**",
+      "focus": "State provenance, sessions/generations/epochs/sequences, replay, transitions, restart, lifecycle, model correspondence, and freshness.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T042"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T044",
+      "source_task_id": "T044",
+      "source_record_sha256": "6917068013ec5d546469482cd80b2dc693c7280cf9b720f73b2de69e0b6c8c25",
+      "phase": "Path group: Trusted state and executable model",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Trusted state and executable model",
+      "source_scope": "crates/haldir-state/**",
+      "focus": "State provenance, sessions/generations/epochs/sequences, replay, transitions, restart, lifecycle, model correspondence, and freshness.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T043"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T045",
+      "source_task_id": "T045",
+      "source_record_sha256": "c79d37e446f65c71919a306d58493e229d994f610982d5748c6685745bcaa953",
+      "phase": "Path group: Native deterministic policy",
+      "title": "Read and specify Native deterministic policy",
+      "source_scope": "crates/haldir-policy-native/**",
+      "focus": "Normative tables, default deny, HOLD/ESTOP, composition, state freshness, constraints, monotonic non-widening, and exhaustive cases.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T044"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T046",
+      "source_task_id": "T046",
+      "source_record_sha256": "a334976c6318a95c463a596c171610a5dd61ab6a96d739a6d1f8bb9755d7972e",
+      "phase": "Path group: Native deterministic policy",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Native deterministic policy",
+      "source_scope": "crates/haldir-policy-native/**",
+      "focus": "Normative tables, default deny, HOLD/ESTOP, composition, state freshness, constraints, monotonic non-widening, and exhaustive cases.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T045"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T047",
+      "source_task_id": "T047",
+      "source_record_sha256": "9f9a7b8fd7fdf56db38d6ad734399557cc747600c2d9c15e0c9ea8057ff68819",
+      "phase": "Path group: Native deterministic policy",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Native deterministic policy",
+      "source_scope": "crates/haldir-policy-native/**",
+      "focus": "Normative tables, default deny, HOLD/ESTOP, composition, state freshness, constraints, monotonic non-widening, and exhaustive cases.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T046"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T048",
+      "source_task_id": "T048",
+      "source_record_sha256": "6c1397c795ade8b95e5b31d77930c45bc7a5a774d391287516d67cdd9ba30587",
+      "phase": "Path group: Native deterministic policy",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Native deterministic policy",
+      "source_scope": "crates/haldir-policy-native/**",
+      "focus": "Normative tables, default deny, HOLD/ESTOP, composition, state freshness, constraints, monotonic non-widening, and exhaustive cases.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T047"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T049",
+      "source_task_id": "T049",
+      "source_record_sha256": "25f7c9c074b99373174405663da1751f4a51efa485689fdc40661aa2a1120da9",
+      "phase": "Path group: Native deterministic policy",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Native deterministic policy",
+      "source_scope": "crates/haldir-policy-native/**",
+      "focus": "Normative tables, default deny, HOLD/ESTOP, composition, state freshness, constraints, monotonic non-widening, and exhaustive cases.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T048"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T050",
+      "source_task_id": "T050",
+      "source_record_sha256": "c1d39f76d69d87ccf1af6dc61e02de636568733cd40ee2c598a8fd036ac91ade",
+      "phase": "Path group: Gate aggregate and service",
+      "title": "Read and specify Gate aggregate and service",
+      "source_scope": "crates/haldir-gate/**",
+      "focus": "Typestate, activation, ingress, decision, Gate-owned command creation, receipts, publisher capability, continuously running service, cancellation, and shutdown.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T049"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T051",
+      "source_task_id": "T051",
+      "source_record_sha256": "8d65ba3d1f9296509d4a9723480a7b758f46ecfffe27955ebef47994884dad95",
+      "phase": "Path group: Gate aggregate and service",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Gate aggregate and service",
+      "source_scope": "crates/haldir-gate/**",
+      "focus": "Typestate, activation, ingress, decision, Gate-owned command creation, receipts, publisher capability, continuously running service, cancellation, and shutdown.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T050"
+      ],
+      "execution_wave": 3,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T052",
+      "source_task_id": "T052",
+      "source_record_sha256": "fa0f2e3282d447c817d66c7e9e2f99f697b3da7b34668d40f7170a05036b5c81",
+      "phase": "Path group: Gate aggregate and service",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Gate aggregate and service",
+      "source_scope": "crates/haldir-gate/**",
+      "focus": "Typestate, activation, ingress, decision, Gate-owned command creation, receipts, publisher capability, continuously running service, cancellation, and shutdown.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T051"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T053",
+      "source_task_id": "T053",
+      "source_record_sha256": "f17878657055dde43967b1862a6714788a46bb28f8e6bfdc614a9c19b1bcacde",
+      "phase": "Path group: Gate aggregate and service",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Gate aggregate and service",
+      "source_scope": "crates/haldir-gate/**",
+      "focus": "Typestate, activation, ingress, decision, Gate-owned command creation, receipts, publisher capability, continuously running service, cancellation, and shutdown.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T052"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T054",
+      "source_task_id": "T054",
+      "source_record_sha256": "500425f06d97e282681867f7b18139e4c7f648aa846f8a1f167aee9486dbb3cf",
+      "phase": "Path group: Gate aggregate and service",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Gate aggregate and service",
+      "source_scope": "crates/haldir-gate/**",
+      "focus": "Typestate, activation, ingress, decision, Gate-owned command creation, receipts, publisher capability, continuously running service, cancellation, and shutdown.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T053"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T055",
+      "source_task_id": "T055",
+      "source_record_sha256": "7806afec435b49bf095199ca12757b57a7ff77a34b7d86addb84c7e2eb5b2421",
+      "phase": "Path group: Durable evidence and recovery",
+      "title": "Read and specify Durable evidence and recovery",
+      "source_scope": "crates/haldir-durable/**",
+      "focus": "Journal format, atomicity/fsync assumptions, corruption, rollback, command/receipt crash points, restart high-water, and audit recovery.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T054"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T056",
+      "source_task_id": "T056",
+      "source_record_sha256": "911f55fc6d3434e6602c495c245d1494650e1709e26d350168edaca471657b1c",
+      "phase": "Path group: Durable evidence and recovery",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Durable evidence and recovery",
+      "source_scope": "crates/haldir-durable/**",
+      "focus": "Journal format, atomicity/fsync assumptions, corruption, rollback, command/receipt crash points, restart high-water, and audit recovery.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T055"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T057",
+      "source_task_id": "T057",
+      "source_record_sha256": "915eabefbc8f2af266da755763ab454dd7fde9a18120a034c029388808a4a306",
+      "phase": "Path group: Durable evidence and recovery",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Durable evidence and recovery",
+      "source_scope": "crates/haldir-durable/**",
+      "focus": "Journal format, atomicity/fsync assumptions, corruption, rollback, command/receipt crash points, restart high-water, and audit recovery.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T056"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T058",
+      "source_task_id": "T058",
+      "source_record_sha256": "79f577ee05ca5110b537f243fbfffa235764e0ec294c2f770951154271f3ff30",
+      "phase": "Path group: Durable evidence and recovery",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Durable evidence and recovery",
+      "source_scope": "crates/haldir-durable/**",
+      "focus": "Journal format, atomicity/fsync assumptions, corruption, rollback, command/receipt crash points, restart high-water, and audit recovery.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T057"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T059",
+      "source_task_id": "T059",
+      "source_record_sha256": "6a0ca2a77d29401d19e0fde6c2303c691f905f0c15a1188a45ea13d5ca6bfd8b",
+      "phase": "Path group: Durable evidence and recovery",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Durable evidence and recovery",
+      "source_scope": "crates/haldir-durable/**",
+      "focus": "Journal format, atomicity/fsync assumptions, corruption, rollback, command/receipt crash points, restart high-water, and audit recovery.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T058"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T060",
+      "source_task_id": "T060",
+      "source_record_sha256": "ea9e3ce9b768c61b38fb13298f3c3bb60d8c8d85b394bc0aee3814408a8d26ce",
+      "phase": "Path group: Deployment validation",
+      "title": "Read and specify Deployment validation",
+      "source_scope": "crates/haldir-deployment/**",
+      "focus": "Complete config before side effects, profiles, paths, permissions, secrets, capability minting, startup order, rollback, and render parity.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T059"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T061",
+      "source_task_id": "T061",
+      "source_record_sha256": "ded20147f7825c5536f3f26035f3f2d347ed05ff9f77b65bf4c8a03c2576997f",
+      "phase": "Path group: Deployment validation",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Deployment validation",
+      "source_scope": "crates/haldir-deployment/**",
+      "focus": "Complete config before side effects, profiles, paths, permissions, secrets, capability minting, startup order, rollback, and render parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T060"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T062",
+      "source_task_id": "T062",
+      "source_record_sha256": "c5c33f6732540d3223b1ff3e0cfbfc2f8fbea6173738f44c68bcee9ce0dc0458",
+      "phase": "Path group: Deployment validation",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Deployment validation",
+      "source_scope": "crates/haldir-deployment/**",
+      "focus": "Complete config before side effects, profiles, paths, permissions, secrets, capability minting, startup order, rollback, and render parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T061"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T063",
+      "source_task_id": "T063",
+      "source_record_sha256": "caf756b9d91df1eabc7721f9d6203a2bf81f4b5345ee7b8a50736c8fa9df32ed",
+      "phase": "Path group: Deployment validation",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Deployment validation",
+      "source_scope": "crates/haldir-deployment/**",
+      "focus": "Complete config before side effects, profiles, paths, permissions, secrets, capability minting, startup order, rollback, and render parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T062"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T064",
+      "source_task_id": "T064",
+      "source_record_sha256": "3d17c33fc982e635a59788d8a406c809a0429d75fd9403121dcd8036e04b8414",
+      "phase": "Path group: Deployment validation",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Deployment validation",
+      "source_scope": "crates/haldir-deployment/**",
+      "focus": "Complete config before side effects, profiles, paths, permissions, secrets, capability minting, startup order, rollback, and render parity.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T063"
+      ],
+      "execution_wave": 4,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T065",
+      "source_task_id": "T065",
+      "source_record_sha256": "a631f4122e970fe016306eea52381a32db2a01d305748cf0df540a840d843bef",
+      "phase": "Path group: NCP compatibility",
+      "title": "Read and specify NCP compatibility",
+      "source_scope": "crates/haldir-ncp08/**, docs/NCP-COMPATIBILITY.md",
+      "focus": "Explicit 0.8 semantics, final 1.0 migration, command modes/TTL/ESTOP, sessions, canonical JSON, vectors, and no implicit upgrade.; language family=rust/md",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T064"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T066",
+      "source_task_id": "T066",
+      "source_record_sha256": "e3fc2535c38de7b63652b19da23af51ab3bf3276b5d5fffe31249f408aa53571",
+      "phase": "Path group: NCP compatibility",
+      "title": "Prove input, state, error, time, identity, and resource invariants for NCP compatibility",
+      "source_scope": "crates/haldir-ncp08/**, docs/NCP-COMPATIBILITY.md",
+      "focus": "Explicit 0.8 semantics, final 1.0 migration, command modes/TTL/ESTOP, sessions, canonical JSON, vectors, and no implicit upgrade.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T065"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T067",
+      "source_task_id": "T067",
+      "source_record_sha256": "12d83ad978b5dc7e84a945906c0d80518f6346ab16c4c9ec902822f1b1668f05",
+      "phase": "Path group: NCP compatibility",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of NCP compatibility",
+      "source_scope": "crates/haldir-ncp08/**, docs/NCP-COMPATIBILITY.md",
+      "focus": "Explicit 0.8 semantics, final 1.0 migration, command modes/TTL/ESTOP, sessions, canonical JSON, vectors, and no implicit upgrade.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T066"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T068",
+      "source_task_id": "T068",
+      "source_record_sha256": "56a8ab2e4b751cbca4847c6f7cbfb5df9d81fd14ff3d25071727abe48d27764e",
+      "phase": "Path group: NCP compatibility",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for NCP compatibility",
+      "source_scope": "crates/haldir-ncp08/**, docs/NCP-COMPATIBILITY.md",
+      "focus": "Explicit 0.8 semantics, final 1.0 migration, command modes/TTL/ESTOP, sessions, canonical JSON, vectors, and no implicit upgrade.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T067"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T069",
+      "source_task_id": "T069",
+      "source_record_sha256": "d82d4c58629596eb11f3984f20d31c0acb65fbea32277504bf8cf62608b6f59d",
+      "phase": "Path group: NCP compatibility",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for NCP compatibility",
+      "source_scope": "crates/haldir-ncp08/**, docs/NCP-COMPATIBILITY.md",
+      "focus": "Explicit 0.8 semantics, final 1.0 migration, command modes/TTL/ESTOP, sessions, canonical JSON, vectors, and no implicit upgrade.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T068"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T070",
+      "source_task_id": "T070",
+      "source_record_sha256": "cd444f4ff1901a2eff782e2cbde64f5d9615205b41b2e664e0e6dacb83c9b569",
+      "phase": "Path group: Zenoh transport",
+      "title": "Read and specify Zenoh transport",
+      "source_scope": "crates/haldir-transport-zenoh/**",
+      "focus": "Ingress and final routes, session lineage, queue bounds, callbacks, reconnect, cancellation, publisher exclusivity, remote identity, and real-router tests.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T069"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T071",
+      "source_task_id": "T071",
+      "source_record_sha256": "6a40de38117740fe25024a2d670d17be66ae3d4e96000bedde6bdff213e83079",
+      "phase": "Path group: Zenoh transport",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Zenoh transport",
+      "source_scope": "crates/haldir-transport-zenoh/**",
+      "focus": "Ingress and final routes, session lineage, queue bounds, callbacks, reconnect, cancellation, publisher exclusivity, remote identity, and real-router tests.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T070"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T072",
+      "source_task_id": "T072",
+      "source_record_sha256": "576c3a383b5c4e8254e26078b3dfdc810f34f822689439fbee6aa6f6809d3a41",
+      "phase": "Path group: Zenoh transport",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Zenoh transport",
+      "source_scope": "crates/haldir-transport-zenoh/**",
+      "focus": "Ingress and final routes, session lineage, queue bounds, callbacks, reconnect, cancellation, publisher exclusivity, remote identity, and real-router tests.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T071"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T073",
+      "source_task_id": "T073",
+      "source_record_sha256": "f32277d17c5f9a578eec2a8270f215ab55d86ce2329d1b1df72a68b14f67e075",
+      "phase": "Path group: Zenoh transport",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Zenoh transport",
+      "source_scope": "crates/haldir-transport-zenoh/**",
+      "focus": "Ingress and final routes, session lineage, queue bounds, callbacks, reconnect, cancellation, publisher exclusivity, remote identity, and real-router tests.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T072"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T074",
+      "source_task_id": "T074",
+      "source_record_sha256": "044dd58934d241532a811b27c7e3d5bd609a91ca6d9ba983766cd19704cf373f",
+      "phase": "Path group: Zenoh transport",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Zenoh transport",
+      "source_scope": "crates/haldir-transport-zenoh/**",
+      "focus": "Ingress and final routes, session lineage, queue bounds, callbacks, reconnect, cancellation, publisher exclusivity, remote identity, and real-router tests.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T073"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T075",
+      "source_task_id": "T075",
+      "source_record_sha256": "efd8496c2bcae738a394f2a3456c0918f44d9c6f18c517611a83ef6ebcbae368",
+      "phase": "Path group: Reference plant",
+      "title": "Read and specify Reference plant",
+      "source_scope": "crates/haldir-reference-plant/**",
+      "focus": "Reference-only dynamics/application, watchdog, HOLD/ESTOP, receipts, application observation, profile scope, and no general vehicle claim.; language family=rust",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T074"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T076",
+      "source_task_id": "T076",
+      "source_record_sha256": "e231cdb2b6413018f115400960f68f1febe05792b173adc17425d3649bd6d4fe",
+      "phase": "Path group: Reference plant",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Reference plant",
+      "source_scope": "crates/haldir-reference-plant/**",
+      "focus": "Reference-only dynamics/application, watchdog, HOLD/ESTOP, receipts, application observation, profile scope, and no general vehicle claim.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T075"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T077",
+      "source_task_id": "T077",
+      "source_record_sha256": "c048d5e17b7a2e6b37908d12b80c94a69188054e7e2ce492bf21449708e98e8d",
+      "phase": "Path group: Reference plant",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Reference plant",
+      "source_scope": "crates/haldir-reference-plant/**",
+      "focus": "Reference-only dynamics/application, watchdog, HOLD/ESTOP, receipts, application observation, profile scope, and no general vehicle claim.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T076"
+      ],
+      "execution_wave": 5,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T078",
+      "source_task_id": "T078",
+      "source_record_sha256": "ceab7f0c7c999f0a43cf2477fee706c6e721de73e8e6cce2ffdf7045bffbc98f",
+      "phase": "Path group: Reference plant",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Reference plant",
+      "source_scope": "crates/haldir-reference-plant/**",
+      "focus": "Reference-only dynamics/application, watchdog, HOLD/ESTOP, receipts, application observation, profile scope, and no general vehicle claim.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T077"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T079",
+      "source_task_id": "T079",
+      "source_record_sha256": "59eee9a7f25bcd291031ba1975bcc560da5cce2d7dc9beece02e27c617779348",
+      "phase": "Path group: Reference plant",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Reference plant",
+      "source_scope": "crates/haldir-reference-plant/**",
+      "focus": "Reference-only dynamics/application, watchdog, HOLD/ESTOP, receipts, application observation, profile scope, and no general vehicle claim.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T078"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T080",
+      "source_task_id": "T080",
+      "source_record_sha256": "607ee9a8f3c759920c06ebc0d65e15fd57b229d26b28239a76a620f1d074130f",
+      "phase": "Path group: Evidence framework",
+      "title": "Read and specify Evidence framework",
+      "source_scope": "crates/haldir-evidence/**, evidence/**",
+      "focus": "Claim vocabulary, evidence tiers, generation, signatures/checksums, immutable inputs, no synthetic/live substitution, and clean reproduction.; language family=rust/json/md",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T079"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T081",
+      "source_task_id": "T081",
+      "source_record_sha256": "ab90135e6eb426830792ae8de521d42e7fb162a5407e5e8dfc0900efd2e8a7b8",
+      "phase": "Path group: Evidence framework",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Evidence framework",
+      "source_scope": "crates/haldir-evidence/**, evidence/**",
+      "focus": "Claim vocabulary, evidence tiers, generation, signatures/checksums, immutable inputs, no synthetic/live substitution, and clean reproduction.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T080"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T082",
+      "source_task_id": "T082",
+      "source_record_sha256": "ce13edf4c50113f6edf78daf42484007cc0972aa86fa10f2e6f57a0087813266",
+      "phase": "Path group: Evidence framework",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Evidence framework",
+      "source_scope": "crates/haldir-evidence/**, evidence/**",
+      "focus": "Claim vocabulary, evidence tiers, generation, signatures/checksums, immutable inputs, no synthetic/live substitution, and clean reproduction.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T081"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T083",
+      "source_task_id": "T083",
+      "source_record_sha256": "1749b554b2226e1f3ae61c94f3e47bb6a06f2a26f819c2b0bbc6a20ec4f3b4e1",
+      "phase": "Path group: Evidence framework",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Evidence framework",
+      "source_scope": "crates/haldir-evidence/**, evidence/**",
+      "focus": "Claim vocabulary, evidence tiers, generation, signatures/checksums, immutable inputs, no synthetic/live substitution, and clean reproduction.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T082"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T084",
+      "source_task_id": "T084",
+      "source_record_sha256": "d8584d630fcb75bec05d73a6b198ea5c38d83eb64e93918ce8441038ce47d43a",
+      "phase": "Path group: Evidence framework",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Evidence framework",
+      "source_scope": "crates/haldir-evidence/**, evidence/**",
+      "focus": "Claim vocabulary, evidence tiers, generation, signatures/checksums, immutable inputs, no synthetic/live substitution, and clean reproduction.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T083"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T085",
+      "source_task_id": "T085",
+      "source_record_sha256": "b0fd026ed8d572fdf9950ff9f9b3866e55441dadb68ad43a0ebd29a288db2bbb",
+      "phase": "Path group: Formal model",
+      "title": "Read and specify Formal model",
+      "source_scope": "formal/HaldirAuthority.tla, formal/HaldirAuthority.cfg, formal/README.md",
+      "focus": "Invariants, bounds, fairness, crash/order cases, lease expiry, rollover, optional advisory, TLC results, assumptions, and refinement.; language family=tla/cfg/md",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T084"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T086",
+      "source_task_id": "T086",
+      "source_record_sha256": "7d596ae06d7819398257890a9e9a108e866573f8fc6b62d84a0cfea53dcebbea",
+      "phase": "Path group: Formal model",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Formal model",
+      "source_scope": "formal/HaldirAuthority.tla, formal/HaldirAuthority.cfg, formal/README.md",
+      "focus": "Invariants, bounds, fairness, crash/order cases, lease expiry, rollover, optional advisory, TLC results, assumptions, and refinement.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T085"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T087",
+      "source_task_id": "T087",
+      "source_record_sha256": "2f39893f8184ab340ef2653727daa7c7798b6552c1a0cbe2d0993aaee461f64d",
+      "phase": "Path group: Formal model",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Formal model",
+      "source_scope": "formal/HaldirAuthority.tla, formal/HaldirAuthority.cfg, formal/README.md",
+      "focus": "Invariants, bounds, fairness, crash/order cases, lease expiry, rollover, optional advisory, TLC results, assumptions, and refinement.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T086"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T088",
+      "source_task_id": "T088",
+      "source_record_sha256": "34d2c13e066c103ce66eecff369d095e5884696168be7bd940b10e786c81f52e",
+      "phase": "Path group: Formal model",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Formal model",
+      "source_scope": "formal/HaldirAuthority.tla, formal/HaldirAuthority.cfg, formal/README.md",
+      "focus": "Invariants, bounds, fairness, crash/order cases, lease expiry, rollover, optional advisory, TLC results, assumptions, and refinement.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T087"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T089",
+      "source_task_id": "T089",
+      "source_record_sha256": "5dcac20d9c396348a478e241891a10d2523aed2f6c6079d718f1783b4340760b",
+      "phase": "Path group: Formal model",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Formal model",
+      "source_scope": "formal/HaldirAuthority.tla, formal/HaldirAuthority.cfg, formal/README.md",
+      "focus": "Invariants, bounds, fairness, crash/order cases, lease expiry, rollover, optional advisory, TLC results, assumptions, and refinement.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T088"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T090",
+      "source_task_id": "T090",
+      "source_record_sha256": "a5ba69aac3d5795bb8bec200c206b325f1b87a8bacbf6fb9849547e611b3e5dd",
+      "phase": "Path group: Secure reference deployment",
+      "title": "Read and specify Secure reference deployment",
+      "source_scope": "deploy/secure-reference-v1/**",
+      "focus": "PKI roles, key custody, ACL least privilege, final-route deny tests, router/process identities, rotation/revocation, and reproducible campaign.; language family=yaml/json/certs/scripts",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T089"
+      ],
+      "execution_wave": 6,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T091",
+      "source_task_id": "T091",
+      "source_record_sha256": "7ca248ceab61aca83171f51854ad60d223c52fb0db7f893c8d9be56b4e119cec",
+      "phase": "Path group: Secure reference deployment",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Secure reference deployment",
+      "source_scope": "deploy/secure-reference-v1/**",
+      "focus": "PKI roles, key custody, ACL least privilege, final-route deny tests, router/process identities, rotation/revocation, and reproducible campaign.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T090"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T092",
+      "source_task_id": "T092",
+      "source_record_sha256": "f0108b417c11bc4c0da49753257ed886383d8045b4aebf3938d0c39bfb5370aa",
+      "phase": "Path group: Secure reference deployment",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Secure reference deployment",
+      "source_scope": "deploy/secure-reference-v1/**",
+      "focus": "PKI roles, key custody, ACL least privilege, final-route deny tests, router/process identities, rotation/revocation, and reproducible campaign.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T091"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T093",
+      "source_task_id": "T093",
+      "source_record_sha256": "f4dd79202e5e9c259f53f74a5cdbed835a62f6a82bd49d37142d8143fadc0f74",
+      "phase": "Path group: Secure reference deployment",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Secure reference deployment",
+      "source_scope": "deploy/secure-reference-v1/**",
+      "focus": "PKI roles, key custody, ACL least privilege, final-route deny tests, router/process identities, rotation/revocation, and reproducible campaign.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T092"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T094",
+      "source_task_id": "T094",
+      "source_record_sha256": "5255674c3567f131c37fcfca95800b7b1885a3c974bdebd6ac13d23c167b6a7b",
+      "phase": "Path group: Secure reference deployment",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Secure reference deployment",
+      "source_scope": "deploy/secure-reference-v1/**",
+      "focus": "PKI roles, key custody, ACL least privilege, final-route deny tests, router/process identities, rotation/revocation, and reproducible campaign.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T093"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T095",
+      "source_task_id": "T095",
+      "source_record_sha256": "8538a273c892e02e954db59aeed2623976b96206f85e5f26db610486519e9871",
+      "phase": "Path group: Claims, assurance, limitations, roadmap",
+      "title": "Read and specify Claims, assurance, limitations, roadmap",
+      "source_scope": "docs/**, release/0.9.0/**",
+      "focus": "Authority graph, assurance profiles, claim/evidence ledger, nonclaims, project catalog, research protocol, roadmap, and exact status.; language family=md/json",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T094"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T096",
+      "source_task_id": "T096",
+      "source_record_sha256": "5c2698128b6012952f6b514ed529147b403a66f13a82ee6effe4a0643dc5cdc9",
+      "phase": "Path group: Claims, assurance, limitations, roadmap",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Claims, assurance, limitations, roadmap",
+      "source_scope": "docs/**, release/0.9.0/**",
+      "focus": "Authority graph, assurance profiles, claim/evidence ledger, nonclaims, project catalog, research protocol, roadmap, and exact status.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T095"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T097",
+      "source_task_id": "T097",
+      "source_record_sha256": "be944ba0084b20c9ffeb608f500e068c5a8116bdee0025c41aaadeef91777814",
+      "phase": "Path group: Claims, assurance, limitations, roadmap",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Claims, assurance, limitations, roadmap",
+      "source_scope": "docs/**, release/0.9.0/**",
+      "focus": "Authority graph, assurance profiles, claim/evidence ledger, nonclaims, project catalog, research protocol, roadmap, and exact status.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T096"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T098",
+      "source_task_id": "T098",
+      "source_record_sha256": "ee6fddb0d08e37eda79c7334d8548490f65406207046c0d5111168527b10d178",
+      "phase": "Path group: Claims, assurance, limitations, roadmap",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Claims, assurance, limitations, roadmap",
+      "source_scope": "docs/**, release/0.9.0/**",
+      "focus": "Authority graph, assurance profiles, claim/evidence ledger, nonclaims, project catalog, research protocol, roadmap, and exact status.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T097"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T099",
+      "source_task_id": "T099",
+      "source_record_sha256": "4a01761c9f2e9ce07870405c9aa5b042e4f5119c70fa68f9c5c3739efc3fc993",
+      "phase": "Path group: Claims, assurance, limitations, roadmap",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Claims, assurance, limitations, roadmap",
+      "source_scope": "docs/**, release/0.9.0/**",
+      "focus": "Authority graph, assurance profiles, claim/evidence ledger, nonclaims, project catalog, research protocol, roadmap, and exact status.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T098"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T100",
+      "source_task_id": "T100",
+      "source_record_sha256": "0a2332705337c1f53c6a84ed5f188e26a5664e7753c5fa0ef3c10ec4e7816af6",
+      "phase": "Path group: Tools and workflows",
+      "title": "Read and specify Tools and workflows",
+      "source_scope": "tools/**, .github/**, justfile",
+      "focus": "Locked formal/CI/release commands, permissions, artifacts, fuzz/mutation, reproducible vectors, packages, and publication.; language family=rust/python/shell/yaml",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T099"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T101",
+      "source_task_id": "T101",
+      "source_record_sha256": "a3f48b02958d9b2cf2a4a1824565c8ae7e74556cf38156a8cc10e73b53bf093f",
+      "phase": "Path group: Tools and workflows",
+      "title": "Prove input, state, error, time, identity, and resource invariants for Tools and workflows",
+      "source_scope": "tools/**, .github/**, justfile",
+      "focus": "Locked formal/CI/release commands, permissions, artifacts, fuzz/mutation, reproducible vectors, packages, and publication.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T100"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T102",
+      "source_task_id": "T102",
+      "source_record_sha256": "58e1bd2f73f8e5e11327782d7431efa1c550f69a8d00cea5560d5053ccb1a08f",
+      "phase": "Path group: Tools and workflows",
+      "title": "Adversarially review numerical/security/concurrency/compatibility behavior of Tools and workflows",
+      "source_scope": "tools/**, .github/**, justfile",
+      "focus": "Locked formal/CI/release commands, permissions, artifacts, fuzz/mutation, reproducible vectors, packages, and publication.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T101"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T103",
+      "source_task_id": "T103",
+      "source_record_sha256": "98427b8ac18fbd412eee8013fb02f7e9a058fcfbb83d86d36e992bd2f7c90d4e",
+      "phase": "Path group: Tools and workflows",
+      "title": "Build independent tests, oracles, fuzz corpus, and failure injection for Tools and workflows",
+      "source_scope": "tools/**, .github/**, justfile",
+      "focus": "Locked formal/CI/release commands, permissions, artifacts, fuzz/mutation, reproducible vectors, packages, and publication.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T102"
+      ],
+      "execution_wave": 7,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T104",
+      "source_task_id": "T104",
+      "source_record_sha256": "46f9ed125f3a59fd05bb5c7ad028fd1f9df2670717039f59cd11c8bfd14d1a5b",
+      "phase": "Path group: Tools and workflows",
+      "title": "Reconcile public docs, migrations, evidence, and downstream consumers for Tools and workflows",
+      "source_scope": "tools/**, .github/**, justfile",
+      "focus": "Locked formal/CI/release commands, permissions, artifacts, fuzz/mutation, reproducible vectors, packages, and publication.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T103"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T105",
+      "source_task_id": "T105",
+      "source_record_sha256": "568f61ef39bbe892b219d7381c224382ded4d677764919c1cc97d9b016dc4159",
+      "phase": "Repository-specific closure",
+      "title": "Build an authenticated continuously running Gate service or remove every live-service claim from 1.0.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Build an authenticated continuously running Gate service or remove every live-service claim from 1.0.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T104"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T106",
+      "source_task_id": "T106",
+      "source_record_sha256": "1d906fd856b7b0ff0153a8816a31e98a30693f7ad01bbaa54cf6693e708339b3",
+      "phase": "Repository-specific closure",
+      "title": "Authenticate and freshness-bind trusted state, challenge/nonce, deployment profile, controller admission, and mission lease provenance.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Authenticate and freshness-bind trusted state, challenge/nonce, deployment profile, controller admission, and mission lease provenance.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T105"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T107",
+      "source_task_id": "T107",
+      "source_record_sha256": "166e43ae0ab81938bf3def75b933a59c1f3022bf47f2a755199a4140b24fa578",
+      "phase": "Repository-specific closure",
+      "title": "Prove the sole final-route publisher capability exists only in Gate-owned live state and cannot be cloned, serialized, leaked, or recovered after retirement.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Prove the sole final-route publisher capability exists only in Gate-owned live state and cannot be cloned, serialized, leaked, or recovered after retirement.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T106"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T108",
+      "source_task_id": "T108",
+      "source_record_sha256": "a0e498d2a0e968b6cfd509448731566537d4c6ef2765d99f52de97e298610c6c",
+      "phase": "Repository-specific closure",
+      "title": "Run a real intent through admission, lease, trusted state, policy, fresh command, publication, receipt, reference-plant/Crebain application, watchdog, and observed effect.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Run a real intent through admission, lease, trusted state, policy, fresh command, publication, receipt, reference-plant/Crebain application, watchdog, and observed effect.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T107"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T109",
+      "source_task_id": "T109",
+      "source_record_sha256": "96834eff1aa6b4203e673072dba7d97bbc7841a5d2affb02a7b1665d2e060873",
+      "phase": "Repository-specific closure",
+      "title": "Prove DENY, HOLD, ESTOP, invalid, stale, replayed, incompatible, resource-exhausted, cancelled, and internal-error outcomes cannot produce an active command.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Prove DENY, HOLD, ESTOP, invalid, stale, replayed, incompatible, resource-exhausted, cancelled, and internal-error outcomes cannot produce an active command.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T108"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T110",
+      "source_task_id": "T110",
+      "source_record_sha256": "2e1199e6130ff3f604108c29ce4993ceff18cdf21a0a57af0cafbf98c870929e",
+      "phase": "Repository-specific closure",
+      "title": "Formalize crash consistency for decision, durable receipt, command publication, plant receipt, and restart high-water.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Formalize crash consistency for decision, durable receipt, command publication, plant receipt, and restart high-water.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T109"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T111",
+      "source_task_id": "T111",
+      "source_record_sha256": "ceefc0542ab8ea6ec7673bb24dafded0ecca24e4f4a83101a917a09305f1c73d",
+      "phase": "Repository-specific closure",
+      "title": "Migrate to exact NCP 1.0 or explicitly scope 1.0 without that integration; never translate security-sensitive fields by guessing.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Migrate to exact NCP 1.0 or explicitly scope 1.0 without that integration; never translate security-sensitive fields by guessing.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T110"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T112",
+      "source_task_id": "T112",
+      "source_record_sha256": "77a7e72e4bd1263920f97823cd783e6b8bae7d6ab4f1e57df6a532e258fc4fac",
+      "phase": "Repository-specific closure",
+      "title": "Expand TLA+/executable model traces to cover service lifecycle, expiry, restart, cancellation, optional Galadriel record-only evidence, and publication crash points.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Expand TLA+/executable model traces to cover service lifecycle, expiry, restart, cancellation, optional Galadriel record-only evidence, and publication crash points.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T111"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T113",
+      "source_task_id": "T113",
+      "source_record_sha256": "9d8d8949b4961af3381ba7058e64561789a61089b5ebc6abc86bf2050214a739",
+      "phase": "Repository-specific closure",
+      "title": "Produce implementation-to-model trace identifiers and automatically reject traces not admitted by the model.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Produce implementation-to-model trace identifiers and automatically reject traces not admitted by the model.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T112"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T114",
+      "source_task_id": "T114",
+      "source_record_sha256": "34edf8f922108cfe23eedd7272a9e7ed4854014847220032d9dc6d9a550b5c5a",
+      "phase": "Repository-specific closure",
+      "title": "Run real multi-principal mTLS/default-deny ACL tests proving observers, controllers, Galadriel, and ordinary Crebain identities cannot publish the final route.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Run real multi-principal mTLS/default-deny ACL tests proving observers, controllers, Galadriel, and ordinary Crebain identities cannot publish the final route.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T113"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T115",
+      "source_task_id": "T115",
+      "source_record_sha256": "7cdb67ee7834752fc8181d01391c15c67935883847f0a1ee2906099aaa0a742f",
+      "phase": "Repository-specific closure",
+      "title": "Commission independent cryptographic, formal-methods, and secure-deployment reviews.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Commission independent cryptographic, formal-methods, and secure-deployment reviews.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T114"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T116",
+      "source_task_id": "T116",
+      "source_record_sha256": "f5f74a09fca678ef9928ec0bce1527ced6a654c1b99c92b642036f9d8ce5efbf",
+      "phase": "Repository-specific closure",
+      "title": "Publish a claim table distinguishing reference-monitor invariants, deployment-profile evidence, plant application, and excluded vehicle-safety claims.",
+      "source_scope": "repository-specific paths named by requirement",
+      "focus": "Publish a claim table distinguishing reference-monitor invariants, deployment-profile evidence, plant application, and excluded vehicle-safety claims.",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T115"
+      ],
+      "execution_wave": 8,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T117",
+      "source_task_id": "T117",
+      "source_record_sha256": "bc55e895ec39e5e2d6921421c91746f691597c2578ebffc3123fa44eb6d4e3f2",
+      "phase": "Final qualification",
+      "title": "Run full feature/platform/profile matrix and prove unsupported combinations fail clearly",
+      "source_scope": "all code/build profiles",
+      "focus": "matrix qualification",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T116"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T118",
+      "source_task_id": "T118",
+      "source_record_sha256": "afb8d04128b78f2d4efc6392e816bcad2677fc0518b71fa8ab38f15bd5703155",
+      "phase": "Final qualification",
+      "title": "Run long-duration resource, cancellation, restart, fault, and hostile-input campaigns",
+      "source_scope": "all runtime profiles",
+      "focus": "resilience",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T117"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T119",
+      "source_task_id": "T119",
+      "source_record_sha256": "fcaa895350668b15f8085b813c9f7bad7350c28d153dab42d21a715058038c03",
+      "phase": "Final qualification",
+      "title": "Generate reproducible packages, SBOM, license report, vulnerability scan, provenance and checksums",
+      "source_scope": "release artifacts",
+      "focus": "supply chain",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T118"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T120",
+      "source_task_id": "T120",
+      "source_record_sha256": "4cb50bb7af0705c89873268f7a94fdbdec3c4b7512f4b1688fac0d1d7198d30f",
+      "phase": "Final qualification",
+      "title": "Commission independent clean-room build and critical evidence reproduction",
+      "source_scope": "clean external environment",
+      "focus": "independence",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T119"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T121",
+      "source_task_id": "T121",
+      "source_record_sha256": "c2c1dde1b55a5e4391205d15a370371e108fdd3466a4eb0178e74989020a49fe",
+      "phase": "Final qualification",
+      "title": "Reconcile every README, GitHub description, citation, package, tag, schema and support claim",
+      "source_scope": "all public metadata",
+      "focus": "truthfulness",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T120"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T122",
+      "source_task_id": "T122",
+      "source_record_sha256": "581ce056fcb3e15309b7e6c85f20d553a73e0a926a45b16c1d9269383a327777",
+      "phase": "Final qualification",
+      "title": "Run publication, rollback, revocation, withdrawal, and post-publication rehearsals without changing candidate",
+      "source_scope": "release process",
+      "focus": "release safety",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T121"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T123",
+      "source_task_id": "T123",
+      "source_record_sha256": "fc50f331daa69b0bb3b5de9678a8d8c96739af6af6b2fff8d4070d24b2a1a3df",
+      "phase": "Final qualification",
+      "title": "Create local convergence manifest and hand off only explicit cross-repository requirements",
+      "source_scope": "release evidence",
+      "focus": "ecosystem boundary",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T122"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 1,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T124",
+      "source_task_id": "T124",
+      "source_record_sha256": "316e482ac38d219ea1527e16e3f0bd15b870777b42c427dd7000e3931b84a4c3",
+      "phase": "Final qualification",
+      "title": "Perform final lead-only twenty-lens diff review against frozen audit cut",
+      "source_scope": "entire candidate diff",
+      "focus": "final review",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T123"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 2,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    },
+    {
+      "id": "CH-T125",
+      "source_task_id": "T125",
+      "source_record_sha256": "654f57e922e0c2267b597f4432ad137372919eb16aacb505fcedee185c8dd69f",
+      "phase": "Final qualification",
+      "title": "Issue signed GO, NARROWED_GO, or NO_GO decision with residual risks and removed claims",
+      "source_scope": "release manifest",
+      "focus": "governance",
+      "priority": "P0_RELEASE_BLOCKER",
+      "dependencies": [
+        "CH-T124"
+      ],
+      "execution_wave": 9,
+      "subagent_lane": 3,
+      "lead_review_required": true,
+      "status": "OPEN",
+      "claim_disposition": "UNRESOLVED",
+      "assigned_reviewers": [
+
+      ],
+      "implementation_commits": [
+
+      ],
+      "evidence": [
+
+      ],
+      "closure_commit": null,
+      "twenty_lens_reviews": {
+      }
+    }
+  ]
+}

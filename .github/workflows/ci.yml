@@ -97,6 +97,10 @@ jobs:
         run: |
           python3 -m unittest tools/release/test_verify_audit_inputs.py
           python3 tools/release/verify-audit-inputs.py
+      - name: Verify current-head 0.9 audit cut
+        run: |
+          python3 -m unittest tools/release/test_verify_current_audit.py
+          python3 tools/release/verify-current-audit.py
       - name: Verify normative 0.9 authority model
         run: |
           python3 -m unittest tools/release/test_verify_authority_model.py

@@ -1,18 +1,24 @@
-# Haldir 0.9 release qualification
+# Haldir 0.9 release qualification (historical ledger)
 
-## Status
+> **Current-head notice:** this document describes the preceding 120-task
+> `T000..T119` qualification program. Its identities and evidence are retained
+> unchanged, but they do not close the later 126-task handoff. The authoritative
+> current program is the
+> [current-head qualification record](../../../release/0.9.0/current-head/README.md),
+> whose tasks are `CH-T000..CH-T125` and whose status remains `NO_GO`.
 
-This directory is the normative qualification record for Haldir `0.9.0`, the first
-public release. It adapts the supplied Haldir 1.0 implementation handoff to a 0.9
-release label without weakening any correctness, security, authority, resource-bound,
-or evidence gate. NCP protocol versions remain independent of the Haldir version.
+## Historical status
+
+This directory records the earlier Haldir `0.9.0` qualification attempt. It is
+historical input to the current program, not the current release decision. NCP
+protocol versions remain independent of the Haldir version.
 
 The author is **Sepehr Mahmoudian**. Review and independent-assurance roles are
 separate from authorship and must name the actual reviewer before their gates can
 close. The initial release intentionally has no persistent archive identifier; one
 may be added in a later metadata-only release after the supervisor review.
 
-The release remains **NO-GO** until every core requirement in
+The historical ledger remains **NO-GO** until every core requirement in
 [`release/0.9.0/requirements.json`](../../../release/0.9.0/requirements.json) is
 verified, every optional unsupported claim is removed and explicitly recorded as
 `not_claimed`, and the final clean-commit release ceremony passes.

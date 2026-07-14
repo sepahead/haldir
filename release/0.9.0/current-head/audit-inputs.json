@@ -1,0 +1,363 @@
+{
+  "approved_cut_update": {
+    "commit_count": 1,
+    "deletions": 58,
+    "files": [
+      {
+        "change": "modified",
+        "path": "docs/THREAT-MODEL.md",
+        "sha256": "b5d7b83d29a95a58cb2c8d3ecfa470db0c2d8b76e09abed5e9af58ee00abb70b"
+      },
+      {
+        "change": "added",
+        "path": "docs/release/0.9.0/THREAT-MODEL.md",
+        "sha256": "cd7010762be3bc3cd278d932fa1e3f0c8014d5277799405822148c28bdeffbc0"
+      }
+    ],
+    "from_commit": "9cf56e149a105026b072c9073d7e87b93103966e",
+    "insertions": 340,
+    "patch_sha256": "621264b02620212b5cf2255cfc37c492f66f2d52160e14f2e7ff464e44cee413",
+    "status": "LEAD_APPROVED_AFTER_COMPLETE_DIFF_AND_REBASELINE",
+    "to_commit": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438"
+  },
+  "author": {
+    "email": "sepmhn@gmail.com",
+    "name": "Sepehr Mahmoudian"
+  },
+  "baseline": {
+    "command": "bash tools/p0r-exit-gate.sh",
+    "exit_status": 0,
+    "failed_gates": 0,
+    "log": {
+      "compressed_bytes": 20018,
+      "compressed_sha256": "53d3bcba011be9ac83bbf4975080ff27b33bbf17a99ca2179026e0071ed7f1dc",
+      "path": "release/0.9.0/current-head/evidence/source-cut-p0r.log.gz",
+      "uncompressed_bytes": 130401,
+      "uncompressed_lines": 2409,
+      "uncompressed_sha256": "fbf69d44b56e0abf41ff1efc5bfeced7e3931aff37af05df2d5c1d87a6f07dd8"
+    },
+    "passed_gates": 27,
+    "source_commit": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438"
+  },
+  "captured_at_utc": "2026-07-14T15:10:06Z",
+  "github_source_cut_checks": {
+    "ci": {
+      "conclusion": "success",
+      "created_at": "2026-07-14T10:57:35Z",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "jobs": [
+        "interop",
+        "macos-compile",
+        "supply-chain",
+        "feature-matrix",
+        "build-test",
+        "clean-build"
+      ],
+      "log_evidence": {
+        "compressed_bytes": 65961,
+        "compressed_sha256": "c7bd25803990b4bf314b06091f775476fba60b6cde9f83fed2ce11b60c97f6f5",
+        "path": "release/0.9.0/current-head/evidence/source-cut-ci.log.gz",
+        "uncompressed_bytes": 443370,
+        "uncompressed_lines": 3870,
+        "uncompressed_sha256": "4a5cbf61cb184821332ae851f5c1f57da7f94cb301113ed9b5b58281f3e57794"
+      },
+      "metadata_evidence": {
+        "bytes": 16469,
+        "lines": 512,
+        "path": "release/0.9.0/current-head/evidence/source-cut-ci.json",
+        "sha256": "55817853d79845b38141f9cc6ca0f25d2c05b9ebff3c815bf153ed625326daf1"
+      },
+      "run_id": 29327196587,
+      "status": "completed",
+      "updated_at": "2026-07-14T10:58:47Z",
+      "url": "https://github.com/sepahead/haldir/actions/runs/29327196587",
+      "workflow": "ci"
+    },
+    "formal": {
+      "conclusion": "success",
+      "created_at": "2026-07-14T10:57:35Z",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "jobs": [
+        "tlc-model-check"
+      ],
+      "log_evidence": {
+        "compressed_bytes": 5664,
+        "compressed_sha256": "854b9eb9c482d43277e1f554e58b875198ce2efad586443466f7bc02666165d7",
+        "path": "release/0.9.0/current-head/evidence/source-cut-formal.log.gz",
+        "uncompressed_bytes": 29867,
+        "uncompressed_lines": 267,
+        "uncompressed_sha256": "2e32e702bbe83e4f128e7d12126ae62451ab37e4d7bae86ea7b1b60e712bd00a"
+      },
+      "metadata_evidence": {
+        "bytes": 3023,
+        "lines": 97,
+        "path": "release/0.9.0/current-head/evidence/source-cut-formal.json",
+        "sha256": "dd09e6df9702e7017cab4489e0f98b768481d2ae35b01e2d4266acd055789378"
+      },
+      "run_id": 29327196583,
+      "status": "completed",
+      "updated_at": "2026-07-14T10:57:48Z",
+      "url": "https://github.com/sepahead/haldir/actions/runs/29327196583",
+      "workflow": "formal"
+    }
+  },
+  "handoff": {
+    "adapted_release_target": "0.9.0",
+    "archive_sha256": "1de5cfc2a577621c24ef10e97fd2319799d02b602cfb3de54954928a0d988efe",
+    "audit_cut_sha256": "b77dcffa56ec0eb0f80fbbd29ff6f7c98ebf8b894e23393f67685b952af80ca6",
+    "checksums_verified": true,
+    "ledger_sha256": "891601e322f453499fc7a3375728d43f7cfb0eaa193be5b96b1a5d6c7aae0f40",
+    "original_frozen_commit": "9cf56e149a105026b072c9073d7e87b93103966e",
+    "original_release_target": "1.0.0",
+    "original_task_count": 126,
+    "package": "HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF",
+    "prepared": "2026-07-14",
+    "readme_sha256": "bf1d3ea1d830d60a5e8ea9d41b32e5845748165a28d124e52497610b8c3e6f47",
+    "sha256s_sha256": "5ed07cc488640d512342c8b3adc1feeda523f897f5f9734cdf62441766d216b0",
+    "task_namespace": "CH-T000..CH-T125"
+  },
+  "input_scope": {
+    "deployment_profiles": [
+      "deploy/secure-reference-v1/profile.json"
+    ],
+    "formal_artifacts": [
+      "formal/HaldirAuthority.cfg",
+      "formal/HaldirAuthority.tla",
+      "formal/README.md"
+    ],
+    "interop_corpora": [
+      "tools/interop/vectors.json"
+    ],
+    "machine_learning_models": [],
+    "paper_suffixes_scanned": [
+      ".bib",
+      ".pdf",
+      ".tex"
+    ],
+    "papers": [],
+    "scope_note": "No ML model or paper artifact is tracked; the immutable source tree binds all other schemas, fixtures, generated evidence, and documentation.",
+    "test_data": [
+      "crates/haldir-ncp08/tests/data/ncp-v0.8.0/README.md",
+      "crates/haldir-ncp08/tests/data/ncp-v0.8.0/command_frame.json",
+      "crates/haldir-ncp08/tests/data/ncp-v0.8.0/command_frame.schema.json"
+    ],
+    "workspace_packages": {
+      "count": 16,
+      "names": [
+        "haldir-admission",
+        "haldir-contracts",
+        "haldir-core",
+        "haldir-crypto",
+        "haldir-ctl",
+        "haldir-deployment",
+        "haldir-durable",
+        "haldir-evidence",
+        "haldir-gate",
+        "haldir-ncp08",
+        "haldir-policy-native",
+        "haldir-range",
+        "haldir-reference-plant",
+        "haldir-state",
+        "haldir-testkit",
+        "haldir-transport-zenoh"
+      ],
+      "registry_publication": false,
+      "source_version": "0.1.0-experimental"
+    }
+  },
+  "locked_inputs": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "1712be900a8bab7aa0f5b12a6f1c6d47bbce4078a420936bc598673517f865a2"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "8767fc69ea7b90b374de6ca77e9d22dbfac0e3b1db236ea03d24f05470d2831f"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "61d97acc9676fd1b6348a44dee3c372804b9a1e984385c7d73a2620b322d4927"
+    },
+    {
+      "path": "deny.toml",
+      "sha256": "08e563a6f20d8a5423b0a85a2c2183a9b3d82d0b40ca6efac0ab62976e863ae6"
+    },
+    {
+      "path": "tools/pins.toml",
+      "sha256": "0cd9c3279c61266c1e926fd1fcce8cd6cab38baf119d1be9e19c7ccc12d7fcb6"
+    },
+    {
+      "path": "deploy/secure-reference-v1/profile.json",
+      "sha256": "76a10873155ef5fe85f13117fdf6fcb6f3938399823cbb6af9bff523a3b54e06"
+    },
+    {
+      "path": "formal/HaldirAuthority.tla",
+      "sha256": "0ab0bc5826c356cab6e01555a32fbc489286988b575c62605e740b69c6e5e61e"
+    },
+    {
+      "path": "formal/HaldirAuthority.cfg",
+      "sha256": "20651c85285170ac0bbd35b6f6b9c31597fd63b28e7678b72388033dbad3c58f"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "171618c83effa8579f492ad79a5e0df0a54a27f72a5b6d8989ffcbc5a5c8180b"
+    },
+    {
+      "path": ".github/workflows/formal.yml",
+      "sha256": "3de8203531471e675ee03b535fb7c690527a7fd6922a9dd3edb4be32a83443b5"
+    },
+    {
+      "path": "justfile",
+      "sha256": "4633a855139a3fd799f20f099ed1dc5ab7d5fb6960ceb0880dbd03ef9565c0ca"
+    },
+    {
+      "path": "release/0.9.0/allowed-signers",
+      "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+    }
+  ],
+  "master_handoff": {
+    "approved_audit_heads": {
+      "NCP": "0ba5ff6e963225b0635f8fec349278f1ac287df3",
+      "crebain": "4c311900ade5668200a48d56fb191be1916b884a",
+      "galadriel": "94e2f8cc01f352d2bf899b7f656997f143a2588f",
+      "haldir": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "pid-rs": "64060035ea36e380004949f06dd226dcc7242b96"
+    },
+    "checksums_verified": true,
+    "child_archives": {
+      "NCP": {
+        "files": 23,
+        "sha256": "661c5a9bd6a62a8a973bc953fd45ba1a58d44592985c871fc6b039c9cbdd333b",
+        "tasks": 146
+      },
+      "crebain": {
+        "files": 23,
+        "sha256": "c7c8a342e5a4b94c2d4c411299c63ed1c01163acff847d9bf7389ed8ea8c052a",
+        "tasks": 159
+      },
+      "galadriel": {
+        "files": 23,
+        "sha256": "41bd414e38e7f46a0417005d59e2b0c0eb5e139ec38cce632e006b60a750cd94",
+        "tasks": 116
+      },
+      "haldir": {
+        "files": 23,
+        "sha256": "1de5cfc2a577621c24ef10e97fd2319799d02b602cfb3de54954928a0d988efe",
+        "tasks": 126
+      },
+      "pid-rs": {
+        "files": 47,
+        "sha256": "9fcdcaf1e5254942c8dbdf4cea3890f6a858674bd6fd613b14f353b2a60e4730",
+        "tasks": 159
+      }
+    },
+    "cross_archive_sha256": "ae06b5525537e88de4ae37aa49b40de01893061bdc3096bcf1059c5c6d71e3d4",
+    "cross_current_heads_sha256": "f43c85b88e71c002ef0f91b2f080526566b3f1e983ae0022f402eadc52efaffa",
+    "cross_ledger_sha256": "807d9e2087e932725513dba0eb0d9de252fed85fcce6b75d0121f252fd08f582",
+    "cross_repo": {
+      "files": 12,
+      "tasks": 79
+    },
+    "cross_sha256s_sha256": "40bd8855cb1ae574d7fb91688d8567a7267089bd80c739c8b1f3270a4efe42f6",
+    "current_heads_sha256": "dc393b47bac804fa9dd47215e6eced584d0b6863cf57b383ff5957bcbae4bbf6",
+    "frozen_heads": {
+      "NCP": "0ba5ff6e963225b0635f8fec349278f1ac287df3",
+      "crebain": "4c311900ade5668200a48d56fb191be1916b884a",
+      "galadriel": "94e2f8cc01f352d2bf899b7f656997f143a2588f",
+      "haldir": "9cf56e149a105026b072c9073d7e87b93103966e",
+      "pid-rs": "64060035ea36e380004949f06dd226dcc7242b96"
+    },
+    "master_sha256s_sha256": "0d4d1c19600bd8e5d930cb269fcaa204e80e9728914572664af7961566d3ba57",
+    "master_validation_sha256": "e693dafd3d53ab031b499f358e3a680a5d2c5fd538023e83fd935f5fd020c777",
+    "other_head_verification_scope": "CHECKSUM_VERIFIED_HANDOFF_ASSERTIONS; NON_HALDIR_GIT_OBJECTS NOT VERIFIED HERE",
+    "package_index_sha256": "cec6b200866b0a34473c4429c74137c87790c1fe073a19453ed79e147e32411d",
+    "prepared": "2026-07-14",
+    "retained_inputs": [
+      {
+        "bytes": 43202,
+        "path": "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+        "sha256": "1de5cfc2a577621c24ef10e97fd2319799d02b602cfb3de54954928a0d988efe"
+      },
+      {
+        "bytes": 402,
+        "path": "release/0.9.0/current-head/handoff/MASTER_CURRENT_HEADS.json",
+        "sha256": "dc393b47bac804fa9dd47215e6eced584d0b6863cf57b383ff5957bcbae4bbf6"
+      },
+      {
+        "bytes": 1356,
+        "path": "release/0.9.0/current-head/handoff/MASTER_SHA256SUMS.txt",
+        "sha256": "0d4d1c19600bd8e5d930cb269fcaa204e80e9728914572664af7961566d3ba57"
+      },
+      {
+        "bytes": 1345,
+        "path": "release/0.9.0/current-head/handoff/PACKAGE_INDEX.json",
+        "sha256": "cec6b200866b0a34473c4429c74137c87790c1fe073a19453ed79e147e32411d"
+      },
+      {
+        "bytes": 11647,
+        "path": "release/0.9.0/current-head/handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip",
+        "sha256": "ae06b5525537e88de4ae37aa49b40de01893061bdc3096bcf1059c5c6d71e3d4"
+      }
+    ]
+  },
+  "ncp": {
+    "commit": "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e",
+    "package_version": "0.8.0",
+    "protocol": "0.8",
+    "protocol_1_0_qualified": false
+  },
+  "persistent_identifier": null,
+  "release_target": "0.9.0",
+  "requirements_ledger": {
+    "identity_sha256": "8b2c92a373514e30c1ab0f5e741ad595c0e3b2e67e37dc660deb43d64a7a6cfb",
+    "legacy_ledger_sha256": "04454e6eeba74a1e36fccbfa7110437f3fffb00778ce019819852b7678b04b2d",
+    "path": "release/0.9.0/current-head/requirements.json",
+    "schema_version": "1.0.0",
+    "source_ledger_sha256": "891601e322f453499fc7a3375728d43f7cfb0eaa193be5b96b1a5d6c7aae0f40",
+    "task_count": 126,
+    "task_namespace": "CH-T000..CH-T125"
+  },
+  "repository_publication_state": {
+    "cleanup_disposition": "VERIFIED_NO_OP",
+    "evidence": {
+      "bytes": 530,
+      "lines": 20,
+      "path": "release/0.9.0/current-head/evidence/publication-state.json",
+      "sha256": "2cd20381ce5001bdc36b080bfc0a887b06c6215e3c481a90f351353038e9dba1"
+    },
+    "github_releases": [],
+    "local_tags": [],
+    "remote_tags": []
+  },
+  "schema_version": "2.0.0",
+  "source": {
+    "branch": "main",
+    "commit": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "origin_main_commit": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "parent": "9cf56e149a105026b072c9073d7e87b93103966e",
+    "remote": "git@github.com:sepahead/haldir.git",
+    "repository": "https://github.com/sepahead/haldir",
+    "source_commit_signature": {
+      "format": "ssh",
+      "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "principal": "sepmhn@gmail.com",
+      "status": "verified"
+    },
+    "submodules": [],
+    "tracked_bytes": 5562467,
+    "tracked_files": 283,
+    "tree": "8d8cdda01d25bc9f3c6a2911b2c4464f5c7505e5",
+    "tree_clean": true
+  },
+  "toolchains": {
+    "cargo": "1.96.0 (30a34c682 2026-05-25)",
+    "cargo_deny": "0.19.9",
+    "host": "aarch64-apple-darwin",
+    "python": "3.14.6",
+    "rustc": "1.96.0 (ac68faa20 2026-05-25)"
+  }
+}

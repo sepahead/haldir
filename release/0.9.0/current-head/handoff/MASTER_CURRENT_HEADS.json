@@ -1,0 +1,11 @@
+{
+  "heads": {
+    "NCP": "0ba5ff6e963225b0635f8fec349278f1ac287df3",
+    "crebain": "4c311900ade5668200a48d56fb191be1916b884a",
+    "galadriel": "94e2f8cc01f352d2bf899b7f656997f143a2588f",
+    "haldir": "9cf56e149a105026b072c9073d7e87b93103966e",
+    "pid-rs": "64060035ea36e380004949f06dd226dcc7242b96"
+  },
+  "prepared": "2026-07-14",
+  "status": "frozen audit cuts; abort and re-audit on change"
+}

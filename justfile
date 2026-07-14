@@ -67,6 +67,10 @@ verify-release-audit:
     python3 -m unittest tools/release/test_verify_audit_inputs.py
     python3 tools/release/verify-audit-inputs.py
 
+verify-current-audit:
+    python3 -m unittest tools/release/test_verify_current_audit.py
+    python3 tools/release/verify-current-audit.py
+
 verify-release-authority:
     python3 -m unittest tools/release/test_verify_authority_model.py
     python3 tools/release/verify-authority-model.py

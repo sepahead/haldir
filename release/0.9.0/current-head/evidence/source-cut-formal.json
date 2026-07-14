@@ -1,0 +1,97 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-07-14T10:57:35Z",
+  "databaseId": 29327196583,
+  "event": "push",
+  "headBranch": "main",
+  "headSha": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+  "jobs": [
+    {
+      "completedAt": "2026-07-14T10:57:47Z",
+      "conclusion": "success",
+      "databaseId": 87066255465,
+      "name": "tlc-model-check",
+      "startedAt": "2026-07-14T10:57:37Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-07-14T10:57:39Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-07-14T10:57:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:40Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+          "number": 2,
+          "startedAt": "2026-07-14T10:57:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:40Z",
+          "conclusion": "success",
+          "name": "Set up JRE",
+          "number": 3,
+          "startedAt": "2026-07-14T10:57:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:41Z",
+          "conclusion": "success",
+          "name": "Fetch pinned TLA+ tools",
+          "number": 4,
+          "startedAt": "2026-07-14T10:57:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:44Z",
+          "conclusion": "success",
+          "name": "Model-check HaldirAuthority",
+          "number": 5,
+          "startedAt": "2026-07-14T10:57:41Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:45Z",
+          "conclusion": "success",
+          "name": "Upload TLC log",
+          "number": 6,
+          "startedAt": "2026-07-14T10:57:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:45Z",
+          "conclusion": "success",
+          "name": "Post Set up JRE",
+          "number": 11,
+          "startedAt": "2026-07-14T10:57:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:45Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+          "number": 12,
+          "startedAt": "2026-07-14T10:57:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-07-14T10:57:45Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 13,
+          "startedAt": "2026-07-14T10:57:45Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sepahead/haldir/actions/runs/29327196583/job/87066255465"
+    }
+  ],
+  "status": "completed",
+  "updatedAt": "2026-07-14T10:57:48Z",
+  "url": "https://github.com/sepahead/haldir/actions/runs/29327196583",
+  "workflowName": "formal"
+}

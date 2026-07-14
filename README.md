@@ -63,6 +63,9 @@ ready, certified, airworthy, or safe for deployment. Honesty vocabulary is norma
 *applied*, and *observed* mean exactly what `docs/HALDIR-NCP-V0.8.0-TRIPLE-CHECKED-AUDIT-AND-IMPLEMENTATION-SPECIFICATION-2026.md`
 says they mean.
 
+- **Release program:** `0.9.0`, authored by Sepehr Mahmoudian, is under supervisor
+  review and remains `NO_GO`; see the
+  [current-head qualification record](release/0.9.0/current-head/README.md).
 - **Command-authority profile:** `PRE_AUTHORITY_ACL_ONLY` (NCP `v0.8.0`, increment 1).
 - **Assurance profile implemented here:** `assurance-reference-v1` — one vehicle, one
   controller, one Gate, one **deterministic reference plant**, `Hold` + local-NED velocity,
