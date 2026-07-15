@@ -1,0 +1,507 @@
+{
+  "schema_version": "1.0.0",
+  "record_id": "CH-T000-R02-BFE-2026-07-14",
+  "task_id": "CH-T000",
+  "source_task_id": "T000",
+  "release_target": "0.9.0",
+  "persistent_identifier": null,
+  "classification": "AUTOMATED_SUPPORTING_REVIEW_ONLY",
+  "reviewer": {
+    "id": "CH-T000-R02",
+    "agent_task_path": "/root/t000_final_audit",
+    "role": "independent adversarial evidence, qualification, and lifecycle reviewer",
+    "human": false,
+    "named_human_reviewer": false,
+    "security_certifier": false,
+    "release_approver": false
+  },
+  "repository_author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "reviewed_at_utc": "2026-07-14T17:28:59Z",
+  "review_scope": {
+    "kind": "BFE_IDENTITY_EVIDENCE_AND_QUALIFICATION_DESIGN_AUDIT",
+    "source_commit": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "source_tree": "8d8cdda01d25bc9f3c6a2911b2c4464f5c7505e5",
+    "implementation_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "implementation_tree": "02b19c32ab61e76ff217dacaef974f6dfc7b59e4",
+    "implementation_parent": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "complete_changed_line_semantic_review_performed_by_r02": false,
+    "scope_statement": "R02 independently recomputed the exact implementation identity, signature, deterministic diff identities, and retained evidence identities; inspected the CH-T000 qualification/review/resource-boundary design adversarially; and reproduced the committed bfe verifier and its 34 tests in a fresh Linux container. R02 did not claim a new line-by-line semantic review of all 22 bfe paths or of the concurrently changing qualification framework.",
+    "concurrent_candidate_boundary": "The uncommitted qualification verifier and profiler changed during this audit. Findings about that candidate remain pending until a stable signed framework commit is independently re-audited.",
+    "preliminary_stage_boundary": "This report is a preliminary review of immutable bfe identity/evidence plus an adversarial review of a changing worktree. It does not approve or qualify B, C, D, or any unsigned worktree state; exact signed B must be independently re-audited after it is frozen."
+  },
+  "implementation_signature": {
+    "format": "ssh",
+    "status": "verified",
+    "principal": "sepmhn@gmail.com",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "allowed_signers_path": "release/0.9.0/allowed-signers",
+    "allowed_signers_sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+  },
+  "implementation_diff": {
+    "command": "git -c diff.algorithm=myers diff --no-ext-diff --no-textconv --no-renames --no-color --src-prefix=a/ --dst-prefix=b/ --binary --full-index 2bfcabe5bf9fd6c428f7d50132bd36ec4e147438..bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "files": 22,
+    "insertions": 6661,
+    "deletions": 7,
+    "binary_artifacts": 5,
+    "patch_sha256": "3fb81eb3b18ae3c2a5352c2a541cf8f14020e37508aa8a8b8587a24ca8f551cc",
+    "patch_bytes": 427414,
+    "patch_lines": 9544,
+    "name_status_sha256": "d90536ba164259750548017173c1b910b207b801e8dc863607c1966cef160efe",
+    "numstat_sha256": "9c29158d64f8696cdb16925fc6569f32afa66f8052a4db0fec717262513a2602",
+    "paths": [
+      ".github/workflows/ci.yml",
+      "README.md",
+      "docs/release/0.9.0/README.md",
+      "justfile",
+      "release/0.9.0/current-head/HANDOFF-ERRATA.md",
+      "release/0.9.0/current-head/README.md",
+      "release/0.9.0/current-head/audit-inputs.json",
+      "release/0.9.0/current-head/evidence/publication-state.json",
+      "release/0.9.0/current-head/evidence/source-cut-ci.json",
+      "release/0.9.0/current-head/evidence/source-cut-ci.log.gz",
+      "release/0.9.0/current-head/evidence/source-cut-formal.json",
+      "release/0.9.0/current-head/evidence/source-cut-formal.log.gz",
+      "release/0.9.0/current-head/evidence/source-cut-p0r.log.gz",
+      "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+      "release/0.9.0/current-head/handoff/MASTER_CURRENT_HEADS.json",
+      "release/0.9.0/current-head/handoff/MASTER_SHA256SUMS.txt",
+      "release/0.9.0/current-head/handoff/PACKAGE_INDEX.json",
+      "release/0.9.0/current-head/handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip",
+      "release/0.9.0/current-head/requirements.json",
+      "tools/p0r-exit-gate.sh",
+      "tools/release/test_verify_current_audit.py",
+      "tools/release/verify-current-audit.py"
+    ]
+  },
+  "committed_verifier": {
+    "path": "tools/release/verify-current-audit.py",
+    "source_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "sha256": "573a18ab664fe381707fa901e7d90ffdd328439e880d3d23da9118547663723e",
+    "bytes": 52277,
+    "lines": 1339
+  },
+  "committed_verifier_tests": {
+    "path": "tools/release/test_verify_current_audit.py",
+    "source_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "sha256": "5275c7e83895831faff707ecef8c145d32c8ac511aa640720963c173563cd656",
+    "bytes": 11995,
+    "lines": 288,
+    "passed": 34,
+    "failed": 0
+  },
+  "evidence_identities": [
+    {
+      "id": "CH-T000-E02",
+      "path": "release/0.9.0/current-head/audit-inputs.json",
+      "sha256": "06dbb9a9656bae39aa209f9c602577d45a7167f68f0f064a687701e56c4517eb",
+      "bytes": 13379,
+      "lines": 363
+    },
+    {
+      "id": "CH-T000-BOOTSTRAP-LEDGER",
+      "path": "release/0.9.0/current-head/requirements.json",
+      "sha256": "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40",
+      "bytes": 122010,
+      "lines": 3820
+    },
+    {
+      "id": "CH-T000-E03-METADATA",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.json",
+      "sha256": "513096a816e24220c7d18f31290faa54546fd60670479ba7f45bada01a0befaf",
+      "bytes": 2545,
+      "lines": 46
+    },
+    {
+      "id": "CH-T000-E03-LOG",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.log.gz",
+      "sha256": "417bde0ef2f6dd0f9ce59b95c4e209d15160ea5ae6ddbd63218bdc07ec307933",
+      "bytes": 20907,
+      "uncompressed_sha256": "1b68e1fd069d312ef39d293a40bee3a0f911dcf55336dcd897893382e4be1e3a",
+      "uncompressed_bytes": 133101,
+      "uncompressed_lines": 2464
+    },
+    {
+      "id": "CH-T000-E04-METADATA",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.json",
+      "sha256": "9958d8752af1e4bbc4d4d66ae016f4da8b327f5eb120088ed82d0dd0de5ddc78",
+      "bytes": 5620,
+      "lines": 93
+    },
+    {
+      "id": "CH-T000-E04-LOG",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz",
+      "sha256": "918bd15c9a46415282512666d3ade66021022b48bc7b5178047d2103a35da99c",
+      "bytes": 379,
+      "uncompressed_sha256": "e9213d34384987a19e423fe6549110396e2b2d33933d37ea963e2553f9b4f865",
+      "uncompressed_bytes": 729,
+      "uncompressed_lines": 20
+    },
+    {
+      "id": "CH-T000-E05-METADATA",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.json",
+      "sha256": "90bbb3278503f8f1cf171fc981af8c5d665965bdaf8190d744d41e8e57c8d70f",
+      "bytes": 16732,
+      "lines": 520
+    },
+    {
+      "id": "CH-T000-E05-ATTEMPT",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json",
+      "sha256": "e60cd69b34aedf1204c838ba89a7db5ec8372a84329d9ba21ad0284e6b6c8467",
+      "bytes": 11337,
+      "lines": 1
+    },
+    {
+      "id": "CH-T000-E05-LOG",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz",
+      "sha256": "74531e2cce2ae6d974e498c16bfaf230fa5200df02ce7de818489c76665caa92",
+      "bytes": 67356,
+      "uncompressed_sha256": "20d3ba8a990082bb6665a4eedc453eca5453483641ce5f3091930ee5ad100c2e",
+      "uncompressed_bytes": 493752,
+      "uncompressed_lines": 3882
+    },
+    {
+      "id": "CH-T000-E06-METADATA",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.json",
+      "sha256": "831a04ac14c5c6f428038b4279db8460488c0787e2aa9f3338c459550cf814f2",
+      "bytes": 3023,
+      "lines": 97
+    },
+    {
+      "id": "CH-T000-E06-ATTEMPT",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json",
+      "sha256": "a0245dce277990dc739608f9e7cda41838826c47f25ff0e197d764da803defca",
+      "bytes": 2173,
+      "lines": 1
+    },
+    {
+      "id": "CH-T000-E06-LOG",
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz",
+      "sha256": "d8ca420c8b3c4ee9208731fb05fc3a057e7719230e5393d3724ff329d96613ae",
+      "bytes": 5886,
+      "uncompressed_sha256": "ead0acbc258decc77381628814ef805c2cbf405f01587d722117c5b625b88ca1",
+      "uncompressed_bytes": 36584,
+      "uncompressed_lines": 267
+    }
+  ],
+  "independent_reproduction": {
+    "metadata_path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.json",
+    "log_path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz",
+    "source_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "source_tree": "02b19c32ab61e76ff217dacaef974f6dfc7b59e4",
+    "fresh_no_local_no_hardlinks_clone": true,
+    "network_disabled": true,
+    "container_root_read_only": true,
+    "source_mount_read_only": true,
+    "checkout_clean": true,
+    "exit_status": 0,
+    "verifier_result": "PASS",
+    "tests_passed": 34,
+    "tests_failed": 0,
+    "scope": "Exact bfe verifier and committed 34-test suite only"
+  },
+  "verified_facts": [
+    "The bfe implementation commit is an SSH-signed child of the approved 2bfc source cut with the declared tree, author, committer, subject, and allowed key fingerprint.",
+    "The deterministic 22-path implementation diff has the declared patch, name-status, numstat, byte, line, insertion, deletion, and binary identities.",
+    "All retained E03 through E06 compressed and uncompressed identities recomputed exactly; every retained JSON file parsed without duplicate keys or non-standard constants.",
+    "The current requirements ledger contains exactly 126 OPEN tasks, no closure commit, no mutable task evidence, and overall NO_GO.",
+    "The bfe verifier and all 34 committed adversarial tests pass in R02's fresh object-isolated, clean, network-disabled, read-only Linux reproduction.",
+    "The author is Sepehr Mahmoudian; persistent_identifier is null; no DOI or Zenodo identifier is claimed; the retained publication-state capture reports no local tags, remote tags, or GitHub releases."
+  ],
+  "blockers": [
+    {
+      "id": "CH-T000-R02-B01",
+      "severity": "P0",
+      "applies_to": "QUALIFICATION_PROCESS",
+      "status": "CANDIDATE_RESOLUTION_PRESENT_PENDING_SIGNED_B",
+      "finding": "HANDOFF-ERRATA.md alone did not explicitly amend T000's line-by-line, pre-edit, and pre-approval chronology. The new qualification amendment directly labels those clauses amended rather than satisfied, limits the exception to the bootstrap tasks, preserves CH-T001/CH-T002 full-file and assignment obligations, and blocks CH-T003 until they are complete.",
+      "candidate_resolution_evidence": "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md sha256=550276a5d533e79784868f1125ee95c7df2b114f48e92cc3d989aa6cbd7ea6b7 (3915 bytes, 71 lines), reviewed as unsigned worktree candidate content only.",
+      "required_resolution": "Include the exact reviewed amendment in signed B, bind it in C, and recheck that the signed bytes and surrounding review claims preserve the same narrow semantics.",
+      "closure_effect": "BLOCKS_QUALIFICATION_ACTIVATION_UNTIL_SIGNED_AND_BOUND"
+    },
+    {
+      "id": "CH-T000-R02-B02",
+      "severity": "P0",
+      "applies_to": "BFE_REVIEW_COVERAGE",
+      "finding": "R02 bound the complete bfe diff identity but did not independently perform or retain a new line-by-line semantic review of all 22 changed paths; the existing main review only asserts earlier automated contexts did so.",
+      "required_resolution": "Retain the actual R01/R02 changed-line reports with exact scope and limitations, or narrow the independent-review claim. Do not infer a complete line review from a patch hash.",
+      "closure_effect": "BLOCKS_CLAIM_OF_COMPLETE_INDEPENDENT_LINE_REVIEW"
+    },
+    {
+      "id": "CH-T000-R02-B03",
+      "severity": "P0",
+      "applies_to": "E03_PROVENANCE",
+      "status": "RESOLVED_BY_REPLACEMENT_EVIDENCE",
+      "finding": "The initial E03 raw log omitted the detached HEAD, tree, clean status, tool-version prologue, and proof that no ignored target cache predated the gate. The sole decisive replacement is a fresh detached worktree run whose raw transcript directly retains its path, exact HEAD/tree, empty status section, TARGET_PRESENT_BEFORE_GATE=no, tool versions, command, and complete 31/31 output under direct stdout/stderr redirection.",
+      "non_decisive_attempts": [
+        "A wrapper attempt failed before the gate because it used a reserved zsh variable.",
+        "A wrapper attempt lost its trustworthy terminal/session status and was discarded.",
+        "A status-0 capture used a worktree with an ignored target cache and was discarded.",
+        "A wrong-working-directory attempt ran against the dirty main worktree, returned status 1, and was discarded."
+      ],
+      "attempt_interpretation": "The four discarded wrapper attempts are neither product/gate failures nor evidence passes. They are non-decisive capture-procedure history; none is retained or cited as proof.",
+      "resolution_evidence": "E03 metadata sha256=513096a816e24220c7d18f31290faa54546fd60670479ba7f45bada01a0befaf (2545 bytes, 46 lines); gzip sha256=417bde0ef2f6dd0f9ce59b95c4e209d15160ea5ae6ddbd63218bdc07ec307933 (20907 bytes); raw sha256=1b68e1fd069d312ef39d293a40bee3a0f911dcf55336dcd897893382e4be1e3a (133101 bytes, 2464 lines); worktree=/private/tmp/haldir-bfe0b13-e03-final-clean; target absent before gate; started=2026-07-14T16:50:28Z; completed=2026-07-14T16:55:52Z; exit_status=0; 31 passed, 0 failed.",
+      "required_resolution": "None for the original E03 provenance defect. C must still bind these exact replacement identities rather than the superseded E03 bytes.",
+      "closure_effect": "NONE_ORIGINAL_EVIDENCE_DEFECT_RESOLVED"
+    },
+    {
+      "id": "CH-T000-R02-B04",
+      "severity": "P0",
+      "applies_to": "E05_E06_CAPTURE_PROVENANCE",
+      "status": "EVIDENCE_DEFECT_RESOLVED_PENDING_C_BINDING",
+      "finding": "The hosted artifacts were recaptured with typed ordinary-metadata gh-to-jq, attempt-metadata gh, log-download gh, gzip, and cmp operations. CI capture ran 2026-07-14T16:35:02Z through 2026-07-14T16:35:12Z; formal capture ran 2026-07-14T16:35:12Z through 2026-07-14T16:35:18Z. Every operation exited 0 and the recaptured retained bytes compared exactly equal. The evidence-layer defect is resolved, but the changing main review and unsigned C candidate have not yet immutably bound these typed operations.",
+      "required_resolution": "Bind the exact typed capture operations, timestamps, exit statuses, retained identities, and equality results in the final main C review; independently verify those bindings against the signed C bytes.",
+      "closure_effect": "BLOCKS_FINAL_C_REVIEW_BINDING_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B05",
+      "severity": "P0",
+      "applies_to": "E04_BINDINGS",
+      "finding": "The earlier E04 sidecar was lead-run while the main review described R02 reproduction. R02 has now replaced it with an actual independent automated run, so every old E04 digest, size, line count, runner field, and expected schema in the main review, qualification, and verifier is stale.",
+      "required_resolution": "Bind the new E04 metadata/log identities exactly and identify runner_id=/root/t000_final_audit and reviewer_id=CH-T000-R02 without implying named-human or release-authority status.",
+      "closure_effect": "BLOCKS_CURRENT_QUALIFICATION_VERIFICATION"
+    },
+    {
+      "id": "CH-T000-R02-B06",
+      "severity": "P0",
+      "applies_to": "REVIEW_PROVENANCE",
+      "finding": "The main review labels R02 NO_COMMIT_BLOCKERS and refers to an unretained run; this report instead has unresolved blockers and retains the actual run. No separately retained R01 report was present at audit time.",
+      "required_resolution": "Replace the stale R02 disposition with PENDING_RESOLUTION until every item here is closed, bind this report, and retain the actual R01 report. Automated reports must remain explicitly non-human.",
+      "closure_effect": "BLOCKS_INDEPENDENT_REVIEW_DISPOSITION"
+    },
+    {
+      "id": "CH-T000-R02-B07",
+      "severity": "P0",
+      "applies_to": "FRAMEWORK_REVIEW_SCOPE",
+      "finding": "The main review_scope covers only 2bfc..bfe, while the qualification framework adds thousands of verifier/test/profiler lines and lifecycle logic that are themselves CH-T000 closure-critical.",
+      "required_resolution": "Freeze and independently review the exact signed framework diff, retain patch/tree/file identities and reports, then rerun the final audit after concurrent editing stops.",
+      "closure_effect": "BLOCKS_FRAMEWORK_QUALIFICATION"
+    },
+    {
+      "id": "CH-T000-R02-B08",
+      "severity": "P0",
+      "applies_to": "QUALIFICATION_FILE_IDENTITIES",
+      "finding": "At the audited snapshot, CH-T000-qualification.json bound an obsolete CH-T000.json hash/size/line count and obsolete E04 identities.",
+      "required_resolution": "Recompute every path/hash/byte/line record only after all bound artifacts are final; strict-parse and recursively recheck every binding before signing.",
+      "closure_effect": "BLOCKS_QUALIFICATION_VERIFIER"
+    },
+    {
+      "id": "CH-T000-R02-B09",
+      "severity": "P0",
+      "applies_to": "RESOURCE_EVIDENCE",
+      "finding": "CH-T000-E07 was referenced but absent, and RE05 remained PENDING at the audited snapshot.",
+      "required_resolution": "Generate and bind E07 only against the final stable framework verifier, require overall_pass=true, and reject any pending or dangling E07 reference.",
+      "closure_effect": "BLOCKS_QUALIFICATION_SIGNING"
+    },
+    {
+      "id": "CH-T000-R02-B10",
+      "severity": "P0",
+      "applies_to": "RESOURCE_PROFILE_COVERAGE",
+      "finding": "The initial profiler covered only five reader/decompression/Git-stdout limits and ten cases. It omitted ZIP entry/aggregate maxima, Git stderr, end-to-end valid JSON/requirements parsing at maxima, a valid gzip at the compressed maximum, and an explicit timeout-profile disposition.",
+      "required_resolution": "Profile exact and max-plus-one behavior for every declared maximum with non-confounding fixtures and timing samples; cover both Git streams and ZIP bounds; distinguish primitive-reader timings from end-to-end parsing; either profile the declared timeout or explicitly leave that evidence item partial.",
+      "closure_effect": "BLOCKS_RE05_AND_L10_RESOLUTION"
+    },
+    {
+      "id": "CH-T000-R02-B11",
+      "severity": "P0",
+      "applies_to": "VERIFIER_INTEGRATION",
+      "finding": "During the audited snapshot, the public verify() path still returned OK without invoking the new CH-T000 qualification verifier.",
+      "required_resolution": "Integrate stage-aware qualification verification in the public gate and prove a missing, malformed, or contradictory qualification fails in the stages where it is mandatory while the earlier framework-only stage remains explicitly dormant.",
+      "closure_effect": "BLOCKS_ANY_QUALIFICATION_CLAIM"
+    },
+    {
+      "id": "CH-T000-R02-B12",
+      "severity": "P0",
+      "applies_to": "L10_L11_IMPLEMENTATION",
+      "finding": "R02 found post-hoc subprocess PIPE bounds, verify-then-reread JSON races, path-swap races, and profiler path-import ABA risk. Fixes were edited concurrently during this audit but were not a stable candidate that R02 could finally certify.",
+      "required_resolution": "On the final framework, prove bounded concurrent stdout/stderr capture with descendant process-group cleanup, descriptor-stable no-follow reads, parsing of the exact digest-checked bytes, exact profiler snapshot execution, and adversarial regressions for each defect.",
+      "closure_effect": "PENDING_FINAL_REAUDIT"
+    },
+    {
+      "id": "CH-T000-R02-B13",
+      "severity": "P0",
+      "applies_to": "CONTRADICTORY_SEMANTICS",
+      "finding": "Critical governance fields such as qualification scope, public-claim text, limitations, lens claim impact, deviation resolution, and effective-only-when were accepted as arbitrary nonempty strings, permitting valid syntax with typed NO_GO flags but contradictory public-authority prose.",
+      "required_resolution": "Use closed enums/booleans or exact pinned strings for critical claim and authority semantics and add a contradictory-prose mutation test.",
+      "closure_effect": "BLOCKS_CF01_N06_AND_L19_RESOLUTION"
+    },
+    {
+      "id": "CH-T000-R02-B14",
+      "severity": "P0",
+      "applies_to": "EVIDENCE_SCOPE",
+      "finding": "qualification_verifier_boundary correctly said E04 covered only the bfe verifier/34 tests, while RE03, RE04, and several lenses cited E04 as evidence for the later qualification/review mutation suite.",
+      "required_resolution": "Mark new-framework checks pending until exact signed-framework evidence exists; never use bfe E04 as proof of later code.",
+      "closure_effect": "BLOCKS_NEW_FRAMEWORK_EVIDENCE_CLAIMS"
+    },
+    {
+      "id": "CH-T000-R02-B15",
+      "severity": "P0",
+      "applies_to": "LEAD_APPROVAL_PROVENANCE",
+      "finding": "The lead-approval timestamp approved only control IDs, while their content and cases changed afterward; IDs did not bind the approved bytes.",
+      "required_resolution": "Bind a canonical digest of the final controls/cases and final approval time, or define approval as effected by the signed qualification commit.",
+      "closure_effect": "BLOCKS_CLAIM_OF_APPROVAL_FOR_CURRENT_CONTROLS"
+    },
+    {
+      "id": "CH-T000-R02-B16",
+      "severity": "P1",
+      "applies_to": "DECISION_SCHEMA",
+      "finding": "The qualification simultaneously said CH-T000 was OPEN and next_open_task was CH-T001.",
+      "required_resolution": "Represent current blocking task as CH-T000 and use a distinct next_task_eligible_after_activation field for CH-T001.",
+      "closure_effect": "BLOCKS_SEMANTIC_CONSISTENCY"
+    },
+    {
+      "id": "CH-T000-R02-B17",
+      "severity": "P0",
+      "applies_to": "QUALIFICATION_ACTIVATION_STATE_MACHINE",
+      "finding": "A two-stage design that introduced terminal verification or terminal tests in the activation commit would self-qualify the transition and violate crash-consistency controls.",
+      "required_resolution": "Use the B/C/D design below: signed framework B with dormant tested logic and all OPEN; signed data-only qualification C binding exact B evidence and all OPEN; signed data-only activation D under unchanged B code with exact C evidence and only CH-T000 VERIFIED.",
+      "closure_effect": "BLOCKS_ACTIVATION_UNTIL_ENFORCED"
+    },
+    {
+      "id": "CH-T000-R02-B18",
+      "severity": "P0",
+      "applies_to": "CLOSURE_COMMIT_SEMANTICS",
+      "finding": "CF09 said closure_commit must contain every bound artifact even though post-qualification activation evidence cannot be contained in the earlier qualification commit.",
+      "required_resolution": "Define closure_commit as exact qualification commit C; require signed activation D to contain and bind post-C evidence separately; do not assert C contains D-era artifacts.",
+      "closure_effect": "BLOCKS_CF09_CONSISTENCY"
+    },
+    {
+      "id": "CH-T000-R02-B19",
+      "severity": "P0",
+      "applies_to": "REVOCATION_AND_ROLLBACK",
+      "finding": "The rollback plan reopened only CH-T000 and did not invalidate transitively dependent task closures if a defect were discovered after later tasks closed.",
+      "required_resolution": "Enforce a VERIFIED dependency-closed prefix. A signed forward revocation of task j must preserve earlier verified tasks, reopen j through the last verified descendant, leave later tasks OPEN, force NO_GO, retain all historical evidence, and bind an append-only revocation record. task0 OPEN must forbid any later terminal task.",
+      "closure_effect": "BLOCKS_LIFECYCLE_RESOLUTION"
+    },
+    {
+      "id": "CH-T000-R02-B20",
+      "severity": "P0",
+      "applies_to": "B_C_D_DIFF_INVARIANTS",
+      "finding": "Calling C or D data-only is insufficient unless immutable Git history proves exact path and code-blob equality.",
+      "required_resolution": "B must be a signed exact child of bfe with a closed framework-path diff and no qualifier. C must be a signed exact child of B with a closed data-path diff, unchanged code/workflow/integration blobs, all OPEN, and exact bfe+B qualification evidence. D must be a signed exact child of C with another closed data-path diff, unchanged framework and C qualification bytes, exact activation evidence, only task0 VERIFIED, later tasks OPEN, and NO_GO.",
+      "closure_effect": "BLOCKS_STAGE_AUTHENTICITY"
+    },
+    {
+      "id": "CH-T000-R02-B21",
+      "severity": "P1",
+      "applies_to": "FILESYSTEM_CONTAINMENT",
+      "finding": "Final-component O_NOFOLLOW and stable descriptors do not by themselves prevent an ancestor directory component from being swapped to a symlink between a component check and open.",
+      "required_resolution": "Either traverse repository-relative components with no-follow openat directory descriptors or narrow the concurrency/symlink claim to the tested final-component threat model.",
+      "closure_effect": "BLOCKS_UNQUALIFIED_FULL_PATH_RACE_CLAIM"
+    },
+    {
+      "id": "CH-T000-R02-B22",
+      "severity": "P1",
+      "applies_to": "RESOURCE_PROFILE_PROVENANCE",
+      "finding": "Timing evidence without CPU/core/memory context is not comparable, and the profiler's own git --version subprocess initially used unbounded PIPE capture.",
+      "required_resolution": "Record sufficient hardware/runtime context or explicitly label timings diagnostic and non-comparable; bound all profiler subprocess capture or constrain the trust model explicitly.",
+      "closure_effect": "BLOCKS_STRONG_REPRODUCIBLE_PERFORMANCE_CLAIM"
+    },
+    {
+      "id": "CH-T000-R02-B23",
+      "severity": "P0",
+      "applies_to": "FINAL_EVIDENCE_CUT",
+      "finding": "No current uncommitted qualification artifact can be treated as immutable or exact while its verifier, tests, profiler, reports, and bindings are still changing.",
+      "required_resolution": "After B, C, and D respectively exist, verify each signature/parent/diff; run all strict JSON, unit, lint, type, local gate, clean Linux, hosted CI/formal, resource, and mutation checks on the exact named commit; retain the applicable raw evidence in the following data-only stage; then perform one final independent read-only audit.",
+      "closure_effect": "BLOCKS_FINAL_DISPOSITION"
+    }
+  ],
+  "required_state_machine": {
+    "B_FRAMEWORK": {
+      "parent": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "signed": true,
+      "diff": "exact closed 20-path framework allowlist with the exact A/M status for every path",
+      "path_statuses": {
+        ".github/workflows/ci.yml": "M",
+        "README.md": "M",
+        "docs/COMPLETION-CHECKLIST.md": "M",
+        "docs/EVIDENCE-SEMANTICS.md": "M",
+        "docs/LIMITATIONS.md": "M",
+        "docs/PROJECT-CATALOG.md": "M",
+        "docs/ROADMAP-STATUS.md": "M",
+        "docs/galadriels-mirror.md": "M",
+        "docs/release/0.9.0/README.md": "M",
+        "docs/release/0.9.0/THREAT-MODEL.md": "M",
+        "justfile": "M",
+        "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md": "A",
+        "release/0.9.0/current-head/HANDOFF-ERRATA.md": "M",
+        "release/0.9.0/current-head/README.md": "M",
+        "tools/p0r-exit-gate.sh": "M",
+        "tools/release/current-audit-resource-profile.py": "A",
+        "tools/release/current_audit_test_fixtures.py": "A",
+        "tools/release/test_current_audit_resource_profile.py": "A",
+        "tools/release/test_verify_current_audit.py": "M",
+        "tools/release/verify-current-audit.py": "M"
+      },
+      "requirements": "all 126 OPEN; overall NO_GO",
+      "qualification": "absent",
+      "activation": "absent"
+    },
+    "C_QUALIFICATION": {
+      "parent": "exact signed B",
+      "signed": true,
+      "diff": "exact closed data-only qualification/evidence allowlist; every framework blob identical to B",
+      "bindings": "exact bfe+B identities and E01..E06 plus Q01..Q08",
+      "requirements": "all 126 OPEN; overall NO_GO",
+      "activation": "absent"
+    },
+    "D_ACTIVATION": {
+      "parent": "exact signed C",
+      "signed": true,
+      "diff": "exact closed activation/requirements/A-evidence allowlist; framework and C qualification bytes unchanged",
+      "bindings": "activation binds B+C and A01..A05",
+      "task0": "VERIFIED; implementation_commits=[bfe,B]; closure_commit=C; exact E/Q/A evidence and R01..R03; NO_PUBLIC_CLAIM_CHANGE",
+      "later_tasks": "OPEN",
+      "overall_status": "NO_GO"
+    },
+    "POST_D_CONTINUATION": {
+      "immutable_prefix": "Exact signed B, C, and D remain the first three descendants of bfe and retain their original parent, diff, signature, evidence, and terminal-state bindings.",
+      "byte_frozen_paths": [
+        "tools/release/verify-current-audit.py",
+        "tools/release/test_verify_current_audit.py",
+        "tools/release/current-audit-resource-profile.py",
+        "tools/release/test_current_audit_resource_profile.py",
+        "tools/release/current_audit_test_fixtures.py",
+        "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md",
+        "release/0.9.0/current-head/HANDOFF-ERRATA.md"
+      ],
+      "evolvable_integration_paths": [
+        ".github/workflows/ci.yml",
+        "justfile",
+        "tools/p0r-exit-gate.sh"
+      ],
+      "evolvable_hygiene_paths": [
+        "README.md",
+        "docs/COMPLETION-CHECKLIST.md",
+        "docs/EVIDENCE-SEMANTICS.md",
+        "docs/LIMITATIONS.md",
+        "docs/PROJECT-CATALOG.md",
+        "docs/ROADMAP-STATUS.md",
+        "docs/galadriels-mirror.md",
+        "docs/release/0.9.0/README.md",
+        "docs/release/0.9.0/THREAT-MODEL.md",
+        "release/0.9.0/current-head/README.md"
+      ],
+      "integration_retention_rule": "Later-task commits may evolve the three integration paths only while retaining the exact CH-T000 verifier invocation and both CH-T000 test-suite invocations established by B; removal, weakening, or replacement fails closed.",
+      "hygiene_retention_rule": "Later-task commits may evolve the ten non-normative Markdown paths only if the resulting Git-object bytes, retained plain and compressed logs, and commit messages continue to satisfy the bounded neutral-language hygiene check.",
+      "task0_rule": "The exact D terminal state and evidence remain valid in later dependency-closed prefixes unless a valid signed forward revocation applies."
+    },
+    "REVOCATION": {
+      "rule": "VERIFIED tasks form a dependency-closed prefix",
+      "forward_only": true,
+      "history_retained": true,
+      "task0_open_forbids_later_terminal": true,
+      "partial_descendant_reopen_permitted": false
+    }
+  },
+  "disposition": "PENDING_RESOLUTION",
+  "approval": {
+    "technical_task_closure_approved": false,
+    "qualification_signing_approved": false,
+    "activation_approved": false,
+    "named_human_or_release_authority_approval": false,
+    "reason": "The bfe implementation identity and narrow verifier reproduction pass, but the qualification framework, evidence scope, process exceptions, lifecycle state machine, and final exact bindings have unresolved P0 blockers."
+  }
+}

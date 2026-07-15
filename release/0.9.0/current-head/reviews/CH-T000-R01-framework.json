@@ -1,0 +1,1450 @@
+{
+  "schema_version": "1.0.0",
+  "record_id": "CH-T000-R01-SIGNED-FRAMEWORK-REVIEW",
+  "task_id": "CH-T000",
+  "source_task_id": "T000",
+  "release_target": "0.9.0",
+  "persistent_identifier": null,
+  "classification": "AUTOMATED_SUPPORTING_REVIEW_ONLY",
+  "reviewer": {
+    "id": "CH-T000-R01",
+    "agent_task_path": "/root",
+    "role": "primary exact changed-line and context reviewer",
+    "human": false,
+    "named_human_approver": false,
+    "security_certifier": false,
+    "release_approver": false
+  },
+  "reviewed_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+  "reviewed_tree": "fd6208746545dc249d6b1e41d6d023e7775407e7",
+  "reviewed_parent": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+  "review_started_at_utc": "2026-07-15T10:27:02Z",
+  "review_completed_at_utc": "2026-07-15T10:27:07Z",
+  "immutable_scope": {
+    "kind": "EXACT_BFE_AND_FRAMEWORK_CHANGED_LINE_CONTEXT_AND_BINARY_REVIEW",
+    "reviewed_diffs": [
+      {
+        "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+        "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+        "tree": "02b19c32ab61e76ff217dacaef974f6dfc7b59e4",
+        "path_statuses": {
+          ".github/workflows/ci.yml": "M",
+          "README.md": "M",
+          "docs/release/0.9.0/README.md": "M",
+          "justfile": "M",
+          "release/0.9.0/current-head/HANDOFF-ERRATA.md": "A",
+          "release/0.9.0/current-head/README.md": "A",
+          "release/0.9.0/current-head/audit-inputs.json": "A",
+          "release/0.9.0/current-head/evidence/publication-state.json": "A",
+          "release/0.9.0/current-head/evidence/source-cut-ci.json": "A",
+          "release/0.9.0/current-head/evidence/source-cut-ci.log.gz": "A",
+          "release/0.9.0/current-head/evidence/source-cut-formal.json": "A",
+          "release/0.9.0/current-head/evidence/source-cut-formal.log.gz": "A",
+          "release/0.9.0/current-head/evidence/source-cut-p0r.log.gz": "A",
+          "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip": "A",
+          "release/0.9.0/current-head/handoff/MASTER_CURRENT_HEADS.json": "A",
+          "release/0.9.0/current-head/handoff/MASTER_SHA256SUMS.txt": "A",
+          "release/0.9.0/current-head/handoff/PACKAGE_INDEX.json": "A",
+          "release/0.9.0/current-head/handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip": "A",
+          "release/0.9.0/current-head/requirements.json": "A",
+          "tools/p0r-exit-gate.sh": "M",
+          "tools/release/test_verify_current_audit.py": "A",
+          "tools/release/verify-current-audit.py": "A"
+        },
+        "patch_sha256": "3fb81eb3b18ae3c2a5352c2a541cf8f14020e37508aa8a8b8587a24ca8f551cc",
+        "patch_bytes": 427414,
+        "patch_lines": 9544,
+        "reviewed_paths": 22,
+        "reviewed_text_additions": 6661,
+        "reviewed_text_deletions": 7,
+        "reviewed_binary_files": 5
+      },
+      {
+        "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+        "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+        "tree": "fd6208746545dc249d6b1e41d6d023e7775407e7",
+        "path_statuses": {
+          ".github/workflows/ci.yml": "M",
+          "README.md": "M",
+          "docs/COMPLETION-CHECKLIST.md": "M",
+          "docs/EVIDENCE-SEMANTICS.md": "M",
+          "docs/LIMITATIONS.md": "M",
+          "docs/PROJECT-CATALOG.md": "M",
+          "docs/ROADMAP-STATUS.md": "M",
+          "docs/galadriels-mirror.md": "M",
+          "docs/release/0.9.0/README.md": "M",
+          "docs/release/0.9.0/THREAT-MODEL.md": "M",
+          "justfile": "M",
+          "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md": "A",
+          "release/0.9.0/current-head/HANDOFF-ERRATA.md": "M",
+          "release/0.9.0/current-head/README.md": "M",
+          "tools/p0r-exit-gate.sh": "M",
+          "tools/release/current-audit-gate.sh": "A",
+          "tools/release/current-audit-resource-profile.py": "A",
+          "tools/release/current_audit_test_fixtures.py": "A",
+          "tools/release/test_current_audit_resource_profile.py": "A",
+          "tools/release/test_verify_current_audit.py": "M",
+          "tools/release/verify-current-audit.py": "M"
+        },
+        "patch_sha256": "98806174c4767919ed12715dc7fa684e4cb1306c245ba3e33ab47e4c9f31df47",
+        "patch_bytes": 767446,
+        "patch_lines": 18001,
+        "reviewed_paths": 21,
+        "reviewed_text_additions": 17028,
+        "reviewed_text_deletions": 295,
+        "reviewed_binary_files": 0
+      }
+    ],
+    "unchanged_context_paths": [
+      "release/0.9.0/current-head/audit-inputs.json",
+      "release/0.9.0/current-head/requirements.json",
+      "release/0.9.0/allowed-signers",
+      ".github/workflows/formal.yml",
+      "tools/pins.toml"
+    ]
+  },
+  "path_reviews": [
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": ".github/workflows/ci.yml",
+      "status": "M",
+      "text_additions": 4,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": ".github/workflows/ci.yml",
+        "sha256": "c2d29035d5d546539459d9ec91271bb45f60a9576de52bce1f1a4d4a432a61de",
+        "bytes": 6099,
+        "lines": 146
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "README.md",
+      "status": "M",
+      "text_additions": 3,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "README.md",
+        "sha256": "2b24cf4d957e467550640c4b575a41364007d8e56eb14def52fa850dfa58991d",
+        "bytes": 19968,
+        "lines": 275
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "docs/release/0.9.0/README.md",
+      "status": "M",
+      "text_additions": 13,
+      "text_deletions": 7,
+      "hunks": 4,
+      "binary": false,
+      "blob": {
+        "path": "docs/release/0.9.0/README.md",
+        "sha256": "a2a10d29d91bd2c06c03842f3c5cc332b62c112f6d5bd8198b00ec3a85c18938",
+        "bytes": 5900,
+        "lines": 104
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "justfile",
+      "status": "M",
+      "text_additions": 4,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "justfile",
+        "sha256": "cdb75d7441d3a4af6494a2cecc2b57bb21511f6c10b7ef2916c73091f4edaa9a",
+        "bytes": 2475,
+        "lines": 92
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/HANDOFF-ERRATA.md",
+      "status": "A",
+      "text_additions": 91,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/HANDOFF-ERRATA.md",
+        "sha256": "066215493910c8d6e04a3fcb48476fb0c46192a889410b605c66fc506492365a",
+        "bytes": 4488,
+        "lines": 91
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/README.md",
+      "status": "A",
+      "text_additions": 38,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/README.md",
+        "sha256": "1ad57f3d9efc199793af385fde0e2bba249ff98ecbc5a7a92898b7869868e9f3",
+        "bytes": 2023,
+        "lines": 38
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/audit-inputs.json",
+      "status": "A",
+      "text_additions": 363,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/audit-inputs.json",
+        "sha256": "06dbb9a9656bae39aa209f9c602577d45a7167f68f0f064a687701e56c4517eb",
+        "bytes": 13379,
+        "lines": 363
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/evidence/publication-state.json",
+      "status": "A",
+      "text_additions": 20,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/evidence/publication-state.json",
+        "sha256": "2cd20381ce5001bdc36b080bfc0a887b06c6215e3c481a90f351353038e9dba1",
+        "bytes": 530,
+        "lines": 20
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/evidence/source-cut-ci.json",
+      "status": "A",
+      "text_additions": 512,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/evidence/source-cut-ci.json",
+        "sha256": "55817853d79845b38141f9cc6ca0f25d2c05b9ebff3c815bf153ed625326daf1",
+        "bytes": 16469,
+        "lines": 512
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/evidence/source-cut-ci.log.gz",
+      "status": "A",
+      "text_additions": null,
+      "text_deletions": null,
+      "hunks": 0,
+      "binary": true,
+      "blob": {
+        "path": "release/0.9.0/current-head/evidence/source-cut-ci.log.gz",
+        "sha256": "c7bd25803990b4bf314b06091f775476fba60b6cde9f83fed2ce11b60c97f6f5",
+        "bytes": 65961
+      },
+      "review_completed": true,
+      "review_method": "BOUNDED_BINARY_PARSER_AND_EXACT_BLOB_IDENTITY",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/evidence/source-cut-formal.json",
+      "status": "A",
+      "text_additions": 97,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/evidence/source-cut-formal.json",
+        "sha256": "dd09e6df9702e7017cab4489e0f98b768481d2ae35b01e2d4266acd055789378",
+        "bytes": 3023,
+        "lines": 97
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/evidence/source-cut-formal.log.gz",
+      "status": "A",
+      "text_additions": null,
+      "text_deletions": null,
+      "hunks": 0,
+      "binary": true,
+      "blob": {
+        "path": "release/0.9.0/current-head/evidence/source-cut-formal.log.gz",
+        "sha256": "854b9eb9c482d43277e1f554e58b875198ce2efad586443466f7bc02666165d7",
+        "bytes": 5664
+      },
+      "review_completed": true,
+      "review_method": "BOUNDED_BINARY_PARSER_AND_EXACT_BLOB_IDENTITY",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/evidence/source-cut-p0r.log.gz",
+      "status": "A",
+      "text_additions": null,
+      "text_deletions": null,
+      "hunks": 0,
+      "binary": true,
+      "blob": {
+        "path": "release/0.9.0/current-head/evidence/source-cut-p0r.log.gz",
+        "sha256": "53d3bcba011be9ac83bbf4975080ff27b33bbf17a99ca2179026e0071ed7f1dc",
+        "bytes": 20018
+      },
+      "review_completed": true,
+      "review_method": "BOUNDED_BINARY_PARSER_AND_EXACT_BLOB_IDENTITY",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+      "status": "A",
+      "text_additions": null,
+      "text_deletions": null,
+      "hunks": 0,
+      "binary": true,
+      "blob": {
+        "path": "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+        "sha256": "1de5cfc2a577621c24ef10e97fd2319799d02b602cfb3de54954928a0d988efe",
+        "bytes": 43202
+      },
+      "review_completed": true,
+      "review_method": "BOUNDED_BINARY_PARSER_AND_EXACT_BLOB_IDENTITY",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/handoff/MASTER_CURRENT_HEADS.json",
+      "status": "A",
+      "text_additions": 11,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/handoff/MASTER_CURRENT_HEADS.json",
+        "sha256": "dc393b47bac804fa9dd47215e6eced584d0b6863cf57b383ff5957bcbae4bbf6",
+        "bytes": 402,
+        "lines": 11
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/handoff/MASTER_SHA256SUMS.txt",
+      "status": "A",
+      "text_additions": 13,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/handoff/MASTER_SHA256SUMS.txt",
+        "sha256": "0d4d1c19600bd8e5d930cb269fcaa204e80e9728914572664af7961566d3ba57",
+        "bytes": 1356
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/handoff/PACKAGE_INDEX.json",
+      "status": "A",
+      "text_additions": 41,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/handoff/PACKAGE_INDEX.json",
+        "sha256": "cec6b200866b0a34473c4429c74137c87790c1fe073a19453ed79e147e32411d",
+        "bytes": 1345,
+        "lines": 41
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip",
+      "status": "A",
+      "text_additions": null,
+      "text_deletions": null,
+      "hunks": 0,
+      "binary": true,
+      "blob": {
+        "path": "release/0.9.0/current-head/handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip",
+        "sha256": "ae06b5525537e88de4ae37aa49b40de01893061bdc3096bcf1059c5c6d71e3d4",
+        "bytes": 11647
+      },
+      "review_completed": true,
+      "review_method": "BOUNDED_BINARY_PARSER_AND_EXACT_BLOB_IDENTITY",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "release/0.9.0/current-head/requirements.json",
+      "status": "A",
+      "text_additions": 3820,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/requirements.json",
+        "sha256": "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40",
+        "bytes": 122010,
+        "lines": 3820
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "tools/p0r-exit-gate.sh",
+      "status": "M",
+      "text_additions": 4,
+      "text_deletions": 0,
+      "hunks": 3,
+      "binary": false,
+      "blob": {
+        "path": "tools/p0r-exit-gate.sh",
+        "sha256": "370f8edd04c72e94a1fb9aecaf980743904d709cc19717c9a1cd5d26757fc2ac",
+        "bytes": 4013,
+        "lines": 88
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "tools/release/test_verify_current_audit.py",
+      "status": "A",
+      "text_additions": 288,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "5275c7e83895831faff707ecef8c145d32c8ac511aa640720963c173563cd656",
+        "bytes": 11995,
+        "lines": 288
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path": "tools/release/verify-current-audit.py",
+      "status": "A",
+      "text_additions": 1339,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "573a18ab664fe381707fa901e7d90ffdd328439e880d3d23da9118547663723e",
+        "bytes": 52277,
+        "lines": 1339
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": ".github/workflows/ci.yml",
+      "status": "M",
+      "text_additions": 19,
+      "text_deletions": 4,
+      "hunks": 4,
+      "binary": false,
+      "blob": {
+        "path": ".github/workflows/ci.yml",
+        "sha256": "dabd674e79262f8684b3cda91ef3df906abea070bbd675a5e8a70d049fb6984b",
+        "bytes": 6802,
+        "lines": 161
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "README.md",
+      "status": "M",
+      "text_additions": 3,
+      "text_deletions": 3,
+      "hunks": 3,
+      "binary": false,
+      "blob": {
+        "path": "README.md",
+        "sha256": "2044c3a84a1f35087769f5e6c67fbf01c1c4179958a4ce6d50734b60c63ff4fa",
+        "bytes": 19976,
+        "lines": 275
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/COMPLETION-CHECKLIST.md",
+      "status": "M",
+      "text_additions": 1,
+      "text_deletions": 1,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "docs/COMPLETION-CHECKLIST.md",
+        "sha256": "e8c3578841adf8640cba332bc12c341c48e615e901d1129813f36aa63d553e9b",
+        "bytes": 11249,
+        "lines": 161
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/EVIDENCE-SEMANTICS.md",
+      "status": "M",
+      "text_additions": 3,
+      "text_deletions": 3,
+      "hunks": 3,
+      "binary": false,
+      "blob": {
+        "path": "docs/EVIDENCE-SEMANTICS.md",
+        "sha256": "e71fe14e6dc127da855b2dcfb550c34b62f94539855717a0d892ea24d6be97b6",
+        "bytes": 18676,
+        "lines": 245
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/LIMITATIONS.md",
+      "status": "M",
+      "text_additions": 2,
+      "text_deletions": 2,
+      "hunks": 2,
+      "binary": false,
+      "blob": {
+        "path": "docs/LIMITATIONS.md",
+        "sha256": "0ffe4546f08d38de3ec66dd66d3c17510627cb8ee7e382bd2d646a1e880b5770",
+        "bytes": 33632,
+        "lines": 420
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/PROJECT-CATALOG.md",
+      "status": "M",
+      "text_additions": 7,
+      "text_deletions": 7,
+      "hunks": 7,
+      "binary": false,
+      "blob": {
+        "path": "docs/PROJECT-CATALOG.md",
+        "sha256": "29959ca1c4287f228a04949cc07ac376e2ef65ea46f21b03635dd4bb35e4717b",
+        "bytes": 85175,
+        "lines": 516
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/ROADMAP-STATUS.md",
+      "status": "M",
+      "text_additions": 1,
+      "text_deletions": 1,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "docs/ROADMAP-STATUS.md",
+        "sha256": "1271e77bc71b8cb7693a4af1467ded9569511e1d338741355275fe738f499bd9",
+        "bytes": 19234,
+        "lines": 149
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/galadriels-mirror.md",
+      "status": "M",
+      "text_additions": 1,
+      "text_deletions": 2,
+      "hunks": 2,
+      "binary": false,
+      "blob": {
+        "path": "docs/galadriels-mirror.md",
+        "sha256": "4b9a85b555376c7b20a730438d8f985ea5899d2926077a0ba66406c1790d6a7a",
+        "bytes": 74016,
+        "lines": 435
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/release/0.9.0/README.md",
+      "status": "M",
+      "text_additions": 3,
+      "text_deletions": 3,
+      "hunks": 2,
+      "binary": false,
+      "blob": {
+        "path": "docs/release/0.9.0/README.md",
+        "sha256": "70b5df14c03c4dbd492c751b57877ef5ff599adf7812bbf5dddff73161c0af5b",
+        "bytes": 5893,
+        "lines": 104
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "docs/release/0.9.0/THREAT-MODEL.md",
+      "status": "M",
+      "text_additions": 1,
+      "text_deletions": 1,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "docs/release/0.9.0/THREAT-MODEL.md",
+        "sha256": "3729926a75031e8fcc4d3ca805c13e66ab8850b9995bb80b73842f78e24c974a",
+        "bytes": 19504,
+        "lines": 321
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "justfile",
+      "status": "M",
+      "text_additions": 4,
+      "text_deletions": 4,
+      "hunks": 3,
+      "binary": false,
+      "blob": {
+        "path": "justfile",
+        "sha256": "e96971c4caae3a209bbb52b073bb18116f71eb774ea29dfc55ee824de939186a",
+        "bytes": 2693,
+        "lines": 92
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md",
+      "status": "A",
+      "text_additions": 71,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md",
+        "sha256": "550276a5d533e79784868f1125ee95c7df2b114f48e92cc3d989aa6cbd7ea6b7",
+        "bytes": 3915,
+        "lines": 71
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "release/0.9.0/current-head/HANDOFF-ERRATA.md",
+      "status": "M",
+      "text_additions": 4,
+      "text_deletions": 4,
+      "hunks": 2,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/HANDOFF-ERRATA.md",
+        "sha256": "231faa39599c4806d5240340f7d569e7672b985b589fd2d42c2fa9d227c13880",
+        "bytes": 4497,
+        "lines": 91
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "release/0.9.0/current-head/README.md",
+      "status": "M",
+      "text_additions": 128,
+      "text_deletions": 7,
+      "hunks": 4,
+      "binary": false,
+      "blob": {
+        "path": "release/0.9.0/current-head/README.md",
+        "sha256": "d2694262aec3bcf29b762341e410cfd9c1db0149916774ab2dca1c9400aae011",
+        "bytes": 9087,
+        "lines": 159
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/p0r-exit-gate.sh",
+      "status": "M",
+      "text_additions": 3,
+      "text_deletions": 4,
+      "hunks": 4,
+      "binary": false,
+      "blob": {
+        "path": "tools/p0r-exit-gate.sh",
+        "sha256": "8238fd229ffd1e95da26787d793af73523f6980cd6430ec220bd4fa2632e5a64",
+        "bytes": 3977,
+        "lines": 87
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/release/current-audit-gate.sh",
+      "status": "A",
+      "text_additions": 14,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "0201235128c932b54babe6c9fd03fe5f0977916a05bda07e10fc065009b6bd05",
+        "bytes": 485,
+        "lines": 14
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/release/current-audit-resource-profile.py",
+      "status": "A",
+      "text_additions": 2387,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/current-audit-resource-profile.py",
+        "sha256": "aff4af99dafd4ecdc2bf3369368fc8b0f5c885458b8a6de8da1b481535cd75db",
+        "bytes": 90962,
+        "lines": 2387
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/release/current_audit_test_fixtures.py",
+      "status": "A",
+      "text_additions": 374,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/current_audit_test_fixtures.py",
+        "sha256": "9f04237dda41d46670cb4d8963606b9b6fe0e12a386a9780d0869cf12c48324b",
+        "bytes": 11477,
+        "lines": 374
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/release/test_current_audit_resource_profile.py",
+      "status": "A",
+      "text_additions": 1136,
+      "text_deletions": 0,
+      "hunks": 1,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/test_current_audit_resource_profile.py",
+        "sha256": "161e7e0945953b3f2295f9d0eed79f7ed17e6503ed4d1b40f73fbe1637206c05",
+        "bytes": 48451,
+        "lines": 1136
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/release/test_verify_current_audit.py",
+      "status": "M",
+      "text_additions": 2797,
+      "text_deletions": 52,
+      "hunks": 20,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "34e58839c1d5b5482a8c4bc64fc949e2d9ddbe2e62af4518b2b2c59e4791fa19",
+        "bytes": 133026,
+        "lines": 3033
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    },
+    {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/release/verify-current-audit.py",
+      "status": "M",
+      "text_additions": 10069,
+      "text_deletions": 197,
+      "hunks": 68,
+      "binary": false,
+      "blob": {
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "5e20752cef892fa6773e1de9429d6bf2ad8e2ba30dffda4e6981dd6264bfa631",
+        "bytes": 446907,
+        "lines": 11211
+      },
+      "review_completed": true,
+      "review_method": "EVERY_CHANGED_TEXT_LINE_WITH_RELEVANT_UNCHANGED_CONTEXT",
+      "unchanged_context_considered": true,
+      "finding_ids": []
+    }
+  ],
+  "unchanged_context_reviews": [
+    {
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "release/0.9.0/current-head/audit-inputs.json",
+      "sha256": "06dbb9a9656bae39aa209f9c602577d45a7167f68f0f064a687701e56c4517eb",
+      "bytes": 13379,
+      "lines": 363,
+      "review_completed": true,
+      "review_method": "LINE_BY_LINE_NORMATIVE_AND_EXECUTION_CONTEXT_REVIEW",
+      "finding_ids": []
+    },
+    {
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "release/0.9.0/current-head/requirements.json",
+      "sha256": "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40",
+      "bytes": 122010,
+      "lines": 3820,
+      "review_completed": true,
+      "review_method": "LINE_BY_LINE_NORMATIVE_AND_EXECUTION_CONTEXT_REVIEW",
+      "finding_ids": []
+    },
+    {
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "release/0.9.0/allowed-signers",
+      "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed",
+      "bytes": 98,
+      "review_completed": true,
+      "review_method": "LINE_BY_LINE_NORMATIVE_AND_EXECUTION_CONTEXT_REVIEW",
+      "finding_ids": []
+    },
+    {
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "3de8203531471e675ee03b535fb7c690527a7fd6922a9dd3edb4be32a83443b5",
+      "bytes": 1394,
+      "lines": 39,
+      "review_completed": true,
+      "review_method": "LINE_BY_LINE_NORMATIVE_AND_EXECUTION_CONTEXT_REVIEW",
+      "finding_ids": []
+    },
+    {
+      "commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path": "tools/pins.toml",
+      "sha256": "0cd9c3279c61266c1e926fd1fcce8cd6cab38baf119d1be9e19c7ccc12d7fcb6",
+      "bytes": 2253,
+      "review_completed": true,
+      "review_method": "LINE_BY_LINE_NORMATIVE_AND_EXECUTION_CONTEXT_REVIEW",
+      "finding_ids": []
+    }
+  ],
+  "findings": [],
+  "test_results": {
+    "commands": [
+      "python3 -I tools/release/test_verify_current_audit.py",
+      "python3 -I tools/release/test_current_audit_resource_profile.py",
+      "python3 -I tools/release/verify-current-audit.py"
+    ],
+    "passed": 161,
+    "failed": 0,
+    "exact_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+    "evidence_ids": [
+      "CH-T000-Q03",
+      "CH-T000-Q06"
+    ]
+  },
+  "blocker_dispositions": [
+    {
+      "id": "CH-T000-R02-B01",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01"
+      ],
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualification_control_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B01 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B02",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_each_missing_lens_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B02 was reviewed against CH-T000-Q07; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B03",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-E03"
+      ],
+      "control_ids": [
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_p0_exit_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B03 was reviewed against CH-T000-E03; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B04",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-E05",
+        "CH-T000-E06"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_attempt_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B04 was reviewed against CH-T000-E05; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B05",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-E04"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_clean_linux_provenance_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B05 was reviewed against CH-T000-E04; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B06",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N05"
+      ],
+      "test_ids": [
+        "test_qualification_clean_linux_reviewer_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B06 was reviewed against CH-T000-Q07; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B07",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02"
+      ],
+      "test_ids": [
+        "test_qualification_implementation_diff_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B07 was reviewed against CH-T000-Q07; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B08",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N02"
+      ],
+      "test_ids": [
+        "test_qualification_evidence_digest_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B08 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B09",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q06"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_qualification_exact_resource_boundaries"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B09 was reviewed against CH-T000-Q06; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B10",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q06"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_qualification_gzip_expansion_over_limit_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B10 was reviewed against CH-T000-Q06; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B11",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q02",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_public_c_missing_qualification_is_rejected",
+        "test_public_c_malformed_qualification_is_rejected",
+        "test_public_d_missing_activation_is_rejected",
+        "test_public_d_malformed_activation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B11 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B12",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_bounded_runner_kills_inheriting_grandchild",
+        "test_bounded_runner_kills_descendant_after_leader_exit",
+        "test_qualification_git_output_over_limit_is_rejected",
+        "test_qualification_git_stderr_over_limit_is_rejected",
+        "test_qualification_git_timeout_is_rejected",
+        "test_evidence_read_uses_stable_parent_dirfd_across_swap",
+        "test_duplicate_json_key_is_rejected",
+        "test_verifier_snapshot_aba_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B12 was reviewed against CH-T000-Q07; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B13",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualification_behavior_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B13 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B14",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "control_ids": [
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_missing_job_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B14 was reviewed against CH-T000-Q02; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B15",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N05"
+      ],
+      "test_ids": [
+        "test_qualification_control_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B15 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B16",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualification_decision_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B16 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B17",
+      "status": "DEFERRED_TO_D",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_framework_pending_to_qualified_open_to_terminal_stage_sequence"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B17 was reviewed against CH-T000-Q01; the exact DEFERRED_TO_D disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B18",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_terminal_closure_commit_must_contain_bound_artifacts"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B18 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B19",
+      "status": "UNRESOLVED_PENDING_SIGNED_D_REVOCATION_PROTOCOL",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_revocation_cascade_accepts_forward_reopen_of_all_descendants"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B19 was reviewed against CH-T000-Q01; the exact UNRESOLVED_PENDING_SIGNED_D_REVOCATION_PROTOCOL disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B20",
+      "status": "DEFERRED_TO_D",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualified_or_terminal_stage_rejects_qualification_deletion"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B20 was reviewed against CH-T000-Q01; the exact DEFERRED_TO_D disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B21",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q02",
+        "CH-T000-Q03"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_evidence_read_uses_stable_parent_dirfd_across_swap"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B21 was reviewed against CH-T000-Q01; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B22",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q06",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_qualification_exact_resource_boundaries"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B22 was reviewed against CH-T000-Q06; the exact RESOLVED_AT_C disposition and its bounded technical scope are retained."
+    },
+    {
+      "id": "CH-T000-R02-B23",
+      "status": "DEFERRED_TO_D",
+      "evidence_ids": [
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_terminal_exact_ch_t000_state_verifies"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY",
+      "rationale": "CH-T000-R02-B23 was reviewed against CH-T000-Q02; the exact DEFERRED_TO_D disposition and its bounded technical scope are retained."
+    }
+  ],
+  "activation_blockers": [
+    "CH-T000-R02-B17",
+    "CH-T000-R02-B19",
+    "CH-T000-R02-B20",
+    "CH-T000-R02-B23"
+  ],
+  "human_review_boundary": {
+    "named_human_approval": "NOT_PERFORMED",
+    "independent_human_review": "NOT_PERFORMED",
+    "release_approval": "NOT_GRANTED",
+    "security_certification": "NOT_GRANTED",
+    "automated_review_is_human_approval": false
+  },
+  "release_authority_boundary": {
+    "overall_release_status": "NO_GO",
+    "public_claim_change": "NONE",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  },
+  "decisive_reproduction": null,
+  "disposition": "C_REVIEW_COMPLETE_WITH_D_ACTIVATION_BLOCKERS"
+}

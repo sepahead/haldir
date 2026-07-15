@@ -1,0 +1,1630 @@
+{
+  "schema_version": "2.0.0",
+  "record_id": "CH-T000-TECHNICAL-QUALIFICATION-REVIEW",
+  "task_id": "CH-T000",
+  "source_task_id": "T000",
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "review_started_at_utc": "2026-07-15T10:27:12Z",
+  "review_completed_at_utc": "2026-07-15T10:27:12Z",
+  "review_classification": "AUTOMATED_TECHNICAL_SUPPORT_ONLY",
+  "scope": "Exact technical qualification of the CH-T000 current-head input freeze and its fail-closed qualification framework only; no runtime-correctness, safety, deployment, field-validation, security-certification, publication, named-human-approval, or release-readiness claim.",
+  "effective_only_when": "SIGNED_DATA_ONLY_ACTIVATION_COMMIT_BINDING_EXACT_QUALIFICATION_COMMIT_EVIDENCE_AND_TERMINAL_LEDGER_TRANSITION",
+  "reviewed_commits": {
+    "approved_source_cut": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "input_freeze_implementation": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "qualification_framework": "1f759dbb7ee845319255923d758ca64c0f61935b"
+  },
+  "process_deviation": {
+    "classification": "RETROSPECTIVE_CH_T000_BOOTSTRAP_AMENDMENT",
+    "pre_edit_behavior_packet_existed": false,
+    "pre_edit_normative_approval_existed": false,
+    "complete_file_review_ledger_existed": false,
+    "resolution": "AMENDED_NOT_SATISFIED",
+    "amendment_path": "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md",
+    "scope": "CH_T000_ONLY_NO_TRANSFER_TO_LATER_TASKS",
+    "residual_limitation": "RETROSPECTIVE_RECONSTRUCTION_DOES_NOT_PROVE_PRE_EDIT_KNOWLEDGE"
+  },
+  "current_behavior": {
+    "input_identity": "EXACT_SOURCE_HANDOFF_HEADS_PACKAGES_TOOLCHAINS_AND_PUBLICATION_STATE_ARE_FROZEN_BY_SIGNED_GIT_OBJECTS",
+    "validation": "OFFLINE_FAIL_CLOSED_TYPED_VALIDATION_WITH_EXPLICIT_RESOURCE_LIMITS",
+    "state_transition": "CH_T000_REMAINS_OPEN_UNTIL_SEPARATE_SIGNED_DATA_ONLY_ACTIVATION",
+    "failure_behavior": "ANY_IDENTITY_SCHEMA_PROVENANCE_RESOURCE_OR_GOVERNANCE_MISMATCH_REJECTS",
+    "public_claims": "NO_PUBLIC_CLAIM_CHANGE_RELEASE_REMAINS_NO_GO"
+  },
+  "normative_controls": [
+    {
+      "id": "CH-T000-N01",
+      "requirement": "Bind the approved source, signed input-freeze implementation, and signed qualification-framework commits by exact Git identity and ancestry.",
+      "accepted_case": {
+        "id": "CH-T000-N01-A01",
+        "expected": "ACCEPT_EXACT_BOUND_STATE_ONLY",
+        "test_id": "test_qualification_exact_record_verifies"
+      },
+      "rejected_case": {
+        "id": "CH-T000-N01-R01",
+        "expected": "REJECT_MUTATED_OR_UNBOUND_STATE",
+        "test_id": "test_qualification_implementation_commit_mutation_is_rejected"
+      }
+    },
+    {
+      "id": "CH-T000-N02",
+      "requirement": "Bind every declared review and evidence payload by repository path, SHA-256 digest, byte count, and line count where textual.",
+      "accepted_case": {
+        "id": "CH-T000-N02-A01",
+        "expected": "ACCEPT_EXACT_BOUND_STATE_ONLY",
+        "test_id": "test_qualification_exact_record_verifies"
+      },
+      "rejected_case": {
+        "id": "CH-T000-N02-R01",
+        "expected": "REJECT_MUTATED_OR_UNBOUND_STATE",
+        "test_id": "test_qualification_evidence_digest_mutation_is_rejected"
+      }
+    },
+    {
+      "id": "CH-T000-N03",
+      "requirement": "Parse JSON, gzip, ZIP, filesystem paths, Git output, and child-process output with explicit fail-closed syntax, identity, timeout, and resource bounds.",
+      "accepted_case": {
+        "id": "CH-T000-N03-A01",
+        "expected": "ACCEPT_EXACT_BOUND_STATE_ONLY",
+        "test_id": "test_qualification_exact_record_verifies"
+      },
+      "rejected_case": {
+        "id": "CH-T000-N03-R01",
+        "expected": "REJECT_MUTATED_OR_UNBOUND_STATE",
+        "test_id": "test_qualification_exact_resource_boundaries"
+      }
+    },
+    {
+      "id": "CH-T000-N04",
+      "requirement": "Accept local, independent Linux, CI, and formal evidence only when exact commit provenance, direct exit status, complete nested success, and retained-log identity agree.",
+      "accepted_case": {
+        "id": "CH-T000-N04-A01",
+        "expected": "ACCEPT_EXACT_BOUND_STATE_ONLY",
+        "test_id": "test_qualification_exact_record_verifies"
+      },
+      "rejected_case": {
+        "id": "CH-T000-N04-R01",
+        "expected": "REJECT_MUTATED_OR_UNBOUND_STATE",
+        "test_id": "test_qualification_nested_failed_step_is_rejected"
+      }
+    },
+    {
+      "id": "CH-T000-N05",
+      "requirement": "Keep every automated reviewer outside named-human authority and keep the public, release, deployment, publication, DOI, and Zenodo dispositions at no authority and NO_GO.",
+      "accepted_case": {
+        "id": "CH-T000-N05-A01",
+        "expected": "ACCEPT_EXACT_BOUND_STATE_ONLY",
+        "test_id": "test_qualification_exact_record_verifies"
+      },
+      "rejected_case": {
+        "id": "CH-T000-N05-R01",
+        "expected": "REJECT_MUTATED_OR_UNBOUND_STATE",
+        "test_id": "test_qualification_named_human_impersonation_is_rejected"
+      }
+    },
+    {
+      "id": "CH-T000-N06",
+      "requirement": "Permit CH-T000 closure only through a later signed data-only activation commit; preserve exact closure evidence and reopen a dependency-closed suffix on signed revocation.",
+      "accepted_case": {
+        "id": "CH-T000-N06-A01",
+        "expected": "ACCEPT_EXACT_BOUND_STATE_ONLY",
+        "test_id": "test_qualification_exact_record_verifies"
+      },
+      "rejected_case": {
+        "id": "CH-T000-N06-R01",
+        "expected": "REJECT_MUTATED_OR_UNBOUND_STATE",
+        "test_id": "test_terminal_closure_commit_must_contain_bound_artifacts"
+      }
+    }
+  ],
+  "mandatory_counterfactuals": [
+    {
+      "id": "CH-T000-CF01",
+      "scenario": "valid syntax with contradictory semantics",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N03",
+      "test_id": "test_qualification_behavior_mutation_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF02",
+      "scenario": "authenticated but unauthorized producer",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N05",
+      "test_id": "test_qualification_human_reviewer_impersonation_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF03",
+      "scenario": "stale yet correctly signed data",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N01",
+      "test_id": "test_stale_correctly_signed_implementation_commit_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF04",
+      "scenario": "correct version string with wrong contract or algorithm digest",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N02",
+      "test_id": "test_qualification_evidence_digest_mutation_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF05",
+      "scenario": "clean result under a nonrepresentative environment",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N04",
+      "test_id": "test_qualification_clean_linux_provenance_mutation_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF06",
+      "scenario": "timeout or capacity exhaustion followed by convenience fallback",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N03",
+      "test_id": "test_qualification_git_timeout_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF07",
+      "scenario": "feature unification activating a privileged or experimental path",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N05",
+      "test_id": "test_qualification_undeclared_artifact_class_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF08",
+      "scenario": "partial migration accepted through default values",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N06",
+      "test_id": "test_qualification_legacy_closure_transfer_is_rejected",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF09",
+      "scenario": "crash between decision and durable activation evidence",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N06",
+      "test_id": "test_framework_pending_rejects_premature_packet_or_activation",
+      "disposition": "RESOLVED"
+    },
+    {
+      "id": "CH-T000-CF10",
+      "scenario": "simple but odd input unlikely to resemble expected examples",
+      "expected": "FAIL_CLOSED_WITH_NO_PUBLIC_CLAIM_CHANGE",
+      "control_id": "CH-T000-N03",
+      "test_id": "test_duplicate_json_key_is_rejected",
+      "disposition": "RESOLVED"
+    }
+  ],
+  "lead_approval": {
+    "approver_id": "CH-T000-R03",
+    "kind": "AUTOMATED_LEAD_AGENT",
+    "human": false,
+    "named_human_approver": false,
+    "decision": "APPROVE_EXACT_N01_N06_AND_COUNTERFACTUALS_FOR_TECHNICAL_QUALIFICATION_ONLY",
+    "controls_and_cases_sha256": "e5d26151eef08083c9174feed2c96b7bfd8962949a243d94c9a01d51daffc71b",
+    "approval_effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_THIS_REVIEW_AND_QUALIFICATION"
+  },
+  "reviewers": [
+    {
+      "id": "CH-T000-R01",
+      "kind": "AUTOMATED_PRIMARY_FRAMEWORK_REVIEWER",
+      "human": false,
+      "named_human_approver": false,
+      "report_path": "release/0.9.0/current-head/reviews/CH-T000-R01-framework.json"
+    },
+    {
+      "id": "CH-T000-R02",
+      "kind": "AUTOMATED_INDEPENDENT_ADVERSARIAL_REVIEWER",
+      "human": false,
+      "named_human_approver": false,
+      "report_paths": [
+        "release/0.9.0/current-head/reviews/CH-T000-R02-bfe.json",
+        "release/0.9.0/current-head/reviews/CH-T000-R02-framework.json"
+      ]
+    },
+    {
+      "id": "CH-T000-R03",
+      "kind": "AUTOMATED_LEAD_AGENT",
+      "human": false,
+      "named_human_approver": false,
+      "report_path": "release/0.9.0/current-head/reviews/CH-T000.json"
+    }
+  ],
+  "human_review_boundary": {
+    "named_human_approval": "NOT_PERFORMED",
+    "independent_human_review": "NOT_PERFORMED",
+    "release_approval": "NOT_GRANTED",
+    "security_certification": "NOT_GRANTED",
+    "automated_review_is_human_approval": false
+  },
+  "release_authority_boundary": {
+    "overall_release_status": "NO_GO",
+    "public_claim_change": "NONE",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  },
+  "review_limitations": [
+    "AUTOMATED_REVIEW_IS_NOT_INDEPENDENT_OR_NAMED_HUMAN_REVIEW",
+    "RETAINED_RUN_OUTPUT_IS_NOT_REMOTE_PLATFORM_ATTESTATION",
+    "RESOURCE_PROFILE_ESTABLISHES_DECLARED_BOUNDARY_BEHAVIOR_NOT_GLOBAL_PERFORMANCE",
+    "TECHNICAL_INPUT_FREEZE_QUALIFICATION_DOES_NOT_ESTABLISH_RUNTIME_PRODUCT_CORRECTNESS",
+    "NO_TAG_RELEASE_DOI_ZENODO_DEPLOYMENT_PUBLICATION_OR_SECURITY_CERTIFICATION_IS_GRANTED"
+  ],
+  "finding_dispositions": [
+    {
+      "id": "CH-T000-R02-B01",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01"
+      ],
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualification_control_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B02",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_each_missing_lens_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B03",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-E03"
+      ],
+      "control_ids": [
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_p0_exit_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B04",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-E05",
+        "CH-T000-E06"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_attempt_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B05",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-E04"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_clean_linux_provenance_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B06",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N05"
+      ],
+      "test_ids": [
+        "test_qualification_clean_linux_reviewer_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B07",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02"
+      ],
+      "test_ids": [
+        "test_qualification_implementation_diff_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B08",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N02"
+      ],
+      "test_ids": [
+        "test_qualification_evidence_digest_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B09",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q06"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_qualification_exact_resource_boundaries"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B10",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q06"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_qualification_gzip_expansion_over_limit_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B11",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q02",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_public_c_missing_qualification_is_rejected",
+        "test_public_c_malformed_qualification_is_rejected",
+        "test_public_d_missing_activation_is_rejected",
+        "test_public_d_malformed_activation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B12",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_bounded_runner_kills_inheriting_grandchild",
+        "test_bounded_runner_kills_descendant_after_leader_exit",
+        "test_qualification_git_output_over_limit_is_rejected",
+        "test_qualification_git_stderr_over_limit_is_rejected",
+        "test_qualification_git_timeout_is_rejected",
+        "test_evidence_read_uses_stable_parent_dirfd_across_swap",
+        "test_duplicate_json_key_is_rejected",
+        "test_verifier_snapshot_aba_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B13",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualification_behavior_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B14",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "control_ids": [
+        "CH-T000-N04"
+      ],
+      "test_ids": [
+        "test_qualification_missing_job_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B15",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N05"
+      ],
+      "test_ids": [
+        "test_qualification_control_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B16",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualification_decision_mutation_is_rejected"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B17",
+      "status": "DEFERRED_TO_D",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_framework_pending_to_qualified_open_to_terminal_stage_sequence"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B18",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_terminal_closure_commit_must_contain_bound_artifacts"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B19",
+      "status": "UNRESOLVED_PENDING_SIGNED_D_REVOCATION_PROTOCOL",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_revocation_cascade_accepts_forward_reopen_of_all_descendants"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B20",
+      "status": "DEFERRED_TO_D",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualified_or_terminal_stage_rejects_qualification_deletion"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B21",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q02",
+        "CH-T000-Q03"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_evidence_read_uses_stable_parent_dirfd_across_swap"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B22",
+      "status": "RESOLVED_AT_C",
+      "evidence_ids": [
+        "CH-T000-Q06",
+        "CH-T000-Q08"
+      ],
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "test_ids": [
+        "test_qualification_exact_resource_boundaries"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    },
+    {
+      "id": "CH-T000-R02-B23",
+      "status": "DEFERRED_TO_D",
+      "evidence_ids": [
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_terminal_exact_ch_t000_state_verifies"
+      ],
+      "scope": "SIGNED_B_FRAMEWORK_AND_SIGNED_C_EVIDENCE_ONLY"
+    }
+  ],
+  "twenty_lens_reviews": {
+    "L01": {
+      "name": "Claims and scope",
+      "question": "Can a reader infer more than the exact evidence tier supports? Separate implemented, verified, validated, deployment-qualified, field-validated, and not-claimed.",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-E01",
+        "CH-T000-E02",
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Exact source, implementation, framework, and no-authority boundary are bound.",
+      "applicability_rationale": "The task is applicable because CH-T000 establishes the audit root.",
+      "residual_limitation": "No runtime or release-readiness claim is evaluated."
+    },
+    "L02": {
+      "name": "First-principles semantics",
+      "question": "Are inputs, state, transitions, outputs, invariants, units, and failure states explicit rather than implied by names?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N04",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-E03",
+        "CH-T000-E04",
+        "CH-T000-E05",
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04"
+      ],
+      "finding": "Independent and local accepted-state paths agree on exact identities.",
+      "applicability_rationale": "Functional acceptance is limited to the audit verifier and its gates.",
+      "residual_limitation": "Product runtime correctness remains outside this task."
+    },
+    "L03": {
+      "name": "Mathematics and statistics",
+      "question": "Are definitions, assumptions, estimands, finite-sample behavior, multiplicity, uncertainty, calibration, and failure regions correct and explicit?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N03"
+      ],
+      "evidence_ids": [
+        "CH-T000-E02",
+        "CH-T000-Q06",
+        "CH-T000-Q07"
+      ],
+      "finding": "Digest, byte, line, and exact/+1 resource relations are closed.",
+      "applicability_rationale": "Numeric consistency is applicable to every retained record and parser bound.",
+      "residual_limitation": "The profile makes no cross-machine latency claim."
+    },
+    "L04": {
+      "name": "Type and state integrity",
+      "question": "Can invalid combinations be constructed through safe APIs, deserialization, FFI, feature flags, defaults, or migration?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N03",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-E02",
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Closed fields and exact OPEN-to-D transition typing reject ambiguity.",
+      "applicability_rationale": "State integrity is central to preventing premature closure.",
+      "residual_limitation": "Only CH-T000 transition semantics are qualified here."
+    },
+    "L05": {
+      "name": "Time, ordering, and replay",
+      "question": "Are clock domains, freshness, deadlines, sessions, epochs, generations, sequence numbers, duplicates, restart, and rollover unambiguous?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "evidence_ids": [
+        "CH-T000-E03",
+        "CH-T000-E04",
+        "CH-T000-E05",
+        "CH-T000-E06",
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "finding": "Subject, execution, capture, review, and retention ordering is explicit.",
+      "applicability_rationale": "All retained execution evidence is time-bearing and therefore applicable.",
+      "residual_limitation": "Platform clocks are trusted inputs, not independently attested time."
+    },
+    "L06": {
+      "name": "Identity and provenance",
+      "question": "Can every result, command, model, dataset, scene, schema, configuration, build, and evidence artifact be traced immutably?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N05"
+      ],
+      "evidence_ids": [
+        "CH-T000-E01",
+        "CH-T000-E04",
+        "CH-T000-Q01",
+        "CH-T000-Q03",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Git, runner, and automated reviewer identities remain distinct and bound.",
+      "applicability_rationale": "Identity provenance is required for every qualified commit and review.",
+      "residual_limitation": "Automated identities do not imply named-human review."
+    },
+    "L07": {
+      "name": "Authentication and cryptography",
+      "question": "Are canonical bytes, domain separation, algorithms, identities, rotation, revocation, downgrade resistance, and failure semantics complete?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02"
+      ],
+      "evidence_ids": [
+        "CH-T000-E01",
+        "CH-T000-E02",
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "finding": "Signed commits and SHA-256 file identities bind the qualified graph.",
+      "applicability_rationale": "Authentication is applicable to commit and evidence provenance.",
+      "residual_limitation": "Key custody and organizational revocation are not certified."
+    },
+    "L08": {
+      "name": "Authority and safety",
+      "question": "Who may observe, advise, intend, authorize, publish, apply, and confirm? Can any fallback or optional component widen authority?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-Q01",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Every authority-bearing field remains false and release remains NO_GO.",
+      "applicability_rationale": "Authority separation is applicable because the task changes audit state.",
+      "residual_limitation": "No deployment, tag, publication, DOI, or archive authority is granted."
+    },
+    "L09": {
+      "name": "Hostile inputs and parsers",
+      "question": "What happens with duplicates, unknown fields, unsafe integers, NaN/Inf, Unicode ambiguity, malformed nesting, path tricks, and contradictory metadata?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N03"
+      ],
+      "evidence_ids": [
+        "CH-T000-Q06",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Duplicate keys, path aliases, malformed compression, and contradictory state reject.",
+      "applicability_rationale": "The verifier consumes adversary-controlled repository bytes.",
+      "residual_limitation": "Unknown future formats require a new protocol version."
+    },
+    "L10": {
+      "name": "Resource and denial-of-service bounds",
+      "question": "Are bytes, allocations, dimensions, states, queues, retries, threads, log volume, GPU/CPU work, and serialization bounded before expensive work?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N03"
+      ],
+      "evidence_ids": [
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q06",
+        "CH-T000-Q08"
+      ],
+      "finding": "Every parser and subprocess boundary has an explicit exact/+1 disposition.",
+      "applicability_rationale": "Resource exhaustion is applicable to offline verification of retained evidence.",
+      "residual_limitation": "Configured maxima are protocol limits, not capacity guarantees."
+    },
+    "L11": {
+      "name": "Concurrency and lifecycle",
+      "question": "Are initialization, callback ownership, races, cancellation, selected events, cleanup, crash consistency, and shutdown fully specified?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N03",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-Q06",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Dirfd snapshots and bounded process-group cleanup close reviewed races.",
+      "applicability_rationale": "Concurrent filesystem and child-process behavior affects verifier integrity.",
+      "residual_limitation": "Kernel and filesystem primitives remain trusted dependencies."
+    },
+    "L12": {
+      "name": "Determinism and reproducibility",
+      "question": "Can independent clean machines reproduce code generation, builds, fixtures, simulations, proofs, benchmarks, evidence, and archives?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "evidence_ids": [
+        "CH-T000-E03",
+        "CH-T000-E04",
+        "CH-T000-E05",
+        "CH-T000-E06",
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05",
+        "CH-T000-Q06"
+      ],
+      "finding": "Local, clean Linux, hosted, formal, and profile records bind reproducible subjects.",
+      "applicability_rationale": "Reproducibility is applicable to each independent evidence class.",
+      "residual_limitation": "Hosted services and container runtime are not independently attested."
+    },
+    "L13": {
+      "name": "API, FFI, and SemVer",
+      "question": "Is the stable surface minimal and are panic, ownership, allocation, thread safety, features, MSRV/runtime, and compatibility explicit?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-E01",
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "finding": "No API, FFI, or version compatibility claim changes at CH-T000.",
+      "applicability_rationale": "Compatibility is reviewed because the framework is release-bound infrastructure.",
+      "residual_limitation": "Later product compatibility tasks remain OPEN."
+    },
+    "L14": {
+      "name": "Schema, wire, and language parity",
+      "question": "Is there one normative semantic source and do all languages/encodings accept and reject the same corpus?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N03"
+      ],
+      "evidence_ids": [
+        "CH-T000-E02",
+        "CH-T000-Q06",
+        "CH-T000-Q07"
+      ],
+      "finding": "Canonical JSON and exact artifact records reject silent representation drift.",
+      "applicability_rationale": "Multiple serialized evidence classes make parity applicable.",
+      "residual_limitation": "Product wire and language parity are not established by CH-T000."
+    },
+    "L15": {
+      "name": "Configuration and deployment",
+      "question": "Can invalid profiles start? Are paths, secrets, permissions, ACLs, certificates, environments, startup order, and rollback safe?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N04",
+        "CH-T000-N05"
+      ],
+      "evidence_ids": [
+        "CH-T000-E04",
+        "CH-T000-E05",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q07"
+      ],
+      "finding": "Runner restrictions and claim boundaries prevent deployment-context promotion.",
+      "applicability_rationale": "Configuration is applicable to clean and hosted reproduction evidence.",
+      "residual_limitation": "No field deployment profile is qualified."
+    },
+    "L16": {
+      "name": "Observability and forensics",
+      "question": "Can disabled, unavailable, stale, incompatible, insufficient, anomalous, denied, and internal-fault states be distinguished without leaking secrets?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04"
+      ],
+      "evidence_ids": [
+        "CH-T000-E03",
+        "CH-T000-E04",
+        "CH-T000-E05",
+        "CH-T000-E06",
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05"
+      ],
+      "finding": "Direct statuses, complete logs, and exact markers preserve reviewed outcomes.",
+      "applicability_rationale": "Forensics is applicable because evidence must survive beyond execution.",
+      "residual_limitation": "Logs prove named commands only and may omit external platform internals."
+    },
+    "L17": {
+      "name": "Verification and evidence quality",
+      "question": "Does each claim have the right proof: theorem, model, property, fuzz, mutation, clean-room, real-router, statistical, or physical evidence?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N04",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-E01",
+        "CH-T000-E02",
+        "CH-T000-E03",
+        "CH-T000-E04",
+        "CH-T000-E05",
+        "CH-T000-E06",
+        "CH-T000-Q01",
+        "CH-T000-Q02",
+        "CH-T000-Q03",
+        "CH-T000-Q04",
+        "CH-T000-Q05",
+        "CH-T000-Q06",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Two automated reviews and all execution classes support only technical qualification.",
+      "applicability_rationale": "Evidence quality is the direct subject of CH-T000.",
+      "residual_limitation": "Independent named-human assurance is absent and not inferred."
+    },
+    "L18": {
+      "name": "Ecosystem composition",
+      "question": "Are pid-rs, NCP, Engram, Prisoma, Crebain, Galadriel, Haldir, ROS, and external authority relationships explicit and acyclic?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-E01",
+        "CH-T000-E02",
+        "CH-T000-Q01",
+        "CH-T000-Q07"
+      ],
+      "finding": "Closure transfer is forbidden; downstream work remains independently open.",
+      "applicability_rationale": "The handoff explicitly spans a multi-repository program.",
+      "residual_limitation": "Non-Haldir Git objects are not verified here."
+    },
+    "L19": {
+      "name": "Human factors and governance",
+      "question": "Are naming, docs, examples, runbooks, review roles, incident response, support, deprecation, and withdrawal usable under stress?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-E04",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "Author and automated reviewer roles are separate and no human status is fabricated.",
+      "applicability_rationale": "Governance truthfulness is applicable to all qualification records.",
+      "residual_limitation": "Organizational approval remains outside repository evidence."
+    },
+    "L20": {
+      "name": "Counterfactual and quirky-case review",
+      "question": "How would a malicious peer, rushed operator, odd-but-simple dataset, future maintainer, or AI-generated patch falsify the intended claim?",
+      "status": "C_REVIEW_COMPLETE_D_ACTIVATION_PENDING",
+      "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N03",
+        "CH-T000-N04",
+        "CH-T000-N05",
+        "CH-T000-N06"
+      ],
+      "evidence_ids": [
+        "CH-T000-Q06",
+        "CH-T000-Q07",
+        "CH-T000-Q08"
+      ],
+      "finding": "All ten mandatory counterfactuals have explicit fail-closed tests and dispositions.",
+      "applicability_rationale": "Quirky-case review is applicable to a security-sensitive offline verifier.",
+      "residual_limitation": "Unenumerated future protocol changes require renewed adversarial review."
+    }
+  },
+  "task_disposition": "C_EVIDENCE_COMPLETE_ACTIVATION_BLOCKERS_DEFERRED",
+  "claim_disposition": "NO_PUBLIC_CLAIM_CHANGE",
+  "overall_release_status": "NO_GO",
+  "evidence_catalog": {
+    "CH-T000-E01": {
+      "id": "CH-T000-E01",
+      "kind": "SIGNED_INPUT_FREEZE_IMPLEMENTATION",
+      "subject_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "result": "PASS",
+      "files": [],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    },
+    "CH-T000-E02": {
+      "id": "CH-T000-E02",
+      "kind": "FROZEN_INPUT_MANIFEST_AND_BOOTSTRAP_LEDGER",
+      "subject_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/audit-inputs.json",
+          "sha256": "06dbb9a9656bae39aa209f9c602577d45a7167f68f0f064a687701e56c4517eb",
+          "bytes": 13379,
+          "lines": 363
+        },
+        {
+          "path": "release/0.9.0/current-head/requirements.json",
+          "sha256": "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40",
+          "bytes": 122010,
+          "lines": 3820
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    },
+    "CH-T000-E03": {
+      "id": "CH-T000-E03",
+      "kind": "EXACT_LOCAL_P0R_GATE",
+      "subject_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.json",
+          "sha256": "513096a816e24220c7d18f31290faa54546fd60670479ba7f45bada01a0befaf",
+          "bytes": 2545,
+          "lines": 46
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.log.gz",
+          "sha256": "417bde0ef2f6dd0f9ce59b95c4e209d15160ea5ae6ddbd63218bdc07ec307933",
+          "bytes": 20907
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    },
+    "CH-T000-E04": {
+      "id": "CH-T000-E04",
+      "kind": "INDEPENDENT_CLEAN_LINUX_REPRODUCTION_AND_REVIEW",
+      "subject_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.json",
+          "sha256": "9958d8752af1e4bbc4d4d66ae016f4da8b327f5eb120088ed82d0dd0de5ddc78",
+          "bytes": 5620,
+          "lines": 93
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz",
+          "sha256": "918bd15c9a46415282512666d3ade66021022b48bc7b5178047d2103a35da99c",
+          "bytes": 379
+        },
+        {
+          "path": "release/0.9.0/current-head/reviews/CH-T000-R02-bfe.json",
+          "sha256": "5e1deac021a91931f5d8c1a54e7a8278ae4bc434aec7f4b5a497e07af8d0c598",
+          "bytes": 31756,
+          "lines": 507
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    },
+    "CH-T000-E05": {
+      "id": "CH-T000-E05",
+      "kind": "EXACT_GITHUB_CI_RUN",
+      "subject_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.json",
+          "sha256": "90bbb3278503f8f1cf171fc981af8c5d665965bdaf8190d744d41e8e57c8d70f",
+          "bytes": 16732,
+          "lines": 520
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json",
+          "sha256": "e60cd69b34aedf1204c838ba89a7db5ec8372a84329d9ba21ad0284e6b6c8467",
+          "bytes": 11337,
+          "lines": 1
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz",
+          "sha256": "74531e2cce2ae6d974e498c16bfaf230fa5200df02ce7de818489c76665caa92",
+          "bytes": 67356
+        }
+      ],
+      "capture_operations": {
+        "ordinary_metadata": {
+          "raw_path": "/private/tmp/ch-t000-implementation-ci.json.raw",
+          "normalized_path": "/private/tmp/ch-t000-implementation-ci.json.normalized",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.json",
+          "capture_command": "gh run view 29344463711 --repo sepahead/haldir --json conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,status,updatedAt,url,workflowName > /private/tmp/ch-t000-implementation-ci.json.raw",
+          "capture_exit_status": 0,
+          "normalize_command": "jq . /private/tmp/ch-t000-implementation-ci.json.raw > /private/tmp/ch-t000-implementation-ci.json.normalized",
+          "normalize_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-implementation-ci.json.normalized release/0.9.0/current-head/evidence/ch-t000-implementation-ci.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-14T16:35:02Z",
+          "completed_at_utc": "2026-07-14T16:35:04Z"
+        },
+        "attempt_metadata": {
+          "raw_path": "/private/tmp/ch-t000-implementation-ci-attempt.json.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json",
+          "capture_command": "gh run view 29344463711 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName > /private/tmp/ch-t000-implementation-ci-attempt.json.raw",
+          "capture_exit_status": 0,
+          "retain_command": "cp /private/tmp/ch-t000-implementation-ci-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json",
+          "retain_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-implementation-ci-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-14T16:35:04Z",
+          "completed_at_utc": "2026-07-14T16:35:06Z"
+        },
+        "raw_log": {
+          "raw_path": "/private/tmp/ch-t000-implementation-ci.log.gz.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz",
+          "decompressed_path": "/private/tmp/ch-t000-implementation-ci.log.gz.decompressed",
+          "capture_command": "gh run view 29344463711 --repo sepahead/haldir --attempt 1 --log > /private/tmp/ch-t000-implementation-ci.log.gz.raw",
+          "capture_exit_status": 0,
+          "compression_command": "gzip -n -9 -c /private/tmp/ch-t000-implementation-ci.log.gz.raw > release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz",
+          "compression_exit_status": 0,
+          "decompress_command": "gzip -cd release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz > /private/tmp/ch-t000-implementation-ci.log.gz.decompressed",
+          "decompress_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-implementation-ci.log.gz.raw /private/tmp/ch-t000-implementation-ci.log.gz.decompressed",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-14T16:35:06Z",
+          "completed_at_utc": "2026-07-14T16:35:12Z"
+        }
+      },
+      "log_integrity": {
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz",
+        "compressed_sha256": "74531e2cce2ae6d974e498c16bfaf230fa5200df02ce7de818489c76665caa92",
+        "compressed_bytes": 67356,
+        "uncompressed_sha256": "20d3ba8a990082bb6665a4eedc453eca5453483641ce5f3091930ee5ad100c2e",
+        "uncompressed_bytes": 493752,
+        "uncompressed_lines": 3882
+      },
+      "verification": null
+    },
+    "CH-T000-E06": {
+      "id": "CH-T000-E06",
+      "kind": "EXACT_GITHUB_FORMAL_RUN",
+      "subject_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.json",
+          "sha256": "831a04ac14c5c6f428038b4279db8460488c0787e2aa9f3338c459550cf814f2",
+          "bytes": 3023,
+          "lines": 97
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json",
+          "sha256": "a0245dce277990dc739608f9e7cda41838826c47f25ff0e197d764da803defca",
+          "bytes": 2173,
+          "lines": 1
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz",
+          "sha256": "d8ca420c8b3c4ee9208731fb05fc3a057e7719230e5393d3724ff329d96613ae",
+          "bytes": 5886
+        }
+      ],
+      "capture_operations": {
+        "ordinary_metadata": {
+          "raw_path": "/private/tmp/ch-t000-implementation-formal.json.raw",
+          "normalized_path": "/private/tmp/ch-t000-implementation-formal.json.normalized",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.json",
+          "capture_command": "gh run view 29344463943 --repo sepahead/haldir --json conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,status,updatedAt,url,workflowName > /private/tmp/ch-t000-implementation-formal.json.raw",
+          "capture_exit_status": 0,
+          "normalize_command": "jq . /private/tmp/ch-t000-implementation-formal.json.raw > /private/tmp/ch-t000-implementation-formal.json.normalized",
+          "normalize_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-implementation-formal.json.normalized release/0.9.0/current-head/evidence/ch-t000-implementation-formal.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-14T16:35:12Z",
+          "completed_at_utc": "2026-07-14T16:35:14Z"
+        },
+        "attempt_metadata": {
+          "raw_path": "/private/tmp/ch-t000-implementation-formal-attempt.json.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json",
+          "capture_command": "gh run view 29344463943 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName > /private/tmp/ch-t000-implementation-formal-attempt.json.raw",
+          "capture_exit_status": 0,
+          "retain_command": "cp /private/tmp/ch-t000-implementation-formal-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json",
+          "retain_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-implementation-formal-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-14T16:35:14Z",
+          "completed_at_utc": "2026-07-14T16:35:16Z"
+        },
+        "raw_log": {
+          "raw_path": "/private/tmp/ch-t000-implementation-formal.log.gz.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz",
+          "decompressed_path": "/private/tmp/ch-t000-implementation-formal.log.gz.decompressed",
+          "capture_command": "gh run view 29344463943 --repo sepahead/haldir --attempt 1 --log > /private/tmp/ch-t000-implementation-formal.log.gz.raw",
+          "capture_exit_status": 0,
+          "compression_command": "gzip -n -9 -c /private/tmp/ch-t000-implementation-formal.log.gz.raw > release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz",
+          "compression_exit_status": 0,
+          "decompress_command": "gzip -cd release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz > /private/tmp/ch-t000-implementation-formal.log.gz.decompressed",
+          "decompress_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-implementation-formal.log.gz.raw /private/tmp/ch-t000-implementation-formal.log.gz.decompressed",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-14T16:35:16Z",
+          "completed_at_utc": "2026-07-14T16:35:18Z"
+        }
+      },
+      "log_integrity": {
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz",
+        "compressed_sha256": "d8ca420c8b3c4ee9208731fb05fc3a057e7719230e5393d3724ff329d96613ae",
+        "compressed_bytes": 5886,
+        "uncompressed_sha256": "ead0acbc258decc77381628814ef805c2cbf405f01587d722117c5b625b88ca1",
+        "uncompressed_bytes": 36584,
+        "uncompressed_lines": 267
+      },
+      "verification": null
+    },
+    "CH-T000-Q01": {
+      "id": "CH-T000-Q01",
+      "kind": "SIGNED_QUALIFICATION_FRAMEWORK_COMMIT",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    },
+    "CH-T000-Q02": {
+      "id": "CH-T000-Q02",
+      "kind": "EXACT_FRAMEWORK_LOCAL_P0R_GATE",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.json",
+          "sha256": "673b3abc97b7bdf397202b493835f276e577542c05fcaaeb096c7003c2b4c06b",
+          "bytes": 2733,
+          "lines": 47
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.log.gz",
+          "sha256": "bdb8ee4beb457c1365951f6cfd5c904b43b1f4a83be9f943cd0e4c452933c364",
+          "bytes": 20932
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    },
+    "CH-T000-Q03": {
+      "id": "CH-T000-Q03",
+      "kind": "INDEPENDENT_FRAMEWORK_CLEAN_LINUX_REPRODUCTION",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.json",
+          "sha256": "59152357faff683a1a3cd7ed3ff88b5af420e9f1b8b52d72c752cb9c89bd39fe",
+          "bytes": 17778,
+          "lines": 552
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review-attempt.json",
+          "sha256": "71a3f6de6aa320e18095cd06b97b8ff47b08874ae6f79c50ce2e364c876c43f9",
+          "bytes": 12023,
+          "lines": 1
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz",
+          "sha256": "03d07797672165555a42eac8994c1470e8711ab870bc6ec7ece7c9b85f694c16",
+          "bytes": 69833
+        }
+      ],
+      "capture_operations": {
+        "ordinary_metadata": {
+          "raw_path": "/private/tmp/ch-t000-framework-clean-linux-review.json.raw",
+          "normalized_path": "/private/tmp/ch-t000-framework-clean-linux-review.json.normalized",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.json",
+          "capture_command": "gh run view 29405644520 --repo sepahead/haldir --json conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,status,updatedAt,url,workflowName > /private/tmp/ch-t000-framework-clean-linux-review.json.raw",
+          "capture_exit_status": 0,
+          "normalize_command": "jq . /private/tmp/ch-t000-framework-clean-linux-review.json.raw > /private/tmp/ch-t000-framework-clean-linux-review.json.normalized",
+          "normalize_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-clean-linux-review.json.normalized release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:10:06Z",
+          "completed_at_utc": "2026-07-15T10:10:35Z"
+        },
+        "attempt_metadata": {
+          "raw_path": "/private/tmp/ch-t000-framework-clean-linux-review-attempt.json.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review-attempt.json",
+          "capture_command": "gh run view 29405644520 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName > /private/tmp/ch-t000-framework-clean-linux-review-attempt.json.raw",
+          "capture_exit_status": 0,
+          "retain_command": "cp /private/tmp/ch-t000-framework-clean-linux-review-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review-attempt.json",
+          "retain_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-clean-linux-review-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review-attempt.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:10:35Z",
+          "completed_at_utc": "2026-07-15T10:10:43Z"
+        },
+        "raw_log": {
+          "raw_path": "/private/tmp/ch-t000-framework-clean-linux-review.log.gz.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz",
+          "decompressed_path": "/private/tmp/ch-t000-framework-clean-linux-review.log.gz.decompressed",
+          "capture_command": "gh run view 29405644520 --repo sepahead/haldir --attempt 1 --log > /private/tmp/ch-t000-framework-clean-linux-review.log.gz.raw",
+          "capture_exit_status": 0,
+          "compression_command": "gzip -n -9 -c /private/tmp/ch-t000-framework-clean-linux-review.log.gz.raw > release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz",
+          "compression_exit_status": 0,
+          "decompress_command": "gzip -cd release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz > /private/tmp/ch-t000-framework-clean-linux-review.log.gz.decompressed",
+          "decompress_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-clean-linux-review.log.gz.raw /private/tmp/ch-t000-framework-clean-linux-review.log.gz.decompressed",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:11:19Z",
+          "completed_at_utc": "2026-07-15T10:11:24Z"
+        }
+      },
+      "log_integrity": {
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz",
+        "compressed_sha256": "03d07797672165555a42eac8994c1470e8711ab870bc6ec7ece7c9b85f694c16",
+        "compressed_bytes": 69833,
+        "uncompressed_sha256": "1e2f6af7559263c09777aad9c256de0978d686058ed4d2b15461b4214b54c800",
+        "uncompressed_bytes": 513823,
+        "uncompressed_lines": 4039
+      },
+      "verification": null
+    },
+    "CH-T000-Q04": {
+      "id": "CH-T000-Q04",
+      "kind": "EXACT_FRAMEWORK_GITHUB_CI_RUN",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.json",
+          "sha256": "288fc399878d3dec991a8bb92c211f3a7b54553571ec2d68e986c17e4c165b79",
+          "bytes": 17765,
+          "lines": 552
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci-attempt.json",
+          "sha256": "78448b8eee900add550c1bcd52991a8bf18fafea9fd2fb06e73ae4dccdd219cb",
+          "bytes": 12010,
+          "lines": 1
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz",
+          "sha256": "5046925285362f42e60879c2b451256922760232314377756410a102ed578863",
+          "bytes": 69760
+        }
+      ],
+      "capture_operations": {
+        "ordinary_metadata": {
+          "raw_path": "/private/tmp/ch-t000-framework-ci.json.raw",
+          "normalized_path": "/private/tmp/ch-t000-framework-ci.json.normalized",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.json",
+          "capture_command": "gh run view 29406262221 --repo sepahead/haldir --json conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,status,updatedAt,url,workflowName > /private/tmp/ch-t000-framework-ci.json.raw",
+          "capture_exit_status": 0,
+          "normalize_command": "jq . /private/tmp/ch-t000-framework-ci.json.raw > /private/tmp/ch-t000-framework-ci.json.normalized",
+          "normalize_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-ci.json.normalized release/0.9.0/current-head/evidence/ch-t000-framework-ci.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:11:24Z",
+          "completed_at_utc": "2026-07-15T10:11:52Z"
+        },
+        "attempt_metadata": {
+          "raw_path": "/private/tmp/ch-t000-framework-ci-attempt.json.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci-attempt.json",
+          "capture_command": "gh run view 29406262221 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName > /private/tmp/ch-t000-framework-ci-attempt.json.raw",
+          "capture_exit_status": 0,
+          "retain_command": "cp /private/tmp/ch-t000-framework-ci-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-framework-ci-attempt.json",
+          "retain_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-ci-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-framework-ci-attempt.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:11:52Z",
+          "completed_at_utc": "2026-07-15T10:12:07Z"
+        },
+        "raw_log": {
+          "raw_path": "/private/tmp/ch-t000-framework-ci.log.gz.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz",
+          "decompressed_path": "/private/tmp/ch-t000-framework-ci.log.gz.decompressed",
+          "capture_command": "gh run view 29406262221 --repo sepahead/haldir --attempt 1 --log > /private/tmp/ch-t000-framework-ci.log.gz.raw",
+          "capture_exit_status": 0,
+          "compression_command": "gzip -n -9 -c /private/tmp/ch-t000-framework-ci.log.gz.raw > release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz",
+          "compression_exit_status": 0,
+          "decompress_command": "gzip -cd release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz > /private/tmp/ch-t000-framework-ci.log.gz.decompressed",
+          "decompress_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-ci.log.gz.raw /private/tmp/ch-t000-framework-ci.log.gz.decompressed",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:18:52Z",
+          "completed_at_utc": "2026-07-15T10:20:29Z"
+        }
+      },
+      "log_integrity": {
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz",
+        "compressed_sha256": "5046925285362f42e60879c2b451256922760232314377756410a102ed578863",
+        "compressed_bytes": 69760,
+        "uncompressed_sha256": "da4e52d64b40209bdc2cc1ac5f16a9573021497131b67fbd8abe03c8a71496ec",
+        "uncompressed_bytes": 512250,
+        "uncompressed_lines": 4028
+      },
+      "verification": null
+    },
+    "CH-T000-Q05": {
+      "id": "CH-T000-Q05",
+      "kind": "EXACT_FRAMEWORK_GITHUB_FORMAL_RUN",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.json",
+          "sha256": "c2e980ac76ef2009b6ff7d6db444d89c30526037ef963c87d01f03026a1c987b",
+          "bytes": 3023,
+          "lines": 97
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal-attempt.json",
+          "sha256": "157285662244db8763c6a33374416baa1a3602ecff3890a22aecfe3d11e78019",
+          "bytes": 2173,
+          "lines": 1
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz",
+          "sha256": "f8d71189ae959ddc1078f2b96df848fa24c0950a05aeb3fd20f815195dc7d081",
+          "bytes": 5864
+        }
+      ],
+      "capture_operations": {
+        "ordinary_metadata": {
+          "raw_path": "/private/tmp/ch-t000-framework-formal.json.raw",
+          "normalized_path": "/private/tmp/ch-t000-framework-formal.json.normalized",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.json",
+          "capture_command": "gh run view 29406262334 --repo sepahead/haldir --json conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,status,updatedAt,url,workflowName > /private/tmp/ch-t000-framework-formal.json.raw",
+          "capture_exit_status": 0,
+          "normalize_command": "jq . /private/tmp/ch-t000-framework-formal.json.raw > /private/tmp/ch-t000-framework-formal.json.normalized",
+          "normalize_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-formal.json.normalized release/0.9.0/current-head/evidence/ch-t000-framework-formal.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:20:29Z",
+          "completed_at_utc": "2026-07-15T10:20:35Z"
+        },
+        "attempt_metadata": {
+          "raw_path": "/private/tmp/ch-t000-framework-formal-attempt.json.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal-attempt.json",
+          "capture_command": "gh run view 29406262334 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName > /private/tmp/ch-t000-framework-formal-attempt.json.raw",
+          "capture_exit_status": 0,
+          "retain_command": "cp /private/tmp/ch-t000-framework-formal-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-framework-formal-attempt.json",
+          "retain_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-formal-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-framework-formal-attempt.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:20:35Z",
+          "completed_at_utc": "2026-07-15T10:20:36Z"
+        },
+        "raw_log": {
+          "raw_path": "/private/tmp/ch-t000-framework-formal.log.gz.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz",
+          "decompressed_path": "/private/tmp/ch-t000-framework-formal.log.gz.decompressed",
+          "capture_command": "gh run view 29406262334 --repo sepahead/haldir --attempt 1 --log > /private/tmp/ch-t000-framework-formal.log.gz.raw",
+          "capture_exit_status": 0,
+          "compression_command": "gzip -n -9 -c /private/tmp/ch-t000-framework-formal.log.gz.raw > release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz",
+          "compression_exit_status": 0,
+          "decompress_command": "gzip -cd release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz > /private/tmp/ch-t000-framework-formal.log.gz.decompressed",
+          "decompress_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-framework-formal.log.gz.raw /private/tmp/ch-t000-framework-formal.log.gz.decompressed",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:20:36Z",
+          "completed_at_utc": "2026-07-15T10:20:43Z"
+        }
+      },
+      "log_integrity": {
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz",
+        "compressed_sha256": "f8d71189ae959ddc1078f2b96df848fa24c0950a05aeb3fd20f815195dc7d081",
+        "compressed_bytes": 5864,
+        "uncompressed_sha256": "5b0172f4cc3e4000c72e4837c9a678c2b3d8bbee8597b3182ecf26d5f22133d3",
+        "uncompressed_bytes": 36592,
+        "uncompressed_lines": 267
+      },
+      "verification": null
+    },
+    "CH-T000-Q06": {
+      "id": "CH-T000-Q06",
+      "kind": "BOUNDED_VERIFIER_RESOURCE_PROFILE",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-resource-profile.json",
+          "sha256": "de6ea3ee293ba4dd8d5d6f0e28b4b73d529a0fa63665ff3192ef486de075c6f3",
+          "bytes": 54523,
+          "lines": 1746
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": {
+        "overall_pass": true,
+        "boundary_cases": 34,
+        "samples_per_case": 3,
+        "profiler_tests_passed": 26,
+        "profiler_tests_failed": 0
+      }
+    },
+    "CH-T000-Q07": {
+      "id": "CH-T000-Q07",
+      "kind": "R01_EXACT_FRAMEWORK_AUDIT",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/reviews/CH-T000-R01-framework.json",
+          "sha256": "a400b1bd52391f91c4a08cff3a249e414c2b424190bd2a27bb15b7008b41135e",
+          "bytes": 51013,
+          "lines": 1450
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    },
+    "CH-T000-Q08": {
+      "id": "CH-T000-Q08",
+      "kind": "R02_INDEPENDENT_FRAMEWORK_AUDIT",
+      "subject_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/reviews/CH-T000-R02-framework.json",
+          "sha256": "fba9e33bf34df35d98157d44d19585d614af230bd0624872e82971c994c96b15",
+          "bytes": 51654,
+          "lines": 1466
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null,
+      "verification": null
+    }
+  }
+}
