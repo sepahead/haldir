@@ -125,7 +125,7 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   development smoke separately exercises concrete session open, aggregate bind, and immediate
   local shutdown, but no decision or publisher path (`CL-LIVE-GATE-DEV-BIND-01`). An
   executable authenticated service package, Prepared abandonment/reclamation, OS-level append/write/
-  `sync_data` or disk-full fault injection, live-session faults, panic-abort/supervisor handling, child-process
+  `sync_data` or disk-full fault injection, live-session faults, panic-abort/process-manager handling, child-process
   crash, and power-loss behavior remain absent.
 - **YES** — Evidence storage bounded; tamper/chain-break detected; full-spool drop
   never flips a decision.

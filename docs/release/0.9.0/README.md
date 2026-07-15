@@ -16,7 +16,7 @@ protocol versions remain independent of the Haldir version.
 The author is **Sepehr Mahmoudian**. Review and independent-assurance roles are
 separate from authorship and must name the actual reviewer before their gates can
 close. The initial release intentionally has no persistent archive identifier; one
-may be added in a later metadata-only release after the supervisor review.
+may be added in a later metadata-only release after external review.
 
 The historical ledger remains **NO-GO** until every core requirement in
 [`release/0.9.0/requirements.json`](../../../release/0.9.0/requirements.json) is
@@ -99,6 +99,6 @@ record for its exact implementation CI and formal attempts.
 
 Task closure requires a stable SHALL/SHALL NOT requirement, applicable positive and
 negative tests, the exact commands and results, immutable source/dependency identity,
-a ten-lens review, and a residual-risk statement. External reviews, penetration tests,
-and supervisor approvals must be performed by real named people; repository authors
+a twenty-lens review, and a residual-risk statement. External reviews, penetration tests,
+and formal approvals must be performed by real named people; repository authors
 must not manufacture those records.

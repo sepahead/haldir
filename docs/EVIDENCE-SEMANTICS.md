@@ -32,7 +32,7 @@ to provision a disposable fixture and then open/bind/immediately shut it down wi
 receive/process call. The retained clean-source campaign proves those concrete local calls and
 returns for one fresh fixture while processing zero intents and publishing zero commands. It does
 not prove authenticated state/control provenance, a protected credential-opening package, peer
-identity, publisher worker, supervisor, delivery, remote cleanup, or a production transport pipeline
+identity, publisher worker, process manager, delivery, remote cleanup, or a production transport pipeline
 (`CL-LIVE-INGRESS-BINDING-01`, `CL-LIVE-GATE-DEV-BIND-01`).
 
 ## Each producer signs only what it observed
@@ -172,7 +172,7 @@ first, that event completes normally and the request applies to the next returne
 
 Explicit shutdown orders undeclare/drain before dropping the lower service and closing the
 wrapper. Neither the request handle nor the shutdown-aware method supplies a timeout, an OS-signal
-runner or supervisor, durable-journal footer/finalization, or proof of remote session retirement;
+runner or process manager, durable-journal footer/finalization, or proof of remote session retirement;
 it is not graceful production shutdown. Public transport borrowing constructors may already have
 minted other handles, and the lower raw-event service remains public. Fake-only tests establish
 prior-request preservation, return before a private retry, in-flight publication completion and
@@ -225,7 +225,7 @@ event is emitted. Cold drop, pending timeout-as-drop, panic unwind, and the two 
 terminal-fault endpoints are covered only through test seams. Coordinator-level OS partial
 write/`sync_data` failure, disk-full behavior, real append-commit ambiguity on either
 recovery side,
-panic-abort or service-supervisor behavior, child-process crash, live-session
+panic-abort or service-manager behavior, child-process crash, live-session
 cancellation/timeout/panic, queue-worker, and transport tests remain absent. Lower journal
 layers test their own narrower append ambiguity and reopen behavior. This is not transport
 invocation, delivery, receiver inactivity, or application evidence

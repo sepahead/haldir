@@ -46,6 +46,7 @@ clean_build_gate() {
   return "$status"
 }
 
+run "current-head audit gate" /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
 run "rustfmt"              cargo fmt --all --check
 run "clippy (deny warns)" cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 run "tests"               cargo test --workspace --all-targets --all-features --locked
@@ -59,8 +60,6 @@ run "source pins"         python3 tools/verify-pins.py
 run "CI/formal pins"       python3 tools/verify-ci-pins.py
 run "release audit tests" python3 -m unittest tools/release/test_verify_audit_inputs.py
 run "release audit cut"   python3 tools/release/verify-audit-inputs.py
-run "current-head audit tests" python3 -m unittest tools/release/test_verify_current_audit.py
-run "current-head audit cut" python3 tools/release/verify-current-audit.py
 run "release authority tests" python3 -m unittest tools/release/test_verify_authority_model.py
 run "release authority model" python3 tools/release/verify-authority-model.py
 run "release evidence generator tests" python3 -m unittest tools/release/test_generate_task_evidence.py
@@ -80,9 +79,9 @@ run "diff hygiene"        git diff --check
 
 printf '\n============================================================\n'
 printf 'P0-R exit gate: %d passed, %d failed\n' "$pass" "$fail"
-if [ "$fail" -ne 0 ]; then
+if (( fail != 0 )); then
   printf 'failed: %s\n' "${failed[*]}"
   printf 'Note: the TLA+ check (CL-FORMAL-01) runs in CI, not here.\n'
-  exit 1
+  builtin exit 1
 fi
 printf 'All offline P0-R gates passed. (TLA+ check runs in CI: CL-FORMAL-01.)\n'

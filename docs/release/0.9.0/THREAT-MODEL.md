@@ -248,7 +248,7 @@ These are safety/resource bounds, not an availability guarantee. There is no
 proven pre-verification per-principal limiter, cryptographic concurrency cap,
 connection/declaration quota, fairness scheduler, reserved control-plane
 capacity, authenticated flood campaign, disk-full/power-loss campaign, live
-soak/latency evidence, in-flight publisher timeout, supervisor, or plant-safe
+soak/latency evidence, in-flight publisher timeout, process management, or plant-safe
 fallback proof. Route-authorized invalid traffic can consume signature,
 receipt, journal, and finite recovery resources. The shutdown handle is an
 irreversible cooperative denial capability whose clones must be restricted.
