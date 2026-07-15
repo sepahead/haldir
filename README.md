@@ -40,7 +40,7 @@ command publications. A retained clean-source synthetic campaign now proves thos
 calls and returns against the pinned router and fresh ephemeral Gate PKI for one disposable fixture
 (`CL-LIVE-GATE-DEV-BIND-01`; `evidence/12-live-gate-dev-smoke`, source commit
 `3a75c039c3e73b999a74741b5633ee43a0a69e97`). It is not selected by an authenticated package
-loader, control plane, worker, or supervisor. It has no protected credential loader and proves no peer identity,
+loader, control plane, worker, or process manager. It has no protected credential loader and proves no peer identity,
 credential custody, handle exclusivity, delivery, or remote cleanup. Successful declared-live
 startup mints the private move-only capability required by the live coordinator;
 exact reference and copied-report paths cannot reach its concrete publisher method. Crebain is
@@ -63,7 +63,7 @@ ready, certified, airworthy, or safe for deployment. Honesty vocabulary is norma
 *applied*, and *observed* mean exactly what `docs/HALDIR-NCP-V0.8.0-TRIPLE-CHECKED-AUDIT-AND-IMPLEMENTATION-SPECIFICATION-2026.md`
 says they mean.
 
-- **Release program:** `0.9.0`, authored by Sepehr Mahmoudian, is under supervisor
+- **Release program:** `0.9.0`, authored by Sepehr Mahmoudian, is under external
   review and remains `NO_GO`; see the
   [current-head qualification record](release/0.9.0/current-head/README.md).
 - **Command-authority profile:** `PRE_AUTHORITY_ACL_ONLY` (NCP `v0.8.0`, increment 1).
@@ -191,7 +191,7 @@ helper test proves that a later request wakes a pending idle receive. The
 service kernel owns one canonical capacity-one pool for its own
 process-local lifetime. The outer aggregate retains one supplied session wrapper and internally
 derived ingress, but it is not a credential-opening package, exclusive handle owner, separate
-publisher worker, supervisor, or runnable transport package. Its local request latch is not an
+publisher worker, process manager, or runnable transport package. Its local request latch is not an
 OS-signal runner, an in-flight timeout, durable-journal finalization, confirmed remote session
 retirement, or graceful production shutdown. Publisher-result
 ordering, cold drop before first poll, pending timeout-as-drop, panic unwind, and synthetic

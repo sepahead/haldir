@@ -161,7 +161,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   shutdown-aware method. If a concurrent event is selected before the request is observed, it
   is processed without request-driven cancellation; the request remains latched for the next returned
   owner. There is no timeout for a hung in-flight transport call and no OS-signal runner or
-  supervisor uses this API yet. Cancelling the consuming future itself still drops the aggregate,
+  process manager uses this API yet. Cancelling the consuming future itself still drops the aggregate,
   so a future runner must signal through the handle and await the ownership-returning transition.
   Its explicit shutdown attempts
   undeclare/drain, then drops the publisher-owning service, then closes the retained wrapper.
@@ -176,7 +176,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   shared session, and public borrowing constructors can mint typed ingress/publisher handles before
   the wrapper is consumed. The aggregate therefore does not prove exclusive credentials, a sole
   global session/subscriber/publisher handle, or confirmed remote cleanup after cancellation/drop.
-  No production control plane, protected credential-opening package, publisher worker, or supervisor
+  No production control plane, protected credential-opening package, publisher worker, or process manager
   selects it, and no graceful production-shutdown property is established. The development target's
   immediate shutdown is only a local cleanup call. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.

@@ -22,7 +22,7 @@ machine-readable crosswalk must preserve both namespaces.
 ## Release label
 
 The handoff's proposed target is `1.0.0`. This implementation program uses
-`0.9.0` for the first supervisor-review release. This is a narrowing of release
+`0.9.0` for the first external-review release. This is a narrowing of release
 status, not a waiver of any correctness, security, evidence, or claim gate. The
 author is Sepehr Mahmoudian. DOI and Zenodo metadata are intentionally absent.
 
@@ -86,6 +86,6 @@ tasks can close.
 ## Human review boundary
 
 Automated agents may supply additional review lanes, but they are not represented
-as the supervisor or as an independent human security, cryptography, formal, or
-deployment reviewer. Any such gate remains pending or its associated strong
-claim is removed until a real named reviewer acts.
+as a named release authority or as an independent human security, cryptography,
+formal, or deployment reviewer. Any such gate remains pending or its associated
+strong claim is removed until a real named reviewer acts.

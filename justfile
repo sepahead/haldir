@@ -2,7 +2,7 @@
 # If `just` is not installed, run the underlying cargo/python commands directly
 # (see .github/workflows/ci.yml, which does not depend on `just`).
 
-set shell := ["bash", "-uc"]
+set shell := ["/usr/bin/env", "-u", "BASH_ENV", "-u", "ENV", "/bin/bash", "--noprofile", "--norc", "-uc"]
 
 default: ci
 
@@ -68,8 +68,7 @@ verify-release-audit:
     python3 tools/release/verify-audit-inputs.py
 
 verify-current-audit:
-    python3 -m unittest tools/release/test_verify_current_audit.py
-    python3 tools/release/verify-current-audit.py
+    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
 
 verify-release-authority:
     python3 -m unittest tools/release/test_verify_authority_model.py
@@ -89,4 +88,5 @@ diff-check:
 
 # Canonical offline gate. Platform-specific and TLA+ jobs still run in GitHub CI.
 ci:
-    bash tools/p0r-exit-gate.sh
+    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
+    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/p0r-exit-gate.sh

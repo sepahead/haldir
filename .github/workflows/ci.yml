@@ -4,6 +4,7 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -84,11 +85,29 @@ jobs:
         run: cargo build --workspace --locked
 
   supply-chain:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
+      - name: Install pinned Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.14.6"
+          check-latest: false
+      - name: Harden pinned Python permissions
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        run: |
+          PYTHON3="$(/usr/bin/readlink -f "${pythonLocation}/bin/python3")"
+          /usr/bin/chmod go-w "$PYTHON3"
+          /usr/bin/test -x "$PYTHON3"
+      - name: Preload isolated task-runner image
+        run: /usr/bin/docker pull python@sha256:4a3a38c8710794e278c3651352dd6195d5798eb6ec5ad41db6258e753c9e4ceb
+      - name: Verify current-head 0.9 audit cut
+        run: /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
       - name: Verify source pins
         run: python3 tools/verify-pins.py
       - name: Verify immutable CI and formal-tool pins
@@ -97,10 +116,6 @@ jobs:
         run: |
           python3 -m unittest tools/release/test_verify_audit_inputs.py
           python3 tools/release/verify-audit-inputs.py
-      - name: Verify current-head 0.9 audit cut
-        run: |
-          python3 -m unittest tools/release/test_verify_current_audit.py
-          python3 tools/release/verify-current-audit.py
       - name: Verify normative 0.9 authority model
         run: |
           python3 -m unittest tools/release/test_verify_authority_model.py

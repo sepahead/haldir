@@ -142,7 +142,7 @@ limitations inside `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
    and capability-marked concrete Called/publisher binding, design
    authenticated restart clearance covering transport/session retirement and recovered
    policy history, then test live-session cancellation/timeout/panic, OS-level append/write/
-   `sync_data` fault injection and disk-full behavior, panic-abort/supervisor handling, reconnect, child-process
+   `sync_data` fault injection and disk-full behavior, panic-abort/process-manager handling, reconnect, child-process
    crash, the remaining operation/route matrix, and bypass inventory.
 5. **Research/release honesty:** integrate Crebain then Engram in that order, run the
    registered campaigns, and create an experimental release only after every stronger
