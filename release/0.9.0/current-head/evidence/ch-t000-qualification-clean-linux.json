@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "CH-T000",
+  "evidence_id": "CH-T000-A03",
+  "evidence_role": "INDEPENDENT_TECHNICAL_REPRODUCTION",
+  "reviewer_id": "CH-T000-R02",
+  "runner_id": "/root/d_activation_schema",
+  "runner_kind": "automated_agent",
+  "human": false,
+  "named_human_reviewer": false,
+  "release_authority": false,
+  "runner_class": "FRESH_OBJECT_ISOLATED_NETWORK_DISABLED_READ_ONLY_LINUX_CONTAINER",
+  "source_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+  "source_tree": "168be86ff96265db3c6e65221425c4f8f7c8e545",
+  "source_checkout": {
+    "method": "FRESH_NO_LOCAL_NO_HARDLINKS_CANONICAL_SSH_CLONE_WITH_DETACHED_CHECKOUT",
+    "source_repository": "git@github.com:sepahead/haldir.git",
+    "host_path": "/private/tmp/haldir-1fd8ab5-ch-t000-a03-cprime2-source",
+    "clone_command": "git clone --no-local --no-hardlinks --branch main --single-branch git@github.com:sepahead/haldir.git /private/tmp/haldir-1fd8ab5-ch-t000-a03-cprime2-source",
+    "clone_result": {
+      "exit_status": 0,
+      "combined_output": "Cloning into '/private/tmp/haldir-1fd8ab5-ch-t000-a03-cprime2-source'...\n",
+      "sha256": "a22361c5701c8386b5993831e0d594619a6c20c613e44ccfd61147bd42436524",
+      "bytes": 73,
+      "lines": 1
+    },
+    "checkout_command": "git -C /private/tmp/haldir-1fd8ab5-ch-t000-a03-cprime2-source checkout --detach 1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+    "checkout_result": {
+      "exit_status": 0,
+      "combined_output": "HEAD is now at 1fd8ab5 release: qualify current-head audit evidence\n",
+      "sha256": "9964f9181eb822c708b585e34076e01ca5ab007371f46290db1b720bac93312b",
+      "bytes": 68,
+      "lines": 1
+    },
+    "clean_check_command": "git -C /private/tmp/haldir-1fd8ab5-ch-t000-a03-cprime2-source status --porcelain=v1 --untracked-files=all",
+    "clean_check_result": {
+      "exit_status": 0,
+      "combined_output": "",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "lines": 0
+    },
+    "head": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+    "tree": "168be86ff96265db3c6e65221425c4f8f7c8e545"
+  },
+  "container": {
+    "runtime": "Docker Engine 27.4.0 via Colima 0.10.3 on macOS Virtualization.Framework",
+    "client_version": "27.4.0",
+    "server_version": "27.4.0",
+    "image_reference": "python@sha256:4a3a38c8710794e278c3651352dd6195d5798eb6ec5ad41db6258e753c9e4ceb",
+    "image_id": "sha256:d41229b8b87f39e241faf16b5db46e7823f9d82b3774fbf3690edb92be068185",
+    "image_created_at": "2026-07-14T04:47:15Z",
+    "os": "Debian GNU/Linux 12",
+    "architecture": "arm64",
+    "kernel": "Linux 6.8.0-50-generic aarch64",
+    "python": "3.14.6",
+    "git": "2.39.5",
+    "ssh_keygen": "/usr/bin/ssh-keygen",
+    "network": "none",
+    "root_filesystem": "read-only",
+    "source_mount": "read-only",
+    "temporary_filesystem": "writable Colima-VM-local /var/tmp execution-copy bind plus writable /tmp tmpfs"
+  },
+  "command": "docker run --rm --network=none --read-only --user 501:20 --group-add 991 --tmpfs /tmp:rw,nosuid,nodev,exec,mode=1777 -e HOME=/var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4/home -e TMPDIR=/var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4/tmp -e DOCKER_HOST=unix:///var/run/docker.sock -v /private/tmp/haldir-a03-passwd:/etc/passwd:ro -v /private/tmp/haldir-a03-group:/etc/group:ro -v /private/tmp/haldir-1fd8ab5-ch-t000-a03-cprime2-source:/repo:ro -v /var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4:/var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4:rw -v /usr/bin/docker:/usr/local/bin/docker:ro -v /var/run/docker.sock:/var/run/docker.sock python@sha256:4a3a38c8710794e278c3651352dd6195d5798eb6ec5ad41db6258e753c9e4ceb sh -ceu 'test \"$(git -C /repo rev-parse HEAD)\" = 1fd8ab53835a43d206d839fc53c8c0614f93c0e8; test \"$(git -C /repo rev-parse HEAD^{tree})\" = 168be86ff96265db3c6e65221425c4f8f7c8e545; test -z \"$(git -C /repo status --porcelain=v1 --untracked-files=all)\"; mkdir -p /var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4/repo /var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4/home /var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4/tmp; cp -a /repo/. /var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4/repo/; cd /var/tmp/haldir-1fd8ab5-ch-t000-a03-cprime4/repo; test \"$(git rev-parse HEAD)\" = 1fd8ab53835a43d206d839fc53c8c0614f93c0e8; test \"$(git rev-parse HEAD^{tree})\" = 168be86ff96265db3c6e65221425c4f8f7c8e545; test -z \"$(git status --porcelain=v1 --untracked-files=all)\"; printf \"HEAD=%s\\nTREE=%s\\n\" \"$(git rev-parse HEAD)\" \"$(git rev-parse HEAD^{tree})\"; python3 --version; git --version; test -x /usr/bin/ssh-keygen; python3 -I tools/release/test_verify_current_audit.py; python3 -I tools/release/test_current_audit_resource_profile.py; python3 -I tools/release/verify-current-audit.py' > /private/tmp/ch-t000-cprime4-a03.log.raw 2>&1",
+  "capture_method": "The outer zsh process captured docker run stdout and stderr by direct redirection and retained the direct Docker exit status in a separate result file; no tee or pipeline determined success. A fresh canonical SSH clone was mounted read-only at /repo, copied into a dedicated writable Colima-VM-local scratch bind, and rechecked for exact HEAD, tree, and clean status before execution so nested bind paths resolved on the same daemon host.",
+  "started_at_utc": "2026-07-15T10:48:05Z",
+  "completed_at_utc": "2026-07-15T10:49:05Z",
+  "exit_status": 0,
+  "results": {
+    "commit_identity": "MATCH",
+    "tree_identity": "MATCH",
+    "checkout_clean": true,
+    "verifier": "PASS",
+    "adversarial_tests_passed": 161,
+    "adversarial_tests_failed": 0
+  },
+  "log": {
+    "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-clean-linux.log.gz",
+    "compressed_sha256": "6994a41038290ebcb8c1d203ccd2921e7879dbd1e2430ba555aae700a4f3c9b5",
+    "compressed_bytes": 198,
+    "uncompressed_sha256": "f0cb20f671f935315a3e0f1939a7d0ea92f125ff9a6944e7ccd60b53723d7526",
+    "uncompressed_bytes": 511,
+    "uncompressed_lines": 15
+  },
+  "scope_limitations": [
+    "The retained fresh canonical SSH clone remained read-only at /repo; execution used a separately mounted writable copy because the frozen tests intentionally create repository-adjacent signed fixtures and temporary repositories.",
+    "The outer container had no network namespace access and a read-only root filesystem, but its Docker socket was a privileged capability channel to the trusted local Colima daemon; this is not a general adversarial-sandbox claim.",
+    "Nested registered-test containers independently enforced their frozen no-network, read-only-root, bounded-output, timeout, and cleanup controls.",
+    "The local daemon, daemon-side Docker client, socket, Colima VM filesystem, shared read-only source mount, macOS host kernel, canonical Git transport, and preloaded pinned images remained trusted dependencies.",
+    "This is automated technical reproduction only and grants no human approval, security certification, publication authority, or release authority."
+  ]
+}

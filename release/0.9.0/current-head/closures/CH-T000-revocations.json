@@ -1,0 +1,31 @@
+{
+  "schema_version": "2.0.0",
+  "release_target": "0.9.0",
+  "persistent_identifier": null,
+  "policy": "APPEND_ONLY_SIGNED_ANY_VERIFIED_SUFFIX_REOPEN_WITH_EPOCH_ROLLBACK",
+  "framework_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+  "qualification_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+  "activation_commit": "DERIVED_AS_SIGNED_COMMIT_FIRST_CONTAINING_THIS_LEDGER",
+  "limits": {
+    "records": 126,
+    "cause_files_per_record": 16,
+    "cause_file_bytes": 4194304,
+    "cause_total_bytes_per_record": 16777216
+  },
+  "records": [],
+  "human_review_boundary": {
+    "named_human_approval": "NOT_PERFORMED",
+    "independent_human_review": "NOT_PERFORMED",
+    "release_approval": "NOT_GRANTED",
+    "security_certification": "NOT_GRANTED",
+    "automated_review_is_human_approval": false
+  },
+  "release_authority_boundary": {
+    "overall_release_status": "NO_GO",
+    "public_claim_change": "NONE",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  }
+}

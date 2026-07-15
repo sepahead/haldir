@@ -1,0 +1,29 @@
+{
+  "schema_version": "2.0.0",
+  "release_target": "0.9.0",
+  "persistent_identifier": null,
+  "framework_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+  "qualification_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+  "activation_commit": "DERIVED_AS_SIGNED_COMMIT_FIRST_CONTAINING_THIS_REGISTRY",
+  "append_only": true,
+  "epoch_model": "MONOTONIC_PER_TASK_F_I_C_D",
+  "integration_model": "CENTRAL_ISOLATED_REGISTRY_DISPATCH",
+  "limits": {
+    "registrations": 256,
+    "first_parent_commits": 1024,
+    "changed_paths_per_commit": 4096,
+    "path_bytes": 240,
+    "verifier_output_bytes_per_stream": 65536,
+    "verifier_seconds": 10,
+    "verifier_aggregate_seconds": 7680
+  },
+  "registrations": [],
+  "release_authority_boundary": {
+    "overall_release_status": "NO_GO",
+    "public_claim_change": "NONE",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  }
+}

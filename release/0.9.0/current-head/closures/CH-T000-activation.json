@@ -1,0 +1,1296 @@
+{
+  "schema_version": "1.0.0",
+  "record_id": "CH-T000-SIGNED-TECHNICAL-ACTIVATION",
+  "task_id": "CH-T000",
+  "source_task_id": "T000",
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "activation_effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_THIS_RECORD_EXACT_EVIDENCE_AND_LEDGER_TRANSITION",
+  "framework_commit": "1f759dbb7ee845319255923d758ca64c0f61935b",
+  "qualification_commit": {
+    "commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+    "tree": "168be86ff96265db3c6e65221425c4f8f7c8e545",
+    "parent": "1f759dbb7ee845319255923d758ca64c0f61935b",
+    "author_name": "Sepehr Mahmoudian",
+    "author_email": "sepmhn@gmail.com",
+    "authored_at": "2026-07-15T12:28:21+02:00",
+    "committer_name": "Sepehr Mahmoudian",
+    "committer_email": "sepmhn@gmail.com",
+    "committed_at": "2026-07-15T12:28:21+02:00",
+    "subject": "release: qualify current-head audit evidence",
+    "signature": {
+      "format": "ssh",
+      "status": "verified",
+      "principal": "sepmhn@gmail.com",
+      "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "allowed_signers_path": "release/0.9.0/allowed-signers",
+      "allowed_signers_sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+    },
+    "diff": {
+      "base": "1f759dbb7ee845319255923d758ca64c0f61935b",
+      "path_statuses": {
+        "release/0.9.0/current-head/closures/CH-T000-qualification.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-ci-attempt.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-ci.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review-attempt.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-formal-attempt.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-formal.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.json": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.log.gz": "A",
+        "release/0.9.0/current-head/evidence/ch-t000-resource-profile.json": "A",
+        "release/0.9.0/current-head/reviews/CH-T000-R01-framework.json": "A",
+        "release/0.9.0/current-head/reviews/CH-T000-R02-bfe.json": "A",
+        "release/0.9.0/current-head/reviews/CH-T000-R02-framework.json": "A",
+        "release/0.9.0/current-head/reviews/CH-T000.json": "A"
+      },
+      "patch_command": "git -c diff.algorithm=myers diff --no-ext-diff --no-textconv --no-renames --no-color --src-prefix=a/ --dst-prefix=b/ --binary --full-index 1f759dbb7ee845319255923d758ca64c0f61935b..1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+      "patch_sha256": "96722f85b2e9b3879d82a0c10eaad860e37d9703bf655f196ef99431b56465eb",
+      "patch_bytes": 744546,
+      "patch_lines": 14627,
+      "name_status_sha256": "8e1c3711468d21757f4fdef1d3b52b02b70a9734d4f8e7e41240d8a43bf86c21",
+      "numstat_sha256": "19613a0ecabfb983ff5e4f3066b2d72bf4295a2434bf81c83b6abfcb9b3d55e7"
+    },
+    "changed_files": [
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/closures/CH-T000-qualification.json",
+        "sha256": "74c0b8d46770d89953e8b263c78004a04bd855d288e7fe79ef92f72d1797f693",
+        "bytes": 23203,
+        "lines": 609
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.json",
+        "sha256": "9958d8752af1e4bbc4d4d66ae016f4da8b327f5eb120088ed82d0dd0de5ddc78",
+        "bytes": 5620,
+        "lines": 93
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz",
+        "sha256": "918bd15c9a46415282512666d3ade66021022b48bc7b5178047d2103a35da99c",
+        "bytes": 379
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci-attempt.json",
+        "sha256": "78448b8eee900add550c1bcd52991a8bf18fafea9fd2fb06e73ae4dccdd219cb",
+        "bytes": 12010,
+        "lines": 1
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.json",
+        "sha256": "288fc399878d3dec991a8bb92c211f3a7b54553571ec2d68e986c17e4c165b79",
+        "bytes": 17765,
+        "lines": 552
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz",
+        "sha256": "5046925285362f42e60879c2b451256922760232314377756410a102ed578863",
+        "bytes": 69760
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review-attempt.json",
+        "sha256": "71a3f6de6aa320e18095cd06b97b8ff47b08874ae6f79c50ce2e364c876c43f9",
+        "bytes": 12023,
+        "lines": 1
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.json",
+        "sha256": "59152357faff683a1a3cd7ed3ff88b5af420e9f1b8b52d72c752cb9c89bd39fe",
+        "bytes": 17778,
+        "lines": 552
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz",
+        "sha256": "03d07797672165555a42eac8994c1470e8711ab870bc6ec7ece7c9b85f694c16",
+        "bytes": 69833
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal-attempt.json",
+        "sha256": "157285662244db8763c6a33374416baa1a3602ecff3890a22aecfe3d11e78019",
+        "bytes": 2173,
+        "lines": 1
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.json",
+        "sha256": "c2e980ac76ef2009b6ff7d6db444d89c30526037ef963c87d01f03026a1c987b",
+        "bytes": 3023,
+        "lines": 97
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz",
+        "sha256": "f8d71189ae959ddc1078f2b96df848fa24c0950a05aeb3fd20f815195dc7d081",
+        "bytes": 5864
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.json",
+        "sha256": "673b3abc97b7bdf397202b493835f276e577542c05fcaaeb096c7003c2b4c06b",
+        "bytes": 2733,
+        "lines": 47
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.log.gz",
+        "sha256": "bdb8ee4beb457c1365951f6cfd5c904b43b1f4a83be9f943cd0e4c452933c364",
+        "bytes": 20932
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json",
+        "sha256": "e60cd69b34aedf1204c838ba89a7db5ec8372a84329d9ba21ad0284e6b6c8467",
+        "bytes": 11337,
+        "lines": 1
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.json",
+        "sha256": "90bbb3278503f8f1cf171fc981af8c5d665965bdaf8190d744d41e8e57c8d70f",
+        "bytes": 16732,
+        "lines": 520
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz",
+        "sha256": "74531e2cce2ae6d974e498c16bfaf230fa5200df02ce7de818489c76665caa92",
+        "bytes": 67356
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json",
+        "sha256": "a0245dce277990dc739608f9e7cda41838826c47f25ff0e197d764da803defca",
+        "bytes": 2173,
+        "lines": 1
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.json",
+        "sha256": "831a04ac14c5c6f428038b4279db8460488c0787e2aa9f3338c459550cf814f2",
+        "bytes": 3023,
+        "lines": 97
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz",
+        "sha256": "d8ca420c8b3c4ee9208731fb05fc3a057e7719230e5393d3724ff329d96613ae",
+        "bytes": 5886
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.json",
+        "sha256": "513096a816e24220c7d18f31290faa54546fd60670479ba7f45bada01a0befaf",
+        "bytes": 2545,
+        "lines": 46
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.log.gz",
+        "sha256": "417bde0ef2f6dd0f9ce59b95c4e209d15160ea5ae6ddbd63218bdc07ec307933",
+        "bytes": 20907
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/ch-t000-resource-profile.json",
+        "sha256": "de6ea3ee293ba4dd8d5d6f0e28b4b73d529a0fa63665ff3192ef486de075c6f3",
+        "bytes": 54523,
+        "lines": 1746
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/reviews/CH-T000-R01-framework.json",
+        "sha256": "a400b1bd52391f91c4a08cff3a249e414c2b424190bd2a27bb15b7008b41135e",
+        "bytes": 51013,
+        "lines": 1450
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/reviews/CH-T000-R02-bfe.json",
+        "sha256": "5e1deac021a91931f5d8c1a54e7a8278ae4bc434aec7f4b5a497e07af8d0c598",
+        "bytes": 31756,
+        "lines": 507
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/reviews/CH-T000-R02-framework.json",
+        "sha256": "fba9e33bf34df35d98157d44d19585d614af230bd0624872e82971c994c96b15",
+        "bytes": 51654,
+        "lines": 1466
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/reviews/CH-T000.json",
+        "sha256": "02d077b0a4ab34271627a6679472d8c978b052a27eb72c2e4791496c3958be04",
+        "bytes": 68200,
+        "lines": 1630
+      }
+    ]
+  },
+  "qualification_records": {
+    "qualification": {
+      "path": "release/0.9.0/current-head/closures/CH-T000-qualification.json",
+      "sha256": "74c0b8d46770d89953e8b263c78004a04bd855d288e7fe79ef92f72d1797f693",
+      "bytes": 23203,
+      "lines": 609
+    },
+    "review": {
+      "path": "release/0.9.0/current-head/reviews/CH-T000.json",
+      "sha256": "02d077b0a4ab34271627a6679472d8c978b052a27eb72c2e4791496c3958be04",
+      "bytes": 68200,
+      "lines": 1630
+    }
+  },
+  "evidence_files": [
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-p0r.json",
+      "sha256": "240d1a6869bacd040e6a7495115de28bb3a8dae68856986ffc35ea0e985078c4",
+      "bytes": 2740,
+      "lines": 47
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-p0r.log.gz",
+      "sha256": "e3138ade90f942fbedd0807b13899048ac195a3e1d809b90341dec6b1b5a4233",
+      "bytes": 20886
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-clean-linux.json",
+      "sha256": "432bb242bbd0a8ec67b81686d7a4c2f7c001d8c8e8ca36fdb84662e47c9e673e",
+      "bytes": 6974,
+      "lines": 92
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-clean-linux.log.gz",
+      "sha256": "6994a41038290ebcb8c1d203ccd2921e7879dbd1e2430ba555aae700a4f3c9b5",
+      "bytes": 198
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci.json",
+      "sha256": "b8322b42b98685298ccec846436990da0d0963eed4c3176706aad5bd5fef7ffd",
+      "bytes": 17765,
+      "lines": 552
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci-attempt.json",
+      "sha256": "7236e6572c38590c0c74c83e54f0110142d1ed842059587e07b02027ef0a63b3",
+      "bytes": 12010,
+      "lines": 1
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci.log.gz",
+      "sha256": "2c77e2e2e59304e7dac38f3dd6b83bcfb1385c0910cd527de0107f6d2908a550",
+      "bytes": 69328
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal.json",
+      "sha256": "dacfc93679cd27df7c0d402df402c5736c66d8127c0497c86c23b9a47519137e",
+      "bytes": 3023,
+      "lines": 97
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal-attempt.json",
+      "sha256": "896d1bee8de6e06e40a7b297c32f186ba3c2a3c26d3d4e8fc31c85c91f1647d2",
+      "bytes": 2173,
+      "lines": 1
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal.log.gz",
+      "sha256": "65f57c616d8603287d5121996f285023a6bbf3cf3a96a3fb4bba61b298f62a3b",
+      "bytes": 5863
+    }
+  ],
+  "requirements_record": {
+    "path": "release/0.9.0/current-head/requirements.json",
+    "sha256": "127764b220327d6a9bf0eb24161e86e9bea4ba7529b377b94966c0399d8e4387",
+    "bytes": 148549,
+    "lines": 4434
+  },
+  "revocation_ledger_record": {
+    "path": "release/0.9.0/current-head/closures/CH-T000-revocations.json",
+    "sha256": "d322f006c78ad7340e04ef613e6fc9412c4af5f1d6d0cac74d9d15f97c0cc343",
+    "bytes": 1083,
+    "lines": 31
+  },
+  "successor_registry_record": {
+    "path": "release/0.9.0/current-head/closures/task-verifier-registry.json",
+    "sha256": "1f9c5b93616c5ed2155c046b6bf889c59c0e623c26620dc9b495cfd36a075ea6",
+    "bytes": 984,
+    "lines": 29
+  },
+  "active_claims_record": {
+    "path": "release/0.9.0/current-head/closures/active-claims.json",
+    "sha256": "ca5523f1cac9d93d752c3c08f115c95351bbdf05919a435527717fc23a6727fe",
+    "bytes": 30691,
+    "lines": 738
+  },
+  "terminal_transition": {
+    "task_id": "CH-T000",
+    "from": "OPEN",
+    "to": "VERIFIED",
+    "closure_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+    "implementation_commits": [
+      "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "1f759dbb7ee845319255923d758ca64c0f61935b"
+    ],
+    "evidence_ids": [
+      "CH-T000-E01",
+      "CH-T000-E02",
+      "CH-T000-E03",
+      "CH-T000-E04",
+      "CH-T000-E05",
+      "CH-T000-E06",
+      "CH-T000-Q01",
+      "CH-T000-Q02",
+      "CH-T000-Q03",
+      "CH-T000-Q04",
+      "CH-T000-Q05",
+      "CH-T000-Q06",
+      "CH-T000-Q07",
+      "CH-T000-Q08",
+      "CH-T000-A01",
+      "CH-T000-A02",
+      "CH-T000-A03",
+      "CH-T000-A04",
+      "CH-T000-A05"
+    ],
+    "reviewer_ids": [
+      "CH-T000-R01",
+      "CH-T000-R02",
+      "CH-T000-R03"
+    ],
+    "lens_projection": {
+      "L01": {
+        "name": "Claims and scope",
+        "question": "Can a reader infer more than the exact evidence tier supports? Separate implemented, verified, validated, deployment-qualified, field-validated, and not-claimed.",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N05",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E01",
+          "CH-T000-E02",
+          "CH-T000-Q01",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Exact source, implementation, framework, and no-authority boundary are bound.",
+        "applicability_rationale": "The task is applicable because CH-T000 establishes the audit root.",
+        "residual_limitation": "No runtime or release-readiness claim is evaluated.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L02": {
+        "name": "First-principles semantics",
+        "question": "Are inputs, state, transitions, outputs, invariants, units, and failure states explicit rather than implied by names?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N02",
+          "CH-T000-N04",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E03",
+          "CH-T000-E04",
+          "CH-T000-E05",
+          "CH-T000-Q02",
+          "CH-T000-Q03",
+          "CH-T000-Q04"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Independent and local accepted-state paths agree on exact identities.",
+        "applicability_rationale": "Functional acceptance is limited to the audit verifier and its gates.",
+        "residual_limitation": "Product runtime correctness remains outside this task.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L03": {
+        "name": "Mathematics and statistics",
+        "question": "Are definitions, assumptions, estimands, finite-sample behavior, multiplicity, uncertainty, calibration, and failure regions correct and explicit?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N02",
+          "CH-T000-N03"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E02",
+          "CH-T000-Q06",
+          "CH-T000-Q07"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Digest, byte, line, and exact/+1 resource relations are closed.",
+        "applicability_rationale": "Numeric consistency is applicable to every retained record and parser bound.",
+        "residual_limitation": "The profile makes no cross-machine latency claim.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L04": {
+        "name": "Type and state integrity",
+        "question": "Can invalid combinations be constructed through safe APIs, deserialization, FFI, feature flags, defaults, or migration?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N02",
+          "CH-T000-N03",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E02",
+          "CH-T000-Q01",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Closed fields and exact OPEN-to-D transition typing reject ambiguity.",
+        "applicability_rationale": "State integrity is central to preventing premature closure.",
+        "residual_limitation": "Only CH-T000 transition semantics are qualified here.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L05": {
+        "name": "Time, ordering, and replay",
+        "question": "Are clock domains, freshness, deadlines, sessions, epochs, generations, sequence numbers, duplicates, restart, and rollover unambiguous?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N02",
+          "CH-T000-N04"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E03",
+          "CH-T000-E04",
+          "CH-T000-E05",
+          "CH-T000-E06",
+          "CH-T000-Q02",
+          "CH-T000-Q03",
+          "CH-T000-Q04",
+          "CH-T000-Q05"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Subject, execution, capture, review, and retention ordering is explicit.",
+        "applicability_rationale": "All retained execution evidence is time-bearing and therefore applicable.",
+        "residual_limitation": "Platform clocks are trusted inputs, not independently attested time.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L06": {
+        "name": "Identity and provenance",
+        "question": "Can every result, command, model, dataset, scene, schema, configuration, build, and evidence artifact be traced immutably?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N02",
+          "CH-T000-N05"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E01",
+          "CH-T000-E04",
+          "CH-T000-Q01",
+          "CH-T000-Q03",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Git, runner, and automated reviewer identities remain distinct and bound.",
+        "applicability_rationale": "Identity provenance is required for every qualified commit and review.",
+        "residual_limitation": "Automated identities do not imply named-human review.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L07": {
+        "name": "Authentication and cryptography",
+        "question": "Are canonical bytes, domain separation, algorithms, identities, rotation, revocation, downgrade resistance, and failure semantics complete?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N02"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E01",
+          "CH-T000-E02",
+          "CH-T000-Q01",
+          "CH-T000-Q07"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Signed commits and SHA-256 file identities bind the qualified graph.",
+        "applicability_rationale": "Authentication is applicable to commit and evidence provenance.",
+        "residual_limitation": "Key custody and organizational revocation are not certified.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L08": {
+        "name": "Authority and safety",
+        "question": "Who may observe, advise, intend, authorize, publish, apply, and confirm? Can any fallback or optional component widen authority?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N05",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-Q01",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Every authority-bearing field remains false and release remains NO_GO.",
+        "applicability_rationale": "Authority separation is applicable because the task changes audit state.",
+        "residual_limitation": "No deployment, tag, publication, DOI, or archive authority is granted.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L09": {
+        "name": "Hostile inputs and parsers",
+        "question": "What happens with duplicates, unknown fields, unsafe integers, NaN/Inf, Unicode ambiguity, malformed nesting, path tricks, and contradictory metadata?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N02",
+          "CH-T000-N03"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-Q06",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Duplicate keys, path aliases, malformed compression, and contradictory state reject.",
+        "applicability_rationale": "The verifier consumes adversary-controlled repository bytes.",
+        "residual_limitation": "Unknown future formats require a new protocol version.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L10": {
+        "name": "Resource and denial-of-service bounds",
+        "question": "Are bytes, allocations, dimensions, states, queues, retries, threads, log volume, GPU/CPU work, and serialization bounded before expensive work?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N03"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-Q02",
+          "CH-T000-Q03",
+          "CH-T000-Q06",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Every parser and subprocess boundary has an explicit exact/+1 disposition.",
+        "applicability_rationale": "Resource exhaustion is applicable to offline verification of retained evidence.",
+        "residual_limitation": "Configured maxima are protocol limits, not capacity guarantees.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L11": {
+        "name": "Concurrency and lifecycle",
+        "question": "Are initialization, callback ownership, races, cancellation, selected events, cleanup, crash consistency, and shutdown fully specified?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N03",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-Q06",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Dirfd snapshots and bounded process-group cleanup close reviewed races.",
+        "applicability_rationale": "Concurrent filesystem and child-process behavior affects verifier integrity.",
+        "residual_limitation": "Kernel and filesystem primitives remain trusted dependencies.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L12": {
+        "name": "Determinism and reproducibility",
+        "question": "Can independent clean machines reproduce code generation, builds, fixtures, simulations, proofs, benchmarks, evidence, and archives?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N02",
+          "CH-T000-N04"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E03",
+          "CH-T000-E04",
+          "CH-T000-E05",
+          "CH-T000-E06",
+          "CH-T000-Q02",
+          "CH-T000-Q03",
+          "CH-T000-Q04",
+          "CH-T000-Q05",
+          "CH-T000-Q06"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Local, clean Linux, hosted, formal, and profile records bind reproducible subjects.",
+        "applicability_rationale": "Reproducibility is applicable to each independent evidence class.",
+        "residual_limitation": "Hosted services and container runtime are not independently attested.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L13": {
+        "name": "API, FFI, and SemVer",
+        "question": "Is the stable surface minimal and are panic, ownership, allocation, thread safety, features, MSRV/runtime, and compatibility explicit?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N05",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E01",
+          "CH-T000-Q01",
+          "CH-T000-Q07"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "No API, FFI, or version compatibility claim changes at CH-T000.",
+        "applicability_rationale": "Compatibility is reviewed because the framework is release-bound infrastructure.",
+        "residual_limitation": "Later product compatibility tasks remain OPEN.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L14": {
+        "name": "Schema, wire, and language parity",
+        "question": "Is there one normative semantic source and do all languages/encodings accept and reject the same corpus?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N02",
+          "CH-T000-N03"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E02",
+          "CH-T000-Q06",
+          "CH-T000-Q07"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Canonical JSON and exact artifact records reject silent representation drift.",
+        "applicability_rationale": "Multiple serialized evidence classes make parity applicable.",
+        "residual_limitation": "Product wire and language parity are not established by CH-T000.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L15": {
+        "name": "Configuration and deployment",
+        "question": "Can invalid profiles start? Are paths, secrets, permissions, ACLs, certificates, environments, startup order, and rollback safe?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N04",
+          "CH-T000-N05"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E04",
+          "CH-T000-E05",
+          "CH-T000-Q03",
+          "CH-T000-Q04",
+          "CH-T000-Q07"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Runner restrictions and claim boundaries prevent deployment-context promotion.",
+        "applicability_rationale": "Configuration is applicable to clean and hosted reproduction evidence.",
+        "residual_limitation": "No field deployment profile is qualified.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L16": {
+        "name": "Observability and forensics",
+        "question": "Can disabled, unavailable, stale, incompatible, insufficient, anomalous, denied, and internal-fault states be distinguished without leaking secrets?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N02",
+          "CH-T000-N04"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E03",
+          "CH-T000-E04",
+          "CH-T000-E05",
+          "CH-T000-E06",
+          "CH-T000-Q02",
+          "CH-T000-Q03",
+          "CH-T000-Q04",
+          "CH-T000-Q05"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Direct statuses, complete logs, and exact markers preserve reviewed outcomes.",
+        "applicability_rationale": "Forensics is applicable because evidence must survive beyond execution.",
+        "residual_limitation": "Logs prove named commands only and may omit external platform internals.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L17": {
+        "name": "Verification and evidence quality",
+        "question": "Does each claim have the right proof: theorem, model, property, fuzz, mutation, clean-room, real-router, statistical, or physical evidence?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N02",
+          "CH-T000-N04",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E01",
+          "CH-T000-E02",
+          "CH-T000-E03",
+          "CH-T000-E04",
+          "CH-T000-E05",
+          "CH-T000-E06",
+          "CH-T000-Q01",
+          "CH-T000-Q02",
+          "CH-T000-Q03",
+          "CH-T000-Q04",
+          "CH-T000-Q05",
+          "CH-T000-Q06",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Two automated reviews and all execution classes support only technical qualification.",
+        "applicability_rationale": "Evidence quality is the direct subject of CH-T000.",
+        "residual_limitation": "Independent named-human assurance is absent and not inferred.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L18": {
+        "name": "Ecosystem composition",
+        "question": "Are pid-rs, NCP, Engram, Prisoma, Crebain, Galadriel, Haldir, ROS, and external authority relationships explicit and acyclic?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N05",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E01",
+          "CH-T000-E02",
+          "CH-T000-Q01",
+          "CH-T000-Q07"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Closure transfer is forbidden; downstream work remains independently open.",
+        "applicability_rationale": "The handoff explicitly spans a multi-repository program.",
+        "residual_limitation": "Non-Haldir Git objects are not verified here.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L19": {
+        "name": "Human factors and governance",
+        "question": "Are naming, docs, examples, runbooks, review roles, incident response, support, deprecation, and withdrawal usable under stress?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N02",
+          "CH-T000-N05",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-E04",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "Author and automated reviewer roles are separate and no human status is fabricated.",
+        "applicability_rationale": "Governance truthfulness is applicable to all qualification records.",
+        "residual_limitation": "Organizational approval remains outside repository evidence.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      },
+      "L20": {
+        "name": "Counterfactual and quirky-case review",
+        "question": "How would a malicious peer, rushed operator, odd-but-simple dataset, future maintainer, or AI-generated patch falsify the intended claim?",
+        "status": "RESOLVED_AT_D",
+        "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+        "control_ids": [
+          "CH-T000-N01",
+          "CH-T000-N02",
+          "CH-T000-N03",
+          "CH-T000-N04",
+          "CH-T000-N05",
+          "CH-T000-N06"
+        ],
+        "c_evidence_ids": [
+          "CH-T000-Q06",
+          "CH-T000-Q07",
+          "CH-T000-Q08"
+        ],
+        "activation_evidence_ids": [
+          "CH-T000-A01",
+          "CH-T000-A02",
+          "CH-T000-A03",
+          "CH-T000-A04",
+          "CH-T000-A05"
+        ],
+        "c_finding": "All ten mandatory counterfactuals have explicit fail-closed tests and dispositions.",
+        "applicability_rationale": "Quirky-case review is applicable to a security-sensitive offline verifier.",
+        "residual_limitation": "Unenumerated future protocol changes require renewed adversarial review.",
+        "activation_finding": "SIGNED_D_EVIDENCE_ACTIVATES_ONLY_THE_REVIEWED_CH_T000_TECHNICAL_TRANSITION",
+        "review_record": "release/0.9.0/current-head/reviews/CH-T000.json"
+      }
+    },
+    "next_open_task": "CH-T001",
+    "overall_release_status": "NO_GO"
+  },
+  "activation_blocker_resolutions": [
+    {
+      "id": "CH-T000-R02-B17",
+      "status": "RESOLVED_AT_D",
+      "evidence_ids": [
+        "CH-T000-A01",
+        "CH-T000-A02",
+        "CH-T000-A03"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_framework_pending_to_qualified_open_to_terminal_stage_sequence"
+      ]
+    },
+    {
+      "id": "CH-T000-R02-B19",
+      "status": "RESOLVED_AT_D",
+      "evidence_ids": [
+        "CH-T000-A01",
+        "CH-T000-A02",
+        "CH-T000-A03"
+      ],
+      "control_ids": [
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_forward_protocol_real_git_revocation_refreeze_modes_and_head_force"
+      ]
+    },
+    {
+      "id": "CH-T000-R02-B20",
+      "status": "RESOLVED_AT_D",
+      "evidence_ids": [
+        "CH-T000-A01",
+        "CH-T000-A02",
+        "CH-T000-A04",
+        "CH-T000-A05"
+      ],
+      "control_ids": [
+        "CH-T000-N01",
+        "CH-T000-N02",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_qualified_or_terminal_stage_rejects_qualification_deletion"
+      ]
+    },
+    {
+      "id": "CH-T000-R02-B23",
+      "status": "RESOLVED_AT_D",
+      "evidence_ids": [
+        "CH-T000-A01",
+        "CH-T000-A02",
+        "CH-T000-A03",
+        "CH-T000-A04",
+        "CH-T000-A05"
+      ],
+      "control_ids": [
+        "CH-T000-N02",
+        "CH-T000-N04",
+        "CH-T000-N06"
+      ],
+      "test_ids": [
+        "test_terminal_exact_ch_t000_state_verifies"
+      ]
+    }
+  ],
+  "decision": {
+    "kind": "ACTIVATE_CH_T000_TECHNICAL_QUALIFICATION_ONLY",
+    "claim_disposition": "NO_PUBLIC_CLAIM_CHANGE",
+    "release_status": "NO_GO",
+    "human": false,
+    "named_human_approver": false
+  },
+  "human_review_boundary": {
+    "named_human_approval": "NOT_PERFORMED",
+    "independent_human_review": "NOT_PERFORMED",
+    "release_approval": "NOT_GRANTED",
+    "security_certification": "NOT_GRANTED",
+    "automated_review_is_human_approval": false
+  },
+  "release_authority_boundary": {
+    "overall_release_status": "NO_GO",
+    "public_claim_change": "NONE",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  },
+  "revocation_policy": {
+    "kind": "SIGNED_ANY_VERIFIED_SUFFIX_REOPEN_WITH_FRESH_EPOCH_REQUALIFICATION",
+    "dedicated_commit_required": true,
+    "reopen_target_and_all_descendants": true,
+    "historical_evidence_retained": true,
+    "in_flight_epoch_aborted": true,
+    "product_and_claim_rollback_required": true,
+    "overall_status_after_revocation": "NO_GO",
+    "ledger_path": "release/0.9.0/current-head/closures/CH-T000-revocations.json"
+  },
+  "evidence_catalog": {
+    "CH-T000-A01": {
+      "id": "CH-T000-A01",
+      "kind": "SIGNED_QUALIFICATION_COMMIT",
+      "subject_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+      "result": "PASS",
+      "files": [],
+      "capture_operations": null,
+      "log_integrity": null
+    },
+    "CH-T000-A02": {
+      "id": "CH-T000-A02",
+      "kind": "EXACT_QUALIFICATION_LOCAL_P0R_GATE",
+      "subject_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-p0r.json",
+          "sha256": "240d1a6869bacd040e6a7495115de28bb3a8dae68856986ffc35ea0e985078c4",
+          "bytes": 2740,
+          "lines": 47
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-p0r.log.gz",
+          "sha256": "e3138ade90f942fbedd0807b13899048ac195a3e1d809b90341dec6b1b5a4233",
+          "bytes": 20886
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null
+    },
+    "CH-T000-A03": {
+      "id": "CH-T000-A03",
+      "kind": "INDEPENDENT_QUALIFICATION_CLEAN_LINUX_REPRODUCTION",
+      "subject_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-clean-linux.json",
+          "sha256": "432bb242bbd0a8ec67b81686d7a4c2f7c001d8c8e8ca36fdb84662e47c9e673e",
+          "bytes": 6974,
+          "lines": 92
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-clean-linux.log.gz",
+          "sha256": "6994a41038290ebcb8c1d203ccd2921e7879dbd1e2430ba555aae700a4f3c9b5",
+          "bytes": 198
+        }
+      ],
+      "capture_operations": null,
+      "log_integrity": null
+    },
+    "CH-T000-A04": {
+      "id": "CH-T000-A04",
+      "kind": "EXACT_QUALIFICATION_GITHUB_CI_RUN",
+      "subject_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci.json",
+          "sha256": "b8322b42b98685298ccec846436990da0d0963eed4c3176706aad5bd5fef7ffd",
+          "bytes": 17765,
+          "lines": 552
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci-attempt.json",
+          "sha256": "7236e6572c38590c0c74c83e54f0110142d1ed842059587e07b02027ef0a63b3",
+          "bytes": 12010,
+          "lines": 1
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci.log.gz",
+          "sha256": "2c77e2e2e59304e7dac38f3dd6b83bcfb1385c0910cd527de0107f6d2908a550",
+          "bytes": 69328
+        }
+      ],
+      "capture_operations": {
+        "ordinary_metadata": {
+          "raw_path": "/private/tmp/ch-t000-qualification-ci.json.raw",
+          "normalized_path": "/private/tmp/ch-t000-qualification-ci.json.normalized",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci.json",
+          "capture_command": "gh run view 29408638396 --repo sepahead/haldir --json conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,status,updatedAt,url,workflowName > /private/tmp/ch-t000-qualification-ci.json.raw",
+          "capture_exit_status": 0,
+          "normalize_command": "jq . /private/tmp/ch-t000-qualification-ci.json.raw > /private/tmp/ch-t000-qualification-ci.json.normalized",
+          "normalize_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-qualification-ci.json.normalized release/0.9.0/current-head/evidence/ch-t000-qualification-ci.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:47:37Z",
+          "completed_at_utc": "2026-07-15T10:47:43Z"
+        },
+        "attempt_metadata": {
+          "raw_path": "/private/tmp/ch-t000-qualification-ci-attempt.json.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci-attempt.json",
+          "capture_command": "gh run view 29408638396 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName > /private/tmp/ch-t000-qualification-ci-attempt.json.raw",
+          "capture_exit_status": 0,
+          "retain_command": "cp /private/tmp/ch-t000-qualification-ci-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-qualification-ci-attempt.json",
+          "retain_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-qualification-ci-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-qualification-ci-attempt.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:47:43Z",
+          "completed_at_utc": "2026-07-15T10:47:48Z"
+        },
+        "raw_log": {
+          "raw_path": "/private/tmp/ch-t000-qualification-ci.log.gz.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci.log.gz",
+          "decompressed_path": "/private/tmp/ch-t000-qualification-ci.log.gz.decompressed",
+          "capture_command": "gh run view 29408638396 --repo sepahead/haldir --attempt 1 --log > /private/tmp/ch-t000-qualification-ci.log.gz.raw",
+          "capture_exit_status": 0,
+          "compression_command": "gzip -n -9 -c /private/tmp/ch-t000-qualification-ci.log.gz.raw > release/0.9.0/current-head/evidence/ch-t000-qualification-ci.log.gz",
+          "compression_exit_status": 0,
+          "decompress_command": "gzip -cd release/0.9.0/current-head/evidence/ch-t000-qualification-ci.log.gz > /private/tmp/ch-t000-qualification-ci.log.gz.decompressed",
+          "decompress_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-qualification-ci.log.gz.raw /private/tmp/ch-t000-qualification-ci.log.gz.decompressed",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:47:48Z",
+          "completed_at_utc": "2026-07-15T10:47:50Z"
+        }
+      },
+      "log_integrity": {
+        "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-ci.log.gz",
+        "compressed_sha256": "2c77e2e2e59304e7dac38f3dd6b83bcfb1385c0910cd527de0107f6d2908a550",
+        "compressed_bytes": 69328,
+        "uncompressed_sha256": "1902c1b98f17fde25c87421816857b2f600c7fbd10d5e4d1af5ba2938faefe0e",
+        "uncompressed_bytes": 512570,
+        "uncompressed_lines": 4031
+      }
+    },
+    "CH-T000-A05": {
+      "id": "CH-T000-A05",
+      "kind": "EXACT_QUALIFICATION_GITHUB_FORMAL_RUN",
+      "subject_commit": "1fd8ab53835a43d206d839fc53c8c0614f93c0e8",
+      "result": "PASS",
+      "files": [
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal.json",
+          "sha256": "dacfc93679cd27df7c0d402df402c5736c66d8127c0497c86c23b9a47519137e",
+          "bytes": 3023,
+          "lines": 97
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal-attempt.json",
+          "sha256": "896d1bee8de6e06e40a7b297c32f186ba3c2a3c26d3d4e8fc31c85c91f1647d2",
+          "bytes": 2173,
+          "lines": 1
+        },
+        {
+          "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal.log.gz",
+          "sha256": "65f57c616d8603287d5121996f285023a6bbf3cf3a96a3fb4bba61b298f62a3b",
+          "bytes": 5863
+        }
+      ],
+      "capture_operations": {
+        "ordinary_metadata": {
+          "raw_path": "/private/tmp/ch-t000-qualification-formal.json.raw",
+          "normalized_path": "/private/tmp/ch-t000-qualification-formal.json.normalized",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal.json",
+          "capture_command": "gh run view 29408638359 --repo sepahead/haldir --json conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,status,updatedAt,url,workflowName > /private/tmp/ch-t000-qualification-formal.json.raw",
+          "capture_exit_status": 0,
+          "normalize_command": "jq . /private/tmp/ch-t000-qualification-formal.json.raw > /private/tmp/ch-t000-qualification-formal.json.normalized",
+          "normalize_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-qualification-formal.json.normalized release/0.9.0/current-head/evidence/ch-t000-qualification-formal.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:47:50Z",
+          "completed_at_utc": "2026-07-15T10:47:52Z"
+        },
+        "attempt_metadata": {
+          "raw_path": "/private/tmp/ch-t000-qualification-formal-attempt.json.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal-attempt.json",
+          "capture_command": "gh run view 29408638359 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName > /private/tmp/ch-t000-qualification-formal-attempt.json.raw",
+          "capture_exit_status": 0,
+          "retain_command": "cp /private/tmp/ch-t000-qualification-formal-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-qualification-formal-attempt.json",
+          "retain_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-qualification-formal-attempt.json.raw release/0.9.0/current-head/evidence/ch-t000-qualification-formal-attempt.json",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:47:52Z",
+          "completed_at_utc": "2026-07-15T10:47:56Z"
+        },
+        "raw_log": {
+          "raw_path": "/private/tmp/ch-t000-qualification-formal.log.gz.raw",
+          "retained_path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal.log.gz",
+          "decompressed_path": "/private/tmp/ch-t000-qualification-formal.log.gz.decompressed",
+          "capture_command": "gh run view 29408638359 --repo sepahead/haldir --attempt 1 --log > /private/tmp/ch-t000-qualification-formal.log.gz.raw",
+          "capture_exit_status": 0,
+          "compression_command": "gzip -n -9 -c /private/tmp/ch-t000-qualification-formal.log.gz.raw > release/0.9.0/current-head/evidence/ch-t000-qualification-formal.log.gz",
+          "compression_exit_status": 0,
+          "decompress_command": "gzip -cd release/0.9.0/current-head/evidence/ch-t000-qualification-formal.log.gz > /private/tmp/ch-t000-qualification-formal.log.gz.decompressed",
+          "decompress_exit_status": 0,
+          "compare_command": "cmp /private/tmp/ch-t000-qualification-formal.log.gz.raw /private/tmp/ch-t000-qualification-formal.log.gz.decompressed",
+          "compare_exit_status": 0,
+          "byte_equal": true,
+          "started_at_utc": "2026-07-15T10:47:56Z",
+          "completed_at_utc": "2026-07-15T10:47:58Z"
+        }
+      },
+      "log_integrity": {
+        "path": "release/0.9.0/current-head/evidence/ch-t000-qualification-formal.log.gz",
+        "compressed_sha256": "65f57c616d8603287d5121996f285023a6bbf3cf3a96a3fb4bba61b298f62a3b",
+        "compressed_bytes": 5863,
+        "uncompressed_sha256": "7c19830c439a69999b6af584b5b5c78c430b6c097875037215e0a0ea76191489",
+        "uncompressed_bytes": 36585,
+        "uncompressed_lines": 267
+      }
+    }
+  }
+}
