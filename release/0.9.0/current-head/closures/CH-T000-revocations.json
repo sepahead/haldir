@@ -12,7 +12,75 @@
     "cause_file_bytes": 4194304,
     "cause_total_bytes_per_record": 16777216
   },
-  "records": [],
+  "records": [
+    {
+      "record_id": "R0001",
+      "record_type": "INFLIGHT_ABORT",
+      "author": {
+        "name": "Sepehr Mahmoudian",
+        "email": "sepmhn@gmail.com"
+      },
+      "target_task": "CH-T001",
+      "target_epoch": 1,
+      "reason": "IMPLEMENTATION_DEFECT",
+      "prior_head": "dd3d8a1c993721f89a1edb04dec5247761c694ad",
+      "previous_verified_prefix": 1,
+      "retained_prefix": 1,
+      "invalidated_epochs": [],
+      "deactivated_registrations": [
+        "CH-T001:e0001"
+      ],
+      "aborted_candidate": {
+        "task_id": "CH-T001",
+        "epoch": 1,
+        "stage": "I",
+        "freeze_commit": "18c4d6045b7e8c5987c624b04806e5edee1c8afc",
+        "implementation_commit": "dd3d8a1c993721f89a1edb04dec5247761c694ad",
+        "qualification_commit": null
+      },
+      "rollback_source": "486c519082c7941575ea658e2290955fbd4ad553",
+      "restored_product_paths": [
+        ".gitignore",
+        "audit/generated/FILE_REVIEW_LEDGER.csv",
+        "tools/release/current-file-review-ledger.py",
+        "tools/release/test_current_file_review_ledger.py"
+      ],
+      "cause_evidence_records": [
+        {
+          "id": "R0001-E01",
+          "kind": "IMPLEMENTATION_DEFECT_EVIDENCE",
+          "file": {
+            "path": "release/0.9.0/current-head/tasks/revocations/R0001/product-test-stderr-leak.json",
+            "sha256": "4ddb87c7180ecd169ee9d4773de7565f1f74f62e0360b93cf67a35135af1872d",
+            "bytes": 4049,
+            "lines": 84,
+            "git_mode": "100644",
+            "git_object_type": "blob",
+            "git_object_id": "58dff8c2b6082a1f1360a102dcf6d51a969394aa"
+          }
+        }
+      ],
+      "requirements_record": {
+        "path": "release/0.9.0/current-head/requirements.json",
+        "sha256": "9fcc96fcea3cd79870654852ae1bb7a025a8c8a3b89848291dddabcf77d0bd23",
+        "bytes": 144674,
+        "lines": 3559,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "5dd413ea00a5bb2b15fa0cfbd941f4a0c3bf2c6d"
+      },
+      "active_claims_record": {
+        "path": "release/0.9.0/current-head/closures/active-claims.json",
+        "sha256": "b14e87b91a610ae8d7d3601f8a74a6ae02c1c27bc1606ce976cb53ef695b230f",
+        "bytes": 30863,
+        "lines": 740,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "175c4dc133b4e509082323485d25b043ac88b92c"
+      },
+      "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_INFLIGHT_ABORT_AND_ROLLBACK"
+    }
+  ],
   "human_review_boundary": {
     "named_human_approval": "NOT_PERFORMED",
     "independent_human_review": "NOT_PERFORMED",

@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0.0",
+  "record_id": "R0001",
+  "evidence_id": "R0001-E01",
+  "kind": "IMPLEMENTATION_DEFECT_EVIDENCE",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "task_id": "CH-T001",
+  "epoch": 1,
+  "stage": "I",
+  "freeze_commit": "18c4d6045b7e8c5987c624b04806e5edee1c8afc",
+  "implementation_commit": "dd3d8a1c993721f89a1edb04dec5247761c694ad",
+  "qualification_commit": null,
+  "discovery_status": "CONFIRMED_BEFORE_QUALIFICATION_PUBLICATION",
+  "defects": [
+    {
+      "id": "CH-T001-ID01",
+      "severity": "P0_RELEASE_BLOCKER",
+      "component": "tools/release/test_current_file_review_ledger.py",
+      "function": "test_cli_and_ast_contain_no_replace_exchange_lock_or_rollback_authority",
+      "product_tests": {
+        "path": "tools/release/test_current_file_review_ledger.py",
+        "sha256": "75ef5ac0bcf26c5a0a391306055dd226d14e1002958a7f763aa23c2a7b589192",
+        "bytes": 153200,
+        "lines": 4069,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "b2c7dd3bcf1208c4f0eae8c2e03dc162885f74c8"
+      },
+      "detector": {
+        "function": "_require_unittest_stream",
+        "failure_code": "EVIDENCE_PRODUCT_TEST_TIMING",
+        "frozen_verifier": {
+          "path": "tools/release/tasks/ch-t001/e0001/verify.py",
+          "sha256": "ba109accf382c8ddb3fe01689f46db48309fbcce5ea313be9535f53355692076",
+          "bytes": 181430,
+          "lines": 4912,
+          "git_mode": "100644",
+          "git_object_type": "blob",
+          "git_object_id": "16fba87451c51f42d1ff907e63f2c69f58902d01"
+        }
+      },
+      "reproduction": {
+        "argv": [
+          "/opt/homebrew/bin/python3.14",
+          "-B",
+          "-I",
+          "-P",
+          "tools/release/test_current_file_review_ledger.py"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr": ".....usage: test_current_file_review_ledger.py [-h] {generate,verify} ...\ntest_current_file_review_ledger.py: error: unrecognized arguments: --replace\n.............................................................................................\n----------------------------------------------------------------------\nRan 98 tests in 83.491s\n\nOK\n",
+        "stderr_sha256": "2dca27e98cf4686e367d3784b74c2c9b1f3c60ca146244ed426938469970f3cb",
+        "stderr_bytes": 344
+      },
+      "observation": "The exact 98-test product suite passes, but its negative parser test leaks the expected argparse unknown-option diagnostic between the fifth and sixth unittest progress markers.",
+      "violated_evidence_contract": "The frozen verifier accepts only uninterrupted unittest progress markers and summary for PRODUCT_TESTS. The implementation therefore violates the clean external-stream contract even though all product assertions pass.",
+      "consequence": "Any honest CH-T001 qualification packet for epoch 1 would fail the registered terminal verifier.",
+      "disposition": "ABORT_EPOCH_AND_ROLL_BACK_IMPLEMENTATION",
+      "required_repair": "Refreeze a new epoch whose product test captures the expected argparse diagnostic internally, asserts its exact refusal semantics, and preserves the verifier's strict contiguous unittest progress grammar.",
+      "required_regression_test": "Execute the exact product test command, require a clean 98-dot external stream, and mutate the internally captured refusal diagnostic to prove fail-closed rejection."
+    }
+  ],
+  "review_boundary": {
+    "automated_technical_discovery": true,
+    "named_human_review": false,
+    "external_review": false,
+    "release_approval": false
+  },
+  "authority_boundary": {
+    "overall_status": "NO_GO",
+    "public_claim_change": "NONE",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  }
+}

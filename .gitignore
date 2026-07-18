@@ -3,7 +3,6 @@
 Cargo.lock.orig
 
 # Development PKI and secrets must never be committed outside range/certs-dev fixtures.
-.env
 *.pem
 *.key
 *.p12
@@ -22,7 +21,3 @@ evidence/**/*.private.*
 # Python bytecode is interpreter-specific build output, never source evidence.
 __pycache__/
 *.py[cod]
-
-# Python tool caches are local, reproducible analysis output.
-.mypy_cache/
-.ruff_cache/
