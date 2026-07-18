@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "CH-T000",
+  "evidence_id": "CH-T000-E04",
+  "evidence_role": "INDEPENDENT_AUTOMATED_BFE_REPRODUCTION",
+  "runner_id": "/root/t000_final_audit",
+  "reviewer_id": "CH-T000-R02",
+  "runner_kind": "automated_agent",
+  "human": false,
+  "named_human_reviewer": false,
+  "release_authority": false,
+  "runner_class": "FRESH_OBJECT_ISOLATED_NETWORK_DISABLED_READ_ONLY_LINUX_CONTAINER",
+  "source_commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+  "source_tree": "02b19c32ab61e76ff217dacaef974f6dfc7b59e4",
+  "source_checkout": {
+    "method": "Fresh --no-local --no-hardlinks clone followed by a detached checkout of the exact implementation commit",
+    "source_repository": "/Users/torusprime/Development/sepahead-github/haldir",
+    "host_path": "/Users/torusprime/Development/sepahead-github/haldir-bfe0b13-r02.EHNViE/repo",
+    "clone_command": "git clone --no-local --no-hardlinks --branch main --single-branch /Users/torusprime/Development/sepahead-github/haldir /Users/torusprime/Development/sepahead-github/haldir-bfe0b13-r02.EHNViE/repo",
+    "clone_result": {
+      "exit_status": 0,
+      "combined_output": "Cloning into '/Users/torusprime/Development/sepahead-github/haldir-bfe0b13-r02.EHNViE/repo'...\n",
+      "sha256": "e246c0f83c561d82dcabda94f94ae793a08ccef2e884268b3b7b162617314a7b",
+      "bytes": 95,
+      "lines": 1
+    },
+    "checkout_command": "git -C /Users/torusprime/Development/sepahead-github/haldir-bfe0b13-r02.EHNViE/repo checkout --detach bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "checkout_result": {
+      "exit_status": 0,
+      "combined_output": "HEAD is now at bfe0b13 release: freeze current-head 0.9 audit inputs\n",
+      "sha256": "4cf70f0855713426e827c86097eaa534799cde66ee6ee979a52983dc4640a37e",
+      "bytes": 69,
+      "lines": 1
+    },
+    "clean_check_command": "git -C /Users/torusprime/Development/sepahead-github/haldir-bfe0b13-r02.EHNViE/repo status --short",
+    "clean_check_result": {
+      "exit_status": 0,
+      "combined_output": "",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "lines": 0
+    },
+    "head": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "tree": "02b19c32ab61e76ff217dacaef974f6dfc7b59e4"
+  },
+  "container": {
+    "runtime": "Docker",
+    "client_version": "28.1.1",
+    "server_version": "27.4.0",
+    "image_reference": "rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc",
+    "image_id": "sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc",
+    "image_created_at": "2026-06-24T05:09:58.223634965Z",
+    "os": "linux",
+    "architecture": "arm64",
+    "kernel": "Linux 6.8.0-50-generic aarch64",
+    "python": "3.11.2",
+    "git": "2.39.5",
+    "network": "none",
+    "root_filesystem": "read-only",
+    "source_mount": "read-only",
+    "temporary_filesystem": "/tmp, 64 MiB, nosuid, nodev"
+  },
+  "command": "docker run --rm --network=none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=64m -e PYTHONDONTWRITEBYTECODE=1 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/repo -v /Users/torusprime/Development/sepahead-github/haldir-bfe0b13-r02.EHNViE/repo:/repo:ro -w /repo rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc sh -euxc 'uname -a; python3 --version; git --version; test \"$(git rev-parse HEAD)\" = bfe0b136213a823913cee0f2f7e21e2992c6aced; test \"$(git rev-parse HEAD^{tree})\" = 02b19c32ab61e76ff217dacaef974f6dfc7b59e4; test -z \"$(git status --short)\"; python3 tools/release/verify-current-audit.py; python3 -m unittest tools/release/test_verify_current_audit.py'",
+  "capture_method": "Docker stdout and stderr were redirected directly to one raw file; exit_status is the Docker process exit status, not a pipeline or tee status.",
+  "started_at_utc": "2026-07-14T16:21:57Z",
+  "completed_at_utc": "2026-07-14T16:22:13Z",
+  "exit_status": 0,
+  "results": {
+    "commit_identity": "MATCH",
+    "tree_identity": "MATCH",
+    "checkout_clean": true,
+    "verifier": "PASS",
+    "adversarial_tests_passed": 34,
+    "adversarial_tests_failed": 0
+  },
+  "log": {
+    "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz",
+    "compression_command": "gzip -n -9 -c /Users/torusprime/Development/sepahead-github/haldir-bfe0b13-r02.EHNViE/ch-t000-r02-clean-linux.log > release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz",
+    "compression_tool": "Apple gzip 479",
+    "compression_exit_status": 0,
+    "compressed_sha256": "918bd15c9a46415282512666d3ade66021022b48bc7b5178047d2103a35da99c",
+    "compressed_bytes": 379,
+    "uncompressed_sha256": "e9213d34384987a19e423fe6549110396e2b2d33933d37ea963e2553f9b4f865",
+    "uncompressed_bytes": 729,
+    "uncompressed_lines": 20
+  },
+  "scope_limitations": [
+    "This independent automated run reproduces only the bfe0b136 current-audit verifier and its 34 committed adversarial tests; it does not exercise the later qualification verifier or its tests.",
+    "This run does not reproduce the complete 31-gate Rust build; the separate local and hosted bfe evidence retains those checks with their own provenance limitations.",
+    "The clean clone, container restrictions, command, raw output, and direct process exit status are retained, but the Docker runtime and host kernel are trusted execution dependencies rather than independently attested systems.",
+    "The runner is an automated agent in a separate task context, not a named human reviewer, and grants no security-certification or release authority."
+  ]
+}

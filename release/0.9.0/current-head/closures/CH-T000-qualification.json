@@ -1,0 +1,609 @@
+{
+  "schema_version": "2.0.0",
+  "record_id": "CH-T000-TECHNICAL-QUALIFICATION",
+  "task_id": "CH-T000",
+  "source_task_id": "T000",
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "scope": "Exact technical qualification of the CH-T000 current-head input freeze and its fail-closed qualification framework only; no runtime-correctness, safety, deployment, field-validation, security-certification, publication, named-human-approval, or release-readiness claim.",
+  "qualified_source_cut": {
+    "commit": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "tree": "8d8cdda01d25bc9f3c6a2911b2c4464f5c7505e5",
+    "parent": "9cf56e149a105026b072c9073d7e87b93103966e",
+    "approved_update": "release/0.9.0/current-head/HANDOFF-ERRATA.md"
+  },
+  "qualified_implementation": {
+    "commit": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "tree": "02b19c32ab61e76ff217dacaef974f6dfc7b59e4",
+    "parent": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+    "author_name": "Sepehr Mahmoudian",
+    "author_email": "sepmhn@gmail.com",
+    "authored_at": "2026-07-14T17:13:47+02:00",
+    "committer_name": "Sepehr Mahmoudian",
+    "committer_email": "sepmhn@gmail.com",
+    "committed_at": "2026-07-14T17:13:47+02:00",
+    "subject": "release: freeze current-head 0.9 audit inputs",
+    "signature": {
+      "format": "ssh",
+      "status": "verified",
+      "principal": "sepmhn@gmail.com",
+      "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "allowed_signers_path": "release/0.9.0/allowed-signers",
+      "allowed_signers_sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+    },
+    "diff": {
+      "base": "2bfcabe5bf9fd6c428f7d50132bd36ec4e147438",
+      "path_statuses": {
+        ".github/workflows/ci.yml": "M",
+        "README.md": "M",
+        "docs/release/0.9.0/README.md": "M",
+        "justfile": "M",
+        "release/0.9.0/current-head/HANDOFF-ERRATA.md": "A",
+        "release/0.9.0/current-head/README.md": "A",
+        "release/0.9.0/current-head/audit-inputs.json": "A",
+        "release/0.9.0/current-head/evidence/publication-state.json": "A",
+        "release/0.9.0/current-head/evidence/source-cut-ci.json": "A",
+        "release/0.9.0/current-head/evidence/source-cut-ci.log.gz": "A",
+        "release/0.9.0/current-head/evidence/source-cut-formal.json": "A",
+        "release/0.9.0/current-head/evidence/source-cut-formal.log.gz": "A",
+        "release/0.9.0/current-head/evidence/source-cut-p0r.log.gz": "A",
+        "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip": "A",
+        "release/0.9.0/current-head/handoff/MASTER_CURRENT_HEADS.json": "A",
+        "release/0.9.0/current-head/handoff/MASTER_SHA256SUMS.txt": "A",
+        "release/0.9.0/current-head/handoff/PACKAGE_INDEX.json": "A",
+        "release/0.9.0/current-head/handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip": "A",
+        "release/0.9.0/current-head/requirements.json": "A",
+        "tools/p0r-exit-gate.sh": "M",
+        "tools/release/test_verify_current_audit.py": "A",
+        "tools/release/verify-current-audit.py": "A"
+      },
+      "patch_command": "git -c diff.algorithm=myers diff --no-ext-diff --no-textconv --no-renames --no-color --src-prefix=a/ --dst-prefix=b/ --binary --full-index 2bfcabe5bf9fd6c428f7d50132bd36ec4e147438..bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "patch_sha256": "3fb81eb3b18ae3c2a5352c2a541cf8f14020e37508aa8a8b8587a24ca8f551cc",
+      "patch_bytes": 427414,
+      "patch_lines": 9544,
+      "name_status_sha256": "d90536ba164259750548017173c1b910b207b801e8dc863607c1966cef160efe",
+      "numstat_sha256": "9c29158d64f8696cdb16925fc6569f32afa66f8052a4db0fec717262513a2602"
+    },
+    "changed_files": [
+      {
+        "status": "M",
+        "path": ".github/workflows/ci.yml",
+        "sha256": "c2d29035d5d546539459d9ec91271bb45f60a9576de52bce1f1a4d4a432a61de",
+        "bytes": 6099,
+        "lines": 146
+      },
+      {
+        "status": "M",
+        "path": "README.md",
+        "sha256": "2b24cf4d957e467550640c4b575a41364007d8e56eb14def52fa850dfa58991d",
+        "bytes": 19968,
+        "lines": 275
+      },
+      {
+        "status": "M",
+        "path": "docs/release/0.9.0/README.md",
+        "sha256": "a2a10d29d91bd2c06c03842f3c5cc332b62c112f6d5bd8198b00ec3a85c18938",
+        "bytes": 5900,
+        "lines": 104
+      },
+      {
+        "status": "M",
+        "path": "justfile",
+        "sha256": "cdb75d7441d3a4af6494a2cecc2b57bb21511f6c10b7ef2916c73091f4edaa9a",
+        "bytes": 2475,
+        "lines": 92
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/HANDOFF-ERRATA.md",
+        "sha256": "066215493910c8d6e04a3fcb48476fb0c46192a889410b605c66fc506492365a",
+        "bytes": 4488,
+        "lines": 91
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/README.md",
+        "sha256": "1ad57f3d9efc199793af385fde0e2bba249ff98ecbc5a7a92898b7869868e9f3",
+        "bytes": 2023,
+        "lines": 38
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/audit-inputs.json",
+        "sha256": "06dbb9a9656bae39aa209f9c602577d45a7167f68f0f064a687701e56c4517eb",
+        "bytes": 13379,
+        "lines": 363
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/publication-state.json",
+        "sha256": "2cd20381ce5001bdc36b080bfc0a887b06c6215e3c481a90f351353038e9dba1",
+        "bytes": 530,
+        "lines": 20
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/source-cut-ci.json",
+        "sha256": "55817853d79845b38141f9cc6ca0f25d2c05b9ebff3c815bf153ed625326daf1",
+        "bytes": 16469,
+        "lines": 512
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/source-cut-ci.log.gz",
+        "sha256": "c7bd25803990b4bf314b06091f775476fba60b6cde9f83fed2ce11b60c97f6f5",
+        "bytes": 65961
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/source-cut-formal.json",
+        "sha256": "dd09e6df9702e7017cab4489e0f98b768481d2ae35b01e2d4266acd055789378",
+        "bytes": 3023,
+        "lines": 97
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/source-cut-formal.log.gz",
+        "sha256": "854b9eb9c482d43277e1f554e58b875198ce2efad586443466f7bc02666165d7",
+        "bytes": 5664
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/evidence/source-cut-p0r.log.gz",
+        "sha256": "53d3bcba011be9ac83bbf4975080ff27b33bbf17a99ca2179026e0071ed7f1dc",
+        "bytes": 20018
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip",
+        "sha256": "1de5cfc2a577621c24ef10e97fd2319799d02b602cfb3de54954928a0d988efe",
+        "bytes": 43202
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/handoff/MASTER_CURRENT_HEADS.json",
+        "sha256": "dc393b47bac804fa9dd47215e6eced584d0b6863cf57b383ff5957bcbae4bbf6",
+        "bytes": 402,
+        "lines": 11
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/handoff/MASTER_SHA256SUMS.txt",
+        "sha256": "0d4d1c19600bd8e5d930cb269fcaa204e80e9728914572664af7961566d3ba57",
+        "bytes": 1356
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/handoff/PACKAGE_INDEX.json",
+        "sha256": "cec6b200866b0a34473c4429c74137c87790c1fe073a19453ed79e147e32411d",
+        "bytes": 1345,
+        "lines": 41
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip",
+        "sha256": "ae06b5525537e88de4ae37aa49b40de01893061bdc3096bcf1059c5c6d71e3d4",
+        "bytes": 11647
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/requirements.json",
+        "sha256": "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40",
+        "bytes": 122010,
+        "lines": 3820
+      },
+      {
+        "status": "M",
+        "path": "tools/p0r-exit-gate.sh",
+        "sha256": "370f8edd04c72e94a1fb9aecaf980743904d709cc19717c9a1cd5d26757fc2ac",
+        "bytes": 4013,
+        "lines": 88
+      },
+      {
+        "status": "A",
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "5275c7e83895831faff707ecef8c145d32c8ac511aa640720963c173563cd656",
+        "bytes": 11995,
+        "lines": 288
+      },
+      {
+        "status": "A",
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "573a18ab664fe381707fa901e7d90ffdd328439e880d3d23da9118547663723e",
+        "bytes": 52277,
+        "lines": 1339
+      }
+    ]
+  },
+  "qualified_framework": {
+    "commit": "e747747418f94371348450e6b7205291c1441216",
+    "tree": "dae835ab22215085a146e601e4da8f72c1346710",
+    "parent": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+    "author_name": "Sepehr Mahmoudian",
+    "author_email": "sepmhn@gmail.com",
+    "authored_at": "2026-07-15T11:20:35+02:00",
+    "committer_name": "Sepehr Mahmoudian",
+    "committer_email": "sepmhn@gmail.com",
+    "committed_at": "2026-07-18T11:06:55+02:00",
+    "subject": "release: correct current-head qualification framework",
+    "signature": {
+      "format": "ssh",
+      "status": "verified",
+      "principal": "sepmhn@gmail.com",
+      "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "allowed_signers_path": "release/0.9.0/allowed-signers",
+      "allowed_signers_sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+    },
+    "diff": {
+      "base": "bfe0b136213a823913cee0f2f7e21e2992c6aced",
+      "path_statuses": {
+        ".github/workflows/ci.yml": "M",
+        "README.md": "M",
+        "docs/COMPLETION-CHECKLIST.md": "M",
+        "docs/EVIDENCE-SEMANTICS.md": "M",
+        "docs/LIMITATIONS.md": "M",
+        "docs/PROJECT-CATALOG.md": "M",
+        "docs/ROADMAP-STATUS.md": "M",
+        "docs/galadriels-mirror.md": "M",
+        "docs/release/0.9.0/README.md": "M",
+        "docs/release/0.9.0/THREAT-MODEL.md": "M",
+        "justfile": "M",
+        "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md": "A",
+        "release/0.9.0/current-head/HANDOFF-ERRATA.md": "M",
+        "release/0.9.0/current-head/README.md": "M",
+        "tools/p0r-exit-gate.sh": "M",
+        "tools/release/current-audit-gate.sh": "A",
+        "tools/release/current-audit-resource-profile.py": "A",
+        "tools/release/current_audit_test_fixtures.py": "A",
+        "tools/release/test_current_audit_resource_profile.py": "A",
+        "tools/release/test_verify_current_audit.py": "M",
+        "tools/release/verify-current-audit.py": "M"
+      },
+      "patch_command": "git -c diff.algorithm=myers diff --no-ext-diff --no-textconv --no-renames --no-color --src-prefix=a/ --dst-prefix=b/ --binary --full-index bfe0b136213a823913cee0f2f7e21e2992c6aced..e747747418f94371348450e6b7205291c1441216",
+      "patch_sha256": "93575069f1951749b586241957b723c0908141ea1d24bed435ea621be70ede8c",
+      "patch_bytes": 844711,
+      "patch_lines": 19857,
+      "name_status_sha256": "1eba49c7c5263a3b7e56ca8d322e5457228e70b51daae5c3f7a3143c954e3a8e",
+      "numstat_sha256": "73313476f4d0a4d1f80ec52fd1093e9ee3e8737deffc761e0f0dcb4943176c0d"
+    },
+    "changed_files": [
+      {
+        "status": "M",
+        "path": ".github/workflows/ci.yml",
+        "sha256": "dabd674e79262f8684b3cda91ef3df906abea070bbd675a5e8a70d049fb6984b",
+        "bytes": 6802,
+        "lines": 161
+      },
+      {
+        "status": "M",
+        "path": "README.md",
+        "sha256": "2044c3a84a1f35087769f5e6c67fbf01c1c4179958a4ce6d50734b60c63ff4fa",
+        "bytes": 19976,
+        "lines": 275
+      },
+      {
+        "status": "M",
+        "path": "docs/COMPLETION-CHECKLIST.md",
+        "sha256": "e8c3578841adf8640cba332bc12c341c48e615e901d1129813f36aa63d553e9b",
+        "bytes": 11249,
+        "lines": 161
+      },
+      {
+        "status": "M",
+        "path": "docs/EVIDENCE-SEMANTICS.md",
+        "sha256": "e71fe14e6dc127da855b2dcfb550c34b62f94539855717a0d892ea24d6be97b6",
+        "bytes": 18676,
+        "lines": 245
+      },
+      {
+        "status": "M",
+        "path": "docs/LIMITATIONS.md",
+        "sha256": "0ffe4546f08d38de3ec66dd66d3c17510627cb8ee7e382bd2d646a1e880b5770",
+        "bytes": 33632,
+        "lines": 420
+      },
+      {
+        "status": "M",
+        "path": "docs/PROJECT-CATALOG.md",
+        "sha256": "29959ca1c4287f228a04949cc07ac376e2ef65ea46f21b03635dd4bb35e4717b",
+        "bytes": 85175,
+        "lines": 516
+      },
+      {
+        "status": "M",
+        "path": "docs/ROADMAP-STATUS.md",
+        "sha256": "1271e77bc71b8cb7693a4af1467ded9569511e1d338741355275fe738f499bd9",
+        "bytes": 19234,
+        "lines": 149
+      },
+      {
+        "status": "M",
+        "path": "docs/galadriels-mirror.md",
+        "sha256": "4b9a85b555376c7b20a730438d8f985ea5899d2926077a0ba66406c1790d6a7a",
+        "bytes": 74016,
+        "lines": 435
+      },
+      {
+        "status": "M",
+        "path": "docs/release/0.9.0/README.md",
+        "sha256": "70b5df14c03c4dbd492c751b57877ef5ff599adf7812bbf5dddff73161c0af5b",
+        "bytes": 5893,
+        "lines": 104
+      },
+      {
+        "status": "M",
+        "path": "docs/release/0.9.0/THREAT-MODEL.md",
+        "sha256": "3729926a75031e8fcc4d3ca805c13e66ab8850b9995bb80b73842f78e24c974a",
+        "bytes": 19504,
+        "lines": 321
+      },
+      {
+        "status": "M",
+        "path": "justfile",
+        "sha256": "e96971c4caae3a209bbb52b073bb18116f71eb774ea29dfc55ee824de939186a",
+        "bytes": 2693,
+        "lines": 92
+      },
+      {
+        "status": "A",
+        "path": "release/0.9.0/current-head/HANDOFF-ERRATA-QUALIFICATION-AMENDMENT.md",
+        "sha256": "550276a5d533e79784868f1125ee95c7df2b114f48e92cc3d989aa6cbd7ea6b7",
+        "bytes": 3915,
+        "lines": 71
+      },
+      {
+        "status": "M",
+        "path": "release/0.9.0/current-head/HANDOFF-ERRATA.md",
+        "sha256": "231faa39599c4806d5240340f7d569e7672b985b589fd2d42c2fa9d227c13880",
+        "bytes": 4497,
+        "lines": 91
+      },
+      {
+        "status": "M",
+        "path": "release/0.9.0/current-head/README.md",
+        "sha256": "d14aebb0fb1d6d1d60df96531f82f922ebc5053aeb5ec358989f3636f7661960",
+        "bytes": 9405,
+        "lines": 164
+      },
+      {
+        "status": "M",
+        "path": "tools/p0r-exit-gate.sh",
+        "sha256": "8238fd229ffd1e95da26787d793af73523f6980cd6430ec220bd4fa2632e5a64",
+        "bytes": 3977,
+        "lines": 87
+      },
+      {
+        "status": "A",
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "0201235128c932b54babe6c9fd03fe5f0977916a05bda07e10fc065009b6bd05",
+        "bytes": 485,
+        "lines": 14
+      },
+      {
+        "status": "A",
+        "path": "tools/release/current-audit-resource-profile.py",
+        "sha256": "aff4af99dafd4ecdc2bf3369368fc8b0f5c885458b8a6de8da1b481535cd75db",
+        "bytes": 90962,
+        "lines": 2387
+      },
+      {
+        "status": "A",
+        "path": "tools/release/current_audit_test_fixtures.py",
+        "sha256": "9f04237dda41d46670cb4d8963606b9b6fe0e12a386a9780d0869cf12c48324b",
+        "bytes": 11477,
+        "lines": 374
+      },
+      {
+        "status": "A",
+        "path": "tools/release/test_current_audit_resource_profile.py",
+        "sha256": "161e7e0945953b3f2295f9d0eed79f7ed17e6503ed4d1b40f73fbe1637206c05",
+        "bytes": 48451,
+        "lines": 1136
+      },
+      {
+        "status": "M",
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "8c0af0aae93133ccbada807eaaddaee0ed20c4be77183ff1eee5c592f6dc6f41",
+        "bytes": 181560,
+        "lines": 4165
+      },
+      {
+        "status": "M",
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "3a4958c77b2c6d76915f96811f4feef6c5a19ed80195b6d8d179604cbda96788",
+        "bytes": 473296,
+        "lines": 11928
+      }
+    ]
+  },
+  "evidence_files": [
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.json",
+      "sha256": "513096a816e24220c7d18f31290faa54546fd60670479ba7f45bada01a0befaf",
+      "bytes": 2545,
+      "lines": 46
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-p0r.log.gz",
+      "sha256": "417bde0ef2f6dd0f9ce59b95c4e209d15160ea5ae6ddbd63218bdc07ec307933",
+      "bytes": 20907
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.json",
+      "sha256": "9958d8752af1e4bbc4d4d66ae016f4da8b327f5eb120088ed82d0dd0de5ddc78",
+      "bytes": 5620,
+      "lines": 93
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-clean-linux-review.log.gz",
+      "sha256": "918bd15c9a46415282512666d3ade66021022b48bc7b5178047d2103a35da99c",
+      "bytes": 379
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.json",
+      "sha256": "90bbb3278503f8f1cf171fc981af8c5d665965bdaf8190d744d41e8e57c8d70f",
+      "bytes": 16732,
+      "lines": 520
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci-attempt.json",
+      "sha256": "e60cd69b34aedf1204c838ba89a7db5ec8372a84329d9ba21ad0284e6b6c8467",
+      "bytes": 11337,
+      "lines": 1
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-ci.log.gz",
+      "sha256": "74531e2cce2ae6d974e498c16bfaf230fa5200df02ce7de818489c76665caa92",
+      "bytes": 67356
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.json",
+      "sha256": "831a04ac14c5c6f428038b4279db8460488c0787e2aa9f3338c459550cf814f2",
+      "bytes": 3023,
+      "lines": 97
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal-attempt.json",
+      "sha256": "a0245dce277990dc739608f9e7cda41838826c47f25ff0e197d764da803defca",
+      "bytes": 2173,
+      "lines": 1
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-implementation-formal.log.gz",
+      "sha256": "d8ca420c8b3c4ee9208731fb05fc3a057e7719230e5393d3724ff329d96613ae",
+      "bytes": 5886
+    },
+    {
+      "path": "release/0.9.0/current-head/reviews/CH-T000-R02-bfe.json",
+      "sha256": "5e1deac021a91931f5d8c1a54e7a8278ae4bc434aec7f4b5a497e07af8d0c598",
+      "bytes": 31756,
+      "lines": 507
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.json",
+      "sha256": "b65507c5a8f7b234307d457ae5bfc938e7d5e6a156e7ae81793e85e83850393a",
+      "bytes": 2759,
+      "lines": 47
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.log.gz",
+      "sha256": "955c7c10f689326f3ed72333ed0e5db0c43c00e65fd94b7397d74484e4fe414e",
+      "bytes": 20956
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.json",
+      "sha256": "a06d07f397bc69360668fc6dfcd2570ac9ab53abdeb1a5c7515f3e85225db814",
+      "bytes": 17778,
+      "lines": 552
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review.log.gz",
+      "sha256": "51c7aefd735661c955cf118d286965e79f4ea0498cc45102d0c8f367156b1b4f",
+      "bytes": 68631
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.json",
+      "sha256": "c5fc2dcf8ffd18bc5121e2f8817963476aa5a94b68c9600ed32252b88d331e5b",
+      "bytes": 17765,
+      "lines": 552
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci-attempt.json",
+      "sha256": "f02592161c7b89e0abf0c1291fe9d3b66776827ca809450c29ad9f10d5ec0931",
+      "bytes": 12010,
+      "lines": 1
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-ci.log.gz",
+      "sha256": "c3e6f2f535cfd8d58835f0d652dc52120edd8bfbed4a8c0b7d8d1920dffe5f93",
+      "bytes": 69818
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.json",
+      "sha256": "bb973a2059caf3b2f55b92035012b1b4a0f8ba4a648c71573150388575415d3f",
+      "bytes": 3023,
+      "lines": 97
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal-attempt.json",
+      "sha256": "a09ceee22be531b12ca9173308722bd8ee20f3df8fbfb132106990d78590d783",
+      "bytes": 2173,
+      "lines": 1
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-formal.log.gz",
+      "sha256": "6e795a95adc3bf6813619d42d16cef15d8ae581e640a117217948e900507cdba",
+      "bytes": 5868
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-resource-profile.json",
+      "sha256": "e32eab2b51bb200b0cf2389f86dfbac9723b63a2095150f6496479f6c4cb0130",
+      "bytes": 54427,
+      "lines": 1746
+    },
+    {
+      "path": "release/0.9.0/current-head/reviews/CH-T000-R01-framework.json",
+      "sha256": "8125c455bb0037b4cb46b708cc39722ef439e2cc95999d5dfe7f1d9e818c5d0a",
+      "bytes": 51013,
+      "lines": 1450
+    },
+    {
+      "path": "release/0.9.0/current-head/reviews/CH-T000-R02-framework.json",
+      "sha256": "37c536d8fe2a8623b301905bad1fcb1ce9647f86c20528685b8af9c5438ce867",
+      "bytes": 51654,
+      "lines": 1466
+    },
+    {
+      "path": "release/0.9.0/current-head/evidence/ch-t000-framework-clean-linux-review-attempt.json",
+      "sha256": "902bb83e13aef5c8ce480693f63a1ac98b9d75c0fcc576f8f84e24faf38b8c66",
+      "bytes": 12023,
+      "lines": 1
+    }
+  ],
+  "review_record": {
+    "path": "release/0.9.0/current-head/reviews/CH-T000.json",
+    "sha256": "dce2f4688512acc82baca1a2714872950b13feb6679a8a97987068508376840a",
+    "bytes": 68372,
+    "lines": 1632,
+    "classification": "AUTOMATED_TECHNICAL_SUPPORT_ONLY",
+    "reviewer_ids": [
+      "CH-T000-R01",
+      "CH-T000-R02",
+      "CH-T000-R03"
+    ]
+  },
+  "lead_disposition": {
+    "kind": "AUTOMATED_LEAD_AGENT",
+    "reviewer_id": "CH-T000-R03",
+    "decision": "ACCEPT_TECHNICAL_CH_T000_QUALIFICATION_PENDING_ACTIVATION",
+    "human": false,
+    "named_human_approver": false
+  },
+  "decision": {
+    "current_ledger_status": "OPEN",
+    "recommended_terminal_status": "VERIFIED",
+    "claim_disposition": "NO_PUBLIC_CLAIM_CHANGE",
+    "effective_only_when": "SIGNED_DATA_ONLY_ACTIVATION_COMMIT_BINDING_EXACT_QUALIFICATION_COMMIT_EVIDENCE_AND_TERMINAL_LEDGER_TRANSITION",
+    "release_status_after_activation": "NO_GO",
+    "next_open_task": "CH-T001"
+  },
+  "human_review_boundary": {
+    "named_human_approval": "NOT_PERFORMED",
+    "independent_human_review": "NOT_PERFORMED",
+    "release_approval": "NOT_GRANTED",
+    "security_certification": "NOT_GRANTED",
+    "automated_review_is_human_approval": false
+  },
+  "release_authority_boundary": {
+    "overall_release_status": "NO_GO",
+    "public_claim_change": "NONE",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "CH-T000",
+  "evidence_id": "CH-T000-Q02",
+  "runner_class": "LOCAL_MACOS_DETACHED_WORKTREE",
+  "source_commit": "e747747418f94371348450e6b7205291c1441216",
+  "source_tree": "dae835ab22215085a146e601e4da8f72c1346710",
+  "worktree_creation_command": "git worktree add --detach /private/tmp/haldir-e747747-ch-t000-q02-clean e747747418f94371348450e6b7205291c1441216",
+  "worktree_path": "/private/tmp/haldir-e747747-ch-t000-q02-clean",
+  "command": "CARGO_TERM_COLOR=never TERM=dumb bash tools/p0r-exit-gate.sh",
+  "capture_method": "From inside the detached worktree, one zsh capture block wrote the complete identity, clean-state, target-absence, tool-version, command, and gate stdout/stderr directly to the raw log. The outer zsh wrapper stored the capture-block exit status and UTC start/end timestamps in a separate result file; the retained exit status is not a tee or pipeline status. Only this final fresh-target status-0 capture is retained.",
+  "shell": "/bin/zsh (gate invoked with /bin/bash)",
+  "started_at_utc": "2026-07-18T09:46:11Z",
+  "completed_at_utc": "2026-07-18T09:50:14Z",
+  "exit_status": 0,
+  "passed_gates": 30,
+  "failed_gates": 0,
+  "terminal_markers": [
+    "P0-R exit gate: 30 passed, 0 failed",
+    "All offline P0-R gates passed. (TLA+ check runs in CI: CL-FORMAL-01.)"
+  ],
+  "environment": {
+    "os": "macOS 26.5.1 (25F80)",
+    "kernel": "Darwin 25.5.0 arm64",
+    "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25) (Homebrew)",
+    "cargo": "cargo 1.96.0 (30a34c682 2026-05-25) (Homebrew)",
+    "python": "3.14.6",
+    "git": "2.50.1 (Apple Git-155)",
+    "cargo_deny": "0.19.9",
+    "term": "dumb",
+    "cargo_term_color": "never"
+  },
+  "log": {
+    "path": "release/0.9.0/current-head/evidence/ch-t000-framework-p0r.log.gz",
+    "compressed_sha256": "955c7c10f689326f3ed72333ed0e5db0c43c00e65fd94b7397d74484e4fe414e",
+    "compressed_bytes": 20956,
+    "uncompressed_sha256": "6a2cdfd42e13b93cf6e856b9a90a04830dc7ecd6b5963d9de9684b262fba5f77",
+    "uncompressed_bytes": 133539,
+    "uncompressed_lines": 2466
+  },
+  "scope_limitations": [
+    "The raw transcript directly proves the exact framework commit, tree, worktree path, empty Git status, absence of a pre-existing target directory, tool versions, and offline checks configured by tools/p0r-exit-gate.sh.",
+    "The registered container probes used the local Colima Docker daemon with /private/tmp explicitly mounted into the VM so the mandated detached-worktree path was bind-visible.",
+    "The TLA+ model check is represented by the separately retained exact GitHub formal-workflow evidence.",
+    "A successful qualification run does not establish release readiness or product correctness beyond its named checks."
+  ]
+}
