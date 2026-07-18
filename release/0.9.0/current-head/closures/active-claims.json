@@ -1,0 +1,740 @@
+{
+  "schema_version": "1.0.0",
+  "release_target": "0.9.0",
+  "persistent_identifier": null,
+  "verified_prefix": 1,
+  "overall_status": "NO_GO",
+  "claim_ledger": {
+    "path": "docs/CLAIM-LEDGER.md",
+    "sha256": "4371802d7983e65d5e7277a76879d2a43d8f7fbb095e109d146af524ff6c1d04",
+    "bytes": 55043,
+    "lines": 92,
+    "git_mode": "100644",
+    "git_object_type": "blob",
+    "git_object_id": "a80ad97c318d16a943c995b282af7c0fc2cee647"
+  },
+  "public_surface_records": [
+    {
+      "path": "docs/CLAIM-LEDGER.md",
+      "sha256": "4371802d7983e65d5e7277a76879d2a43d8f7fbb095e109d146af524ff6c1d04",
+      "bytes": 55043,
+      "lines": 92,
+      "git_mode": "100644",
+      "git_object_type": "blob",
+      "git_object_id": "a80ad97c318d16a943c995b282af7c0fc2cee647"
+    }
+  ],
+  "claim_inventory": [
+    {
+      "id": "CL-ALLOW-HONEST-01",
+      "status": "PROVEN",
+      "statement_sha256": "a6896f29712e8d8f1d97bbd10e2e3fdd45b58e4f63bf319372438ea8ef1ecf2f",
+      "support_sha256": "cd0ece1a58eac82343ab94ac134251ba4344347f5a761982a0e5d1a63aee9c50"
+    },
+    {
+      "id": "CL-AUTHORITY-MODEL-01",
+      "status": "PROVEN",
+      "statement_sha256": "f81ac54ea177d669410500ad3eef0044a3cc532152d178fa558d4d3117a68bdb",
+      "support_sha256": "0a1fbed07215649221c69f262de52c07d5966e930cd04c945063f88097d76c30"
+    },
+    {
+      "id": "CL-BACKEND-01",
+      "status": "OUT OF SCOPE",
+      "statement_sha256": "190f03d23b99090675af916af8b8045c8313b3e7bbaa174cf61998c171cb147f",
+      "support_sha256": "64d5333d1f7c18f322c94be21ef7abe987eedb2d23ca3290c10964dfc6e162dc"
+    },
+    {
+      "id": "CL-CBOR-01",
+      "status": "PROVEN",
+      "statement_sha256": "757254e2b0f6d7c12b3db7ad9e56da78fe5122a92991c85a7a4b789c2968c35b",
+      "support_sha256": "93c7e3762582d7e9a8d7205488578eb54c1e66e879f220670f201f5a33aec448"
+    },
+    {
+      "id": "CL-CHALLENGE-01",
+      "status": "PROVEN",
+      "statement_sha256": "61558c7e8301b6fdc60e9a2ed171e431db7bd6b557af7339266087fa2e3eb79f",
+      "support_sha256": "2f2406c19b67e70341154989efa3dc1a6dd87bda53424d67d5d960930f96e79f"
+    },
+    {
+      "id": "CL-CI-01",
+      "status": "PROVEN",
+      "statement_sha256": "a44c8f6a25b7f213f7e992958eccd18e8bbafbd2a41a6d2ff2a2b08eb89253c2",
+      "support_sha256": "ecc8aa8a49ef9eb1407b2117ebb858dc6c6047193931c4f50bc5d7f0bc92f932"
+    },
+    {
+      "id": "CL-CI-02",
+      "status": "PROVEN",
+      "statement_sha256": "b26849be2b37b3cc8c4117a0ca430f24ded2f113ea2f6762e79b318adc42b8a0",
+      "support_sha256": "d74f871227da05c90980f0d1205fba6753167e2a14c6fde97b7969a329e91d20"
+    },
+    {
+      "id": "CL-CONFIG-01",
+      "status": "PROVEN",
+      "statement_sha256": "06ca2c6419c4f62195e9b6d276e54f770f807f5c3bf5fa8fc7cbcac5509f72bd",
+      "support_sha256": "a33d35ffc756dd445acaa9cc6d8167dd9e5885751525c512230da7d3601c2c5f"
+    },
+    {
+      "id": "CL-COSE-01",
+      "status": "PROVEN",
+      "statement_sha256": "132fc0832a5d9b6b001abe50ae74c9043d11655bf4deaf01160628aeec5e50a5",
+      "support_sha256": "901a5a36092c74a5e64d0af68d523529e1bb456b3e6ab3aa1ba698f7d08a7e91"
+    },
+    {
+      "id": "CL-DECISION-ID-01",
+      "status": "PROVEN",
+      "statement_sha256": "9765e3e1cf12de815607542bd6c9150c83202d08c51c325915411262df725ad7",
+      "support_sha256": "a6cd33f497c68c24ce5219fcef6129c21969c034477265c421ae52d5c093c6e9"
+    },
+    {
+      "id": "CL-DEPLOYMENT-PACKAGE-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "779d830367252e0e9f7db4952ba62f4018ec23b6e95d1645b208aa4f602f23b3",
+      "support_sha256": "efe86242986e96b5e3d353d4d334e5fffcaaa9ca8e49aae87026bdc147438d20"
+    },
+    {
+      "id": "CL-DEPLOYMENT-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "3373f3d72f1fb48db123422ce49db087c8c922fe2fa1076b044fe63d3a7cdd59",
+      "support_sha256": "8ae31e355456de9ada70b17dd900519da296e362558c9897710808802de5366a"
+    },
+    {
+      "id": "CL-DURABLE-01",
+      "status": "OUT OF SCOPE",
+      "statement_sha256": "ecb8f3141714b8557a194b4508e6172de8949c421783b797d12b9f0ccd41637b",
+      "support_sha256": "804350573d1d09ccc759d6cce5d6f0532e54ddf106cef9ff245f256fe75f9fbf"
+    },
+    {
+      "id": "CL-DURABLE-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "d5112ed8e809798df79e07da7f066c5819bb46eb6f6b1e2461a6eb52cc6ecb22",
+      "support_sha256": "1560153c1cd670248ecba82f5185566f7f6b8c7911924ee79f9958584389f68c"
+    },
+    {
+      "id": "CL-DURABLE-STARTUP-DEV-01",
+      "status": "PROVEN",
+      "statement_sha256": "8d23e3ddc313921ed8f838509869bb4c359b94c28e70659a9cc321957b344b5e",
+      "support_sha256": "339314a36741a367bf680fcad331447e796ab1193649df400fd82c9bbf0996a7"
+    },
+    {
+      "id": "CL-DUTY-01",
+      "status": "PROVEN",
+      "statement_sha256": "88d280a31bb71e0d0e03545a90c2f480be8f6b60a67c0b18886127072f12543e",
+      "support_sha256": "b0c10a88eb74b12aa7671a4c375189a3154f77ee5e91304b116e2c867552bb17"
+    },
+    {
+      "id": "CL-ERROR-01",
+      "status": "PROVEN",
+      "statement_sha256": "036db540e79a8c9641e087e2a0f88eaba36b06e851104d1974395e5eb8da4e67",
+      "support_sha256": "79dafd3826629de93dd9c0f3815cf84150c8c0da2cfa0bfc3fea33840c276bd1"
+    },
+    {
+      "id": "CL-EVIDENCE-01",
+      "status": "PROVEN",
+      "statement_sha256": "d03f4e52a3ced3287a38ee532b42ee508c50bcdb9550638be005c13b2bd191ad",
+      "support_sha256": "f74310cb314e50bea951102ae9d6b1211d31efc1e42b153bb6797750fb577cf3"
+    },
+    {
+      "id": "CL-EVIDENCE-MANAGER-01",
+      "status": "PROVEN",
+      "statement_sha256": "0866eb6328d1a7d28f6d4b2ae06421f5444e7817cfcfdde02d84b1cc6c0fae1b",
+      "support_sha256": "4762f5674effdd040f1ee742e049092becf7fdc89babb9f0ca7bd4720d6908bf"
+    },
+    {
+      "id": "CL-EVIDENCE-SEGMENT-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "652bd80db7ece277fc2f18b8bf63ae099f1c608e45cb36cea382f2ce0ff3f50e",
+      "support_sha256": "afb1ee1299cff59f8a3cdec2575a887a5216efde852f402ec312b66a21f2b816"
+    },
+    {
+      "id": "CL-FAULT-STATE-01",
+      "status": "PROVEN",
+      "statement_sha256": "39da00ffd95d110bc6b6bc682ee1342841a7ddcad1dd30b822f8401b4a65ba37",
+      "support_sha256": "ae6c2b0c27df34184a5cf64b51d4f4de2b69a3030a6e848037a22f99df430e5a"
+    },
+    {
+      "id": "CL-FIXEDPOINT-01",
+      "status": "PROVEN",
+      "statement_sha256": "3076518c83050f79010da003c37df4c42051a714d37221a6ccdb3052a4cd95bc",
+      "support_sha256": "56993f60e8cccda7d02356b349710d400e0c402442db68e21628ff0d2519a40b"
+    },
+    {
+      "id": "CL-FORMAL-01",
+      "status": "PROVEN",
+      "statement_sha256": "3ee4c01c1fbb3b930b7cd83688710ca511c45cd3ddd339e5c316e62a5a6fded0",
+      "support_sha256": "828acdabbfc58070a1d4706688c063761de469bc87264acf42c5e4fd0922db8f"
+    },
+    {
+      "id": "CL-GATE-JOURNAL-BINDING-01",
+      "status": "PROVEN",
+      "statement_sha256": "5761b502e7e48fa8aa499b762aeceade291b5fff37cda5ee505a9b54cfed6cd9",
+      "support_sha256": "723756b961d5fd357542d24990c49ed5ae9929a56c02358b944efaee5ef9c574"
+    },
+    {
+      "id": "CL-GATE-JOURNAL-REPLAY-01",
+      "status": "PROVEN",
+      "statement_sha256": "95d23e3586854dfa31813c118c3570a563a0152e41379ff979853f77e09b2344",
+      "support_sha256": "712b5bf2aad3b7b97f7e3eb77407956aa4b1b1ae4bd118b297470b092022115b"
+    },
+    {
+      "id": "CL-GATE-LIFECYCLE-01",
+      "status": "PROVEN",
+      "statement_sha256": "b288af6e45b8815ae643d512567b5b91810f490f173a1d9f0a0e244dd852a033",
+      "support_sha256": "9c16dfb8534f04900d065a7c57a65db484d0df6ef319af0b669f89b28d64bd04"
+    },
+    {
+      "id": "CL-GATE-MEDIATION-01",
+      "status": "PROVEN",
+      "statement_sha256": "7f4ad6027fe39aa472a52f76b43a7f1c0b0e4c23fec611c9dc7d485f575ba14e",
+      "support_sha256": "849fe613fb80c57d38a50a0d98658fc4cb2c85e694a391abb47c3e6874428ed7"
+    },
+    {
+      "id": "CL-HARDWARE-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "1c0ca052268057b609e27478c3c6090743c3785f5e67619e236c33a6c38cf2a1",
+      "support_sha256": "522c9ad98f00609b95ff24e2028d0cb7bc14bad9a40b24240753901e8c3134d1"
+    },
+    {
+      "id": "CL-IDENTITY-01",
+      "status": "PROVEN",
+      "statement_sha256": "1c4e83981d4e97a56987c35744085ea1f5b2b388650f2658f644cff03a6312b1",
+      "support_sha256": "52bd0ddb4cf5e032b7d25c521b95101de408cdaf135c916ae787aa199c468797"
+    },
+    {
+      "id": "CL-INTEROP-01",
+      "status": "PROVEN",
+      "statement_sha256": "2499d633af326c28e23cdc1c1bbca3b6e8bd4fd85753d825d0553c65d5a6705e",
+      "support_sha256": "4bce6006b8a27ec32c932f9d0eeaca8e0e4c7527b479e6409c69b0b3b9be6641"
+    },
+    {
+      "id": "CL-LEASE-USAGE-01",
+      "status": "PROVEN",
+      "statement_sha256": "fe74feb472f1089bd34689344df4f0a9b4ed37bef6b59a2c45c4a4cd692eedd4",
+      "support_sha256": "2663e87af7b02c029eb7c043df35f3517d6f5b885bf09491d4e451c68d792d6a"
+    },
+    {
+      "id": "CL-LIVE-ACTIVATION-01",
+      "status": "PROVEN",
+      "statement_sha256": "43f2f988e782fa3c78af8ed2553b82ba058a0f5ed382a63bfdc833d793e64d84",
+      "support_sha256": "a96c26d3da2209f1dd8e4aeb31ad7a7cea5626aaa86ab97c834964c405c3dae0"
+    },
+    {
+      "id": "CL-LIVE-CONTROL-PLANE-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "ddf0c75d2abb75932f4afdef91747de6cb7d1851fa23b1de4e93a72223afdd4c",
+      "support_sha256": "891985bda939aa7c6e05bbb035bd31188d08c1a07b18c66f48cd1541078dd85d"
+    },
+    {
+      "id": "CL-LIVE-GATE-DEV-BIND-01",
+      "status": "PROVEN",
+      "statement_sha256": "5d196f5ffe150aa8aa65a51f9bc86aeec53b4d63c603538b57451bb3afa5a40b",
+      "support_sha256": "fac6e489fc6dd78650ecd931a9eec1bca9caa6dff68294ecf8f22d79d0caa0d7"
+    },
+    {
+      "id": "CL-LIVE-INGRESS-BINDING-01",
+      "status": "PROVEN",
+      "statement_sha256": "32a7c0c19d44e049135e5d1b44d7c2159f60dbc08fadac1ab43794edcc0bd572",
+      "support_sha256": "263c29547099d7f873b8988595ae614d8e2761abb02c05e6a3fdf025d1ed9893"
+    },
+    {
+      "id": "CL-LIVE-TRANSPORT-01",
+      "status": "PROVEN",
+      "statement_sha256": "97b56bbb546bffce37ecf389e663b4dfbd1d1cc7cdbba231083e6201b33e0e81",
+      "support_sha256": "bcf8e5b54a38c28c54ceb38ecf0e857de241e377c47e1684dc96fea4770900c7"
+    },
+    {
+      "id": "CL-LOCAL-ANCHOR-DEV-01",
+      "status": "PROVEN",
+      "statement_sha256": "b4d822bec46fdec7fd5229e4ea6ff109f05d7354f3d1a63a5936033a6da37e90",
+      "support_sha256": "c6d53c4d4d0d57861502df6b2ba18081e6c73a10c768f3f688751ba7b08bafbf"
+    },
+    {
+      "id": "CL-NCP-COMPATIBILITY-01",
+      "status": "PROVEN",
+      "statement_sha256": "30d70a53808bab759c833fb467f583adc853126f831d9e5012a1997cfe186e57",
+      "support_sha256": "80351994ccb65957a3d8eb24b74e8de20d25d3a01b770679d326ce920fc80418"
+    },
+    {
+      "id": "CL-NCP-MODEL-01",
+      "status": "PROVEN",
+      "statement_sha256": "e612b7129ce303e280642c8c03f9ff64fa100b87c1431e0cc05f3da8061417b3",
+      "support_sha256": "e2fbfd2ac8f2e43aa918ad0600f04aa85508d7835ce6418c472f7b0e5e10e453"
+    },
+    {
+      "id": "CL-NCP-REAL-01",
+      "status": "PROVEN",
+      "statement_sha256": "172ad87f9a3879046a2edc79fc01cb20c760e4ae3e658acc8b7e468c60795d5d",
+      "support_sha256": "08f909f9add55f765b894f37ae68d1141fc84ef5d5fbe483dcfd67fa7bb72a36"
+    },
+    {
+      "id": "CL-PHASE-01",
+      "status": "PROVEN",
+      "statement_sha256": "d7a79e4f8b54062f54b3a9abfad12fc71268aa344fb5374418c742595e124656",
+      "support_sha256": "a6676bf54156271539084551d9af3ac86a0dfa0e920b711ffb3272ba32fb06ff"
+    },
+    {
+      "id": "CL-PRODUCTION-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "156c8e4342e340b5a4535c8a7fc2210e6785376c6f0f927960a01cceb8a01a20",
+      "support_sha256": "a1ec38b076578eb07b002a36f50237ac17a62a171e79741d97fc7e70fd6f8807"
+    },
+    {
+      "id": "CL-PROTECTION-MODEL-01",
+      "status": "PROVEN",
+      "statement_sha256": "c7b89e4c0b21cd283772859d167cec4558b99a84be24e6c3940ba30dcbe92625",
+      "support_sha256": "02d4657e4849ae6997451c3acd60998f91fe0ff4f4292e121801eb529ad36130"
+    },
+    {
+      "id": "CL-PUBLICATION-EVIDENCE-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "81013095fd0812ce02fcec580c5e9b89f6c031f1aa0324796d7fae2e76349a2f",
+      "support_sha256": "9bd6e1d003962c91982076fce75643664f755ac430ce175401052764dd747a36"
+    },
+    {
+      "id": "CL-PUBLICATION-STATE-01",
+      "status": "PROVEN",
+      "statement_sha256": "1009210e61a650a87214fe5f5759c3fa2676b8c417b4b81e78be2f48102d83c8",
+      "support_sha256": "9768964067373e7d501783b5627f74351cba04c4f4e634cb25bf6c34c7452ccf"
+    },
+    {
+      "id": "CL-RECEIPT-01",
+      "status": "PROVEN",
+      "statement_sha256": "4db96c0875a4d30a20d03f4ed0c5017baf239642917e06437b5cdcff95204880",
+      "support_sha256": "9e112968d3cca5077492c2ba1852831b67f9cd440ec4a4f9a2e905ccbe5bb3c4"
+    },
+    {
+      "id": "CL-SLEW-01",
+      "status": "PROVEN",
+      "statement_sha256": "419f20fe3825b2408336059fa93f0659d6b8286aae528fabbfcff27200359863",
+      "support_sha256": "1b79766fbaa6665357699e853c7d0e79343c8c303388622a6d883475bf9e1ea0"
+    },
+    {
+      "id": "CL-STATE-DIGEST-01",
+      "status": "PROVEN",
+      "statement_sha256": "bbb5281e8a61b352abc7b2b3efb53dac0e64cf7a81fd5a059dbf696ec6a49475",
+      "support_sha256": "e60651f2cc0ca17a335230e2b48c9e66e27fe2489d2a45924737dcb1d9eae511"
+    },
+    {
+      "id": "CL-STATE-INGRESS-01",
+      "status": "PROVEN",
+      "statement_sha256": "5066b1188772a4acc36a50eb62b4f4fbdaede6e07dbe84c9406d189555f1ef0a",
+      "support_sha256": "6e70b3e60f465793dd075056c9f36e2649d43993d0b8721a493739edf0d12b29"
+    },
+    {
+      "id": "CL-TIMING-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "79b66ca8547b88479f35e50c73b7dc170b571749b369dacb68f5e0802d9ef550",
+      "support_sha256": "efbd7105fa2893f7e233b52b874123a371cb29d2dce56386f3bb2fca70af27c2"
+    },
+    {
+      "id": "CL-TRANSPORT-BOUNDARY-01",
+      "status": "PROVEN",
+      "statement_sha256": "bc924ceb6bc208a810d5ba94470746630b22f4e230e6efe2d543b71e3a476c4f",
+      "support_sha256": "4506a1dfe8e4c4389ab8109b5ff7403fb72e6de5c3b762ad21ae0eddcfdea53d"
+    },
+    {
+      "id": "CL-TRUST-01",
+      "status": "PROVEN",
+      "statement_sha256": "f9afb2677d266b2b09892657ef8e650f9eba635209ae3a4fb1288feedfc89f1d",
+      "support_sha256": "23903cb2efe40f205d54900e49d3f762a4f72addf4b4c180938db38e99946097"
+    }
+  ],
+  "asserted_claims": [
+    {
+      "id": "CL-ALLOW-HONEST-01",
+      "status": "PROVEN",
+      "statement_sha256": "a6896f29712e8d8f1d97bbd10e2e3fdd45b58e4f63bf319372438ea8ef1ecf2f",
+      "support_sha256": "cd0ece1a58eac82343ab94ac134251ba4344347f5a761982a0e5d1a63aee9c50"
+    },
+    {
+      "id": "CL-AUTHORITY-MODEL-01",
+      "status": "PROVEN",
+      "statement_sha256": "f81ac54ea177d669410500ad3eef0044a3cc532152d178fa558d4d3117a68bdb",
+      "support_sha256": "0a1fbed07215649221c69f262de52c07d5966e930cd04c945063f88097d76c30"
+    },
+    {
+      "id": "CL-CBOR-01",
+      "status": "PROVEN",
+      "statement_sha256": "757254e2b0f6d7c12b3db7ad9e56da78fe5122a92991c85a7a4b789c2968c35b",
+      "support_sha256": "93c7e3762582d7e9a8d7205488578eb54c1e66e879f220670f201f5a33aec448"
+    },
+    {
+      "id": "CL-CHALLENGE-01",
+      "status": "PROVEN",
+      "statement_sha256": "61558c7e8301b6fdc60e9a2ed171e431db7bd6b557af7339266087fa2e3eb79f",
+      "support_sha256": "2f2406c19b67e70341154989efa3dc1a6dd87bda53424d67d5d960930f96e79f"
+    },
+    {
+      "id": "CL-CI-01",
+      "status": "PROVEN",
+      "statement_sha256": "a44c8f6a25b7f213f7e992958eccd18e8bbafbd2a41a6d2ff2a2b08eb89253c2",
+      "support_sha256": "ecc8aa8a49ef9eb1407b2117ebb858dc6c6047193931c4f50bc5d7f0bc92f932"
+    },
+    {
+      "id": "CL-CI-02",
+      "status": "PROVEN",
+      "statement_sha256": "b26849be2b37b3cc8c4117a0ca430f24ded2f113ea2f6762e79b318adc42b8a0",
+      "support_sha256": "d74f871227da05c90980f0d1205fba6753167e2a14c6fde97b7969a329e91d20"
+    },
+    {
+      "id": "CL-CONFIG-01",
+      "status": "PROVEN",
+      "statement_sha256": "06ca2c6419c4f62195e9b6d276e54f770f807f5c3bf5fa8fc7cbcac5509f72bd",
+      "support_sha256": "a33d35ffc756dd445acaa9cc6d8167dd9e5885751525c512230da7d3601c2c5f"
+    },
+    {
+      "id": "CL-COSE-01",
+      "status": "PROVEN",
+      "statement_sha256": "132fc0832a5d9b6b001abe50ae74c9043d11655bf4deaf01160628aeec5e50a5",
+      "support_sha256": "901a5a36092c74a5e64d0af68d523529e1bb456b3e6ab3aa1ba698f7d08a7e91"
+    },
+    {
+      "id": "CL-DECISION-ID-01",
+      "status": "PROVEN",
+      "statement_sha256": "9765e3e1cf12de815607542bd6c9150c83202d08c51c325915411262df725ad7",
+      "support_sha256": "a6cd33f497c68c24ce5219fcef6129c21969c034477265c421ae52d5c093c6e9"
+    },
+    {
+      "id": "CL-DEPLOYMENT-PACKAGE-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "779d830367252e0e9f7db4952ba62f4018ec23b6e95d1645b208aa4f602f23b3",
+      "support_sha256": "efe86242986e96b5e3d353d4d334e5fffcaaa9ca8e49aae87026bdc147438d20"
+    },
+    {
+      "id": "CL-DEPLOYMENT-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "3373f3d72f1fb48db123422ce49db087c8c922fe2fa1076b044fe63d3a7cdd59",
+      "support_sha256": "8ae31e355456de9ada70b17dd900519da296e362558c9897710808802de5366a"
+    },
+    {
+      "id": "CL-DURABLE-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "d5112ed8e809798df79e07da7f066c5819bb46eb6f6b1e2461a6eb52cc6ecb22",
+      "support_sha256": "1560153c1cd670248ecba82f5185566f7f6b8c7911924ee79f9958584389f68c"
+    },
+    {
+      "id": "CL-DURABLE-STARTUP-DEV-01",
+      "status": "PROVEN",
+      "statement_sha256": "8d23e3ddc313921ed8f838509869bb4c359b94c28e70659a9cc321957b344b5e",
+      "support_sha256": "339314a36741a367bf680fcad331447e796ab1193649df400fd82c9bbf0996a7"
+    },
+    {
+      "id": "CL-DUTY-01",
+      "status": "PROVEN",
+      "statement_sha256": "88d280a31bb71e0d0e03545a90c2f480be8f6b60a67c0b18886127072f12543e",
+      "support_sha256": "b0c10a88eb74b12aa7671a4c375189a3154f77ee5e91304b116e2c867552bb17"
+    },
+    {
+      "id": "CL-ERROR-01",
+      "status": "PROVEN",
+      "statement_sha256": "036db540e79a8c9641e087e2a0f88eaba36b06e851104d1974395e5eb8da4e67",
+      "support_sha256": "79dafd3826629de93dd9c0f3815cf84150c8c0da2cfa0bfc3fea33840c276bd1"
+    },
+    {
+      "id": "CL-EVIDENCE-01",
+      "status": "PROVEN",
+      "statement_sha256": "d03f4e52a3ced3287a38ee532b42ee508c50bcdb9550638be005c13b2bd191ad",
+      "support_sha256": "f74310cb314e50bea951102ae9d6b1211d31efc1e42b153bb6797750fb577cf3"
+    },
+    {
+      "id": "CL-EVIDENCE-MANAGER-01",
+      "status": "PROVEN",
+      "statement_sha256": "0866eb6328d1a7d28f6d4b2ae06421f5444e7817cfcfdde02d84b1cc6c0fae1b",
+      "support_sha256": "4762f5674effdd040f1ee742e049092becf7fdc89babb9f0ca7bd4720d6908bf"
+    },
+    {
+      "id": "CL-EVIDENCE-SEGMENT-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "652bd80db7ece277fc2f18b8bf63ae099f1c608e45cb36cea382f2ce0ff3f50e",
+      "support_sha256": "afb1ee1299cff59f8a3cdec2575a887a5216efde852f402ec312b66a21f2b816"
+    },
+    {
+      "id": "CL-FAULT-STATE-01",
+      "status": "PROVEN",
+      "statement_sha256": "39da00ffd95d110bc6b6bc682ee1342841a7ddcad1dd30b822f8401b4a65ba37",
+      "support_sha256": "ae6c2b0c27df34184a5cf64b51d4f4de2b69a3030a6e848037a22f99df430e5a"
+    },
+    {
+      "id": "CL-FIXEDPOINT-01",
+      "status": "PROVEN",
+      "statement_sha256": "3076518c83050f79010da003c37df4c42051a714d37221a6ccdb3052a4cd95bc",
+      "support_sha256": "56993f60e8cccda7d02356b349710d400e0c402442db68e21628ff0d2519a40b"
+    },
+    {
+      "id": "CL-FORMAL-01",
+      "status": "PROVEN",
+      "statement_sha256": "3ee4c01c1fbb3b930b7cd83688710ca511c45cd3ddd339e5c316e62a5a6fded0",
+      "support_sha256": "828acdabbfc58070a1d4706688c063761de469bc87264acf42c5e4fd0922db8f"
+    },
+    {
+      "id": "CL-GATE-JOURNAL-BINDING-01",
+      "status": "PROVEN",
+      "statement_sha256": "5761b502e7e48fa8aa499b762aeceade291b5fff37cda5ee505a9b54cfed6cd9",
+      "support_sha256": "723756b961d5fd357542d24990c49ed5ae9929a56c02358b944efaee5ef9c574"
+    },
+    {
+      "id": "CL-GATE-JOURNAL-REPLAY-01",
+      "status": "PROVEN",
+      "statement_sha256": "95d23e3586854dfa31813c118c3570a563a0152e41379ff979853f77e09b2344",
+      "support_sha256": "712b5bf2aad3b7b97f7e3eb77407956aa4b1b1ae4bd118b297470b092022115b"
+    },
+    {
+      "id": "CL-GATE-LIFECYCLE-01",
+      "status": "PROVEN",
+      "statement_sha256": "b288af6e45b8815ae643d512567b5b91810f490f173a1d9f0a0e244dd852a033",
+      "support_sha256": "9c16dfb8534f04900d065a7c57a65db484d0df6ef319af0b669f89b28d64bd04"
+    },
+    {
+      "id": "CL-GATE-MEDIATION-01",
+      "status": "PROVEN",
+      "statement_sha256": "7f4ad6027fe39aa472a52f76b43a7f1c0b0e4c23fec611c9dc7d485f575ba14e",
+      "support_sha256": "849fe613fb80c57d38a50a0d98658fc4cb2c85e694a391abb47c3e6874428ed7"
+    },
+    {
+      "id": "CL-HARDWARE-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "1c0ca052268057b609e27478c3c6090743c3785f5e67619e236c33a6c38cf2a1",
+      "support_sha256": "522c9ad98f00609b95ff24e2028d0cb7bc14bad9a40b24240753901e8c3134d1"
+    },
+    {
+      "id": "CL-IDENTITY-01",
+      "status": "PROVEN",
+      "statement_sha256": "1c4e83981d4e97a56987c35744085ea1f5b2b388650f2658f644cff03a6312b1",
+      "support_sha256": "52bd0ddb4cf5e032b7d25c521b95101de408cdaf135c916ae787aa199c468797"
+    },
+    {
+      "id": "CL-INTEROP-01",
+      "status": "PROVEN",
+      "statement_sha256": "2499d633af326c28e23cdc1c1bbca3b6e8bd4fd85753d825d0553c65d5a6705e",
+      "support_sha256": "4bce6006b8a27ec32c932f9d0eeaca8e0e4c7527b479e6409c69b0b3b9be6641"
+    },
+    {
+      "id": "CL-LEASE-USAGE-01",
+      "status": "PROVEN",
+      "statement_sha256": "fe74feb472f1089bd34689344df4f0a9b4ed37bef6b59a2c45c4a4cd692eedd4",
+      "support_sha256": "2663e87af7b02c029eb7c043df35f3517d6f5b885bf09491d4e451c68d792d6a"
+    },
+    {
+      "id": "CL-LIVE-ACTIVATION-01",
+      "status": "PROVEN",
+      "statement_sha256": "43f2f988e782fa3c78af8ed2553b82ba058a0f5ed382a63bfdc833d793e64d84",
+      "support_sha256": "a96c26d3da2209f1dd8e4aeb31ad7a7cea5626aaa86ab97c834964c405c3dae0"
+    },
+    {
+      "id": "CL-LIVE-CONTROL-PLANE-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "ddf0c75d2abb75932f4afdef91747de6cb7d1851fa23b1de4e93a72223afdd4c",
+      "support_sha256": "891985bda939aa7c6e05bbb035bd31188d08c1a07b18c66f48cd1541078dd85d"
+    },
+    {
+      "id": "CL-LIVE-GATE-DEV-BIND-01",
+      "status": "PROVEN",
+      "statement_sha256": "5d196f5ffe150aa8aa65a51f9bc86aeec53b4d63c603538b57451bb3afa5a40b",
+      "support_sha256": "fac6e489fc6dd78650ecd931a9eec1bca9caa6dff68294ecf8f22d79d0caa0d7"
+    },
+    {
+      "id": "CL-LIVE-INGRESS-BINDING-01",
+      "status": "PROVEN",
+      "statement_sha256": "32a7c0c19d44e049135e5d1b44d7c2159f60dbc08fadac1ab43794edcc0bd572",
+      "support_sha256": "263c29547099d7f873b8988595ae614d8e2761abb02c05e6a3fdf025d1ed9893"
+    },
+    {
+      "id": "CL-LIVE-TRANSPORT-01",
+      "status": "PROVEN",
+      "statement_sha256": "97b56bbb546bffce37ecf389e663b4dfbd1d1cc7cdbba231083e6201b33e0e81",
+      "support_sha256": "bcf8e5b54a38c28c54ceb38ecf0e857de241e377c47e1684dc96fea4770900c7"
+    },
+    {
+      "id": "CL-LOCAL-ANCHOR-DEV-01",
+      "status": "PROVEN",
+      "statement_sha256": "b4d822bec46fdec7fd5229e4ea6ff109f05d7354f3d1a63a5936033a6da37e90",
+      "support_sha256": "c6d53c4d4d0d57861502df6b2ba18081e6c73a10c768f3f688751ba7b08bafbf"
+    },
+    {
+      "id": "CL-NCP-COMPATIBILITY-01",
+      "status": "PROVEN",
+      "statement_sha256": "30d70a53808bab759c833fb467f583adc853126f831d9e5012a1997cfe186e57",
+      "support_sha256": "80351994ccb65957a3d8eb24b74e8de20d25d3a01b770679d326ce920fc80418"
+    },
+    {
+      "id": "CL-NCP-MODEL-01",
+      "status": "PROVEN",
+      "statement_sha256": "e612b7129ce303e280642c8c03f9ff64fa100b87c1431e0cc05f3da8061417b3",
+      "support_sha256": "e2fbfd2ac8f2e43aa918ad0600f04aa85508d7835ce6418c472f7b0e5e10e453"
+    },
+    {
+      "id": "CL-NCP-REAL-01",
+      "status": "PROVEN",
+      "statement_sha256": "172ad87f9a3879046a2edc79fc01cb20c760e4ae3e658acc8b7e468c60795d5d",
+      "support_sha256": "08f909f9add55f765b894f37ae68d1141fc84ef5d5fbe483dcfd67fa7bb72a36"
+    },
+    {
+      "id": "CL-PHASE-01",
+      "status": "PROVEN",
+      "statement_sha256": "d7a79e4f8b54062f54b3a9abfad12fc71268aa344fb5374418c742595e124656",
+      "support_sha256": "a6676bf54156271539084551d9af3ac86a0dfa0e920b711ffb3272ba32fb06ff"
+    },
+    {
+      "id": "CL-PRODUCTION-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "156c8e4342e340b5a4535c8a7fc2210e6785376c6f0f927960a01cceb8a01a20",
+      "support_sha256": "a1ec38b076578eb07b002a36f50237ac17a62a171e79741d97fc7e70fd6f8807"
+    },
+    {
+      "id": "CL-PROTECTION-MODEL-01",
+      "status": "PROVEN",
+      "statement_sha256": "c7b89e4c0b21cd283772859d167cec4558b99a84be24e6c3940ba30dcbe92625",
+      "support_sha256": "02d4657e4849ae6997451c3acd60998f91fe0ff4f4292e121801eb529ad36130"
+    },
+    {
+      "id": "CL-PUBLICATION-EVIDENCE-PRIMITIVE-01",
+      "status": "PROVEN",
+      "statement_sha256": "81013095fd0812ce02fcec580c5e9b89f6c031f1aa0324796d7fae2e76349a2f",
+      "support_sha256": "9bd6e1d003962c91982076fce75643664f755ac430ce175401052764dd747a36"
+    },
+    {
+      "id": "CL-PUBLICATION-STATE-01",
+      "status": "PROVEN",
+      "statement_sha256": "1009210e61a650a87214fe5f5759c3fa2676b8c417b4b81e78be2f48102d83c8",
+      "support_sha256": "9768964067373e7d501783b5627f74351cba04c4f4e634cb25bf6c34c7452ccf"
+    },
+    {
+      "id": "CL-RECEIPT-01",
+      "status": "PROVEN",
+      "statement_sha256": "4db96c0875a4d30a20d03f4ed0c5017baf239642917e06437b5cdcff95204880",
+      "support_sha256": "9e112968d3cca5077492c2ba1852831b67f9cd440ec4a4f9a2e905ccbe5bb3c4"
+    },
+    {
+      "id": "CL-SLEW-01",
+      "status": "PROVEN",
+      "statement_sha256": "419f20fe3825b2408336059fa93f0659d6b8286aae528fabbfcff27200359863",
+      "support_sha256": "1b79766fbaa6665357699e853c7d0e79343c8c303388622a6d883475bf9e1ea0"
+    },
+    {
+      "id": "CL-STATE-DIGEST-01",
+      "status": "PROVEN",
+      "statement_sha256": "bbb5281e8a61b352abc7b2b3efb53dac0e64cf7a81fd5a059dbf696ec6a49475",
+      "support_sha256": "e60651f2cc0ca17a335230e2b48c9e66e27fe2489d2a45924737dcb1d9eae511"
+    },
+    {
+      "id": "CL-STATE-INGRESS-01",
+      "status": "PROVEN",
+      "statement_sha256": "5066b1188772a4acc36a50eb62b4f4fbdaede6e07dbe84c9406d189555f1ef0a",
+      "support_sha256": "6e70b3e60f465793dd075056c9f36e2649d43993d0b8721a493739edf0d12b29"
+    },
+    {
+      "id": "CL-TIMING-01",
+      "status": "UNPROVEN",
+      "statement_sha256": "79b66ca8547b88479f35e50c73b7dc170b571749b369dacb68f5e0802d9ef550",
+      "support_sha256": "efbd7105fa2893f7e233b52b874123a371cb29d2dce56386f3bb2fca70af27c2"
+    },
+    {
+      "id": "CL-TRANSPORT-BOUNDARY-01",
+      "status": "PROVEN",
+      "statement_sha256": "bc924ceb6bc208a810d5ba94470746630b22f4e230e6efe2d543b71e3a476c4f",
+      "support_sha256": "4506a1dfe8e4c4389ab8109b5ff7403fb72e6de5c3b762ad21ae0eddcfdea53d"
+    },
+    {
+      "id": "CL-TRUST-01",
+      "status": "PROVEN",
+      "statement_sha256": "f9afb2677d266b2b09892657ef8e650f9eba635209ae3a4fb1288feedfc89f1d",
+      "support_sha256": "23903cb2efe40f205d54900e49d3f762a4f72addf4b4c180938db38e99946097"
+    }
+  ],
+  "active_claims": [
+    "CL-ALLOW-HONEST-01",
+    "CL-AUTHORITY-MODEL-01",
+    "CL-CBOR-01",
+    "CL-CHALLENGE-01",
+    "CL-CI-01",
+    "CL-CI-02",
+    "CL-CONFIG-01",
+    "CL-COSE-01",
+    "CL-DECISION-ID-01",
+    "CL-DEPLOYMENT-PACKAGE-01",
+    "CL-DEPLOYMENT-PRIMITIVE-01",
+    "CL-DURABLE-PRIMITIVE-01",
+    "CL-DURABLE-STARTUP-DEV-01",
+    "CL-DUTY-01",
+    "CL-ERROR-01",
+    "CL-EVIDENCE-01",
+    "CL-EVIDENCE-MANAGER-01",
+    "CL-EVIDENCE-SEGMENT-PRIMITIVE-01",
+    "CL-FAULT-STATE-01",
+    "CL-FIXEDPOINT-01",
+    "CL-FORMAL-01",
+    "CL-GATE-JOURNAL-BINDING-01",
+    "CL-GATE-JOURNAL-REPLAY-01",
+    "CL-GATE-LIFECYCLE-01",
+    "CL-GATE-MEDIATION-01",
+    "CL-HARDWARE-01",
+    "CL-IDENTITY-01",
+    "CL-INTEROP-01",
+    "CL-LEASE-USAGE-01",
+    "CL-LIVE-ACTIVATION-01",
+    "CL-LIVE-CONTROL-PLANE-01",
+    "CL-LIVE-GATE-DEV-BIND-01",
+    "CL-LIVE-INGRESS-BINDING-01",
+    "CL-LIVE-TRANSPORT-01",
+    "CL-LOCAL-ANCHOR-DEV-01",
+    "CL-NCP-COMPATIBILITY-01",
+    "CL-NCP-MODEL-01",
+    "CL-NCP-REAL-01",
+    "CL-PHASE-01",
+    "CL-PRODUCTION-01",
+    "CL-PROTECTION-MODEL-01",
+    "CL-PUBLICATION-EVIDENCE-PRIMITIVE-01",
+    "CL-PUBLICATION-STATE-01",
+    "CL-RECEIPT-01",
+    "CL-SLEW-01",
+    "CL-STATE-DIGEST-01",
+    "CL-STATE-INGRESS-01",
+    "CL-TIMING-01",
+    "CL-TRANSPORT-BOUNDARY-01",
+    "CL-TRUST-01"
+  ],
+  "release_qualified_claims": [],
+  "removed_claims": [],
+  "non_claimed_claims": [
+    "CL-BACKEND-01",
+    "CL-DURABLE-01"
+  ],
+  "narrowed_claims": [],
+  "residual_limitations": [
+    "AUTOMATED_REVIEW_IS_NOT_INDEPENDENT_OR_NAMED_HUMAN_REVIEW",
+    "AUTOMATED_REVIEW_KEY_SEPARATION_DOES_NOT_ESTABLISH_REAL_WORLD_IDENTITY_OR_ORGANIZATIONAL_INDEPENDENCE",
+    "Automated identities do not imply named-human review.",
+    "Configured maxima are protocol limits, not capacity guarantees.",
+    "Hosted services and container runtime are not independently attested.",
+    "Independent named-human assurance is absent and not inferred.",
+    "Kernel and filesystem primitives remain trusted dependencies.",
+    "Key custody and organizational revocation are not certified.",
+    "Later product compatibility tasks remain OPEN.",
+    "Logs prove named commands only and may omit external platform internals.",
+    "NO_TAG_RELEASE_DOI_ZENODO_DEPLOYMENT_PUBLICATION_OR_SECURITY_CERTIFICATION_IS_GRANTED",
+    "No deployment, tag, publication, DOI, or archive authority is granted.",
+    "No field deployment profile is qualified.",
+    "No runtime or release-readiness claim is evaluated.",
+    "Non-Haldir Git objects are not verified here.",
+    "Only CH-T000 transition semantics are qualified here.",
+    "Organizational approval remains outside repository evidence.",
+    "Platform clocks are trusted inputs, not independently attested time.",
+    "Product runtime correctness remains outside this task.",
+    "Product wire and language parity are not established by CH-T000.",
+    "RESOURCE_PROFILE_ESTABLISHES_DECLARED_BOUNDARY_BEHAVIOR_NOT_GLOBAL_PERFORMANCE",
+    "RETAINED_RUN_OUTPUT_IS_NOT_REMOTE_PLATFORM_ATTESTATION",
+    "RETROSPECTIVE_RECONSTRUCTION_DOES_NOT_PROVE_PRE_EDIT_KNOWLEDGE",
+    "SAME_HOST_OR_OPERATOR_AUTOMATION_IS_NOT_EXTERNAL_REVIEW",
+    "TECHNICAL_INPUT_FREEZE_QUALIFICATION_DOES_NOT_ESTABLISH_RUNTIME_PRODUCT_CORRECTNESS",
+    "The profile makes no cross-machine latency claim.",
+    "Unenumerated future protocol changes require renewed adversarial review.",
+    "Unknown future formats require a new protocol version."
+  ],
+  "current_epochs": {
+    "CH-T000": 1
+  },
+  "tag_authorized": false,
+  "github_release_authorized": false,
+  "doi_authorized": false,
+  "zenodo_authorized": false,
+  "archive_authorized": false
+}
