@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "release_target": "0.9.0",
   "persistent_identifier": null,
-  "verified_prefix": 1,
+  "verified_prefix": 2,
   "overall_status": "NO_GO",
   "claim_ledger": {
     "path": "docs/CLAIM-LEDGER.md",
@@ -14,6 +14,14 @@
     "git_object_id": "a80ad97c318d16a943c995b282af7c0fc2cee647"
   },
   "public_surface_records": [
+    {
+      "path": ".gitignore",
+      "sha256": "cfcafb758561ee79536d05b834cd618e995982df699c8f8f860088e60acfb9f9",
+      "bytes": 539,
+      "git_mode": "100644",
+      "git_object_type": "blob",
+      "git_object_id": "8cec0394d841382d7e41830c7e29bb3a169b08dc"
+    },
     {
       "path": "docs/CLAIM-LEDGER.md",
       "sha256": "4371802d7983e65d5e7277a76879d2a43d8f7fbb095e109d146af524ff6c1d04",
@@ -727,10 +735,20 @@
     "TECHNICAL_INPUT_FREEZE_QUALIFICATION_DOES_NOT_ESTABLISH_RUNTIME_PRODUCT_CORRECTNESS",
     "The profile makes no cross-machine latency claim.",
     "Unenumerated future protocol changes require renewed adversarial review.",
-    "Unknown future formats require a new protocol version."
+    "Unknown future formats require a new protocol version.",
+    ".gitignore is a BUILD_OR_DEPLOYMENT affected public surface under executable signed-D protocol semantics; this classification does not add or qualify a public correctness, deployment, or release claim.",
+    "CH-T001 establishes inventory completeness, not completed file assignment or review; every I row intentionally starts UNASSIGNED and successor CH-T002 owns named assignment.",
+    "Create-once generation provides no authority to replace, update, or automatically recover an existing canonical target; preserved uncertain state requires inspection and exact verification.",
+    "No release, deployment, publication, tag, DOI, Zenodo, archive, or field authority is granted.",
+    "Successful-operation performance at hard resource ceilings is not claimed; retained distributions cover the exact 356-row candidate and hard ceilings are fail-closed validation bounds.",
+    "The CH-T001 wave-gate decision is based on the pinned gate's exit status, exact ordered PASS and FAIL markers, unique gate-owned summary and epilogue chronology, and complete final success epilogue; benign child-tool diagnostics, including successful test summaries containing '0 failed' and nonempty cargo stderr, are retained and digest-bound but are not treated as independent gate failures.",
+    "The hosted-CI attempt log ZIP is retained as a separate raw Git blob capped at 2097152 compressed bytes and 4194304 expanded bytes; exceeding either bound fails closed and requires a new freeze.",
+    "Hosted workflow metadata and logs are retained byte-bound records, not cryptographic attestations issued by GitHub.",
+    "Automated technical review does not constitute named-human, external, release, deployment, or publication approval."
   ],
   "current_epochs": {
-    "CH-T000": 1
+    "CH-T000": 1,
+    "CH-T001": 2
   },
   "tag_authorized": false,
   "github_release_authorized": false,

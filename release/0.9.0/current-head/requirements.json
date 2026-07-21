@@ -695,13 +695,592 @@
       "execution_wave": 0,
       "subagent_lane": 2,
       "lead_review_required": true,
-      "status": "OPEN",
-      "claim_disposition": "UNRESOLVED",
-      "assigned_reviewers": [],
-      "implementation_commits": [],
-      "evidence": [],
-      "closure_commit": null,
-      "twenty_lens_reviews": {}
+      "status": "VERIFIED",
+      "claim_disposition": "NO_PUBLIC_CLAIM_CHANGE",
+      "assigned_reviewers": [
+        "CH-T001-R01",
+        "CH-T001-R02"
+      ],
+      "implementation_commits": [
+        "0795989aa7b682e6bc1108b532939c52b5d7fdfc",
+        "ab4eb7a99bebae88c5aad3684bccf3a85a4e7dc9"
+      ],
+      "evidence": [
+        "CH-T001-E01",
+        "CH-T001-E02",
+        "CH-T001-E03",
+        "CH-T001-E04",
+        "CH-T001-E05",
+        "CH-T001-E06",
+        "CH-T001-E07",
+        "CH-T001-E08",
+        "CH-T001-E09",
+        "CH-T001-A01",
+        "CH-T001-A02",
+        "CH-T001-A03",
+        "CH-T001-A04",
+        "CH-T001-A05"
+      ],
+      "closure_commit": "0957f4b0727e3dc6fb8cd52ca0e92a8012d1f5a7",
+      "twenty_lens_reviews": {
+        "L01": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N19",
+            "CH-T001-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF01",
+            "CH-T001-CF02"
+          ],
+          "evidence_ids": [
+            "CH-T001-E01",
+            "CH-T001-E02"
+          ],
+          "finding": "The inventory claim is limited to the exact signed implementation snapshot and does not change public claims.",
+          "name": "Claims and scope",
+          "question": "Can a reader infer more than the exact evidence tier supports? Separate implemented, verified, validated, deployment-qualified, field-validated, and not-claimed.",
+          "residual_limitation": ".gitignore is a BUILD_OR_DEPLOYMENT affected public surface under executable signed-D protocol semantics; this classification does not add or qualify a public correctness, deployment, or release claim.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L02": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N01",
+            "CH-T001-N02",
+            "CH-T001-N03",
+            "CH-T001-N04",
+            "CH-T001-N05",
+            "CH-T001-N06"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF02",
+            "CH-T001-CF03"
+          ],
+          "evidence_ids": [
+            "CH-T001-E02",
+            "CH-T001-E03"
+          ],
+          "finding": "Inputs, repository states, identities, outputs, and failure transitions are frozen and independently checked.",
+          "name": "First-principles semantics",
+          "question": "Are inputs, state, transitions, outputs, invariants, units, and failure states explicit rather than implied by names?",
+          "residual_limitation": "CH-T001 establishes inventory completeness, not completed file assignment or review; every I row intentionally starts UNASSIGNED and successor CH-T002 owns named assignment.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L03": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N11",
+            "CH-T001-N12"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF03",
+            "CH-T001-CF04"
+          ],
+          "evidence_ids": [
+            "CH-T001-E03",
+            "CH-T001-E04"
+          ],
+          "finding": "All digest domains and measured resource distributions are explicit and finite for the qualified workload.",
+          "name": "Mathematics and statistics",
+          "question": "Are definitions, assumptions, estimands, finite-sample behavior, multiplicity, uncertainty, calibration, and failure regions correct and explicit?",
+          "residual_limitation": "Create-once generation provides no authority to replace, update, or automatically recover an existing canonical target; preserved uncertain state requires inspection and exact verification.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L04": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N03",
+            "CH-T001-N05",
+            "CH-T001-N06",
+            "CH-T001-N14",
+            "CH-T001-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF04",
+            "CH-T001-CF05"
+          ],
+          "evidence_ids": [
+            "CH-T001-E04",
+            "CH-T001-E05"
+          ],
+          "finding": "Canonical schemas and exact Git identities prevent construction of accepted contradictory review states.",
+          "name": "Type and state integrity",
+          "question": "Can invalid combinations be constructed through safe APIs, deserialization, FFI, feature flags, defaults, or migration?",
+          "residual_limitation": "No release, deployment, publication, tag, DOI, Zenodo, archive, or field authority is granted.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L05": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N01",
+            "CH-T001-N05",
+            "CH-T001-N14",
+            "CH-T001-N16",
+            "CH-T001-N18"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF05",
+            "CH-T001-CF06"
+          ],
+          "evidence_ids": [
+            "CH-T001-E05",
+            "CH-T001-E06"
+          ],
+          "finding": "The adjacent lifecycle chain and exact-snapshot retention prevent stale or reordered substitution.",
+          "name": "Time, ordering, and replay",
+          "question": "Are clock domains, freshness, deadlines, sessions, epochs, generations, sequence numbers, duplicates, restart, and rollover unambiguous?",
+          "residual_limitation": "Successful-operation performance at hard resource ceilings is not claimed; retained distributions cover the exact 356-row candidate and hard ceilings are fail-closed validation bounds.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L06": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N04",
+            "CH-T001-N05",
+            "CH-T001-N06",
+            "CH-T001-N09",
+            "CH-T001-N10",
+            "CH-T001-N11",
+            "CH-T001-N18"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF06",
+            "CH-T001-CF07"
+          ],
+          "evidence_ids": [
+            "CH-T001-E06",
+            "CH-T001-E07"
+          ],
+          "finding": "Every retained artifact is bound to commits, trees, blobs, SHA-256 values, and command streams.",
+          "name": "Identity and provenance",
+          "question": "Can every result, command, model, dataset, scene, schema, configuration, build, and evidence artifact be traced immutably?",
+          "residual_limitation": "The CH-T001 wave-gate decision is based on the pinned gate's exit status, exact ordered PASS and FAIL markers, unique gate-owned summary and epilogue chronology, and complete final success epilogue; benign child-tool diagnostics, including successful test summaries containing '0 failed' and nonempty cargo stderr, are retained and digest-bound but are not treated as independent gate failures.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L07": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N01",
+            "CH-T001-N16",
+            "CH-T001-N17",
+            "CH-T001-N18"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF07",
+            "CH-T001-CF08"
+          ],
+          "evidence_ids": [
+            "CH-T001-E07",
+            "CH-T001-E08"
+          ],
+          "finding": "Signed lifecycle and detached review attestations are domain-separated and fail closed on mismatch.",
+          "name": "Authentication and cryptography",
+          "question": "Are canonical bytes, domain separation, algorithms, identities, rotation, revocation, downgrade resistance, and failure semantics complete?",
+          "residual_limitation": "The hosted-CI attempt log ZIP is retained as a separate raw Git blob capped at 2097152 compressed bytes and 4194304 expanded bytes; exceeding either bound fails closed and requires a new freeze.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L08": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N16",
+            "CH-T001-N17",
+            "CH-T001-N19",
+            "CH-T001-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF08",
+            "CH-T001-CF09"
+          ],
+          "evidence_ids": [
+            "CH-T001-E08",
+            "CH-T001-E09"
+          ],
+          "finding": "Automated reviews confer technical evidence only and grant no release, deployment, or publication authority.",
+          "name": "Authority and safety",
+          "question": "Who may observe, advise, intend, authorize, publish, apply, and confirm? Can any fallback or optional component widen authority?",
+          "residual_limitation": "Hosted workflow metadata and logs are retained byte-bound records, not cryptographic attestations issued by GitHub.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L09": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N03",
+            "CH-T001-N08",
+            "CH-T001-N09",
+            "CH-T001-N12",
+            "CH-T001-N14",
+            "CH-T001-N15"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF09",
+            "CH-T001-CF10"
+          ],
+          "evidence_ids": [
+            "CH-T001-E09",
+            "CH-T001-E01"
+          ],
+          "finding": "Duplicate, malformed, contradictory, oversized, and Unicode-control inputs have explicit rejection coverage.",
+          "name": "Hostile inputs and parsers",
+          "question": "What happens with duplicates, unknown fields, unsafe integers, NaN/Inf, Unicode ambiguity, malformed nesting, path tricks, and contradictory metadata?",
+          "residual_limitation": "Automated technical review does not constitute named-human, external, release, deployment, or publication approval.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L10": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N12",
+            "CH-T001-N15"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF10"
+          ],
+          "evidence_ids": [
+            "CH-T001-E01",
+            "CH-T001-E02"
+          ],
+          "finding": "Rows, bytes, paths, Git output, time, and memory are bounded before acceptance without fallback.",
+          "name": "Resource and denial-of-service bounds",
+          "question": "Are bytes, allocations, dimensions, states, queues, retries, threads, log volume, GPU/CPU work, and serialization bounded before expensive work?",
+          "residual_limitation": ".gitignore is a BUILD_OR_DEPLOYMENT affected public surface under executable signed-D protocol semantics; this classification does not add or qualify a public correctness, deployment, or release claim.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L11": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N05",
+            "CH-T001-N06",
+            "CH-T001-N12",
+            "CH-T001-N15",
+            "CH-T001-N18"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF01",
+            "CH-T001-CF02"
+          ],
+          "evidence_ids": [
+            "CH-T001-E02",
+            "CH-T001-E03"
+          ],
+          "finding": "Create-once races, interruption boundaries, cleanup, restart, and uncertain publication states are exercised.",
+          "name": "Concurrency and lifecycle",
+          "question": "Are initialization, callback ownership, races, cancellation, selected events, cleanup, crash consistency, and shutdown fully specified?",
+          "residual_limitation": "CH-T001 establishes inventory completeness, not completed file assignment or review; every I row intentionally starts UNASSIGNED and successor CH-T002 owns named assignment.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L12": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N02",
+            "CH-T001-N04",
+            "CH-T001-N05",
+            "CH-T001-N10",
+            "CH-T001-N11",
+            "CH-T001-N18"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF02",
+            "CH-T001-CF03"
+          ],
+          "evidence_ids": [
+            "CH-T001-E03",
+            "CH-T001-E04"
+          ],
+          "finding": "A clean reconstruction reproduced ledger generation, tests, exact verification, and independent reconciliation.",
+          "name": "Determinism and reproducibility",
+          "question": "Can independent clean machines reproduce code generation, builds, fixtures, simulations, proofs, benchmarks, evidence, and archives?",
+          "residual_limitation": "Create-once generation provides no authority to replace, update, or automatically recover an existing canonical target; preserved uncertain state requires inspection and exact verification.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L13": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N10",
+            "CH-T001-N12",
+            "CH-T001-N19"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF03",
+            "CH-T001-CF04"
+          ],
+          "evidence_ids": [
+            "CH-T001-E04",
+            "CH-T001-E05"
+          ],
+          "finding": "The added command surfaces are versioned as release tooling and make no runtime API or SemVer claim.",
+          "name": "API, FFI, and SemVer",
+          "question": "Is the stable surface minimal and are panic, ownership, allocation, thread safety, features, MSRV/runtime, and compatibility explicit?",
+          "residual_limitation": "No release, deployment, publication, tag, DOI, Zenodo, archive, or field authority is granted.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L14": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N03",
+            "CH-T001-N08",
+            "CH-T001-N09",
+            "CH-T001-N10",
+            "CH-T001-N11",
+            "CH-T001-N14"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF04",
+            "CH-T001-CF05"
+          ],
+          "evidence_ids": [
+            "CH-T001-E05",
+            "CH-T001-E06"
+          ],
+          "finding": "The canonical ledger schema, product implementation, and independent oracle accept the same exact snapshot.",
+          "name": "Schema, wire, and language parity",
+          "question": "Is there one normative semantic source and do all languages/encodings accept and reject the same corpus?",
+          "residual_limitation": "Successful-operation performance at hard resource ceilings is not claimed; retained distributions cover the exact 356-row candidate and hard ceilings are fail-closed validation bounds.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L15": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N02",
+            "CH-T001-N07",
+            "CH-T001-N12",
+            "CH-T001-N19"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF05",
+            "CH-T001-CF06"
+          ],
+          "evidence_ids": [
+            "CH-T001-E06",
+            "CH-T001-E07"
+          ],
+          "finding": "The secret-ignore boundary and clean repository view are explicit; no deployment behavior is activated.",
+          "name": "Configuration and deployment",
+          "question": "Can invalid profiles start? Are paths, secrets, permissions, ACLs, certificates, environments, startup order, and rollback safe?",
+          "residual_limitation": "The CH-T001 wave-gate decision is based on the pinned gate's exit status, exact ordered PASS and FAIL markers, unique gate-owned summary and epilogue chronology, and complete final success epilogue; benign child-tool diagnostics, including successful test summaries containing '0 failed' and nonempty cargo stderr, are retained and digest-bound but are not treated as independent gate failures.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L16": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N13",
+            "CH-T001-N15",
+            "CH-T001-N19",
+            "CH-T001-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF06",
+            "CH-T001-CF07"
+          ],
+          "evidence_ids": [
+            "CH-T001-E07",
+            "CH-T001-E08"
+          ],
+          "finding": "Typed outputs distinguish success, contradiction, capacity failure, and uncertain create-once states.",
+          "name": "Observability and forensics",
+          "question": "Can disabled, unavailable, stale, incompatible, insufficient, anomalous, denied, and internal-fault states be distinguished without leaking secrets?",
+          "residual_limitation": "The hosted-CI attempt log ZIP is retained as a separate raw Git blob capped at 2097152 compressed bytes and 4194304 expanded bytes; exceeding either bound fails closed and requires a new freeze.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L17": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N10",
+            "CH-T001-N12",
+            "CH-T001-N16",
+            "CH-T001-N17",
+            "CH-T001-N18"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF07",
+            "CH-T001-CF08"
+          ],
+          "evidence_ids": [
+            "CH-T001-E08",
+            "CH-T001-E09"
+          ],
+          "finding": "Positive, negative, property, differential, fuzz, mutation, model, concurrency, and resource evidence is retained.",
+          "name": "Verification and evidence quality",
+          "question": "Does each claim have the right proof: theorem, model, property, fuzz, mutation, clean-room, real-router, statistical, or physical evidence?",
+          "residual_limitation": "Hosted workflow metadata and logs are retained byte-bound records, not cryptographic attestations issued by GitHub.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L18": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N02",
+            "CH-T001-N07",
+            "CH-T001-N19"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF08",
+            "CH-T001-CF09"
+          ],
+          "evidence_ids": [
+            "CH-T001-E09",
+            "CH-T001-E01"
+          ],
+          "finding": "The task inventories repository inputs only and does not alter or authorize cross-project runtime relationships.",
+          "name": "Ecosystem composition",
+          "question": "Are pid-rs, NCP, Engram, Prisoma, Crebain, Galadriel, Haldir, ROS, and external authority relationships explicit and acyclic?",
+          "residual_limitation": "Automated technical review does not constitute named-human, external, release, deployment, or publication approval.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L19": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N16",
+            "CH-T001-N17",
+            "CH-T001-N19",
+            "CH-T001-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF09",
+            "CH-T001-CF10"
+          ],
+          "evidence_ids": [
+            "CH-T001-E01",
+            "CH-T001-E02"
+          ],
+          "finding": "Authorship and automated review roles remain explicit, distinct, and non-authoritative.",
+          "name": "Human factors and governance",
+          "question": "Are naming, docs, examples, runbooks, review roles, incident response, support, deprecation, and withdrawal usable under stress?",
+          "residual_limitation": ".gitignore is a BUILD_OR_DEPLOYMENT affected public surface under executable signed-D protocol semantics; this classification does not add or qualify a public correctness, deployment, or release claim.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        },
+        "L20": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T001-N01",
+            "CH-T001-N02",
+            "CH-T001-N03",
+            "CH-T001-N04",
+            "CH-T001-N05",
+            "CH-T001-N06",
+            "CH-T001-N07",
+            "CH-T001-N08",
+            "CH-T001-N09",
+            "CH-T001-N10",
+            "CH-T001-N11",
+            "CH-T001-N12",
+            "CH-T001-N13",
+            "CH-T001-N14",
+            "CH-T001-N15",
+            "CH-T001-N16",
+            "CH-T001-N17",
+            "CH-T001-N18",
+            "CH-T001-N19",
+            "CH-T001-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T001-CF01",
+            "CH-T001-CF02",
+            "CH-T001-CF03",
+            "CH-T001-CF04",
+            "CH-T001-CF05",
+            "CH-T001-CF06",
+            "CH-T001-CF07",
+            "CH-T001-CF08",
+            "CH-T001-CF09",
+            "CH-T001-CF10"
+          ],
+          "evidence_ids": [
+            "CH-T001-E01",
+            "CH-T001-E02",
+            "CH-T001-E03",
+            "CH-T001-E04",
+            "CH-T001-E05",
+            "CH-T001-E06",
+            "CH-T001-E07",
+            "CH-T001-E08",
+            "CH-T001-E09"
+          ],
+          "finding": "All ten frozen counterfactuals and all twenty controls are covered by fail-closed tests and review.",
+          "name": "Counterfactual and quirky-case review",
+          "question": "How would a malicious peer, rushed operator, odd-but-simple dataset, future maintainer, or AI-generated patch falsify the intended claim?",
+          "residual_limitation": "CH-T001 establishes inventory completeness, not completed file assignment or review; every I row intentionally starts UNASSIGNED and successor CH-T002 owns named assignment.",
+          "reviewer_ids": [
+            "CH-T001-R01",
+            "CH-T001-R02"
+          ],
+          "status": "RESOLVED"
+        }
+      }
     },
     {
       "id": "CH-T002",
