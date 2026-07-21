@@ -1,0 +1,320 @@
+{
+  "activation_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-activation.json",
+  "assurance_boundary": {
+    "historical_protocol_execution_revalidated_under_epoch_2": true,
+    "human_review_performed": false,
+    "independent_human_review_performed": false,
+    "prior_framework_accepts_recovery_commit": false,
+    "prior_ledger_and_claim_judgments_changed": false,
+    "same_key_detached_signature_is_independent_approval": false,
+    "transition_kind": "EXPLICIT_ONE_TIME_FRAMEWORK_TRUST_ROOT_RECOVERY"
+  },
+  "author": {
+    "email": "sepmhn@gmail.com",
+    "name": "Sepehr Mahmoudian"
+  },
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "qualification_trust_root_changed": true,
+    "release_authority_changed": false,
+    "runtime_authority_changed": false,
+    "tag_authorized": false,
+    "zenodo_authorized": false
+  },
+  "changed_core_files": [
+    {
+      "new": {
+        "bytes": 536370,
+        "git_mode": "100644",
+        "git_object_id": "9859e73a86689382b33cc4ceac6c92decc551e40",
+        "git_object_type": "blob",
+        "lines": 13561,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "5c9356c08790996ff2a42e8139519b4b930a41473fd7a021a726ac0558c85dce"
+      },
+      "old": {
+        "bytes": 473296,
+        "git_mode": "100644",
+        "git_object_id": "9d7d635a5732af1931a817c6b97ed44395dc7dcc",
+        "git_object_type": "blob",
+        "lines": 11928,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "3a4958c77b2c6d76915f96811f4feef6c5a19ed80195b6d8d179604cbda96788"
+      },
+      "status": "M"
+    },
+    {
+      "new": {
+        "bytes": 204291,
+        "git_mode": "100644",
+        "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+        "git_object_type": "blob",
+        "lines": 4738,
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+      },
+      "old": {
+        "bytes": 181560,
+        "git_mode": "100644",
+        "git_object_id": "bc55b7822ca659370807e993ad8712a91b98c8d3",
+        "git_object_type": "blob",
+        "lines": 4165,
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "8c0af0aae93133ccbada807eaaddaee0ed20c4be77183ff1eee5c592f6dc6f41"
+      },
+      "status": "M"
+    }
+  ],
+  "code_diff": {
+    "base": "c0e4b3d156500684329a92bcb16e0609894fd738",
+    "name_status_sha256": "84fd6e04e25bf8b58296f790d32b647fa7910401f1136be09c61216b8438b764",
+    "numstat_sha256": "59722e05f7ce32b30929fff14cba0becad9926d24e7015c3642d086a244938a5",
+    "patch_bytes": 105749,
+    "patch_command_template": [
+      "/usr/bin/git",
+      "-c",
+      "diff.algorithm=myers",
+      "diff",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--no-renames",
+      "--no-color",
+      "--src-prefix=a/",
+      "--dst-prefix=b/",
+      "--binary",
+      "--full-index",
+      "c0e4b3d156500684329a92bcb16e0609894fd738..<RECOVERY_COMMIT>",
+      "--",
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit.py"
+    ],
+    "patch_lines": 2649,
+    "patch_sha256": "3d24318e1a147d2e7f22237bc88f33bb447026098c67230ce1d9d776cc931937",
+    "paths": [
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit.py"
+    ],
+    "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+  },
+  "created_at_utc": "2026-07-21T23:09:19Z",
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-v1",
+    "principal": "sepmhn@gmail.com",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDuKh9+1+qdjbO6MP/NHD/ai3JtumsKPiz2KBx3lQwLI",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAAcaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS12MQAAAAAAAAAG\nc2hhNTEyAAAAUwAAAAtzc2gtZWQyNTUxOQAAAEBEp5m6Wy4aajDriaJCl7nt0WkknGUhAC\nn202NL8iY/I0jl9XKhqTTkOzKTXjS39186F6XYF0dp0lSu4zN21AMK\n-----END SSH SIGNATURE-----\n"
+  },
+  "execution_budget_correction": {
+    "container_execution_ceiling_seconds": 120,
+    "exception_binding": {
+      "activation_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "epoch": 2,
+      "freeze_commit": "0795989aa7b682e6bc1108b532939c52b5d7fdfc",
+      "implementation_commit": "ab4eb7a99bebae88c5aad3684bccf3a85a4e7dc9",
+      "qualification_commit": "0957f4b0727e3dc6fb8cd52ca0e92a8012d1f5a7",
+      "registration_sha256": "60bf53ed1c975bc958bf26fc0aa5220fc71df95564c5247c469b6be594e28d28",
+      "task_id": "CH-T001",
+      "verifier_path": "tools/release/tasks/ch-t001/e0002/verify.py",
+      "verifier_sha256": "5696199ce75e5f198617efa310e2bfeec8a108361996ac532238549d1ebd8d21"
+    },
+    "registered_tests": {
+      "class": "EXECUTION_DEADLINE_FALSE_NEGATIVE",
+      "diagnostic_certainty": "EXIT_CODE_137_ATTESTED",
+      "exception_seconds": 120,
+      "observed_elapsed_milliseconds": 31830,
+      "observed_error": "CURRENT_AUDIT_REGISTERED_TESTS_FAILED",
+      "observed_exit_code": 137,
+      "observed_requested_seconds": 30,
+      "observed_stderr_bytes": 0,
+      "observed_stdout_bytes": 0,
+      "prior_and_default_seconds": 10,
+      "raw_diagnostic_log_retained": false
+    },
+    "registered_verifier": {
+      "class": "TRANSIENT_EXECUTION_MARGIN_HARDENING",
+      "diagnostic_certainty": "INFERRED_NOT_EXIT_CODE_ATTESTED",
+      "exception_seconds": 30,
+      "observed_error": "CURRENT_AUDIT_REGISTERED_VERIFIER_FAILED",
+      "prior_and_default_seconds": 10,
+      "raw_diagnostic_log_retained": false
+    },
+    "scope": "EXACT_CH-T001_EPOCH_2_REGISTRATION_ONLY"
+  },
+  "failure": {
+    "error": "CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN",
+    "error_raise_line_at_parent": 10419,
+    "faulty_predicate_line_at_parent": 10410,
+    "head_sha": "c0e4b3d156500684329a92bcb16e0609894fd738",
+    "job_id": 88746503189,
+    "job_name": "supply-chain",
+    "run_attempt": 1,
+    "run_id": 29863698341,
+    "source_path": "tools/release/verify-current-audit.py",
+    "step_name": "Verify current-head 0.9 audit cut",
+    "workflow": ".github/workflows/ci.yml"
+  },
+  "framework_epoch": {
+    "next": 2,
+    "prior": 1
+  },
+  "parent_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+  "parent_tree": "82b798640fa2c287d82c916c4334939336154c97",
+  "persistent_identifier": null,
+  "preserved_state_records": [
+    {
+      "bytes": 168367,
+      "git_mode": "100644",
+      "git_object_id": "b56783e69aa1a2433ec44c62a8d46083f18a832a",
+      "git_object_type": "blob",
+      "lines": 4138,
+      "path": "release/0.9.0/current-head/requirements.json",
+      "sha256": "95075e370fb77215ed8c081022def707285069485eb2b1fc06cb0feee7d0dd48"
+    },
+    {
+      "bytes": 32884,
+      "git_mode": "100644",
+      "git_object_id": "4cbf14812f92be0cb9d2a78b66f4f0c44a5914a3",
+      "git_object_type": "blob",
+      "lines": 758,
+      "path": "release/0.9.0/current-head/closures/active-claims.json",
+      "sha256": "d111d11d7b347ecc840fd9820ac75022c60017261d59e19338d37673edded393"
+    },
+    {
+      "bytes": 4066,
+      "git_mode": "100644",
+      "git_object_id": "0c462d95f7314188ba85990f6f13f1a55a85283f",
+      "git_object_type": "blob",
+      "lines": 100,
+      "path": "release/0.9.0/current-head/closures/task-verifier-registry.json",
+      "sha256": "4137bf576badd6a309db742f0acbbf2e7bc4e0e39818602014738e8fac8c2817"
+    },
+    {
+      "bytes": 3592,
+      "git_mode": "100644",
+      "git_object_id": "cf2718035a10190a8e1f74896d91fd353f92d635",
+      "git_object_type": "blob",
+      "lines": 99,
+      "path": "release/0.9.0/current-head/closures/CH-T000-revocations.json",
+      "sha256": "14388ba328e6b51ada9f000de94499fbc5774fe7fa367c1b19717601fc2c157a"
+    }
+  ],
+  "prior_activation_commit": "486c519082c7941575ea658e2290955fbd4ad553",
+  "prior_framework_commit": "e747747418f94371348450e6b7205291c1441216",
+  "prior_qualification_commit": "0e94f61cfd5c78482198a765157571746a256181",
+  "qualification_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json",
+  "qualification_requirements": [
+    {
+      "id": "FR-0001-E01",
+      "kind": "FAILED_HOSTED_CI_RUN",
+      "max_bytes": 65536,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json"
+    },
+    {
+      "id": "FR-0001-E02",
+      "kind": "FAILED_HOSTED_CI_LOG",
+      "max_bytes": 262144,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz"
+    },
+    {
+      "id": "FR-0001-E03",
+      "kind": "REPAIR_HOSTED_CI_RUN",
+      "max_bytes": 65536,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json"
+    },
+    {
+      "id": "FR-0001-E04",
+      "kind": "REPAIR_HOSTED_CI_LOG",
+      "max_bytes": 262144,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz"
+    },
+    {
+      "id": "FR-0001-E05",
+      "kind": "REPAIR_FORMAL_RUN",
+      "max_bytes": 65536,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json"
+    },
+    {
+      "id": "FR-0001-E06",
+      "kind": "REPAIR_FORMAL_LOG",
+      "max_bytes": 262144,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz"
+    },
+    {
+      "id": "FR-0001-E07",
+      "kind": "REPAIR_LOCAL_VALIDATION",
+      "max_bytes": 65536,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json"
+    },
+    {
+      "id": "FR-0001-E08",
+      "kind": "REPAIR_LOCAL_VALIDATION_LOG",
+      "max_bytes": 262144,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz"
+    },
+    {
+      "id": "FR-0001-R01",
+      "kind": "AUTOMATED_DESIGN_REVIEW",
+      "max_bytes": 131072,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json"
+    },
+    {
+      "id": "FR-0001-R02",
+      "kind": "AUTOMATED_IMPLEMENTATION_REVIEW",
+      "max_bytes": 131072,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json"
+    }
+  ],
+  "recovery_id": "FR-0001",
+  "registered_execution_bounds": {
+    "container_execution_ceiling_seconds": 120,
+    "default_registered_test_seconds": 10,
+    "default_registered_verifier_seconds": 10,
+    "protocol_verifier_seconds": 10,
+    "recovery_exception_registered_test_seconds": 120,
+    "recovery_exception_registered_verifier_seconds": 30
+  },
+  "release_target": "0.9.0",
+  "repair_subject": "release: repair current-audit snapshot origin validation",
+  "root_cause": {
+    "class": "LEXICAL_PATH_PREFIX_FALSE_POSITIVE",
+    "correction": "NUL_DELIMITED_SINGLE_DETACHED_WORKTREE_IDENTITY_VALIDATION",
+    "faulty_predicate": "RAW_SOURCE_PATH_SUBSTRING_IN_WORKTREE_PORCELAIN",
+    "trigger": "SNAPSHOT_SIBLING_BASENAME_EXTENDS_LIVE_REPOSITORY_BASENAME"
+  },
+  "schema_version": "1.0.0",
+  "state": {
+    "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_FRAMEWORK_RECOVERY_ACTIVATION",
+    "status": "PENDING_QUALIFICATION",
+    "successor_transitions_allowed": false
+  },
+  "test_contract": {
+    "prior_count": 149,
+    "prior_ids_sha256": "d470d938b04fe96995a2279ad06ad424bb77bf3376b685dfd18eb48f6aec323a",
+    "prior_test_ast_preserved": true,
+    "prior_test_ids_preserved": true,
+    "recovery_count": 163,
+    "recovery_ids_sha256": "5be04ec6ec9fd4f5b0b1257decb807503d3b9a07f2042f12fa425edcbc6a9bbb",
+    "required_regression_test_ids": [
+      "test_framework_recovery_exact_repair_verifies",
+      "test_framework_recovery_old_test_suite_is_preserved",
+      "test_framework_recovery_plan_excludes_self_commit",
+      "test_framework_recovery_plan_field_mutations_are_rejected",
+      "test_framework_recovery_plan_noncanonical_bytes_are_rejected",
+      "test_framework_recovery_signature_namespace_is_purpose_separated",
+      "test_registered_container_rejects_invalid_execution_bounds",
+      "test_registered_runner_wiring_and_bounds_are_frozen",
+      "test_registered_test_timeout_is_separate_and_bounded",
+      "test_snapshot_local_config_is_structural_and_origin_safe",
+      "test_snapshot_worktree_porcelain_accepts_hosted_prefix_collision",
+      "test_snapshot_worktree_porcelain_accepts_spaces_and_newlines",
+      "test_snapshot_worktree_porcelain_rejects_live_repository",
+      "test_snapshot_worktree_porcelain_rejects_malformed_states"
+    ]
+  }
+}

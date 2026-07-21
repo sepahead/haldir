@@ -1505,6 +1505,579 @@ class CurrentAuditVerifierTests(unittest.TestCase):
             self.assertEqual(observed, expected)
             self.assertEqual(len(observed), 2)
 
+    def test_snapshot_worktree_porcelain_accepts_hosted_prefix_collision(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory(prefix="snapshot-prefix-") as raw:
+            root = Path(raw) / "work" / "haldir"
+            live = root / "haldir"
+            snapshot = root / "haldir-current-audit-test" / "exact-repository"
+            live.mkdir(parents=True)
+            snapshot.mkdir(parents=True)
+            self.assertIn(str(live), str(snapshot))
+            commit = "1" * 40
+            porcelain = (
+                b"worktree "
+                + os.fsencode(snapshot)
+                + b"\0HEAD "
+                + commit.encode("ascii")
+                + b"\0detached\0\0"
+            )
+            VERIFY._require_sole_detached_snapshot_worktree(
+                porcelain,
+                snapshot_repo=snapshot,
+                current_commit=commit,
+            )
+
+    def test_snapshot_worktree_porcelain_accepts_spaces_and_newlines(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="snapshot-special-") as raw:
+            live = Path(raw) / "live repository"
+            snapshot = Path(raw) / "snapshot with space\nand newline"
+            live.mkdir()
+            snapshot.mkdir()
+            self.assertIn(b"\n", os.fsencode(snapshot))
+            commit = "2" * 40
+            porcelain = (
+                b"worktree "
+                + os.fsencode(snapshot)
+                + b"\0HEAD "
+                + commit.encode("ascii")
+                + b"\0detached\0\0"
+            )
+            VERIFY._require_sole_detached_snapshot_worktree(
+                porcelain,
+                snapshot_repo=snapshot,
+                current_commit=commit,
+            )
+
+    def test_snapshot_worktree_porcelain_rejects_live_repository(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="snapshot-live-") as raw:
+            live = Path(raw) / "live"
+            snapshot = Path(raw) / "snapshot"
+            live.mkdir()
+            snapshot.mkdir()
+            commit = "3" * 40
+            porcelain = (
+                b"worktree "
+                + os.fsencode(live)
+                + b"\0HEAD "
+                + commit.encode("ascii")
+                + b"\0detached\0\0"
+            )
+            with self.assertRaises(VERIFY.CurrentAuditError):
+                VERIFY._require_sole_detached_snapshot_worktree(
+                    porcelain,
+                    snapshot_repo=snapshot,
+                    current_commit=commit,
+                )
+
+    def test_snapshot_worktree_porcelain_rejects_malformed_states(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="snapshot-malformed-") as raw:
+            live = Path(raw) / "live"
+            snapshot = Path(raw) / "snapshot"
+            live.mkdir()
+            snapshot.mkdir()
+            commit = "4" * 40
+            prefix = b"worktree " + os.fsencode(snapshot)
+            valid = prefix + b"\0HEAD " + commit.encode("ascii") + b"\0detached"
+            invalid = (
+                b"",
+                b"\0\0",
+                valid + b"\0",
+                valid + b"\0\0extra\0\0",
+                prefix + b"\0HEAD " + b"5" * 40 + b"\0detached\0\0",
+                prefix
+                + b"\0HEAD "
+                + commit.encode("ascii")
+                + b"\0branch refs/heads/main\0\0",
+                prefix
+                + b"\0HEAD "
+                + commit.encode("ascii")
+                + b"\0detached\0locked\0\0",
+                b"worktree relative\0HEAD "
+                + commit.encode("ascii")
+                + b"\0detached\0\0",
+                b"worktree \xff\0HEAD " + commit.encode("ascii") + b"\0detached\0\0",
+            )
+            for value in invalid:
+                with self.subTest(value=value):
+                    with self.assertRaises(VERIFY.CurrentAuditError):
+                        VERIFY._require_sole_detached_snapshot_worktree(
+                            value,
+                            snapshot_repo=snapshot,
+                            current_commit=commit,
+                        )
+            with self.assertRaises(VERIFY.CurrentAuditError):
+                VERIFY._require_sole_detached_snapshot_worktree(
+                    valid + b"\0\0",
+                    snapshot_repo=snapshot,
+                    current_commit="not-a-commit",
+                )
+
+    def test_snapshot_local_config_is_structural_and_origin_safe(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="snapshot-config-") as raw:
+            root = Path(raw) / "work" / "haldir"
+            live = root / "haldir"
+            snapshot = root / "haldir-current-audit-test" / "exact-repository"
+            live.mkdir(parents=True)
+            snapshot.mkdir(parents=True)
+            baseline = (
+                b"core.repositoryformatversion\n0\0"
+                b"core.filemode\ntrue\0"
+                b"core.bare\nfalse\0"
+                b"core.logallrefupdates\nfalse\0"
+            )
+            valid = (
+                baseline,
+                baseline + b"core.ignorecase\ntrue\0",
+                baseline + b"core.precomposeunicode\nfalse\0",
+                baseline + b"core.worktree\n" + os.fsencode(snapshot) + b"\0",
+            )
+            for payload in valid:
+                with self.subTest(valid=payload):
+                    VERIFY._require_snapshot_local_config(
+                        payload,
+                        snapshot_repo=snapshot,
+                    )
+            invalid = (
+                b"",
+                baseline[:-1],
+                baseline + b"core.bare\nfalse\0",
+                baseline + b"core.repositoryformatversion\n1\0",
+                baseline + b"remote.origin.url\nhttps://example.invalid/repo\0",
+                baseline + b"include.path\n/tmp/config\0",
+                baseline + b"core.worktree\n" + os.fsencode(live) + b"\0",
+                baseline
+                + b"core.worktree\n"
+                + os.fsencode(snapshot.parent / "exact-repository-extra")
+                + b"\0",
+                baseline + b"malformed\0",
+            )
+            for payload in invalid:
+                with self.subTest(invalid=payload):
+                    with self.assertRaises(VERIFY.CurrentAuditError):
+                        VERIFY._require_snapshot_local_config(
+                            payload,
+                            snapshot_repo=snapshot,
+                        )
+
+    def test_framework_recovery_old_test_suite_is_preserved(self) -> None:
+        path = "tools/release/test_verify_current_audit.py"
+        old_ids = set(
+            VERIFY._discover_unittest_test_ids(
+                VERIFY._git_file(self.repo, VERIFY.FRAMEWORK_RECOVERY_PARENT, path),
+                path,
+            )
+        )
+        new_ids = set(
+            VERIFY._discover_unittest_test_ids((self.repo / path).read_bytes(), path)
+        )
+        self.assertEqual(len(old_ids), 149)
+        self.assertEqual(new_ids - old_ids, VERIFY.FRAMEWORK_RECOVERY_REQUIRED_TEST_IDS)
+
+    def test_framework_recovery_exact_repair_verifies(self) -> None:
+        repair = (
+            VERIFY._git(
+                self.repo,
+                "rev-list",
+                "--first-parent",
+                "--reverse",
+                f"{VERIFY.FRAMEWORK_RECOVERY_PARENT}..HEAD",
+            )
+            .decode("ascii")
+            .splitlines()[0]
+        )
+        plan = VERIFY._verify_framework_recovery_repair(
+            self.repo,
+            repair,
+            framework_commit="e747747418f94371348450e6b7205291c1441216",
+        )
+        self.assertEqual(plan["state"]["status"], "PENDING_QUALIFICATION")
+        self.assertEqual(plan["framework_epoch"], {"prior": 1, "next": 2})
+        self.assertEqual(
+            plan["prior_qualification_commit"],
+            VERIFY.FRAMEWORK_RECOVERY_PRIOR_QUALIFICATION,
+        )
+        self.assertEqual(
+            plan["prior_activation_commit"],
+            VERIFY.FRAMEWORK_RECOVERY_PRIOR_ACTIVATION,
+        )
+
+    def test_framework_recovery_plan_excludes_self_commit(self) -> None:
+        repair = (
+            VERIFY._git(
+                self.repo,
+                "rev-list",
+                "--first-parent",
+                "--reverse",
+                f"{VERIFY.FRAMEWORK_RECOVERY_PARENT}..HEAD",
+            )
+            .decode("ascii")
+            .splitlines()[0]
+        )
+        payload = VERIFY._git_file(
+            self.repo, repair, VERIFY.FRAMEWORK_RECOVERY_PLAN_PATH
+        )
+        tree = VERIFY._commit_metadata(self.repo, repair)["tree"]
+        self.assertNotIn(repair.encode("ascii"), payload)
+        self.assertNotIn(tree.encode("ascii"), payload)
+
+    def test_framework_recovery_plan_field_mutations_are_rejected(self) -> None:
+        repair = (
+            VERIFY._git(
+                self.repo,
+                "rev-list",
+                "--first-parent",
+                "--reverse",
+                f"{VERIFY.FRAMEWORK_RECOVERY_PARENT}..HEAD",
+            )
+            .decode("ascii")
+            .splitlines()[0]
+        )
+        plan, _payload = VERIFY._read_commit_json(
+            self.repo,
+            repair,
+            VERIFY.FRAMEWORK_RECOVERY_PLAN_PATH,
+            "test.framework_recovery.plan",
+        )
+        mutations = []
+        wrong_parent = copy.deepcopy(plan)
+        wrong_parent["parent_commit"] = "0" * 40
+        mutations.append(("parent", wrong_parent))
+        wrong_authority = copy.deepcopy(plan)
+        wrong_authority["authority"]["tag_authorized"] = True
+        mutations.append(("authority", wrong_authority))
+        wrong_record = copy.deepcopy(plan)
+        wrong_record["changed_core_files"][0]["new"]["bytes"] += 1
+        mutations.append(("record", wrong_record))
+
+        def leaf_paths(value: object, prefix: tuple[str, ...] = ()):
+            if isinstance(value, dict):
+                for key in sorted(value):
+                    yield from leaf_paths(value[key], (*prefix, key))
+            else:
+                yield prefix
+
+        for root in ("execution_budget_correction", "registered_execution_bounds"):
+            for path in leaf_paths(plan[root]):
+                mutated = copy.deepcopy(plan)
+                target = mutated[root]
+                for component in path[:-1]:
+                    target = target[component]
+                value = target[path[-1]]
+                if isinstance(value, bool):
+                    target[path[-1]] = not value
+                elif isinstance(value, int):
+                    target[path[-1]] = value + 1
+                else:
+                    target[path[-1]] = f"{value}_MUTATED"
+                mutations.append((f"{root}-{'-'.join(path)}", mutated))
+        for label, mutated in mutations:
+            with self.subTest(label=label):
+                with mock.patch.object(
+                    VERIFY,
+                    "_read_commit_json",
+                    return_value=(
+                        mutated,
+                        VERIFY._canonical_json_bytes(mutated, pretty=True),
+                    ),
+                ):
+                    with self.assertRaises(VERIFY.CurrentAuditError):
+                        VERIFY._verify_framework_recovery_repair(
+                            self.repo,
+                            repair,
+                            framework_commit=(
+                                "e747747418f94371348450e6b7205291c1441216"
+                            ),
+                        )
+
+    def test_framework_recovery_plan_noncanonical_bytes_are_rejected(self) -> None:
+        repair = (
+            VERIFY._git(
+                self.repo,
+                "rev-list",
+                "--first-parent",
+                "--reverse",
+                f"{VERIFY.FRAMEWORK_RECOVERY_PARENT}..HEAD",
+            )
+            .decode("ascii")
+            .splitlines()[0]
+        )
+        plan, _payload = VERIFY._read_commit_json(
+            self.repo,
+            repair,
+            VERIFY.FRAMEWORK_RECOVERY_PLAN_PATH,
+            "test.framework_recovery.plan",
+        )
+        with mock.patch.object(
+            VERIFY,
+            "_read_commit_json",
+            return_value=(plan, VERIFY._canonical_json_bytes(plan)),
+        ):
+            with self.assertRaises(VERIFY.CurrentAuditError):
+                VERIFY._verify_framework_recovery_repair(
+                    self.repo,
+                    repair,
+                    framework_commit="e747747418f94371348450e6b7205291c1441216",
+                )
+
+    def test_framework_recovery_signature_namespace_is_purpose_separated(
+        self,
+    ) -> None:
+        repair = (
+            VERIFY._git(
+                self.repo,
+                "rev-list",
+                "--first-parent",
+                "--reverse",
+                f"{VERIFY.FRAMEWORK_RECOVERY_PARENT}..HEAD",
+            )
+            .decode("ascii")
+            .splitlines()[0]
+        )
+        plan, _payload = VERIFY._read_commit_json(
+            self.repo,
+            repair,
+            VERIFY.FRAMEWORK_RECOVERY_PLAN_PATH,
+            "test.framework_recovery.plan",
+        )
+        mutated = copy.deepcopy(plan)
+        mutated["detached_signature"]["namespace"] = "haldir-release-authority-v1"
+        with mock.patch.object(
+            VERIFY,
+            "_read_commit_json",
+            return_value=(
+                mutated,
+                VERIFY._canonical_json_bytes(mutated, pretty=True),
+            ),
+        ):
+            with self.assertRaises(VERIFY.CurrentAuditError):
+                VERIFY._verify_framework_recovery_repair(
+                    self.repo,
+                    repair,
+                    framework_commit="e747747418f94371348450e6b7205291c1441216",
+                )
+
+    def test_registered_test_timeout_is_separate_and_bounded(self) -> None:
+        self.assertEqual(VERIFY.MAX_VERIFIER_SECONDS, 10)
+        self.assertEqual(VERIFY.FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS, 30)
+        self.assertEqual(VERIFY.MAX_REGISTERED_TEST_SECONDS, 10)
+        self.assertEqual(VERIFY.FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS, 120)
+        self.assertEqual(VERIFY.MAX_REGISTERED_EXECUTION_SECONDS, 120)
+        self.assertGreater(
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS,
+            VERIFY.MAX_VERIFIER_SECONDS,
+        )
+        self.assertGreater(
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS,
+            VERIFY.MAX_REGISTERED_TEST_SECONDS,
+        )
+        self.assertLessEqual(
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS,
+            VERIFY.MAX_REGISTERED_EXECUTION_SECONDS,
+        )
+        self.assertLessEqual(
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS,
+            VERIFY.MAX_REGISTERED_EXECUTION_SECONDS,
+        )
+        registry = json.loads((self.repo / VERIFY.SUCCESSOR_REGISTRY_PATH).read_bytes())
+        registration = next(
+            item
+            for item in registry["registrations"]
+            if item["task_id"] == "CH-T001" and item["epoch"] == 2
+        )
+        exception = VERIFY.FRAMEWORK_RECOVERY_REGISTERED_EXECUTION_EXCEPTION
+        arguments = {
+            "freeze_commit": exception["freeze_commit"],
+            "implementation_commit": exception["implementation_commit"],
+            "qualification_commit": exception["qualification_commit"],
+            "activation_commit": exception["activation_commit"],
+        }
+
+        def registration_leaf_paths(value: object, prefix: tuple[str, ...] = ()):
+            if isinstance(value, dict):
+                for key in sorted(value):
+                    yield from registration_leaf_paths(value[key], (*prefix, key))
+            else:
+                yield prefix
+
+        self.assertEqual(
+            VERIFY._registered_test_execution_seconds(registration, **arguments),
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS,
+        )
+        self.assertEqual(
+            VERIFY._registered_verifier_execution_seconds(registration, **arguments),
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS,
+        )
+        registration_mutations = []
+        for path in registration_leaf_paths(registration):
+            mutated = copy.deepcopy(registration)
+            target = mutated
+            for component in path[:-1]:
+                target = target[component]
+            value = target[path[-1]]
+            target[path[-1]] = (
+                value + 1 if isinstance(value, int) else f"{value}-mutated"
+            )
+            registration_mutations.append(("-".join(path), mutated, arguments))
+        for field in arguments:
+            mutated_arguments = dict(arguments)
+            mutated_arguments[field] = "0" * 40
+            registration_mutations.append((field, registration, mutated_arguments))
+        for label, candidate, candidate_arguments in registration_mutations:
+            with self.subTest(label=label):
+                self.assertEqual(
+                    VERIFY._registered_test_execution_seconds(
+                        candidate, **candidate_arguments
+                    ),
+                    VERIFY.MAX_REGISTERED_TEST_SECONDS,
+                )
+                self.assertEqual(
+                    VERIFY._registered_verifier_execution_seconds(
+                        candidate, **candidate_arguments
+                    ),
+                    VERIFY.MAX_VERIFIER_SECONDS,
+                )
+        reordered = dict(reversed(list(registration.items())))
+        self.assertEqual(
+            VERIFY._registered_test_execution_seconds(reordered, **arguments),
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS,
+        )
+        self.assertEqual(
+            VERIFY._registered_verifier_execution_seconds(reordered, **arguments),
+            VERIFY.FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS,
+        )
+        for malformed in ({}, {"verifier": None}, {"verifier": {"path": object()}}):
+            with self.subTest(malformed=type(malformed.get("verifier")).__name__):
+                self.assertEqual(
+                    VERIFY._registered_test_execution_seconds(malformed, **arguments),
+                    VERIFY.MAX_REGISTERED_TEST_SECONDS,
+                )
+                self.assertEqual(
+                    VERIFY._registered_verifier_execution_seconds(
+                        malformed, **arguments
+                    ),
+                    VERIFY.MAX_VERIFIER_SECONDS,
+                )
+
+    def test_registered_runner_wiring_and_bounds_are_frozen(self) -> None:
+        tree = VERIFY.ast.parse(MODULE_PATH.read_bytes(), filename=str(MODULE_PATH))
+        function = next(
+            node
+            for node in tree.body
+            if isinstance(node, VERIFY.ast.FunctionDef)
+            and node.name == "_run_registered_verifier_v2"
+        )
+        calls = [
+            node
+            for node in VERIFY.ast.walk(function)
+            if isinstance(node, VERIFY.ast.Call)
+        ]
+        parser_calls = [
+            call
+            for call in calls
+            if isinstance(call.func, VERIFY.ast.Name)
+            and call.func.id == "_require_sole_detached_snapshot_worktree"
+        ]
+        self.assertEqual(len(parser_calls), 1)
+        config_parser_calls = [
+            call
+            for call in calls
+            if isinstance(call.func, VERIFY.ast.Name)
+            and call.func.id == "_require_snapshot_local_config"
+        ]
+        self.assertEqual(len(config_parser_calls), 1)
+        git_calls = [
+            call
+            for call in calls
+            if isinstance(call.func, VERIFY.ast.Name) and call.func.id == "_git"
+        ]
+        porcelain_calls = [
+            call
+            for call in git_calls
+            if {
+                node.value
+                for node in call.args
+                if isinstance(node, VERIFY.ast.Constant) and isinstance(node.value, str)
+            }
+            >= {"worktree", "list", "--porcelain", "-z"}
+        ]
+        self.assertEqual(len(porcelain_calls), 1)
+        config_calls = [
+            call
+            for call in git_calls
+            if {
+                node.value
+                for node in call.args
+                if isinstance(node, VERIFY.ast.Constant) and isinstance(node.value, str)
+            }
+            >= {"config", "--local", "--list", "-z"}
+        ]
+        self.assertEqual(len(config_calls), 1)
+        container_calls = [
+            call
+            for call in calls
+            if isinstance(call.func, VERIFY.ast.Name)
+            and call.func.id == "_run_registered_container"
+        ]
+        self.assertEqual(len(container_calls), 2)
+        by_label = {
+            next(
+                keyword.value.value
+                for keyword in call.keywords
+                if keyword.arg == "label"
+                and isinstance(keyword.value, VERIFY.ast.Constant)
+            ): call
+            for call in container_calls
+        }
+        for label, function_name in (
+            ("TESTS", "_registered_test_execution_seconds"),
+            ("VERIFIER", "_registered_verifier_execution_seconds"),
+        ):
+            bound = next(
+                keyword.value
+                for keyword in by_label[label].keywords
+                if keyword.arg == "execution_seconds"
+            )
+            self.assertIsInstance(bound, VERIFY.ast.Call)
+            self.assertIsInstance(bound.func, VERIFY.ast.Name)
+            self.assertEqual(bound.func.id, function_name)
+            self.assertEqual(
+                [keyword.arg for keyword in bound.keywords],
+                [
+                    "freeze_commit",
+                    "implementation_commit",
+                    "qualification_commit",
+                    "activation_commit",
+                ],
+            )
+
+    def test_registered_container_rejects_invalid_execution_bounds(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="registered-bound-") as raw:
+            root = Path(raw)
+            invalid = (
+                True,
+                False,
+                0,
+                -1,
+                121,
+                10**10_000,
+                float("inf"),
+                float("-inf"),
+                float("nan"),
+                "10",
+            )
+            for limit in invalid:
+                with self.subTest(limit=limit):
+                    with self.assertRaises(VERIFY.CurrentAuditError):
+                        VERIFY._run_registered_container(
+                            root,
+                            root,
+                            command=["true"],
+                            label="BOUND_TEST",
+                            execution_seconds=limit,
+                        )
+
     def test_protocol_file_record_rejects_nonregular_modes(self) -> None:
         for mode, object_type in (("120000", "blob"), ("040000", "tree")):
             with self.subTest(mode=mode, object_type=object_type):

@@ -10,6 +10,7 @@ import gzip
 import hashlib
 import io
 import json
+import math
 import os
 import re
 import shutil
@@ -50,6 +51,10 @@ MAX_CHANGED_PATHS_PER_COMMIT = 4096
 MAX_PROTOCOL_PATH_BYTES = 240
 MAX_VERIFIER_OUTPUT_BYTES = 64 * 1024
 MAX_VERIFIER_SECONDS = 10
+FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS = 30
+MAX_REGISTERED_TEST_SECONDS = 10
+FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS = 120
+MAX_REGISTERED_EXECUTION_SECONDS = 120
 MAX_VERIFIER_AGGREGATE_SECONDS = 7_680
 MAX_ZIP_ENTRY_BYTES = 4 * 1024 * 1024
 MAX_ZIP_TOTAL_BYTES = 16 * 1024 * 1024
@@ -150,6 +155,142 @@ BASELINE_GATES = (
 
 IMPLEMENTATION_COMMIT = "bfe0b136213a823913cee0f2f7e21e2992c6aced"
 IMPLEMENTATION_TREE = "02b19c32ab61e76ff217dacaef974f6dfc7b59e4"
+FRAMEWORK_RECOVERY_PARENT = "c0e4b3d156500684329a92bcb16e0609894fd738"
+FRAMEWORK_RECOVERY_ID = "FR-0001"
+FRAMEWORK_RECOVERY_SUBJECT = "release: repair current-audit snapshot origin validation"
+FRAMEWORK_RECOVERY_REGISTERED_EXECUTION_EXCEPTION = {
+    "task_id": "CH-T001",
+    "epoch": 2,
+    "freeze_commit": "0795989aa7b682e6bc1108b532939c52b5d7fdfc",
+    "implementation_commit": "ab4eb7a99bebae88c5aad3684bccf3a85a4e7dc9",
+    "qualification_commit": "0957f4b0727e3dc6fb8cd52ca0e92a8012d1f5a7",
+    "activation_commit": FRAMEWORK_RECOVERY_PARENT,
+    "verifier_path": "tools/release/tasks/ch-t001/e0002/verify.py",
+    "verifier_sha256": (
+        "5696199ce75e5f198617efa310e2bfeec8a108361996ac532238549d1ebd8d21"
+    ),
+    "registration_sha256": (
+        "60bf53ed1c975bc958bf26fc0aa5220fc71df95564c5247c469b6be594e28d28"
+    ),
+}
+FRAMEWORK_RECOVERY_PRIOR_QUALIFICATION = "0e94f61cfd5c78482198a765157571746a256181"
+FRAMEWORK_RECOVERY_PRIOR_ACTIVATION = "486c519082c7941575ea658e2290955fbd4ad553"
+FRAMEWORK_RECOVERY_PLAN_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0001-plan.json"
+)
+FRAMEWORK_RECOVERY_QUALIFICATION_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json"
+)
+FRAMEWORK_RECOVERY_ACTIVATION_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0001-activation.json"
+)
+FRAMEWORK_RECOVERY_CORE_PATHS = (
+    "tools/release/verify-current-audit.py",
+    "tools/release/test_verify_current_audit.py",
+)
+FRAMEWORK_RECOVERY_REPAIR_STATUSES = {
+    FRAMEWORK_RECOVERY_PLAN_PATH: "A",
+    "tools/release/test_verify_current_audit.py": "M",
+    "tools/release/verify-current-audit.py": "M",
+}
+FRAMEWORK_RECOVERY_QUALIFICATION_REQUIREMENTS = (
+    {
+        "id": "FR-0001-E01",
+        "kind": "FAILED_HOSTED_CI_RUN",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json",
+        "max_bytes": 65_536,
+    },
+    {
+        "id": "FR-0001-E02",
+        "kind": "FAILED_HOSTED_CI_LOG",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz",
+        "max_bytes": MAX_COMPRESSED_LOG_BYTES,
+    },
+    {
+        "id": "FR-0001-E03",
+        "kind": "REPAIR_HOSTED_CI_RUN",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json",
+        "max_bytes": 65_536,
+    },
+    {
+        "id": "FR-0001-E04",
+        "kind": "REPAIR_HOSTED_CI_LOG",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz",
+        "max_bytes": MAX_COMPRESSED_LOG_BYTES,
+    },
+    {
+        "id": "FR-0001-E05",
+        "kind": "REPAIR_FORMAL_RUN",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json",
+        "max_bytes": 65_536,
+    },
+    {
+        "id": "FR-0001-E06",
+        "kind": "REPAIR_FORMAL_LOG",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz",
+        "max_bytes": MAX_COMPRESSED_LOG_BYTES,
+    },
+    {
+        "id": "FR-0001-E07",
+        "kind": "REPAIR_LOCAL_VALIDATION",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json",
+        "max_bytes": 65_536,
+    },
+    {
+        "id": "FR-0001-E08",
+        "kind": "REPAIR_LOCAL_VALIDATION_LOG",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz",
+        "max_bytes": MAX_COMPRESSED_LOG_BYTES,
+    },
+    {
+        "id": "FR-0001-R01",
+        "kind": "AUTOMATED_DESIGN_REVIEW",
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json",
+        "max_bytes": 131_072,
+    },
+    {
+        "id": "FR-0001-R02",
+        "kind": "AUTOMATED_IMPLEMENTATION_REVIEW",
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json",
+        "max_bytes": 131_072,
+    },
+)
+FRAMEWORK_RECOVERY_QUALIFICATION_STATUSES = {
+    FRAMEWORK_RECOVERY_QUALIFICATION_PATH: "A",
+    **{
+        requirement["path"]: "A"
+        for requirement in FRAMEWORK_RECOVERY_QUALIFICATION_REQUIREMENTS
+    },
+}
+FRAMEWORK_RECOVERY_ACTIVATION_STATUSES = {FRAMEWORK_RECOVERY_ACTIVATION_PATH: "A"}
+FRAMEWORK_RECOVERY_PRESERVED_PATHS = (
+    "release/0.9.0/current-head/requirements.json",
+    "release/0.9.0/current-head/closures/active-claims.json",
+    "release/0.9.0/current-head/closures/task-verifier-registry.json",
+    "release/0.9.0/current-head/closures/CH-T000-revocations.json",
+)
+FRAMEWORK_RECOVERY_QUALIFICATION_SUBJECT = (
+    "release: qualify current-audit framework recovery"
+)
+FRAMEWORK_RECOVERY_ACTIVATION_SUBJECT = (
+    "release: activate current-audit framework recovery"
+)
+FRAMEWORK_RECOVERY_REQUIRED_TEST_IDS = {
+    "test_framework_recovery_exact_repair_verifies",
+    "test_framework_recovery_old_test_suite_is_preserved",
+    "test_framework_recovery_plan_excludes_self_commit",
+    "test_framework_recovery_plan_field_mutations_are_rejected",
+    "test_framework_recovery_plan_noncanonical_bytes_are_rejected",
+    "test_framework_recovery_signature_namespace_is_purpose_separated",
+    "test_registered_test_timeout_is_separate_and_bounded",
+    "test_snapshot_worktree_porcelain_accepts_hosted_prefix_collision",
+    "test_snapshot_worktree_porcelain_accepts_spaces_and_newlines",
+    "test_snapshot_worktree_porcelain_rejects_live_repository",
+    "test_snapshot_worktree_porcelain_rejects_malformed_states",
+    "test_snapshot_local_config_is_structural_and_origin_safe",
+    "test_registered_runner_wiring_and_bounds_are_frozen",
+    "test_registered_container_rejects_invalid_execution_bounds",
+}
 BOOTSTRAP_REQUIREMENTS_SHA256 = (
     "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40"
 )
@@ -4054,7 +4195,1251 @@ def _verify_named_commit_signature(repo: Path, commit: str, label: str) -> None:
         raise CurrentAuditError(f"CURRENT_AUDIT_{label}_SIGNATURE_INVALID")
 
 
-def _verify_framework_history(repo: Path) -> tuple[str, str, list[str]]:
+def _canonical_json_bytes(value: dict[str, Any], *, pretty: bool = False) -> bytes:
+    options: dict[str, Any] = {"sort_keys": True, "ensure_ascii": True}
+    if pretty:
+        options["indent"] = 2
+    else:
+        options["separators"] = (",", ":")
+    return (json.dumps(value, **options) + "\n").encode("utf-8")
+
+
+def _framework_recovery_code_diff(repo: Path, recovery_commit: str) -> dict[str, Any]:
+    common = (
+        "-c",
+        "diff.algorithm=myers",
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-renames",
+        "--no-color",
+    )
+    selected = ("--", *FRAMEWORK_RECOVERY_CORE_PATHS)
+    patch_arguments = (
+        *common,
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--binary",
+        "--full-index",
+        f"{FRAMEWORK_RECOVERY_PARENT}..{recovery_commit}",
+        *selected,
+    )
+    patch = _git(repo, *patch_arguments)
+    name_status = _git(
+        repo,
+        *common,
+        "--name-status",
+        "-z",
+        f"{FRAMEWORK_RECOVERY_PARENT}..{recovery_commit}",
+        *selected,
+    )
+    numstat = _git(
+        repo,
+        *common,
+        "--numstat",
+        "-z",
+        f"{FRAMEWORK_RECOVERY_PARENT}..{recovery_commit}",
+        *selected,
+    )
+    return {
+        "base": FRAMEWORK_RECOVERY_PARENT,
+        "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN",
+        "paths": list(FRAMEWORK_RECOVERY_CORE_PATHS),
+        "patch_command_template": [
+            GIT_EXECUTABLE,
+            *common,
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+            "--binary",
+            "--full-index",
+            f"{FRAMEWORK_RECOVERY_PARENT}..<RECOVERY_COMMIT>",
+            *selected,
+        ],
+        "patch_sha256": _sha256(patch),
+        "patch_bytes": len(patch),
+        "patch_lines": len(patch.splitlines()),
+        "name_status_sha256": _sha256(name_status),
+        "numstat_sha256": _sha256(numstat),
+    }
+
+
+def _framework_recovery_test_contract(
+    repo: Path, recovery_commit: str
+) -> dict[str, Any]:
+    test_path = "tools/release/test_verify_current_audit.py"
+    old_payload = _git_file(repo, FRAMEWORK_RECOVERY_PARENT, test_path)
+    new_payload = _git_file(repo, recovery_commit, test_path)
+    old_ids = _discover_unittest_test_ids(old_payload, test_path)
+    new_ids = _discover_unittest_test_ids(new_payload, test_path)
+    if (
+        len(old_ids) != len(set(old_ids))
+        or len(new_ids) != len(set(new_ids))
+        or set(new_ids) - set(old_ids) != FRAMEWORK_RECOVERY_REQUIRED_TEST_IDS
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_TEST_NARROWING")
+    try:
+        old_tree = ast.parse(old_payload, filename=test_path)
+        new_tree = ast.parse(new_payload, filename=test_path)
+    except (SyntaxError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_TEST_NARROWING"
+        ) from error
+    for node in new_tree.body:
+        if isinstance(node, ast.ClassDef):
+            node.body = [
+                child
+                for child in node.body
+                if not (
+                    isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and child.name in FRAMEWORK_RECOVERY_REQUIRED_TEST_IDS
+                )
+            ]
+    if ast.dump(old_tree, include_attributes=False) != ast.dump(
+        new_tree, include_attributes=False
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_TEST_NARROWING")
+
+    def digest(identifiers: tuple[str, ...]) -> str:
+        return _sha256(("\n".join(sorted(identifiers)) + "\n").encode("utf-8"))
+
+    return {
+        "prior_count": len(old_ids),
+        "prior_ids_sha256": digest(old_ids),
+        "recovery_count": len(new_ids),
+        "recovery_ids_sha256": digest(new_ids),
+        "prior_test_ids_preserved": True,
+        "prior_test_ast_preserved": True,
+        "required_regression_test_ids": sorted(FRAMEWORK_RECOVERY_REQUIRED_TEST_IDS),
+    }
+
+
+def _framework_recovery_expected_plan(
+    repo: Path, recovery_commit: str, framework_commit: str
+) -> dict[str, Any]:
+    changed_core_files = []
+    for path in FRAMEWORK_RECOVERY_CORE_PATHS:
+        changed_core_files.append(
+            {
+                "status": "M",
+                "old": _commit_regular_file_record(
+                    repo, FRAMEWORK_RECOVERY_PARENT, path
+                ),
+                "new": _commit_regular_file_record(repo, recovery_commit, path),
+            }
+        )
+    return {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_ID,
+        "release_target": "0.9.0",
+        "author": {"name": "Sepehr Mahmoudian", "email": "sepmhn@gmail.com"},
+        "persistent_identifier": None,
+        "framework_epoch": {"prior": 1, "next": 2},
+        "parent_commit": FRAMEWORK_RECOVERY_PARENT,
+        "parent_tree": "82b798640fa2c287d82c916c4334939336154c97",
+        "prior_framework_commit": framework_commit,
+        "prior_qualification_commit": FRAMEWORK_RECOVERY_PRIOR_QUALIFICATION,
+        "prior_activation_commit": FRAMEWORK_RECOVERY_PRIOR_ACTIVATION,
+        "repair_subject": FRAMEWORK_RECOVERY_SUBJECT,
+        "failure": {
+            "workflow": ".github/workflows/ci.yml",
+            "run_id": 29_863_698_341,
+            "run_attempt": 1,
+            "head_sha": FRAMEWORK_RECOVERY_PARENT,
+            "job_id": 88_746_503_189,
+            "job_name": "supply-chain",
+            "step_name": "Verify current-head 0.9 audit cut",
+            "error": "CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN",
+            "source_path": "tools/release/verify-current-audit.py",
+            "faulty_predicate_line_at_parent": 10_410,
+            "error_raise_line_at_parent": 10_419,
+        },
+        "root_cause": {
+            "class": "LEXICAL_PATH_PREFIX_FALSE_POSITIVE",
+            "faulty_predicate": "RAW_SOURCE_PATH_SUBSTRING_IN_WORKTREE_PORCELAIN",
+            "trigger": "SNAPSHOT_SIBLING_BASENAME_EXTENDS_LIVE_REPOSITORY_BASENAME",
+            "correction": "NUL_DELIMITED_SINGLE_DETACHED_WORKTREE_IDENTITY_VALIDATION",
+        },
+        "execution_budget_correction": {
+            "scope": "EXACT_CH-T001_EPOCH_2_REGISTRATION_ONLY",
+            "exception_binding": copy.deepcopy(
+                FRAMEWORK_RECOVERY_REGISTERED_EXECUTION_EXCEPTION
+            ),
+            "registered_verifier": {
+                "class": "TRANSIENT_EXECUTION_MARGIN_HARDENING",
+                "diagnostic_certainty": "INFERRED_NOT_EXIT_CODE_ATTESTED",
+                "raw_diagnostic_log_retained": False,
+                "observed_error": "CURRENT_AUDIT_REGISTERED_VERIFIER_FAILED",
+                "prior_and_default_seconds": MAX_VERIFIER_SECONDS,
+                "exception_seconds": FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS,
+            },
+            "registered_tests": {
+                "class": "EXECUTION_DEADLINE_FALSE_NEGATIVE",
+                "diagnostic_certainty": "EXIT_CODE_137_ATTESTED",
+                "raw_diagnostic_log_retained": False,
+                "observed_error": "CURRENT_AUDIT_REGISTERED_TESTS_FAILED",
+                "observed_requested_seconds": 30,
+                "observed_elapsed_milliseconds": 31_830,
+                "observed_exit_code": 137,
+                "observed_stdout_bytes": 0,
+                "observed_stderr_bytes": 0,
+                "prior_and_default_seconds": MAX_REGISTERED_TEST_SECONDS,
+                "exception_seconds": FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS,
+            },
+            "container_execution_ceiling_seconds": MAX_REGISTERED_EXECUTION_SECONDS,
+        },
+        "changed_core_files": changed_core_files,
+        "code_diff": _framework_recovery_code_diff(repo, recovery_commit),
+        "test_contract": _framework_recovery_test_contract(repo, recovery_commit),
+        "registered_execution_bounds": {
+            "protocol_verifier_seconds": MAX_VERIFIER_SECONDS,
+            "default_registered_verifier_seconds": MAX_VERIFIER_SECONDS,
+            "recovery_exception_registered_verifier_seconds": (
+                FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS
+            ),
+            "default_registered_test_seconds": MAX_REGISTERED_TEST_SECONDS,
+            "recovery_exception_registered_test_seconds": (
+                FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS
+            ),
+            "container_execution_ceiling_seconds": MAX_REGISTERED_EXECUTION_SECONDS,
+        },
+        "preserved_state_records": [
+            _commit_regular_file_record(repo, FRAMEWORK_RECOVERY_PARENT, path)
+            for path in FRAMEWORK_RECOVERY_PRESERVED_PATHS
+        ],
+        "qualification_path": FRAMEWORK_RECOVERY_QUALIFICATION_PATH,
+        "qualification_requirements": [
+            copy.deepcopy(requirement)
+            for requirement in FRAMEWORK_RECOVERY_QUALIFICATION_REQUIREMENTS
+        ],
+        "activation_path": FRAMEWORK_RECOVERY_ACTIVATION_PATH,
+        "state": {
+            "status": "PENDING_QUALIFICATION",
+            "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_FRAMEWORK_RECOVERY_ACTIVATION",
+            "successor_transitions_allowed": False,
+        },
+        "authority": {
+            "runtime_authority_changed": False,
+            "release_authority_changed": False,
+            "qualification_trust_root_changed": True,
+            "deployment_authorized": False,
+            "publication_authorized": False,
+            "tag_authorized": False,
+            "github_release_authorized": False,
+            "doi_authorized": False,
+            "zenodo_authorized": False,
+            "archive_authorized": False,
+            "overall_release_status": "NO_GO",
+        },
+        "assurance_boundary": {
+            "prior_framework_accepts_recovery_commit": False,
+            "transition_kind": "EXPLICIT_ONE_TIME_FRAMEWORK_TRUST_ROOT_RECOVERY",
+            "prior_ledger_and_claim_judgments_changed": False,
+            "historical_protocol_execution_revalidated_under_epoch_2": True,
+            "human_review_performed": False,
+            "independent_human_review_performed": False,
+            "same_key_detached_signature_is_independent_approval": False,
+        },
+    }
+
+
+def _verify_framework_recovery_repair(
+    repo: Path,
+    recovery_commit: str,
+    *,
+    framework_commit: str,
+) -> dict[str, Any]:
+    metadata = _commit_metadata(repo, recovery_commit)
+    if (
+        metadata["parent"] != FRAMEWORK_RECOVERY_PARENT
+        or metadata["subject"] != FRAMEWORK_RECOVERY_SUBJECT
+        or metadata["author_name"] != "Sepehr Mahmoudian"
+        or metadata["author_email"] != "sepmhn@gmail.com"
+        or metadata["committer_name"] != "Sepehr Mahmoudian"
+        or metadata["committer_email"] != "sepmhn@gmail.com"
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_COMMIT_IDENTITY")
+    _verify_named_commit_signature(repo, recovery_commit, "FRAMEWORK_RECOVERY")
+    observed_statuses = _changed_path_statuses(
+        repo, FRAMEWORK_RECOVERY_PARENT, recovery_commit
+    )
+    if not _strict_equal(
+        observed_statuses, dict(sorted(FRAMEWORK_RECOVERY_REPAIR_STATUSES.items()))
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_DIFF")
+    for path in FRAMEWORK_RECOVERY_PRESERVED_PATHS:
+        if _git_tree_entry(repo, recovery_commit, path) != _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_PARENT, path
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_STATE_DRIFT")
+    plan, plan_payload = _read_commit_json(
+        repo,
+        recovery_commit,
+        FRAMEWORK_RECOVERY_PLAN_PATH,
+        "framework_recovery.plan",
+    )
+    if plan_payload != _canonical_json_bytes(plan, pretty=True):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_PLAN_CANONICAL")
+    expected = _framework_recovery_expected_plan(
+        repo, recovery_commit, framework_commit
+    )
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    if set(plan) != expected_fields:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_PLAN_FIELDS")
+    unsigned = {
+        key: copy.deepcopy(value)
+        for key, value in plan.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: value for key, value in unsigned.items() if key != "created_at_utc"
+    }
+    if not _strict_equal(comparable, expected):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_PLAN_INVALID")
+    created = _parse_utc(plan.get("created_at_utc"), "framework_recovery.created")
+    if not (
+        _commit_datetime(repo, FRAMEWORK_RECOVERY_PARENT)
+        <= created
+        <= _commit_datetime(repo, recovery_commit)
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_CHRONOLOGY")
+    signer = _source_release_signer(repo)
+    _verify_ssh_detached_attestation(
+        repo,
+        plan["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-v1",
+        label="framework_recovery.plan",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return plan
+
+
+def _framework_recovery_catalog_record(
+    repo: Path,
+    qualification_commit: str,
+    requirement: dict[str, Any],
+) -> tuple[dict[str, Any], bytes]:
+    path = requirement["path"]
+    file_record = _commit_regular_file_record(repo, qualification_commit, path)
+    if file_record["bytes"] > requirement["max_bytes"]:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_EVIDENCE_BOUND")
+    payload = _git_file(repo, qualification_commit, path)
+    subject_commit = (
+        FRAMEWORK_RECOVERY_PARENT
+        if requirement["id"] in {"FR-0001-E01", "FR-0001-E02"}
+        else _commit_metadata(repo, qualification_commit)["parent"]
+    )
+    record: dict[str, Any] = {
+        "id": requirement["id"],
+        "kind": requirement["kind"],
+        "file": file_record,
+        "subject_commit": subject_commit,
+        "result": (
+            "EXPECTED_FAILURE"
+            if requirement["id"] in {"FR-0001-E01", "FR-0001-E02"}
+            else "PASS"
+        ),
+        "uncompressed": None,
+    }
+    if path.endswith(".log.gz"):
+        uncompressed = _decompress_unbound_gzip(
+            payload, f"framework_recovery.{requirement['id']}"
+        )
+        uncompressed_record = {
+            "sha256": _sha256(uncompressed),
+            "bytes": len(uncompressed),
+            "lines": len(uncompressed.splitlines()),
+        }
+        _decode_gzip_evidence(
+            payload,
+            {
+                "path": path,
+                "compressed_sha256": file_record["sha256"],
+                "compressed_bytes": file_record["bytes"],
+                "uncompressed_sha256": uncompressed_record["sha256"],
+                "uncompressed_bytes": uncompressed_record["bytes"],
+                "uncompressed_lines": uncompressed_record["lines"],
+            },
+            f"framework_recovery.{requirement['id']}",
+            MAX_LOG_BYTES,
+        )
+        record["uncompressed"] = uncompressed_record
+        return record, uncompressed
+    document = _load_json_bytes(payload, f"framework_recovery.{requirement['id']}")
+    if payload != _canonical_json_bytes(document, pretty=True):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_EVIDENCE_CANONICAL")
+    return record, payload
+
+
+def _framework_recovery_run_times(
+    value: dict[str, Any], *, subject_time: datetime, qualification_time: datetime
+) -> tuple[datetime, datetime, datetime, datetime]:
+    created = _parse_utc(value.get("created_at_utc"), "framework_recovery.run.created")
+    started = _parse_utc(value.get("started_at_utc"), "framework_recovery.run.started")
+    completed = _parse_utc(
+        value.get("completed_at_utc"), "framework_recovery.run.completed"
+    )
+    captured = _parse_utc(
+        value.get("captured_at_utc"), "framework_recovery.run.captured"
+    )
+    if not (
+        subject_time
+        <= created
+        <= started
+        <= completed
+        <= captured
+        <= qualification_time
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_CHRONOLOGY")
+    return created, started, completed, captured
+
+
+def _validate_framework_recovery_run_document(
+    repo: Path,
+    qualification_commit: str,
+    value: dict[str, Any],
+    *,
+    evidence_id: str,
+    kind: str,
+    subject_commit: str,
+    workflow_name: str,
+    workflow_path: str,
+    expected_conclusion: str,
+    expected_job_names: tuple[str, ...],
+) -> None:
+    fields = {
+        "schema_version",
+        "evidence_id",
+        "kind",
+        "repository",
+        "workflow_name",
+        "workflow_path",
+        "run_id",
+        "run_attempt",
+        "event",
+        "head_branch",
+        "head_sha",
+        "display_title",
+        "status",
+        "conclusion",
+        "created_at_utc",
+        "started_at_utc",
+        "completed_at_utc",
+        "captured_at_utc",
+        "jobs",
+        "failure",
+        "capture_source",
+    }
+    if set(value) != fields:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_FIELDS")
+    run_id = value.get("run_id")
+    run_attempt = value.get("run_attempt")
+    expected_title = (
+        "release: activate CH-T001 repository inventory"
+        if subject_commit == FRAMEWORK_RECOVERY_PARENT
+        else FRAMEWORK_RECOVERY_SUBJECT
+    )
+    if (
+        value.get("schema_version") != "1.0.0"
+        or value.get("evidence_id") != evidence_id
+        or value.get("kind") != kind
+        or value.get("repository") != "sepahead/haldir"
+        or value.get("workflow_name") != workflow_name
+        or value.get("workflow_path") != workflow_path
+        or type(run_id) is not int
+        or run_id < 1
+        or type(run_attempt) is not int
+        or run_attempt < 1
+        or value.get("event") != "push"
+        or value.get("head_branch") != "main"
+        or value.get("head_sha") != subject_commit
+        or value.get("display_title") != expected_title
+        or value.get("status") != "completed"
+        or value.get("conclusion") != expected_conclusion
+        or value.get("capture_source") != "GITHUB_ACTIONS_API_AND_RETAINED_LOG"
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_INVALID")
+    if subject_commit == FRAMEWORK_RECOVERY_PARENT and (
+        run_id != 29_863_698_341 or run_attempt != 1
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_INVALID")
+    subject_time = _commit_datetime(repo, subject_commit)
+    qualification_time = _commit_datetime(repo, qualification_commit)
+    _created, run_started, run_completed, _captured = _framework_recovery_run_times(
+        value,
+        subject_time=subject_time,
+        qualification_time=qualification_time,
+    )
+    jobs = value.get("jobs")
+    if not isinstance(jobs, list) or len(jobs) != len(expected_job_names):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_JOBS")
+    observed_names: list[str] = []
+    observed_ids: set[int] = set()
+    for index, job in enumerate(jobs):
+        job = _require_fields(
+            job,
+            {
+                "job_id",
+                "name",
+                "status",
+                "conclusion",
+                "started_at_utc",
+                "completed_at_utc",
+                "failed_step",
+            },
+            f"framework_recovery.run.job.{index}",
+        )
+        job_id = job.get("job_id")
+        name = job.get("name")
+        started = _parse_utc(
+            job.get("started_at_utc"), f"framework_recovery.run.job.{index}.started"
+        )
+        completed = _parse_utc(
+            job.get("completed_at_utc"),
+            f"framework_recovery.run.job.{index}.completed",
+        )
+        if (
+            type(job_id) is not int
+            or job_id < 1
+            or job_id in observed_ids
+            or not isinstance(name, str)
+            or job.get("status") != "completed"
+            or not (run_started <= started <= completed <= run_completed)
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_JOBS")
+        observed_ids.add(job_id)
+        observed_names.append(name)
+        if expected_conclusion == "success":
+            if job.get("conclusion") != "success" or job.get("failed_step") is not None:
+                raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_JOBS")
+        elif name == "supply-chain":
+            if (
+                not _strict_equal(
+                    job.get("failed_step"),
+                    {
+                        "name": "Verify current-head 0.9 audit cut",
+                        "number": 7,
+                        "conclusion": "failure",
+                        "error": "CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN",
+                    },
+                )
+                or job.get("conclusion") != "failure"
+            ):
+                raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_JOBS")
+            if job_id != 88_746_503_189:
+                raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_JOBS")
+        elif job.get("conclusion") != "success" or job.get("failed_step") is not None:
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_JOBS")
+    if observed_names != sorted(expected_job_names):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_JOBS")
+    expected_failure = (
+        {
+            "job_id": 88_746_503_189,
+            "job_name": "supply-chain",
+            "step_name": "Verify current-head 0.9 audit cut",
+            "step_number": 7,
+            "error": "CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN",
+        }
+        if expected_conclusion == "failure"
+        else None
+    )
+    if not _strict_equal(value.get("failure"), expected_failure):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_RUN_FAILURE")
+
+
+def _validate_framework_recovery_local_document(
+    repo: Path,
+    qualification_commit: str,
+    repair_commit: str,
+    value: dict[str, Any],
+) -> None:
+    fields = {
+        "schema_version",
+        "evidence_id",
+        "kind",
+        "subject_commit",
+        "subject_tree",
+        "started_at_utc",
+        "completed_at_utc",
+        "platform",
+        "tool_versions",
+        "commands",
+        "overall_result",
+    }
+    if set(value) != fields:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_LOCAL_FIELDS")
+    expected_commands = (
+        (
+            "CURRENT_AUDIT_TESTS",
+            ["python3", "-I", "tools/release/test_verify_current_audit.py"],
+        ),
+        (
+            "CURRENT_AUDIT_VERIFIER",
+            ["python3", "-I", "tools/release/verify-current-audit.py"],
+        ),
+        ("P0R_EXIT_GATE", ["tools/p0r-exit-gate.sh"]),
+        (
+            "RESOURCE_PROFILE",
+            ["python3", "-I", "tools/release/current-audit-resource-profile.py"],
+        ),
+    )
+    if (
+        value.get("schema_version") != "1.0.0"
+        or value.get("evidence_id") != "FR-0001-E07"
+        or value.get("kind") != "REPAIR_LOCAL_VALIDATION"
+        or value.get("subject_commit") != repair_commit
+        or value.get("subject_tree") != _commit_metadata(repo, repair_commit)["tree"]
+        or value.get("overall_result") != "PASS"
+        or not isinstance(value.get("platform"), dict)
+        or set(value["platform"]) != {"operating_system", "architecture"}
+        or any(
+            not isinstance(item, str) or not item.strip()
+            for item in value["platform"].values()
+        )
+        or not isinstance(value.get("tool_versions"), dict)
+        or set(value["tool_versions"]) != {"cargo", "docker", "git", "python", "rustc"}
+        or any(
+            not isinstance(item, str) or not item.strip()
+            for item in value["tool_versions"].values()
+        )
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_LOCAL_INVALID")
+    started = _parse_utc(
+        value.get("started_at_utc"), "framework_recovery.local.started"
+    )
+    completed = _parse_utc(
+        value.get("completed_at_utc"), "framework_recovery.local.completed"
+    )
+    if not (
+        _commit_datetime(repo, repair_commit)
+        <= started
+        <= completed
+        <= _commit_datetime(repo, qualification_commit)
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_LOCAL_CHRONOLOGY")
+    commands = value.get("commands")
+    if not isinstance(commands, list) or len(commands) != len(expected_commands):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_LOCAL_COMMANDS")
+    for index, (command, (command_id, argv)) in enumerate(
+        zip(commands, expected_commands, strict=True)
+    ):
+        command = _require_fields(
+            command,
+            {
+                "id",
+                "argv",
+                "started_at_utc",
+                "completed_at_utc",
+                "exit_status",
+                "result",
+            },
+            f"framework_recovery.local.command.{index}",
+        )
+        command_started = _parse_utc(
+            command.get("started_at_utc"),
+            f"framework_recovery.local.command.{index}.started",
+        )
+        command_completed = _parse_utc(
+            command.get("completed_at_utc"),
+            f"framework_recovery.local.command.{index}.completed",
+        )
+        if (
+            command.get("id") != command_id
+            or command.get("argv") != argv
+            or command.get("exit_status") != 0
+            or command.get("result") != "PASS"
+            or not (started <= command_started <= command_completed <= completed)
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_LOCAL_COMMANDS")
+
+
+def _validate_framework_recovery_review(
+    repo: Path,
+    value: dict[str, Any],
+    *,
+    review_id: str,
+    kind: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+) -> dict[str, str]:
+    fields = {
+        "schema_version",
+        "review_id",
+        "kind",
+        "subject",
+        "reviewer",
+        "configuration",
+        "response",
+        "original_verdict",
+        "qualification_verdict",
+        "findings",
+        "limitations",
+        "detached_signature",
+    }
+    if set(value) != fields:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_REVIEW_FIELDS")
+    reviewer = _require_fields(
+        value.get("reviewer"),
+        {
+            "provider",
+            "model_requested",
+            "model_resolved",
+            "classification",
+            "human_review_performed",
+            "named_human_review_performed",
+            "external_independence",
+            "release_authority",
+            "capture_key_role",
+        },
+        f"framework_recovery.review.{review_id}.reviewer",
+    )
+    configuration = _require_fields(
+        value.get("configuration"),
+        {"max_tokens", "thinking", "effort"},
+        f"framework_recovery.review.{review_id}.configuration",
+    )
+    response = _require_fields(
+        value.get("response"),
+        {
+            "message_id",
+            "stop_reason",
+            "input_tokens",
+            "output_tokens",
+            "thinking_tokens",
+        },
+        f"framework_recovery.review.{review_id}.response",
+    )
+    expected_original = "GO_CONDITIONAL" if review_id.endswith("R01") else "GO"
+    if (
+        value.get("schema_version") != "1.0.0"
+        or value.get("review_id") != review_id
+        or value.get("kind") != kind
+        or not _strict_equal(
+            value.get("subject"),
+            {
+                "parent_commit": FRAMEWORK_RECOVERY_PARENT,
+                "repair_commit": repair_commit,
+                "code_diff": plan["code_diff"],
+            },
+        )
+        or not _strict_equal(
+            reviewer,
+            {
+                "provider": "Anthropic",
+                "model_requested": "claude-fable-5",
+                "model_resolved": "claude-fable-5",
+                "classification": "AUTOMATED",
+                "human_review_performed": False,
+                "named_human_review_performed": False,
+                "external_independence": False,
+                "release_authority": False,
+                "capture_key_role": "LOCAL_REVIEW_SESSION_CAPTURE_KEY",
+            },
+        )
+        or not _strict_equal(
+            configuration,
+            {"max_tokens": 128_000, "thinking": "adaptive", "effort": "max"},
+        )
+        or not isinstance(response.get("message_id"), str)
+        or not response["message_id"].startswith("msg_")
+        or response.get("stop_reason") != "end_turn"
+        or any(
+            type(response.get(field)) is not int or response[field] < 1
+            for field in ("input_tokens", "output_tokens", "thinking_tokens")
+        )
+        or response["thinking_tokens"] > response["output_tokens"]
+        or value.get("original_verdict") != expected_original
+        or value.get("qualification_verdict") != "GO"
+        or value.get("limitations")
+        != [
+            "KEY_SEPARATION_IS_NOT_HUMAN_OR_EXTERNAL_INDEPENDENCE",
+            "RECOVERY_REMAINS_AN_EXPLICIT_TRUST_ROOT_TRANSITION",
+        ]
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_REVIEW_INVALID")
+    findings = value.get("findings")
+    if not isinstance(findings, list) or not findings:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_REVIEW_FINDINGS")
+    finding_ids: list[str] = []
+    for index, finding in enumerate(findings):
+        finding = _require_fields(
+            finding,
+            {"id", "severity", "status", "disposition"},
+            f"framework_recovery.review.{review_id}.finding.{index}",
+        )
+        finding_id = finding.get("id")
+        if (
+            not isinstance(finding_id, str)
+            or re.fullmatch(r"F\d{1,3}", finding_id) is None
+            or finding_id in finding_ids
+            or finding.get("severity") not in {"BLOCKING", "NON_BLOCKING"}
+            or finding.get("status") != "RESOLVED"
+            or not isinstance(finding.get("disposition"), str)
+            or not finding["disposition"].strip()
+            or len(finding["disposition"].encode("utf-8")) > 4096
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_REVIEW_FINDINGS")
+        finding_ids.append(finding_id)
+    unsigned = {
+        key: copy.deepcopy(item)
+        for key, item in value.items()
+        if key != "detached_signature"
+    }
+    expected_principal = (
+        "fr-0001-design@automated.invalid"
+        if review_id.endswith("R01")
+        else "fr-0001-implementation@automated.invalid"
+    )
+    attestation = _verify_ssh_detached_attestation(
+        repo,
+        value["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-review-v1",
+        label=f"framework_recovery.review.{review_id}",
+        expected_principal=expected_principal,
+    )
+    return {
+        "public_key": attestation["public_key"],
+        "key_fingerprint": attestation["key_fingerprint"],
+    }
+
+
+def _framework_recovery_decision(state: str) -> dict[str, Any]:
+    return {
+        "framework_state": state,
+        "framework_epoch": 2,
+        "runtime_authority_changed": False,
+        "release_authority_changed": False,
+        "deployment_authorized": False,
+        "publication_authorized": False,
+        "tag_authorized": False,
+        "github_release_authorized": False,
+        "doi_authorized": False,
+        "zenodo_authorized": False,
+        "archive_authorized": False,
+        "overall_release_status": "NO_GO",
+    }
+
+
+def _verify_framework_recovery_qualification(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    *,
+    framework_commit: str,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    metadata = _verify_data_only_commit(
+        repo,
+        commit=qualification_commit,
+        parent=repair_commit,
+        expected_statuses=dict(
+            sorted(FRAMEWORK_RECOVERY_QUALIFICATION_STATUSES.items())
+        ),
+        label="FRAMEWORK_RECOVERY_QUALIFICATION",
+    )
+    if metadata["subject"] != FRAMEWORK_RECOVERY_QUALIFICATION_SUBJECT:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_QUALIFICATION_IDENTITY"
+        )
+    for path in FRAMEWORK_RECOVERY_PRESERVED_PATHS:
+        if _git_tree_entry(repo, qualification_commit, path) != _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_PARENT, path
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_STATE_DRIFT")
+    catalog: list[dict[str, Any]] = []
+    payloads: dict[str, bytes] = {}
+    documents: dict[str, dict[str, Any]] = {}
+    for requirement in FRAMEWORK_RECOVERY_QUALIFICATION_REQUIREMENTS:
+        record, payload = _framework_recovery_catalog_record(
+            repo, qualification_commit, requirement
+        )
+        catalog.append(record)
+        payloads[requirement["id"]] = payload
+        if not requirement["path"].endswith(".log.gz"):
+            documents[requirement["id"]] = _load_json_bytes(
+                payload, f"framework_recovery.{requirement['id']}"
+            )
+    _validate_framework_recovery_run_document(
+        repo,
+        qualification_commit,
+        documents["FR-0001-E01"],
+        evidence_id="FR-0001-E01",
+        kind="FAILED_HOSTED_CI_RUN",
+        subject_commit=FRAMEWORK_RECOVERY_PARENT,
+        workflow_name="ci",
+        workflow_path=".github/workflows/ci.yml",
+        expected_conclusion="failure",
+        expected_job_names=(
+            "build-test",
+            "clean-build",
+            "feature-matrix",
+            "interop",
+            "macos-compile",
+            "supply-chain",
+        ),
+    )
+    failed_log = payloads["FR-0001-E02"]
+    if (
+        failed_log.count(b"CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN") != 2
+        or failed_log.count(b"Ran 149 tests") != 1
+        or failed_log.count(b"FAILED (errors=1)") != 1
+        or b"verify-current-audit: OK" in failed_log
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_FAILED_LOG")
+    _validate_framework_recovery_run_document(
+        repo,
+        qualification_commit,
+        documents["FR-0001-E03"],
+        evidence_id="FR-0001-E03",
+        kind="REPAIR_HOSTED_CI_RUN",
+        subject_commit=repair_commit,
+        workflow_name="ci",
+        workflow_path=".github/workflows/ci.yml",
+        expected_conclusion="success",
+        expected_job_names=(
+            "build-test",
+            "clean-build",
+            "feature-matrix",
+            "interop",
+            "macos-compile",
+            "supply-chain",
+        ),
+    )
+    ci_log = payloads["FR-0001-E04"]
+    if (
+        ci_log.count(b"verify-current-audit: OK") != 1
+        or ci_log.count(
+            f"Ran {plan['test_contract']['recovery_count']} tests".encode("ascii")
+        )
+        != 1
+        or b"CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN" in ci_log
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_CI_LOG")
+    _validate_framework_recovery_run_document(
+        repo,
+        qualification_commit,
+        documents["FR-0001-E05"],
+        evidence_id="FR-0001-E05",
+        kind="REPAIR_FORMAL_RUN",
+        subject_commit=repair_commit,
+        workflow_name="formal",
+        workflow_path=".github/workflows/formal.yml",
+        expected_conclusion="success",
+        expected_job_names=("tlc-model-check",),
+    )
+    formal_log = payloads["FR-0001-E06"]
+    if formal_log.count(b"Model checking completed. No error has been found.") != 1:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_FORMAL_LOG")
+    _validate_framework_recovery_local_document(
+        repo,
+        qualification_commit,
+        repair_commit,
+        documents["FR-0001-E07"],
+    )
+    local_log = payloads["FR-0001-E08"]
+    if (
+        local_log.count(b"=== CURRENT_AUDIT_TESTS ===") != 1
+        or local_log.count(b"=== CURRENT_AUDIT_VERIFIER ===") != 1
+        or local_log.count(b"=== P0R_EXIT_GATE ===") != 1
+        or local_log.count(b"=== RESOURCE_PROFILE ===") != 1
+        or f"Ran {plan['test_contract']['recovery_count']} tests".encode("ascii")
+        not in local_log
+        or b"verify-current-audit: OK" not in local_log
+        or b"P0-R exit gate: 30 passed, 0 failed" not in local_log
+        or b'"overall_pass": true' not in local_log
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_LOCAL_LOG")
+    review_requirements = FRAMEWORK_RECOVERY_QUALIFICATION_REQUIREMENTS[-2:]
+    review_key_records: list[dict[str, str]] = []
+    review_records: list[dict[str, Any]] = []
+    for requirement in review_requirements:
+        key_record = _validate_framework_recovery_review(
+            repo,
+            documents[requirement["id"]],
+            review_id=requirement["id"],
+            kind=requirement["kind"],
+            repair_commit=repair_commit,
+            plan=plan,
+        )
+        review_key_records.append(key_record)
+        catalog_record = next(
+            item for item in catalog if item["id"] == requirement["id"]
+        )
+        review_records.append(
+            {
+                "review_id": requirement["id"],
+                "file": catalog_record["file"],
+                "capture_key": key_record,
+            }
+        )
+    source_signer = _source_release_signer(repo)
+    review_fingerprints = {item["key_fingerprint"] for item in review_key_records}
+    if (
+        len(review_fingerprints) != 2
+        or source_signer["key_fingerprint"] in review_fingerprints
+        or len({item["public_key"] for item in review_key_records}) != 2
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_REVIEW_KEY_SEPARATION"
+        )
+    qualification, qualification_payload = _read_commit_json(
+        repo,
+        qualification_commit,
+        FRAMEWORK_RECOVERY_QUALIFICATION_PATH,
+        "framework_recovery.qualification",
+    )
+    if qualification_payload != _canonical_json_bytes(qualification, pretty=True):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_QUALIFICATION_CANONICAL"
+        )
+    expected = {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_ID,
+        "release_target": "0.9.0",
+        "author": {"name": "Sepehr Mahmoudian", "email": "sepmhn@gmail.com"},
+        "persistent_identifier": None,
+        "state_before": "PENDING_QUALIFICATION",
+        "state_after": "QUALIFIED_PENDING_ACTIVATION",
+        "qualified_repair": _signed_commit_binding(
+            repo, repair_commit, FRAMEWORK_RECOVERY_PARENT
+        ),
+        "plan_record": _commit_regular_file_record(
+            repo, repair_commit, FRAMEWORK_RECOVERY_PLAN_PATH
+        ),
+        "amended_core_records": [
+            _commit_regular_file_record(repo, repair_commit, path)
+            for path in FRAMEWORK_RECOVERY_CORE_PATHS
+        ],
+        "preserved_state_records": [
+            _commit_regular_file_record(repo, FRAMEWORK_RECOVERY_PARENT, path)
+            for path in FRAMEWORK_RECOVERY_PRESERVED_PATHS
+        ],
+        "evidence_catalog": catalog,
+        "review_records": review_records,
+        "decision": _framework_recovery_decision("QUALIFIED_PENDING_ACTIVATION"),
+        "limitations": [
+            "PRIOR_FRAMEWORK_DOES_NOT_ACCEPT_THE_RECOVERY_COMMIT",
+            "RECOVERY_IS_AN_EXPLICIT_FRAMEWORK_TRUST_ROOT_TRANSITION",
+            "REVIEW_KEY_SEPARATION_IS_NOT_HUMAN_OR_EXTERNAL_INDEPENDENCE",
+            "HOSTED_METADATA_AND_LOGS_REMAIN_PLATFORM_PROVIDED_EVIDENCE",
+        ],
+    }
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    if set(qualification) != expected_fields:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_QUALIFICATION_FIELDS")
+    unsigned = {
+        key: copy.deepcopy(value)
+        for key, value in qualification.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: value for key, value in unsigned.items() if key != "created_at_utc"
+    }
+    if not _strict_equal(comparable, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_QUALIFICATION_INVALID"
+        )
+    created = _parse_utc(
+        qualification.get("created_at_utc"),
+        "framework_recovery.qualification.created",
+    )
+    if not (
+        _commit_datetime(repo, repair_commit)
+        <= created
+        <= _commit_datetime(repo, qualification_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_QUALIFICATION_CHRONOLOGY"
+        )
+    _verify_ssh_detached_attestation(
+        repo,
+        qualification["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-qualification-v1",
+        label="framework_recovery.qualification",
+        expected_principal=source_signer["principal"],
+        expected_public_key=source_signer["public_key"],
+        expected_fingerprint=source_signer["key_fingerprint"],
+    )
+    return qualification
+
+
+def _verify_framework_recovery_activation(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    activation_commit: str,
+    *,
+    qualification: dict[str, Any],
+) -> dict[str, Any]:
+    metadata = _verify_data_only_commit(
+        repo,
+        commit=activation_commit,
+        parent=qualification_commit,
+        expected_statuses=FRAMEWORK_RECOVERY_ACTIVATION_STATUSES,
+        label="FRAMEWORK_RECOVERY_ACTIVATION",
+    )
+    if metadata["subject"] != FRAMEWORK_RECOVERY_ACTIVATION_SUBJECT:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_ACTIVATION_IDENTITY")
+    for path in FRAMEWORK_RECOVERY_PRESERVED_PATHS:
+        if _git_tree_entry(repo, activation_commit, path) != _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_PARENT, path
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_STATE_DRIFT")
+    activation, activation_payload = _read_commit_json(
+        repo,
+        activation_commit,
+        FRAMEWORK_RECOVERY_ACTIVATION_PATH,
+        "framework_recovery.activation",
+    )
+    if activation_payload != _canonical_json_bytes(activation, pretty=True):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_ACTIVATION_CANONICAL")
+    evidence_records = qualification["evidence_catalog"]
+    review_records = qualification["review_records"]
+    expected = {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_ID,
+        "release_target": "0.9.0",
+        "author": {"name": "Sepehr Mahmoudian", "email": "sepmhn@gmail.com"},
+        "persistent_identifier": None,
+        "state_before": "QUALIFIED_PENDING_ACTIVATION",
+        "state_after": "ACTIVE",
+        "repair_commit": repair_commit,
+        "qualification_commit": qualification_commit,
+        "qualified_qualification": _signed_commit_binding(
+            repo, qualification_commit, repair_commit
+        ),
+        "plan_record": _commit_regular_file_record(
+            repo, repair_commit, FRAMEWORK_RECOVERY_PLAN_PATH
+        ),
+        "qualification_record": _commit_regular_file_record(
+            repo, qualification_commit, FRAMEWORK_RECOVERY_QUALIFICATION_PATH
+        ),
+        "evidence_records": evidence_records,
+        "review_records": review_records,
+        "amended_core_records": [
+            _commit_regular_file_record(repo, repair_commit, path)
+            for path in FRAMEWORK_RECOVERY_CORE_PATHS
+        ],
+        "preserved_state_records": [
+            _commit_regular_file_record(repo, FRAMEWORK_RECOVERY_PARENT, path)
+            for path in FRAMEWORK_RECOVERY_PRESERVED_PATHS
+        ],
+        "decision": _framework_recovery_decision("ACTIVE"),
+        "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_THIS_EXACT_ACTIVATION_RECORD",
+    }
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    if set(activation) != expected_fields:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_ACTIVATION_FIELDS")
+    unsigned = {
+        key: copy.deepcopy(value)
+        for key, value in activation.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: value for key, value in unsigned.items() if key != "created_at_utc"
+    }
+    if not _strict_equal(comparable, expected):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_ACTIVATION_INVALID")
+    created = _parse_utc(
+        activation.get("created_at_utc"), "framework_recovery.activation.created"
+    )
+    if not (
+        _commit_datetime(repo, qualification_commit)
+        <= created
+        <= _commit_datetime(repo, activation_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_ACTIVATION_CHRONOLOGY"
+        )
+    signer = _source_release_signer(repo)
+    _verify_ssh_detached_attestation(
+        repo,
+        activation["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-activation-v1",
+        label="framework_recovery.activation",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return activation
+
+
+def _verify_framework_recovery_history(
+    repo: Path, chain: list[str], *, framework_commit: str
+) -> dict[str, Any]:
+    try:
+        parent_index = chain.index(FRAMEWORK_RECOVERY_PARENT)
+    except ValueError as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_PARENT_MISSING"
+        ) from error
+    if parent_index != 9 or parent_index + 1 >= len(chain):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_POSITION")
+    if (
+        len(chain) < 3
+        or chain[1] != FRAMEWORK_RECOVERY_PRIOR_QUALIFICATION
+        or chain[2] != FRAMEWORK_RECOVERY_PRIOR_ACTIVATION
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_PRIOR_ANCHORS")
+    repair_commit = chain[parent_index + 1]
+    plan = _verify_framework_recovery_repair(
+        repo,
+        repair_commit,
+        framework_commit=framework_commit,
+    )
+    result: dict[str, Any] = {
+        "state": "PENDING_QUALIFICATION",
+        "repair_commit": repair_commit,
+        "qualification_commit": None,
+        "activation_commit": None,
+        "plan": plan,
+        "qualification": None,
+    }
+    suffix = chain[parent_index + 2 :]
+    if not suffix:
+        return result
+    qualification_commit = suffix[0]
+    qualification = _verify_framework_recovery_qualification(
+        repo,
+        repair_commit,
+        qualification_commit,
+        framework_commit=framework_commit,
+        plan=plan,
+    )
+    result.update(
+        {
+            "state": "QUALIFIED_PENDING_ACTIVATION",
+            "qualification_commit": qualification_commit,
+            "qualification": qualification,
+        }
+    )
+    if len(suffix) == 1:
+        return result
+    activation_commit = suffix[1]
+    _verify_framework_recovery_activation(
+        repo,
+        repair_commit,
+        qualification_commit,
+        activation_commit,
+        qualification=qualification,
+    )
+    result.update(
+        {
+            "state": "ACTIVE",
+            "activation_commit": activation_commit,
+        }
+    )
+    return result
+
+
+def _verify_framework_history(
+    repo: Path,
+) -> tuple[str, str, list[str], dict[str, Any]]:
     try:
         head = _git(repo, "rev-parse", "HEAD").decode("ascii").strip()
         chain = (
@@ -4107,20 +5492,55 @@ def _verify_framework_history(repo: Path) -> tuple[str, str, list[str]]:
         QUALIFICATION_AMENDMENT_RECORD,
     ):
         raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_AMENDMENT_MISMATCH")
-    frozen_paths = (
-        FRAMEWORK_STAGE_FROZEN_PATHS if len(chain) <= 3 else FRAMEWORK_CORE_FROZEN_PATHS
+    recovery = _verify_framework_recovery_history(
+        repo, chain, framework_commit=framework_commit
     )
+    recovery_commit = recovery["repair_commit"]
+    frozen_paths = FRAMEWORK_CORE_FROZEN_PATHS
     for path in frozen_paths:
-        if _git_file(repo, head, path) != _git_file(repo, framework_commit, path):
+        anchor = (
+            recovery_commit
+            if path in FRAMEWORK_RECOVERY_CORE_PATHS
+            else framework_commit
+        )
+        if _git_tree_entry(repo, head, path) != _git_tree_entry(repo, anchor, path):
             raise CurrentAuditError(f"CURRENT_AUDIT_FRAMEWORK_CODE_DRIFT:{path}")
         worktree_payload = _read_repo_relative_bounded(
             repo, path, MAX_GIT_BYTES, f"framework.worktree.{path}"
         )
-        if worktree_payload != _git_file(repo, framework_commit, path):
+        if worktree_payload != _git_file(repo, anchor, path):
             raise CurrentAuditError(f"CURRENT_AUDIT_FRAMEWORK_WORKTREE_DRIFT:{path}")
+    if _git_tree_entry(repo, head, FRAMEWORK_RECOVERY_PLAN_PATH) != _git_tree_entry(
+        repo, recovery_commit, FRAMEWORK_RECOVERY_PLAN_PATH
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_PLAN_DRIFT")
+    recovery_plan_worktree = _read_repo_relative_bounded(
+        repo,
+        FRAMEWORK_RECOVERY_PLAN_PATH,
+        MAX_JSON_BYTES,
+        "framework_recovery.plan.worktree",
+    )
+    if recovery_plan_worktree != _git_file(
+        repo, recovery_commit, FRAMEWORK_RECOVERY_PLAN_PATH
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_PLAN_WORKTREE_DRIFT")
+    qualification_commit = recovery["qualification_commit"]
+    if qualification_commit is not None:
+        for path in FRAMEWORK_RECOVERY_QUALIFICATION_STATUSES:
+            if _git_tree_entry(repo, head, path) != _git_tree_entry(
+                repo, qualification_commit, path
+            ):
+                raise CurrentAuditError(
+                    "CURRENT_AUDIT_FRAMEWORK_RECOVERY_QUALIFICATION_DRIFT"
+                )
+    activation_commit = recovery["activation_commit"]
+    if activation_commit is not None and _git_tree_entry(
+        repo, head, FRAMEWORK_RECOVERY_ACTIVATION_PATH
+    ) != _git_tree_entry(repo, activation_commit, FRAMEWORK_RECOVERY_ACTIVATION_PATH):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_ACTIVATION_DRIFT")
     _verify_post_activation_gate_retention(repo, head)
     _verify_cited_test_ids(repo, framework_commit)
-    return head, framework_commit, chain
+    return head, framework_commit, chain, recovery
 
 
 def _select_qualification_stage(
@@ -9641,6 +11061,85 @@ def _repository_git_roots(repo: Path) -> tuple[Path, ...]:
     return tuple(sorted(roots))
 
 
+def _require_sole_detached_snapshot_worktree(
+    porcelain: bytes,
+    *,
+    snapshot_repo: Path,
+    current_commit: str,
+) -> None:
+    """Validate one detached snapshot worktree by identity, not path substring."""
+
+    if (
+        HEX40.fullmatch(current_commit) is None
+        or not porcelain.endswith(b"\0\0")
+        or len(porcelain) > MAX_GIT_BYTES
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_WORKTREES")
+    stanzas = porcelain[:-2].split(b"\0\0")
+    if len(stanzas) != 1:
+        raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_WORKTREES")
+    fields = stanzas[0].split(b"\0")
+    expected_head = f"HEAD {current_commit}".encode("ascii")
+    if (
+        len(fields) != 3
+        or not fields[0].startswith(b"worktree ")
+        or fields[1] != expected_head
+        or fields[2] != b"detached"
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_WORKTREES")
+    raw_path = fields[0].removeprefix(b"worktree ")
+    if not raw_path or len(raw_path) > 4096:
+        raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_WORKTREES")
+    if raw_path != os.fsencode(snapshot_repo):
+        raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN")
+
+
+def _require_snapshot_local_config(payload: bytes, *, snapshot_repo: Path) -> None:
+    """Accept only a self-contained clone config with structural path identity."""
+
+    if not payload or len(payload) > MAX_GIT_BYTES or not payload.endswith(b"\0"):
+        raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_CONFIG")
+    entries: dict[bytes, bytes] = {}
+    for raw_entry in payload[:-1].split(b"\0"):
+        key, separator, value = raw_entry.partition(b"\n")
+        canonical_key = key.lower()
+        if (
+            not raw_entry
+            or separator != b"\n"
+            or re.fullmatch(rb"[a-z][a-z0-9.-]*", canonical_key) is None
+            or canonical_key in entries
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_CONFIG")
+        entries[canonical_key] = value
+
+    required = {
+        b"core.bare": {b"false"},
+        b"core.filemode": {b"false", b"true"},
+        b"core.logallrefupdates": {b"false"},
+        b"core.repositoryformatversion": {b"0"},
+    }
+    optional_boolean = {
+        b"core.ignorecase",
+        b"core.precomposeunicode",
+        b"core.protecthfs",
+        b"core.protectntfs",
+        b"core.symlinks",
+    }
+    if not set(required).issubset(entries):
+        raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_CONFIG")
+    for key, value in entries.items():
+        if key in required:
+            valid = value in required[key]
+        elif key in optional_boolean:
+            valid = value in {b"false", b"true"}
+        elif key == b"core.worktree":
+            valid = value == os.fsencode(snapshot_repo)
+        else:
+            valid = False
+        if not valid:
+            raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_CONFIG")
+
+
 def _bounded_filesystem_state(root: Path, label: str) -> tuple[tuple[Any, ...], ...]:
     """Hash a small repository snapshot, including administrative files."""
 
@@ -10073,8 +11572,18 @@ def _run_registered_container(
     *,
     command: list[str],
     label: str,
+    execution_seconds: float | int | None = None,
 ) -> tuple[int, bytes, bytes]:
     """Run one bounded command in a fresh, networkless, read-only container."""
+
+    limit = MAX_VERIFIER_SECONDS if execution_seconds is None else execution_seconds
+    if (
+        type(limit) not in {int, float}
+        or (type(limit) is float and not math.isfinite(limit))
+        or limit <= 0
+        or limit > MAX_REGISTERED_EXECUTION_SECONDS
+    ):
+        raise CurrentAuditError(f"CURRENT_AUDIT_REGISTERED_{label}_TIME_BOUND")
 
     docker_state = _registered_image_state()
     endpoint = docker_state["endpoint"]
@@ -10153,7 +11662,7 @@ def _run_registered_container(
         "/usr/bin/timeout",
         REGISTERED_RUNNER_IMAGE,
         "--signal=KILL",
-        f"{MAX_VERIFIER_SECONDS:.1f}s",
+        f"{limit:.1f}s",
         "/usr/local/bin/python3",
         "-I",
         "-B",
@@ -10168,7 +11677,7 @@ def _run_registered_container(
             docker_command,
             cwd=temporary_root,
             env=_sanitized_git_environment(),
-            timeout_seconds=MAX_VERIFIER_SECONDS + 15,
+            timeout_seconds=limit + 15,
             stdout_limit=MAX_VERIFIER_OUTPUT_BYTES,
             stderr_limit=MAX_VERIFIER_OUTPUT_BYTES,
             error_prefix=f"CURRENT_AUDIT_REGISTERED_{label}_CONTAINER",
@@ -10268,6 +11777,63 @@ def _run_registered_container(
     if result is None:  # pragma: no cover - guarded by the try/finally contract
         raise CurrentAuditError(f"CURRENT_AUDIT_REGISTERED_{label}_NO_RESULT")
     return result
+
+
+def _framework_recovery_registered_execution_exception_applies(
+    registration: dict[str, Any],
+    *,
+    freeze_commit: str,
+    implementation_commit: str,
+    qualification_commit: str,
+    activation_commit: str,
+) -> bool:
+    """Match the one exact registration and lifecycle allowed wider bounds."""
+
+    verifier = registration.get("verifier")
+    if not isinstance(verifier, dict):
+        return False
+    try:
+        registration_sha256 = _sha256(_canonical_json_bytes(registration))
+    except (OverflowError, TypeError, ValueError):
+        return False
+    binding = {
+        "task_id": registration.get("task_id"),
+        "epoch": registration.get("epoch"),
+        "freeze_commit": freeze_commit,
+        "implementation_commit": implementation_commit,
+        "qualification_commit": qualification_commit,
+        "activation_commit": activation_commit,
+        "verifier_path": verifier.get("path"),
+        "verifier_sha256": verifier.get("sha256"),
+        "registration_sha256": registration_sha256,
+    }
+    return _strict_equal(binding, FRAMEWORK_RECOVERY_REGISTERED_EXECUTION_EXCEPTION)
+
+
+def _registered_test_execution_seconds(
+    registration: dict[str, Any],
+    **lifecycle: str,
+) -> int:
+    """Return the default or exact recovery-scoped registered-test bound."""
+
+    if _framework_recovery_registered_execution_exception_applies(
+        registration, **lifecycle
+    ):
+        return FRAMEWORK_RECOVERY_REGISTERED_TEST_SECONDS
+    return MAX_REGISTERED_TEST_SECONDS
+
+
+def _registered_verifier_execution_seconds(
+    registration: dict[str, Any],
+    **lifecycle: str,
+) -> int:
+    """Return the default or exact recovery-scoped registered-verifier bound."""
+
+    if _framework_recovery_registered_execution_exception_applies(
+        registration, **lifecycle
+    ):
+        return FRAMEWORK_RECOVERY_REGISTERED_VERIFIER_SECONDS
+    return MAX_VERIFIER_SECONDS
 
 
 def _run_registered_verifier_v2(
@@ -10391,7 +11957,9 @@ def _run_registered_verifier_v2(
             if administrative_path.exists():
                 administrative_path.unlink()
         snapshot_config = _git(snapshot_repo, "config", "--local", "--list", "-z")
-        snapshot_worktrees = _git(snapshot_repo, "worktree", "list", "--porcelain")
+        snapshot_worktrees = _git(
+            snapshot_repo, "worktree", "list", "--porcelain", "-z"
+        )
         snapshot_common_dir = (
             _git(
                 snapshot_repo, "rev-parse", "--path-format=absolute", "--git-common-dir"
@@ -10401,13 +11969,13 @@ def _run_registered_verifier_v2(
         )
         alternates = snapshot_repo / ".git/objects/info/alternates"
         http_alternates = snapshot_repo / ".git/objects/info/http-alternates"
+        _require_snapshot_local_config(
+            snapshot_config,
+            snapshot_repo=snapshot_repo,
+        )
         if (
             _git(snapshot_repo, "remote")
             or _git(snapshot_repo, "for-each-ref")
-            or b"remote." in snapshot_config.lower()
-            or str(repo).encode("utf-8") in snapshot_config
-            or snapshot_worktrees.count(b"worktree ") != 1
-            or str(repo).encode("utf-8") in snapshot_worktrees
             or Path(snapshot_common_dir) != snapshot_repo / ".git"
             or alternates.exists()
             or http_alternates.exists()
@@ -10417,6 +11985,11 @@ def _run_registered_verifier_v2(
             != b"false"
         ):
             raise CurrentAuditError("CURRENT_AUDIT_REGISTERED_SNAPSHOT_ORIGIN")
+        _require_sole_detached_snapshot_worktree(
+            snapshot_worktrees,
+            snapshot_repo=snapshot_repo,
+            current_commit=current_commit,
+        )
         fsck_code, fsck_stdout, fsck_stderr = _run_bounded(
             _git_command(
                 "fsck",
@@ -10475,6 +12048,13 @@ def _run_registered_verifier_v2(
                 json.dumps(discovered_test_cases, separators=(",", ":")),
             ],
             label="TESTS",
+            execution_seconds=_registered_test_execution_seconds(
+                registration,
+                freeze_commit=freeze_commit,
+                implementation_commit=implementation_commit,
+                qualification_commit=qualification_commit,
+                activation_commit=activation_commit,
+            ),
         )
         if (
             test_code != 0
@@ -10504,6 +12084,13 @@ def _run_registered_verifier_v2(
                 current_commit,
             ],
             label="VERIFIER",
+            execution_seconds=_registered_verifier_execution_seconds(
+                registration,
+                freeze_commit=freeze_commit,
+                implementation_commit=implementation_commit,
+                qualification_commit=qualification_commit,
+                activation_commit=activation_commit,
+            ),
         )
         after_head = _git(snapshot_repo, "rev-parse", "HEAD").decode("ascii").strip()
         after_status = _git(
@@ -11307,6 +12894,7 @@ def _verify_forward_protocol_history(
     framework_commit: str,
     qualification_commit: str,
     activation_commit: str,
+    recovery: dict[str, Any] | None = None,
 ) -> None:
     """Stream the exact post-D F/I/C/D/R state machine once."""
 
@@ -11355,6 +12943,9 @@ def _verify_forward_protocol_history(
         *QUALIFIED_OPEN_DATA_PATHS,
         ACTIVATION_PATH,
         *ACTIVATION_EVIDENCE_PATHS,
+        FRAMEWORK_RECOVERY_PLAN_PATH,
+        *FRAMEWORK_RECOVERY_QUALIFICATION_STATUSES,
+        FRAMEWORK_RECOVERY_ACTIVATION_PATH,
     }
     verified_prefix = 1
     inflight: dict[str, Any] | None = None
@@ -11375,6 +12966,25 @@ def _verify_forward_protocol_history(
     activated_plans: dict[int, dict[str, str]] = {}
     active_verifiers: dict[int, dict[str, Any]] = {}
     previous = activation_commit
+    recovery_commits: dict[str, tuple[str, dict[str, str], str]] = {}
+    if recovery is not None:
+        recovery_commits[recovery["repair_commit"]] = (
+            FRAMEWORK_RECOVERY_PARENT,
+            dict(sorted(FRAMEWORK_RECOVERY_REPAIR_STATUSES.items())),
+            "REPAIR",
+        )
+        if recovery["qualification_commit"] is not None:
+            recovery_commits[recovery["qualification_commit"]] = (
+                recovery["repair_commit"],
+                dict(sorted(FRAMEWORK_RECOVERY_QUALIFICATION_STATUSES.items())),
+                "QUALIFICATION",
+            )
+        if recovery["activation_commit"] is not None:
+            recovery_commits[recovery["activation_commit"]] = (
+                recovery["qualification_commit"],
+                FRAMEWORK_RECOVERY_ACTIVATION_STATUSES,
+                "ACTIVATION",
+            )
 
     def rerun_active_verifiers(
         target_commit: str,
@@ -11414,16 +13024,38 @@ def _verify_forward_protocol_history(
         statuses = _changed_path_statuses(repo, previous, commit)
         _validate_protocol_changed_paths(statuses)
         hygiene_total = _verify_changed_hygiene(repo, commit, statuses, hygiene_total)
-        touched_protected = sorted(set(statuses) & protected_paths)
-        if touched_protected:
-            raise CurrentAuditError(
-                "CURRENT_AUDIT_PROTOCOL_PROTECTED_PATH:" + touched_protected[0]
-            )
-        registry_changed = SUCCESSOR_REGISTRY_PATH in statuses
-        revocation_changed = REVOCATION_PATH in statuses
+        recovery_transition = recovery_commits.get(commit)
+        if recovery_transition is not None:
+            expected_parent, expected_statuses, _recovery_stage = recovery_transition
+            if (
+                previous != expected_parent
+                or verified_prefix != 2
+                or inflight is not None
+                or not _strict_equal(statuses, expected_statuses)
+            ):
+                raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_SEQUENCE")
+            for path in FRAMEWORK_RECOVERY_PRESERVED_PATHS:
+                if _git_tree_entry(repo, commit, path) != _git_tree_entry(
+                    repo, FRAMEWORK_RECOVERY_PARENT, path
+                ):
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_STATE_DRIFT"
+                    )
+            registry_changed = False
+            revocation_changed = False
+        else:
+            touched_protected = sorted(set(statuses) & protected_paths)
+            if touched_protected:
+                raise CurrentAuditError(
+                    "CURRENT_AUDIT_PROTOCOL_PROTECTED_PATH:" + touched_protected[0]
+                )
+            registry_changed = SUCCESSOR_REGISTRY_PATH in statuses
+            revocation_changed = REVOCATION_PATH in statuses
         if registry_changed and revocation_changed:
             raise CurrentAuditError("CURRENT_AUDIT_PROTOCOL_STAGE_AMBIGUOUS")
-        if revocation_changed:
+        if recovery_transition is not None:
+            pass
+        elif revocation_changed:
             candidate_revocation = _load_json_bytes(
                 _git_file(repo, commit, REVOCATION_PATH),
                 "protocol.revocation.dispatch",
@@ -11745,7 +13377,7 @@ def _verify_forward_protocol_history(
 def _verify_qualification_lifecycle(
     manifest: dict[str, Any], repo: Path, requirement_state: str
 ) -> None:
-    head, framework_commit, chain = _verify_framework_history(repo)
+    head, framework_commit, chain, recovery = _verify_framework_history(repo)
     _verify_repository_hygiene(repo, head)
     _require_commit_paths_unchanged(
         repo,
@@ -11851,6 +13483,7 @@ def _verify_qualification_lifecycle(
         framework_commit=framework_commit,
         qualification_commit=qualification_commit,
         activation_commit=activation_commit,
+        recovery=recovery,
     )
 
 
