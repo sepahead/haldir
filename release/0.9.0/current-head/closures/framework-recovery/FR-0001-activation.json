@@ -1,0 +1,439 @@
+{
+  "amended_core_records": [
+    {
+      "bytes": 536370,
+      "git_mode": "100644",
+      "git_object_id": "9859e73a86689382b33cc4ceac6c92decc551e40",
+      "git_object_type": "blob",
+      "lines": 13561,
+      "path": "tools/release/verify-current-audit.py",
+      "sha256": "5c9356c08790996ff2a42e8139519b4b930a41473fd7a021a726ac0558c85dce"
+    },
+    {
+      "bytes": 204291,
+      "git_mode": "100644",
+      "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+      "git_object_type": "blob",
+      "lines": 4738,
+      "path": "tools/release/test_verify_current_audit.py",
+      "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+    }
+  ],
+  "author": {
+    "email": "sepmhn@gmail.com",
+    "name": "Sepehr Mahmoudian"
+  },
+  "created_at_utc": "2026-07-22T01:59:08Z",
+  "decision": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 2,
+    "framework_state": "ACTIVE",
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authority_changed": false,
+    "runtime_authority_changed": false,
+    "tag_authorized": false,
+    "zenodo_authorized": false
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-activation-v1",
+    "principal": "sepmhn@gmail.com",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDuKh9+1+qdjbO6MP/NHD/ai3JtumsKPiz2KBx3lQwLI",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAAnaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1hY3RpdmF0aW9u\nLXYxAAAAAAAAAAZzaGE1MTIAAABTAAAAC3NzaC1lZDI1NTE5AAAAQOwfj2oliAxnFQPu83\nCyWhKdp9bLprnKt+fMPR5xzskPdhNifge2xmz+1vegIwL6fcEbfqypR+bK7BFyODYsLwY=\n-----END SSH SIGNATURE-----\n"
+  },
+  "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_THIS_EXACT_ACTIVATION_RECORD",
+  "evidence_records": [
+    {
+      "file": {
+        "bytes": 2641,
+        "git_mode": "100644",
+        "git_object_id": "3804cb277795f9925bf0ffbd7ae30bc3500bf2fd",
+        "git_object_type": "blob",
+        "lines": 89,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json",
+        "sha256": "ec279c081e02583ae47f35ac3c4992853d53f18d6a319c12eff120be7023be4f"
+      },
+      "id": "FR-0001-E01",
+      "kind": "FAILED_HOSTED_CI_RUN",
+      "result": "EXPECTED_FAILURE",
+      "subject_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "uncompressed": null
+    },
+    {
+      "file": {
+        "bytes": 7708,
+        "git_mode": "100644",
+        "git_object_id": "f6fc4747dbc69704919d74c91bccf4c045e446c4",
+        "git_object_type": "blob",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz",
+        "sha256": "79f12396914db0aba4b66b003428866f2b2ea561c4c6ba06ee7d20fdba1f8dc3"
+      },
+      "id": "FR-0001-E02",
+      "kind": "FAILED_HOSTED_CI_LOG",
+      "result": "EXPECTED_FAILURE",
+      "subject_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "uncompressed": {
+        "bytes": 34163,
+        "lines": 394,
+        "sha256": "c41711ddeb1d4fb7e7acb2df7bff78ffe25a12067c46abe1f228cfd4eb0b5098"
+      }
+    },
+    {
+      "file": {
+        "bytes": 2287,
+        "git_mode": "100644",
+        "git_object_id": "d7ae907c9ba943ba2d2c107805adf30e8ad618de",
+        "git_object_type": "blob",
+        "lines": 78,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json",
+        "sha256": "f04ce45b06e12c2b9010dc0d3a145a89de7de042f1c92ba0b3e957eed467edc5"
+      },
+      "id": "FR-0001-E03",
+      "kind": "REPAIR_HOSTED_CI_RUN",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": null
+    },
+    {
+      "file": {
+        "bytes": 18074,
+        "git_mode": "100644",
+        "git_object_id": "15110a02c6eec8c513eaaa39cb10c54b2a1f7472",
+        "git_object_type": "blob",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz",
+        "sha256": "e37c8917c7b6f9199b401a7e47b7105b48b0e8842a5467d9bc5e2b9cb55d6255"
+      },
+      "id": "FR-0001-E04",
+      "kind": "REPAIR_HOSTED_CI_LOG",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": {
+        "bytes": 120536,
+        "lines": 1366,
+        "sha256": "27f76ed6b3c0d7e7307207931c0eb19f4469e4682d9bf0c85d529858c86804c9"
+      }
+    },
+    {
+      "file": {
+        "bytes": 1020,
+        "git_mode": "100644",
+        "git_object_id": "9429ab79f94c57b0009b51738c7023051b01906a",
+        "git_object_type": "blob",
+        "lines": 33,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json",
+        "sha256": "893e8aa1eb78f7d446e9aa546befced46d82c9ecdfcc5e20232b0f87b431bb4e"
+      },
+      "id": "FR-0001-E05",
+      "kind": "REPAIR_FORMAL_RUN",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": null
+    },
+    {
+      "file": {
+        "bytes": 692,
+        "git_mode": "100644",
+        "git_object_id": "d963cdae35ea71af2f2e06bfff1a07ca3e302bfd",
+        "git_object_type": "blob",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz",
+        "sha256": "9f6253f38e1a1f61e70a610d698eba5811ad23cf1828a7864a6479a407db10a5"
+      },
+      "id": "FR-0001-E06",
+      "kind": "REPAIR_FORMAL_LOG",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": {
+        "bytes": 1299,
+        "lines": 21,
+        "sha256": "a45fb86303cff8c6ebf52df164fe482eb6afe97e8b41ee01ce422e5427192912"
+      }
+    },
+    {
+      "file": {
+        "bytes": 1890,
+        "git_mode": "100644",
+        "git_object_id": "81a13abdacdd41db45747c7dc7838d2dcaf18f3b",
+        "git_object_type": "blob",
+        "lines": 69,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json",
+        "sha256": "f28d35892e41e72b284ce675de1c8cab87eeeb0b16832e6364d904fdf1ba5de1"
+      },
+      "id": "FR-0001-E07",
+      "kind": "REPAIR_LOCAL_VALIDATION",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": null
+    },
+    {
+      "file": {
+        "bytes": 23795,
+        "git_mode": "100644",
+        "git_object_id": "46f511f184bcd5600b94c57eadb3eb5f7f35914d",
+        "git_object_type": "blob",
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz",
+        "sha256": "8f42767c35df2b71d4ea2dec89097b53546a3600f2689bab112f91af9dbf9a02"
+      },
+      "id": "FR-0001-E08",
+      "kind": "REPAIR_LOCAL_VALIDATION_LOG",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": {
+        "bytes": 194103,
+        "lines": 4191,
+        "sha256": "42367389348fe9ff19b67643c3f100bc557f0d7fb01e8241a4fab87a3e4e6065"
+      }
+    },
+    {
+      "file": {
+        "bytes": 4976,
+        "git_mode": "100644",
+        "git_object_id": "f87378eed9e91673fd8b971ac08a90f9e81b587f",
+        "git_object_type": "blob",
+        "lines": 127,
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json",
+        "sha256": "acd1004ca05c0e3fcbbeb9b4a9bdcb2d57dc9d708a59e21c0eb8fc4e5313ad39"
+      },
+      "id": "FR-0001-R01",
+      "kind": "AUTOMATED_DESIGN_REVIEW",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": null
+    },
+    {
+      "file": {
+        "bytes": 6483,
+        "git_mode": "100644",
+        "git_object_id": "7daad15a4691fae96f84e5db821d41da4f078774",
+        "git_object_type": "blob",
+        "lines": 139,
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json",
+        "sha256": "e93e121b2806dabdd336e65f80843efd6631a1480ca8cc9aeee48ead114296fc"
+      },
+      "id": "FR-0001-R02",
+      "kind": "AUTOMATED_IMPLEMENTATION_REVIEW",
+      "result": "PASS",
+      "subject_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "uncompressed": null
+    }
+  ],
+  "persistent_identifier": null,
+  "plan_record": {
+    "bytes": 12679,
+    "git_mode": "100644",
+    "git_object_id": "d2e7a1205010e2165ce73e126bb0a1412860c2a1",
+    "git_object_type": "blob",
+    "lines": 320,
+    "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-plan.json",
+    "sha256": "1e8b6eb3b80162ef6458163ff88da6c6a9c3bf2bc07e9d3b71ccbd4990a391fb"
+  },
+  "preserved_state_records": [
+    {
+      "bytes": 168367,
+      "git_mode": "100644",
+      "git_object_id": "b56783e69aa1a2433ec44c62a8d46083f18a832a",
+      "git_object_type": "blob",
+      "lines": 4138,
+      "path": "release/0.9.0/current-head/requirements.json",
+      "sha256": "95075e370fb77215ed8c081022def707285069485eb2b1fc06cb0feee7d0dd48"
+    },
+    {
+      "bytes": 32884,
+      "git_mode": "100644",
+      "git_object_id": "4cbf14812f92be0cb9d2a78b66f4f0c44a5914a3",
+      "git_object_type": "blob",
+      "lines": 758,
+      "path": "release/0.9.0/current-head/closures/active-claims.json",
+      "sha256": "d111d11d7b347ecc840fd9820ac75022c60017261d59e19338d37673edded393"
+    },
+    {
+      "bytes": 4066,
+      "git_mode": "100644",
+      "git_object_id": "0c462d95f7314188ba85990f6f13f1a55a85283f",
+      "git_object_type": "blob",
+      "lines": 100,
+      "path": "release/0.9.0/current-head/closures/task-verifier-registry.json",
+      "sha256": "4137bf576badd6a309db742f0acbbf2e7bc4e0e39818602014738e8fac8c2817"
+    },
+    {
+      "bytes": 3592,
+      "git_mode": "100644",
+      "git_object_id": "cf2718035a10190a8e1f74896d91fd353f92d635",
+      "git_object_type": "blob",
+      "lines": 99,
+      "path": "release/0.9.0/current-head/closures/CH-T000-revocations.json",
+      "sha256": "14388ba328e6b51ada9f000de94499fbc5774fe7fa367c1b19717601fc2c157a"
+    }
+  ],
+  "qualification_commit": "00e453b4a19c96c890655336605b043dbb29838f",
+  "qualification_record": {
+    "bytes": 14440,
+    "git_mode": "100644",
+    "git_object_id": "0617c3e881025762676ac8966e92bdebe0148127",
+    "git_object_type": "blob",
+    "lines": 373,
+    "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json",
+    "sha256": "ecc64353b5952a76f59afda5add29e1770574a13a9db1e5eeae28f593f9283c2"
+  },
+  "qualified_qualification": {
+    "author_email": "sepmhn@gmail.com",
+    "author_name": "Sepehr Mahmoudian",
+    "authored_at": "2026-07-22T03:45:32+02:00",
+    "changed_files": [
+      {
+        "bytes": 14440,
+        "lines": 373,
+        "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json",
+        "sha256": "ecc64353b5952a76f59afda5add29e1770574a13a9db1e5eeae28f593f9283c2",
+        "status": "A"
+      },
+      {
+        "bytes": 2641,
+        "lines": 89,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json",
+        "sha256": "ec279c081e02583ae47f35ac3c4992853d53f18d6a319c12eff120be7023be4f",
+        "status": "A"
+      },
+      {
+        "bytes": 7708,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz",
+        "sha256": "79f12396914db0aba4b66b003428866f2b2ea561c4c6ba06ee7d20fdba1f8dc3",
+        "status": "A"
+      },
+      {
+        "bytes": 2287,
+        "lines": 78,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json",
+        "sha256": "f04ce45b06e12c2b9010dc0d3a145a89de7de042f1c92ba0b3e957eed467edc5",
+        "status": "A"
+      },
+      {
+        "bytes": 18074,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz",
+        "sha256": "e37c8917c7b6f9199b401a7e47b7105b48b0e8842a5467d9bc5e2b9cb55d6255",
+        "status": "A"
+      },
+      {
+        "bytes": 1020,
+        "lines": 33,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json",
+        "sha256": "893e8aa1eb78f7d446e9aa546befced46d82c9ecdfcc5e20232b0f87b431bb4e",
+        "status": "A"
+      },
+      {
+        "bytes": 692,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz",
+        "sha256": "9f6253f38e1a1f61e70a610d698eba5811ad23cf1828a7864a6479a407db10a5",
+        "status": "A"
+      },
+      {
+        "bytes": 1890,
+        "lines": 69,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json",
+        "sha256": "f28d35892e41e72b284ce675de1c8cab87eeeb0b16832e6364d904fdf1ba5de1",
+        "status": "A"
+      },
+      {
+        "bytes": 23795,
+        "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz",
+        "sha256": "8f42767c35df2b71d4ea2dec89097b53546a3600f2689bab112f91af9dbf9a02",
+        "status": "A"
+      },
+      {
+        "bytes": 4976,
+        "lines": 127,
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json",
+        "sha256": "acd1004ca05c0e3fcbbeb9b4a9bdcb2d57dc9d708a59e21c0eb8fc4e5313ad39",
+        "status": "A"
+      },
+      {
+        "bytes": 6483,
+        "lines": 139,
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json",
+        "sha256": "e93e121b2806dabdd336e65f80843efd6631a1480ca8cc9aeee48ead114296fc",
+        "status": "A"
+      }
+    ],
+    "commit": "00e453b4a19c96c890655336605b043dbb29838f",
+    "committed_at": "2026-07-22T03:45:32+02:00",
+    "committer_email": "sepmhn@gmail.com",
+    "committer_name": "Sepehr Mahmoudian",
+    "diff": {
+      "base": "dde6512d615f54fac26b2728a05b9c53dca68666",
+      "name_status_sha256": "d336838d634aefc0698b7d014b736f1869839d1c360c966d34d0d6b11b2b4219",
+      "numstat_sha256": "f89b070208e5e6d2bd67b1a41b1cc529615a717ce85f10e780d78cb68501f4ba",
+      "patch_bytes": 103618,
+      "patch_command": "git -c diff.algorithm=myers diff --no-ext-diff --no-textconv --no-renames --no-color --src-prefix=a/ --dst-prefix=b/ --binary --full-index dde6512d615f54fac26b2728a05b9c53dca68666..00e453b4a19c96c890655336605b043dbb29838f",
+      "patch_lines": 1955,
+      "patch_sha256": "11fd7a9690271aa6f7efaca888356f0b830ec0b021916b25a2400e98fe5ea695",
+      "path_statuses": {
+        "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json": "A"
+      }
+    },
+    "parent": "dde6512d615f54fac26b2728a05b9c53dca68666",
+    "signature": {
+      "allowed_signers_path": "release/0.9.0/allowed-signers",
+      "allowed_signers_sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed",
+      "format": "ssh",
+      "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+      "principal": "sepmhn@gmail.com",
+      "status": "verified"
+    },
+    "subject": "release: qualify current-audit framework recovery",
+    "tree": "20918436f3b0e27a25668712c41b8b854752d711"
+  },
+  "recovery_id": "FR-0001",
+  "release_target": "0.9.0",
+  "repair_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+  "review_records": [
+    {
+      "capture_key": {
+        "key_fingerprint": "SHA256:X6h6es2UjgXN8A6k9/sLE8Y1f6jXleP3VOyJ7WjecK0",
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAPGp9eBaalV7YF9w1GVcvrONgrz4vK8zLksoyj0WIwc"
+      },
+      "file": {
+        "bytes": 4976,
+        "git_mode": "100644",
+        "git_object_id": "f87378eed9e91673fd8b971ac08a90f9e81b587f",
+        "git_object_type": "blob",
+        "lines": 127,
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json",
+        "sha256": "acd1004ca05c0e3fcbbeb9b4a9bdcb2d57dc9d708a59e21c0eb8fc4e5313ad39"
+      },
+      "review_id": "FR-0001-R01"
+    },
+    {
+      "capture_key": {
+        "key_fingerprint": "SHA256:1aFbb5Al32xe253V0vtRdOxq27iXCAo5qCvpY2sgSVg",
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILefjIK1kpWBH0GsaF+mXA/P5Mdkd1HjI8MPcF2Dye0A"
+      },
+      "file": {
+        "bytes": 6483,
+        "git_mode": "100644",
+        "git_object_id": "7daad15a4691fae96f84e5db821d41da4f078774",
+        "git_object_type": "blob",
+        "lines": 139,
+        "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json",
+        "sha256": "e93e121b2806dabdd336e65f80843efd6631a1480ca8cc9aeee48ead114296fc"
+      },
+      "review_id": "FR-0001-R02"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "state_after": "ACTIVE",
+  "state_before": "QUALIFIED_PENDING_ACTIVATION"
+}
