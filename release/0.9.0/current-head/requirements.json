@@ -1297,13 +1297,577 @@
       "execution_wave": 0,
       "subagent_lane": 3,
       "lead_review_required": true,
-      "status": "OPEN",
-      "claim_disposition": "UNRESOLVED",
-      "assigned_reviewers": [],
-      "implementation_commits": [],
-      "evidence": [],
-      "closure_commit": null,
-      "twenty_lens_reviews": {}
+      "status": "VERIFIED",
+      "claim_disposition": "NO_PUBLIC_CLAIM_CHANGE",
+      "assigned_reviewers": [
+        "CH-T002-R01",
+        "CH-T002-R02",
+        "CH-T002-R03",
+        "CH-T002-R04"
+      ],
+      "implementation_commits": [
+        "b737cfa85d03c377be269498a2209ca873c3f906",
+        "5f3d60c225c89ee05da11cecd1beaddd68f74ec8"
+      ],
+      "evidence": [
+        "CH-T002-E01",
+        "CH-T002-E02",
+        "CH-T002-E03",
+        "CH-T002-E04",
+        "CH-T002-E05",
+        "CH-T002-E06",
+        "CH-T002-E07",
+        "CH-T002-E08",
+        "CH-T002-E09",
+        "CH-T002-E10",
+        "CH-T002-E11",
+        "CH-T002-E12",
+        "CH-T002-E13",
+        "CH-T002-A01",
+        "CH-T002-A02",
+        "CH-T002-A03",
+        "CH-T002-A04",
+        "CH-T002-A05"
+      ],
+      "closure_commit": "7a4e3f7d79ba5561ab961e374c4c38dbbd9d0f1b",
+      "twenty_lens_reviews": {
+        "L01": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N01",
+            "CH-T002-N02"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF01"
+          ],
+          "evidence_ids": [
+            "CH-T002-E07",
+            "CH-T002-E09"
+          ],
+          "finding": "The retained claim boundary prevents a broader inference than the evidence supports.",
+          "name": "Claims and scope",
+          "question": "Can a reader infer more than the exact evidence tier supports? Separate implemented, verified, validated, deployment-qualified, field-validated, and not-claimed.",
+          "residual_limitation": "AUTOMATED_TECHNICAL_SCOPE_IS_LIMITED_TO_DETERMINISTIC_PACKET_GENERATION_ASSIGNMENT_MECHANICS_AND_TECHNICAL_QUALIFICATION",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L02": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N02",
+            "CH-T002-N03"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF02"
+          ],
+          "evidence_ids": [
+            "CH-T002-E01",
+            "CH-T002-E09"
+          ],
+          "finding": "The frozen inputs, state changes, outputs, and failures define the task semantics.",
+          "name": "First-principles semantics",
+          "question": "Are inputs, state, transitions, outputs, invariants, units, and failure states explicit rather than implied by names?",
+          "residual_limitation": "Automated line-by-line and relevant-context review does not constitute completed named-human or external human review.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L03": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N03",
+            "CH-T002-N04"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF03"
+          ],
+          "evidence_ids": [
+            "CH-T002-E03",
+            "CH-T002-E04"
+          ],
+          "finding": "The digest sets and measured distributions use explicit finite inputs.",
+          "name": "Mathematics and statistics",
+          "question": "Are definitions, assumptions, estimands, finite-sample behavior, multiplicity, uncertainty, calibration, and failure regions correct and explicit?",
+          "residual_limitation": "Classification is a bounded technical record for the exact signed F tree and does not establish runtime product correctness.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L04": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N04",
+            "CH-T002-N05"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF04"
+          ],
+          "evidence_ids": [
+            "CH-T002-E03",
+            "CH-T002-E06"
+          ],
+          "finding": "Canonical schemas and exact identity checks reject contradictory accepted states.",
+          "name": "Type and state integrity",
+          "question": "Can invalid combinations be constructed through safe APIs, deserialization, FFI, feature flags, defaults, or migration?",
+          "residual_limitation": "Hosted workflow metadata and logs are retained byte-bound records, not cryptographic attestations issued by GitHub.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L05": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N05",
+            "CH-T002-N06"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF05"
+          ],
+          "evidence_ids": [
+            "CH-T002-E02",
+            "CH-T002-E09"
+          ],
+          "finding": "Adjacent signed commits, timestamps, and packet identities constrain replay and ordering.",
+          "name": "Time, ordering, and replay",
+          "question": "Are clock domains, freshness, deadlines, sessions, epochs, generations, sequence numbers, duplicates, restart, and rollover unambiguous?",
+          "residual_limitation": "NOT_CLAIMED_AUTOMATION_DOES_NOT_SATISFY_HUMAN_REVIEW",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L06": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N06",
+            "CH-T002-N07"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF06"
+          ],
+          "evidence_ids": [
+            "CH-T002-E06",
+            "CH-T002-E13"
+          ],
+          "finding": "Each result binds to exact commits, trees, blobs, SHA-256 values, and command streams.",
+          "name": "Identity and provenance",
+          "question": "Can every result, command, model, dataset, scene, schema, configuration, build, and evidence artifact be traced immutably?",
+          "residual_limitation": "No release, deployment, publication, tag, GitHub release, DOI, Zenodo record, or archive authority is granted.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L07": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N07",
+            "CH-T002-N08"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF07"
+          ],
+          "evidence_ids": [
+            "CH-T002-E06",
+            "CH-T002-E09"
+          ],
+          "finding": "Domain-separated signatures and canonical bytes fail closed on identity mismatch.",
+          "name": "Authentication and cryptography",
+          "question": "Are canonical bytes, domain separation, algorithms, identities, rotation, revocation, downgrade resistance, and failure semantics complete?",
+          "residual_limitation": "Successful operation at hard resource ceilings is not claimed; limits are fail-closed validation bounds.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L08": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N08",
+            "CH-T002-N09"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF08"
+          ],
+          "evidence_ids": [
+            "CH-T002-E07"
+          ],
+          "finding": "Automated technical evidence grants no release, deployment, or publication authority.",
+          "name": "Authority and safety",
+          "question": "Who may observe, advise, intend, authorize, publish, apply, and confirm? Can any fallback or optional component widen authority?",
+          "residual_limitation": "AUTOMATED_TECHNICAL_SCOPE_IS_LIMITED_TO_DETERMINISTIC_PACKET_GENERATION_ASSIGNMENT_MECHANICS_AND_TECHNICAL_QUALIFICATION",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L09": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N09",
+            "CH-T002-N10"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF09"
+          ],
+          "evidence_ids": [
+            "CH-T002-E03",
+            "CH-T002-E04"
+          ],
+          "finding": "Negative vectors cover malformed, duplicate, ambiguous, and contradictory inputs.",
+          "name": "Hostile inputs and parsers",
+          "question": "What happens with duplicates, unknown fields, unsafe integers, NaN/Inf, Unicode ambiguity, malformed nesting, path tricks, and contradictory metadata?",
+          "residual_limitation": "Automated line-by-line and relevant-context review does not constitute completed named-human or external human review.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L10": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N10",
+            "CH-T002-N11"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF10"
+          ],
+          "evidence_ids": [
+            "CH-T002-E05"
+          ],
+          "finding": "Byte, tree, packet, command, time, and memory limits are explicit and fail closed.",
+          "name": "Resource and denial-of-service bounds",
+          "question": "Are bytes, allocations, dimensions, states, queues, retries, threads, log volume, GPU/CPU work, and serialization bounded before expensive work?",
+          "residual_limitation": "Classification is a bounded technical record for the exact signed F tree and does not establish runtime product correctness.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L11": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N11",
+            "CH-T002-N12"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF01"
+          ],
+          "evidence_ids": [
+            "CH-T002-E03",
+            "CH-T002-E04"
+          ],
+          "finding": "Create-once writes, ordered commands, and exact lifecycle transitions constrain races and restart behavior.",
+          "name": "Concurrency and lifecycle",
+          "question": "Are initialization, callback ownership, races, cancellation, selected events, cleanup, crash consistency, and shutdown fully specified?",
+          "residual_limitation": "Hosted workflow metadata and logs are retained byte-bound records, not cryptographic attestations issued by GitHub.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L12": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N12",
+            "CH-T002-N13"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF02"
+          ],
+          "evidence_ids": [
+            "CH-T002-E02",
+            "CH-T002-E06"
+          ],
+          "finding": "Independent reconstruction reproduces the exact ledger, overlay, packets, and manifest.",
+          "name": "Determinism and reproducibility",
+          "question": "Can independent clean machines reproduce code generation, builds, fixtures, simulations, proofs, benchmarks, evidence, and archives?",
+          "residual_limitation": "NOT_CLAIMED_AUTOMATION_DOES_NOT_SATISFY_HUMAN_REVIEW",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L13": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N13",
+            "CH-T002-N14"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF03"
+          ],
+          "evidence_ids": [
+            "CH-T002-E01",
+            "CH-T002-E06"
+          ],
+          "finding": "The change adds release tooling only and makes no runtime API or compatibility claim.",
+          "name": "API, FFI, and SemVer",
+          "question": "Is the stable surface minimal and are panic, ownership, allocation, thread safety, features, MSRV/runtime, and compatibility explicit?",
+          "residual_limitation": "No release, deployment, publication, tag, GitHub release, DOI, Zenodo record, or archive authority is granted.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L14": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N14",
+            "CH-T002-N15"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF04"
+          ],
+          "evidence_ids": [
+            "CH-T002-E03",
+            "CH-T002-E13"
+          ],
+          "finding": "The ledger, overlay, packet builder, and independent verifier share one frozen semantic contract.",
+          "name": "Schema, wire, and language parity",
+          "question": "Is there one normative semantic source and do all languages/encodings accept and reject the same corpus?",
+          "residual_limitation": "Successful operation at hard resource ceilings is not claimed; limits are fail-closed validation bounds.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L15": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N15",
+            "CH-T002-N16"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF05"
+          ],
+          "evidence_ids": [
+            "CH-T002-E03",
+            "CH-T002-E05"
+          ],
+          "finding": "The clean capture environment excludes secret input and does not activate deployment behavior.",
+          "name": "Configuration and deployment",
+          "question": "Can invalid profiles start? Are paths, secrets, permissions, ACLs, certificates, environments, startup order, and rollback safe?",
+          "residual_limitation": "AUTOMATED_TECHNICAL_SCOPE_IS_LIMITED_TO_DETERMINISTIC_PACKET_GENERATION_ASSIGNMENT_MECHANICS_AND_TECHNICAL_QUALIFICATION",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L16": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N16",
+            "CH-T002-N17"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF06"
+          ],
+          "evidence_ids": [
+            "CH-T002-E02",
+            "CH-T002-E09"
+          ],
+          "finding": "Digest-bound command streams distinguish success from a rejected or incomplete state.",
+          "name": "Observability and forensics",
+          "question": "Can disabled, unavailable, stale, incompatible, insufficient, anomalous, denied, and internal-fault states be distinguished without leaking secrets?",
+          "residual_limitation": "Automated line-by-line and relevant-context review does not constitute completed named-human or external human review.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L17": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N17",
+            "CH-T002-N18"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF07"
+          ],
+          "evidence_ids": [
+            "CH-T002-E03",
+            "CH-T002-E04",
+            "CH-T002-E09"
+          ],
+          "finding": "Positive, negative, technique, reconciliation, and resource evidence support the technical scope.",
+          "name": "Verification and evidence quality",
+          "question": "Does each claim have the right proof: theorem, model, property, fuzz, mutation, clean-room, real-router, statistical, or physical evidence?",
+          "residual_limitation": "Classification is a bounded technical record for the exact signed F tree and does not establish runtime product correctness.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L18": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N18",
+            "CH-T002-N19"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF08"
+          ],
+          "evidence_ids": [
+            "CH-T002-E07"
+          ],
+          "finding": "This task changes no cross-project runtime relationship and grants no ecosystem authority.",
+          "name": "Ecosystem composition",
+          "question": "Are pid-rs, NCP, Engram, Prisoma, Crebain, Galadriel, Haldir, ROS, and external authority relationships explicit and acyclic?",
+          "residual_limitation": "Hosted workflow metadata and logs are retained byte-bound records, not cryptographic attestations issued by GitHub.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L19": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N19",
+            "CH-T002-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF09"
+          ],
+          "evidence_ids": [
+            "CH-T002-E01",
+            "CH-T002-E07"
+          ],
+          "finding": "Names, roles, limitations, and handoff boundaries remain explicit in retained records.",
+          "name": "Human factors and governance",
+          "question": "Are naming, docs, examples, runbooks, review roles, incident response, support, deprecation, and withdrawal usable under stress?",
+          "residual_limitation": "NOT_CLAIMED_AUTOMATION_DOES_NOT_SATISFY_HUMAN_REVIEW",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        },
+        "L20": {
+          "claim_impact": "NO_PUBLIC_CLAIM_CHANGE",
+          "control_ids": [
+            "CH-T002-N01",
+            "CH-T002-N02",
+            "CH-T002-N03",
+            "CH-T002-N04",
+            "CH-T002-N05",
+            "CH-T002-N06",
+            "CH-T002-N07",
+            "CH-T002-N08",
+            "CH-T002-N09",
+            "CH-T002-N10",
+            "CH-T002-N11",
+            "CH-T002-N12",
+            "CH-T002-N13",
+            "CH-T002-N14",
+            "CH-T002-N15",
+            "CH-T002-N16",
+            "CH-T002-N17",
+            "CH-T002-N18",
+            "CH-T002-N19",
+            "CH-T002-N20"
+          ],
+          "counterfactual_ids": [
+            "CH-T002-CF01",
+            "CH-T002-CF02",
+            "CH-T002-CF03",
+            "CH-T002-CF04",
+            "CH-T002-CF05",
+            "CH-T002-CF06",
+            "CH-T002-CF07",
+            "CH-T002-CF08",
+            "CH-T002-CF09",
+            "CH-T002-CF10"
+          ],
+          "evidence_ids": [
+            "CH-T002-E01",
+            "CH-T002-E02",
+            "CH-T002-E03",
+            "CH-T002-E04",
+            "CH-T002-E05",
+            "CH-T002-E06",
+            "CH-T002-E07",
+            "CH-T002-E08",
+            "CH-T002-E09",
+            "CH-T002-E10",
+            "CH-T002-E11",
+            "CH-T002-E12",
+            "CH-T002-E13"
+          ],
+          "finding": "All frozen controls and counterfactuals map to retained evidence and fail-closed checks.",
+          "name": "Counterfactual and quirky-case review",
+          "question": "How would a malicious peer, rushed operator, odd-but-simple dataset, future maintainer, or AI-generated patch falsify the intended claim?",
+          "residual_limitation": "No release, deployment, publication, tag, GitHub release, DOI, Zenodo record, or archive authority is granted.",
+          "reviewer_ids": [
+            "CH-T002-R01",
+            "CH-T002-R02",
+            "CH-T002-R03",
+            "CH-T002-R04"
+          ],
+          "status": "RESOLVED"
+        }
+      }
     },
     {
       "id": "CH-T003",
