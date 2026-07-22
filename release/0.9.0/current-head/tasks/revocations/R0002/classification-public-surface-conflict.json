@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0.0",
+  "record_id": "R0002-E01",
+  "kind": "CONTRACT_DEFECT_EVIDENCE",
+  "task_id": "CH-T002",
+  "epoch": 1,
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "identified_at_utc": "2026-07-22T07:56:16Z",
+  "frozen_subject": {
+    "freeze_commit": "57bfc7895019af5ae6647b94e278ac55811ac265",
+    "freeze_tree": "b50fe7c8a6a49a878fd6c6ba98c820f5419652c1",
+    "predecessor_activation_commit": "2167b0b1b8580298b8474e676893f97292c3d7c7",
+    "ch_t001_active_epoch": 2,
+    "ch_t001_verifier_sha256": "5696199ce75e5f198617efa310e2bfeec8a108361996ac532238549d1ebd8d21",
+    "ch_t002_freeze_sha256": "db64c73ea445b78c0578d9270278e64f7545b828e474e681314dbae1f3958010",
+    "ch_t002_verifier_sha256": "9f433dfb845348dfc2a3594f3cf33ebfd14ea3946e16604d131ae13d82a75cb3"
+  },
+  "discarded_local_candidate": {
+    "published": false,
+    "commit": "2c29ab26f1595c5a3d2d8e147b45d4d68b658db7",
+    "tree": "eb8ea5e7c3cbc6d68f45e6aaf05a52759b1c4407",
+    "parent": "57bfc7895019af5ae6647b94e278ac55811ac265",
+    "overlay_sha256": "2924ee6203b4a21dfb1d150a2bd7aa901c03346453f1873cd678612afc5715f5",
+    "completed_ledger_sha256": "df5aba78f0269f358803134c36c967afcd790032269af22e4bfc32d1be1a3ff1"
+  },
+  "defect": {
+    "code": "CH_T002_CLASSIFICATION_CONTRADICTS_ACTIVE_CH_T001_PUBLIC_SURFACE",
+    "summary": "The frozen CH-T002 classification contract resolves .gitignore as public_surface=NO, while the active CH-T001 e0002 verifier requires that path not to be NO.",
+    "affected_path": ".gitignore",
+    "frozen_resolution": "NO",
+    "required_resolution": "YES",
+    "failure_code": "PUBLIC_SURFACE_CONTRADICTION",
+    "reason_correct_resolution_is_yes": ".gitignore controls which repository content is excluded from the distributed source and assurance inventory, and CH-T001 explicitly identifies it as a public surface. CH-T002 must resolve the completed classification rather than retain UNKNOWN."
+  },
+  "decisive_observations": [
+    {
+      "id": "O01",
+      "source": "tools/release/tasks/ch-t001/e0002/verify.py",
+      "observation": "The active predecessor verifier rejects .gitignore when public_surface equals NO and reports PUBLIC_SURFACE_CONTRADICTION."
+    },
+    {
+      "id": "O02",
+      "source": "discarded local CH-T002 e0001 implementation candidate",
+      "observation": "The generated classification record and completed ledger both set .gitignore public_surface to NO."
+    },
+    {
+      "id": "O03",
+      "source": "tools/release/tasks/ch-t001/e0002/test_verify.py",
+      "observation": "The registered integration entrypoint executes the active chain and fails exactly at the predecessor public-surface invariant on the discarded candidate."
+    },
+    {
+      "id": "O04",
+      "source": "release/0.9.0/current-head/tasks/ch-t002/e0001/freeze.json",
+      "observation": "The classification override count, override digest, final classification digest, and control statement are immutable F-stage values, so an I-stage edit cannot correct this classification without violating the signed freeze."
+    }
+  ],
+  "reproduction": {
+    "working_tree": "discarded local candidate commit 2c29ab26f1595c5a3d2d8e147b45d4d68b658db7",
+    "commands": [
+      "python3 tools/release/tasks/ch-t001/e0002/test_verify.py",
+      "python3 tools/release/verify-current-audit.py"
+    ],
+    "observed_results": [
+      "The CH-T001 e0002 suite reports 83 tests with one integration error: PUBLIC_SURFACE_CONTRADICTION.",
+      "The central current-audit gate reports CURRENT_AUDIT_REGISTERED_TESTS_FAILED."
+    ],
+    "expected_after_correction": "Both commands pass against the exact successor candidate."
+  },
+  "impact": {
+    "implementation_qualification_possible_under_epoch_1": false,
+    "verified_prefix_preserved": 2,
+    "public_claim_change": "NONE",
+    "release_status": "NO_GO"
+  },
+  "required_resolution": {
+    "transition": "INFLIGHT_ABORT_THEN_MONOTONIC_EPOCH_REFREEZE",
+    "steps": [
+      "Append this contract-defect record and deactivate CH-T002:e0001 without rewriting signed history.",
+      "Add an explicit .gitignore public_surface UNKNOWN-to-YES review override.",
+      "Recompute the complete override-set digest, classification-set digest, count vectors, frozen control statement, verifier constants, and tests.",
+      "Execute the CH-T001 e0002 suite, CH-T002 registered suite, central audit gate, clean Linux checks, hosted checks, and formal checks before any CH-T002 qualification."
+    ]
+  },
+  "release_authority": {
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  }
+}

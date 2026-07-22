@@ -79,6 +79,68 @@
         "git_object_id": "175c4dc133b4e509082323485d25b043ac88b92c"
       },
       "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_INFLIGHT_ABORT_AND_ROLLBACK"
+    },
+    {
+      "record_id": "R0002",
+      "record_type": "INFLIGHT_ABORT",
+      "author": {
+        "name": "Sepehr Mahmoudian",
+        "email": "sepmhn@gmail.com"
+      },
+      "target_task": "CH-T002",
+      "target_epoch": 1,
+      "reason": "CONTRACT_DEFECT",
+      "prior_head": "57bfc7895019af5ae6647b94e278ac55811ac265",
+      "previous_verified_prefix": 2,
+      "retained_prefix": 2,
+      "invalidated_epochs": [],
+      "deactivated_registrations": [
+        "CH-T002:e0001"
+      ],
+      "aborted_candidate": {
+        "task_id": "CH-T002",
+        "epoch": 1,
+        "stage": "F",
+        "freeze_commit": "57bfc7895019af5ae6647b94e278ac55811ac265",
+        "implementation_commit": null,
+        "qualification_commit": null
+      },
+      "rollback_source": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "restored_product_paths": [],
+      "cause_evidence_records": [
+        {
+          "id": "R0002-E01",
+          "kind": "CONTRACT_DEFECT_EVIDENCE",
+          "file": {
+            "path": "release/0.9.0/current-head/tasks/revocations/R0002/classification-public-surface-conflict.json",
+            "sha256": "5beb3de46e4aaee960da8fe8a8545571aa55b6c703c1343c5582f9c92b227c62",
+            "bytes": 4752,
+            "lines": 95,
+            "git_mode": "100644",
+            "git_object_type": "blob",
+            "git_object_id": "ee1070ffc1494d0b25ecb5406596436ed95613c2"
+          }
+        }
+      ],
+      "requirements_record": {
+        "path": "release/0.9.0/current-head/requirements.json",
+        "sha256": "95075e370fb77215ed8c081022def707285069485eb2b1fc06cb0feee7d0dd48",
+        "bytes": 168367,
+        "lines": 4138,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "b56783e69aa1a2433ec44c62a8d46083f18a832a"
+      },
+      "active_claims_record": {
+        "path": "release/0.9.0/current-head/closures/active-claims.json",
+        "sha256": "d111d11d7b347ecc840fd9820ac75022c60017261d59e19338d37673edded393",
+        "bytes": 32884,
+        "lines": 758,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "4cbf14812f92be0cb9d2a78b66f4f0c44a5914a3"
+      },
+      "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_INFLIGHT_ABORT_AND_ROLLBACK"
     }
   ],
   "human_review_boundary": {
