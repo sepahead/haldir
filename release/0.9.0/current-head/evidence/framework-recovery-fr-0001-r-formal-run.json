@@ -1,0 +1,33 @@
+{
+  "capture_source": "GITHUB_ACTIONS_API_AND_RETAINED_LOG",
+  "captured_at_utc": "2026-07-22T00:04:01Z",
+  "completed_at_utc": "2026-07-21T23:51:27Z",
+  "conclusion": "success",
+  "created_at_utc": "2026-07-21T23:51:15Z",
+  "display_title": "release: repair current-audit snapshot origin validation",
+  "event": "push",
+  "evidence_id": "FR-0001-E05",
+  "failure": null,
+  "head_branch": "main",
+  "head_sha": "dde6512d615f54fac26b2728a05b9c53dca68666",
+  "jobs": [
+    {
+      "completed_at_utc": "2026-07-21T23:51:26Z",
+      "conclusion": "success",
+      "failed_step": null,
+      "job_id": 88793870392,
+      "name": "tlc-model-check",
+      "started_at_utc": "2026-07-21T23:51:17Z",
+      "status": "completed"
+    }
+  ],
+  "kind": "REPAIR_FORMAL_RUN",
+  "repository": "sepahead/haldir",
+  "run_attempt": 1,
+  "run_id": 29878429118,
+  "schema_version": "1.0.0",
+  "started_at_utc": "2026-07-21T23:51:15Z",
+  "status": "completed",
+  "workflow_name": "formal",
+  "workflow_path": ".github/workflows/formal.yml"
+}

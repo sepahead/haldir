@@ -1,0 +1,139 @@
+{
+  "configuration": {
+    "effort": "max",
+    "max_tokens": 128000,
+    "thinking": "adaptive"
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:1aFbb5Al32xe253V0vtRdOxq27iXCAo5qCvpY2sgSVg",
+    "namespace": "haldir-framework-recovery-review-v1",
+    "principal": "fr-0001-implementation@automated.invalid",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILefjIK1kpWBH0GsaF+mXA/P5Mdkd1HjI8MPcF2Dye0A",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgt5+MgrWSlYEfQaxoX6ZcD8/kx2\nR3UeMjww9wXYPJ7QAAAAAjaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1yZXZpZXctdjEA\nAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYMQ64MCRrI7xD4V6O1kCEw\nJWl/oR9awqkdD/H3vCoUJsTn017cUZa+Tbgme+g77kz/R7yzrXdhObV39QW2cVCg==\n-----END SSH SIGNATURE-----\n"
+  },
+  "findings": [
+    {
+      "disposition": "Raw finding N1 is dispositioned by direct immutable-parent cross-checks. plan.parent_tree and the E01 display title are constant-pinned rather than repository-derived; both were confirmed against the immutable parent commit c0e4b3d156500684329a92bcb16e0609894fd738 during this qualification.",
+      "id": "F1",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N2 is non-gating for the exact repair: all 14 required recovery tests are live methods of CurrentAuditVerifierTests and the full discovered count is 163; stricter discovery grounding is deferred.",
+      "id": "F2",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N3 fails closed under any argument miswiring and the exact supplied execution paths were reviewed; stronger AST identity checks are deferred to an authorized later epoch.",
+      "id": "F3",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N4 is retained as an operational limitation. The raw pre-push diagnostic logs behind the execution-budget correction were not retained; the registered-verifier margin increase to 30 seconds is inferred, not exit-code attested, and the registered-test correction rests on a single exit-137 observation at 31.830 seconds.",
+      "id": "F4",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N5 is fail-closed and bounded to the pinned Git environment; future Git-default expansion requires an explicitly reviewed protocol update.",
+      "id": "F5",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N6 is recorded without identity inflation. Review capture keys prove only session-key possession and domain separation; they confer no identity, independence, or approval authority.",
+      "id": "F6",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N7 is resolved by representing adverse review as absence of Q and retaining only truthful success-shaped qualification records; no review record carries release authority.",
+      "id": "F7",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N8 is harmless fail-closed dead-state retention. Epoch 1 does not and cannot validate epoch 2; acceptance of commit dde6512d615f54fac26b2728a05b9c53dca68666 as the sole recovery rests on external retention of its exact commit and path digests and on branch/ref protection, not on any in-repository proof.",
+      "id": "F8",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Raw finding N9 is managed by exact retained hosted logs. The 120-second registered-test exception equals the absolute container ceiling; a future duration regression in the exact CH-T001 e0002 registration has no in-protocol remedy other than suffix revocation and re-registration at the 10-second default.",
+      "id": "F9",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "This recovery confers no runtime, deployment, publication, tag, release, DOI, Zenodo, archive, or scientific authority; overall release status remains NO_GO, and no second recovery is permitted.",
+      "id": "F10",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    }
+  ],
+  "kind": "AUTOMATED_IMPLEMENTATION_REVIEW",
+  "limitations": [
+    "KEY_SEPARATION_IS_NOT_HUMAN_OR_EXTERNAL_INDEPENDENCE",
+    "RECOVERY_REMAINS_AN_EXPLICIT_TRUST_ROOT_TRANSITION"
+  ],
+  "original_verdict": "GO",
+  "qualification_verdict": "GO",
+  "response": {
+    "input_tokens": 361681,
+    "message_id": "msg_011CdG5Vw3t5k43779hW2GED",
+    "output_tokens": 54695,
+    "stop_reason": "end_turn",
+    "thinking_tokens": 48496
+  },
+  "review_id": "FR-0001-R02",
+  "reviewer": {
+    "capture_key_role": "LOCAL_REVIEW_SESSION_CAPTURE_KEY",
+    "classification": "AUTOMATED",
+    "external_independence": false,
+    "human_review_performed": false,
+    "model_requested": "claude-fable-5",
+    "model_resolved": "claude-fable-5",
+    "named_human_review_performed": false,
+    "provider": "Anthropic",
+    "release_authority": false
+  },
+  "schema_version": "1.0.0",
+  "subject": {
+    "code_diff": {
+      "base": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "name_status_sha256": "84fd6e04e25bf8b58296f790d32b647fa7910401f1136be09c61216b8438b764",
+      "numstat_sha256": "59722e05f7ce32b30929fff14cba0becad9926d24e7015c3642d086a244938a5",
+      "patch_bytes": 105749,
+      "patch_command_template": [
+        "/usr/bin/git",
+        "-c",
+        "diff.algorithm=myers",
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-renames",
+        "--no-color",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--binary",
+        "--full-index",
+        "c0e4b3d156500684329a92bcb16e0609894fd738..<RECOVERY_COMMIT>",
+        "--",
+        "tools/release/verify-current-audit.py",
+        "tools/release/test_verify_current_audit.py"
+      ],
+      "patch_lines": 2649,
+      "patch_sha256": "3d24318e1a147d2e7f22237bc88f33bb447026098c67230ce1d9d776cc931937",
+      "paths": [
+        "tools/release/verify-current-audit.py",
+        "tools/release/test_verify_current_audit.py"
+      ],
+      "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+    },
+    "parent_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+    "repair_commit": "dde6512d615f54fac26b2728a05b9c53dca68666"
+  }
+}

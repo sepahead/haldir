@@ -1,0 +1,127 @@
+{
+  "configuration": {
+    "effort": "max",
+    "max_tokens": 128000,
+    "thinking": "adaptive"
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:X6h6es2UjgXN8A6k9/sLE8Y1f6jXleP3VOyJ7WjecK0",
+    "namespace": "haldir-framework-recovery-review-v1",
+    "principal": "fr-0001-design@automated.invalid",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAPGp9eBaalV7YF9w1GVcvrONgrz4vK8zLksoyj0WIwc",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgA8an14FpqVXtgX3DUZVy+s42Cv\nPi8rzMuSyjKPRYjBwAAAAjaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1yZXZpZXctdjEA\nAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeLXZTCVcOdv3rJzebQiWtl\nc8v8dg5PLL+O0WssruGaGhYZMDO6/x/uMiHiH3QieoEp66pqLHJV5fQhK2HGW/Dw==\n-----END SSH SIGNATURE-----\n"
+  },
+  "findings": [
+    {
+      "disposition": "One-shot recovery is fixed to the sole D -> R -> Q -> A sequence; recovery paths become protected and ordinary successors cannot interleave.",
+      "id": "F1",
+      "severity": "BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "The amended verifier and test blobs are re-anchored to the exact repair commit while all other frozen framework paths remain anchored to the prior framework commit.",
+      "id": "F2",
+      "severity": "BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Plan, qualification, activation, and automated-review signatures use distinct purpose namespaces; review keys carry no authority.",
+      "id": "F3",
+      "severity": "BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "The prior 149-test AST is preserved and the exact 14-test recovery superset is required, yielding 163 discovered tests.",
+      "id": "F4",
+      "severity": "BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Snapshot worktree and local-config identity are parsed structurally from NUL-delimited Git output with a closed configuration allowlist.",
+      "id": "F5",
+      "severity": "BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Recovery transitions require no in-flight successor and preserve requirements, claims, registry, and revocation state byte-for-byte.",
+      "id": "F6",
+      "severity": "BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "The earlier lexical snapshot-config concern was eliminated by structural local-config validation with a closed key allowlist.",
+      "id": "F7",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    },
+    {
+      "disposition": "Narrative root-cause, failure, execution-correction, and plan fields are bound by exact structural equality and signatures but do not independently grant authority.",
+      "id": "F8",
+      "severity": "NON_BLOCKING",
+      "status": "RESOLVED"
+    }
+  ],
+  "kind": "AUTOMATED_DESIGN_REVIEW",
+  "limitations": [
+    "KEY_SEPARATION_IS_NOT_HUMAN_OR_EXTERNAL_INDEPENDENCE",
+    "RECOVERY_REMAINS_AN_EXPLICIT_TRUST_ROOT_TRANSITION"
+  ],
+  "original_verdict": "GO_CONDITIONAL",
+  "qualification_verdict": "GO",
+  "response": {
+    "input_tokens": 359723,
+    "message_id": "msg_011CdFovJak5RrZ7f1VFiKaM",
+    "output_tokens": 28218,
+    "stop_reason": "end_turn",
+    "thinking_tokens": 22325
+  },
+  "review_id": "FR-0001-R01",
+  "reviewer": {
+    "capture_key_role": "LOCAL_REVIEW_SESSION_CAPTURE_KEY",
+    "classification": "AUTOMATED",
+    "external_independence": false,
+    "human_review_performed": false,
+    "model_requested": "claude-fable-5",
+    "model_resolved": "claude-fable-5",
+    "named_human_review_performed": false,
+    "provider": "Anthropic",
+    "release_authority": false
+  },
+  "schema_version": "1.0.0",
+  "subject": {
+    "code_diff": {
+      "base": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "name_status_sha256": "84fd6e04e25bf8b58296f790d32b647fa7910401f1136be09c61216b8438b764",
+      "numstat_sha256": "59722e05f7ce32b30929fff14cba0becad9926d24e7015c3642d086a244938a5",
+      "patch_bytes": 105749,
+      "patch_command_template": [
+        "/usr/bin/git",
+        "-c",
+        "diff.algorithm=myers",
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-renames",
+        "--no-color",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--binary",
+        "--full-index",
+        "c0e4b3d156500684329a92bcb16e0609894fd738..<RECOVERY_COMMIT>",
+        "--",
+        "tools/release/verify-current-audit.py",
+        "tools/release/test_verify_current_audit.py"
+      ],
+      "patch_lines": 2649,
+      "patch_sha256": "3d24318e1a147d2e7f22237bc88f33bb447026098c67230ce1d9d776cc931937",
+      "paths": [
+        "tools/release/verify-current-audit.py",
+        "tools/release/test_verify_current_audit.py"
+      ],
+      "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+    },
+    "parent_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+    "repair_commit": "dde6512d615f54fac26b2728a05b9c53dca68666"
+  }
+}
