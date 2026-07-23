@@ -1,0 +1,1546 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "CH-T003",
+  "epoch": 1,
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_FREEZE_AND_REGISTRATION",
+  "task_identity": {
+    "id": "CH-T003",
+    "source_task_id": "T003",
+    "source_record_sha256": "817e1e52659919d03be0b3f1685bd3af318c0ac8454968ce11cc72abaad9f7b5",
+    "phase": "P0 Audit and scope",
+    "title": "Create public surface inventory and claim-tier ledger",
+    "source_scope": "exports, CLI, IPC, schemas, docs, packages, GitHub metadata",
+    "focus": "truthful scope",
+    "priority": "P0_RELEASE_BLOCKER",
+    "dependencies": [
+      "CH-T002"
+    ],
+    "execution_wave": 0,
+    "subagent_lane": 1,
+    "lead_review_required": true
+  },
+  "handoff_task_contract": {
+    "source_task_id": "T003",
+    "source_record_sha256": "817e1e52659919d03be0b3f1685bd3af318c0ac8454968ce11cc72abaad9f7b5",
+    "lead_review_required": true,
+    "preconditions": [
+      "HEAD equals 9cf56e149a105026b072c9073d7e87b93103966e or an approved updated audit cut exists.",
+      "Every in-scope tracked/generated file is present in FILE_REVIEW_LEDGER.csv and assigned to a named reviewer.",
+      "The current behavior, public claim tier, assumptions, affected consumers, and rollback are recorded before editing."
+    ],
+    "procedure": [
+      "Read every in-scope file line by line, including tests, examples, generated output, workflow, documentation, and relevant Git history; record blob and SHA-256 identities.",
+      "Write a current-behavior table covering inputs, validation, state, transitions, outputs, errors, resources, time, identity, persistence, concurrency, and public claims.",
+      "Enumerate all plausible semantic interpretations and construct at least one counterexample or misuse for each rejected interpretation.",
+      "Write normative SHALL/SHALL NOT requirements with stable IDs and exact accepted/rejected cases; obtain lead approval before implementation.",
+      "Implement the smallest coherent change and delete, quarantine, or version any contradictory legacy/default/fallback path.",
+      "Add positive, malformed, empty, min/max, non-finite, duplicate, stale, reordered, replayed, future, capacity, cancellation, restart, and migration tests as applicable.",
+      "Add property/metamorphic, differential/oracle, fuzz, mutation-sensitive, concurrency, resource, and integration tests appropriate to the claim tier.",
+      "Generate evidence from a clean checkout with exact tools, commands, configs, seeds, data/models, platform/hardware, raw outputs, exit status, and checksums.",
+      "Update schemas, API snapshots, migration, examples, README/docs, claim/evidence ledger, support matrix, and exact downstream pins.",
+      "Have an independent reviewer reproduce the decisive evidence and review every changed line plus relevant unchanged context.",
+      "Run the subsystem gate, complete wave gate, full locked CI, and every affected downstream conformance job.",
+      "Close only after all twenty lenses are resolved with evidence; otherwise remove/narrow the claim and leave the task OPEN."
+    ],
+    "mandatory_counterfactuals": [
+      "valid syntax with contradictory semantics",
+      "authenticated but unauthorized producer",
+      "stale yet correctly signed data",
+      "correct version string with wrong contract/algorithm digest",
+      "clean synthetic result under nonrepresentative distribution",
+      "timeout or capacity exhaustion followed by convenience fallback",
+      "feature unification activating a privileged/experimental path",
+      "partial migration accepted through default values",
+      "crash between decision/output and durable evidence",
+      "simple but odd input unlikely to resemble training examples"
+    ],
+    "required_evidence": [
+      "FILE_REVIEW_LEDGER and requirement traceability updates",
+      "complete commands/logs/exit codes",
+      "positive and negative vectors or fixtures",
+      "coverage, fuzz/mutation or model results where applicable",
+      "resource/time distributions at declared maxima",
+      "exact identities and checksums",
+      "independent reviewer record",
+      "claim and migration disposition"
+    ],
+    "completion_rule": "No prose-only closure. Every acceptance condition and evidence item must pass on the exact candidate; otherwise mark NOT_CLAIMED or NO_GO.",
+    "bootstrap_amendment": {
+      "exception": null,
+      "postconditions": [
+        "COMPLETE_CH-T001_INVENTORY_RETAINED",
+        "COMPLETE_CH-T002_ASSIGNMENTS_AND_REVIEWS_RETAINED"
+      ]
+    },
+    "twenty_lenses": [
+      {
+        "id": "L01",
+        "name": "Claims and scope",
+        "question": "Can a reader infer more than the exact evidence tier supports? Separate implemented, verified, validated, deployment-qualified, field-validated, and not-claimed."
+      },
+      {
+        "id": "L02",
+        "name": "First-principles semantics",
+        "question": "Are inputs, state, transitions, outputs, invariants, units, and failure states explicit rather than implied by names?"
+      },
+      {
+        "id": "L03",
+        "name": "Mathematics and statistics",
+        "question": "Are definitions, assumptions, estimands, finite-sample behavior, multiplicity, uncertainty, calibration, and failure regions correct and explicit?"
+      },
+      {
+        "id": "L04",
+        "name": "Type and state integrity",
+        "question": "Can invalid combinations be constructed through safe APIs, deserialization, FFI, feature flags, defaults, or migration?"
+      },
+      {
+        "id": "L05",
+        "name": "Time, ordering, and replay",
+        "question": "Are clock domains, freshness, deadlines, sessions, epochs, generations, sequence numbers, duplicates, restart, and rollover unambiguous?"
+      },
+      {
+        "id": "L06",
+        "name": "Identity and provenance",
+        "question": "Can every result, command, model, dataset, scene, schema, configuration, build, and evidence artifact be traced immutably?"
+      },
+      {
+        "id": "L07",
+        "name": "Authentication and cryptography",
+        "question": "Are canonical bytes, domain separation, algorithms, identities, rotation, revocation, downgrade resistance, and failure semantics complete?"
+      },
+      {
+        "id": "L08",
+        "name": "Authority and safety",
+        "question": "Who may observe, advise, intend, authorize, publish, apply, and confirm? Can any fallback or optional component widen authority?"
+      },
+      {
+        "id": "L09",
+        "name": "Hostile inputs and parsers",
+        "question": "What happens with duplicates, unknown fields, unsafe integers, NaN/Inf, Unicode ambiguity, malformed nesting, path tricks, and contradictory metadata?"
+      },
+      {
+        "id": "L10",
+        "name": "Resource and denial-of-service bounds",
+        "question": "Are bytes, allocations, dimensions, states, queues, retries, threads, log volume, GPU/CPU work, and serialization bounded before expensive work?"
+      },
+      {
+        "id": "L11",
+        "name": "Concurrency and lifecycle",
+        "question": "Are initialization, callback ownership, races, cancellation, selected events, cleanup, crash consistency, and shutdown fully specified?"
+      },
+      {
+        "id": "L12",
+        "name": "Determinism and reproducibility",
+        "question": "Can independent clean machines reproduce code generation, builds, fixtures, simulations, proofs, benchmarks, evidence, and archives?"
+      },
+      {
+        "id": "L13",
+        "name": "API, FFI, and SemVer",
+        "question": "Is the stable surface minimal and are panic, ownership, allocation, thread safety, features, MSRV/runtime, and compatibility explicit?"
+      },
+      {
+        "id": "L14",
+        "name": "Schema, wire, and language parity",
+        "question": "Is there one normative semantic source and do all languages/encodings accept and reject the same corpus?"
+      },
+      {
+        "id": "L15",
+        "name": "Configuration and deployment",
+        "question": "Can invalid profiles start? Are paths, secrets, permissions, ACLs, certificates, environments, startup order, and rollback safe?"
+      },
+      {
+        "id": "L16",
+        "name": "Observability and forensics",
+        "question": "Can disabled, unavailable, stale, incompatible, insufficient, anomalous, denied, and internal-fault states be distinguished without leaking secrets?"
+      },
+      {
+        "id": "L17",
+        "name": "Verification and evidence quality",
+        "question": "Does each claim have the right proof: theorem, model, property, fuzz, mutation, clean-room, real-router, statistical, or physical evidence?"
+      },
+      {
+        "id": "L18",
+        "name": "Ecosystem composition",
+        "question": "Are pid-rs, NCP, Engram, Prisoma, Crebain, Galadriel, Haldir, ROS, and external authority relationships explicit and acyclic?"
+      },
+      {
+        "id": "L19",
+        "name": "Human factors and governance",
+        "question": "Are naming, docs, examples, runbooks, review roles, incident response, support, deprecation, and withdrawal usable under stress?"
+      },
+      {
+        "id": "L20",
+        "name": "Counterfactual and quirky-case review",
+        "question": "How would a malicious peer, rushed operator, odd-but-simple dataset, future maintainer, or AI-generated patch falsify the intended claim?"
+      }
+    ]
+  },
+  "prior_state": {
+    "verified_prefix": 3,
+    "active_claims": {
+      "path": "release/0.9.0/current-head/closures/active-claims.json",
+      "sha256": "aaedcf26501b9023f3cbe898a86cb2ad82e53a850c1dfd060a30ef3f8d70b367",
+      "bytes": 35029,
+      "lines": 771
+    }
+  },
+  "implementation_plan": {
+    "audit/generated/CH-T003_CLAIM_TIER_LEDGER.json": "A",
+    "audit/generated/CH-T003_FILE_REVIEW_OVERLAY.json": "A",
+    "audit/generated/CH-T003_GITHUB_METADATA.json": "A",
+    "audit/generated/CH-T003_LEDGER_COMPOSITION.json": "A",
+    "audit/generated/CH-T003_PUBLIC_SURFACE_INVENTORY.json": "A",
+    "audit/generated/CLAIM_LANGUAGE.json": "A",
+    "docs/CLAIM-LEDGER.md": "M",
+    "tools/release/current-public-surface-inventory.py": "A",
+    "tools/release/test_current_public_surface_inventory.py": "A"
+  },
+  "empty_implementation_reason": null,
+  "affected_surface_inventory": [
+    {
+      "path": "audit/generated/CH-T003_CLAIM_TIER_LEDGER.json",
+      "planned_status": "A",
+      "classification": "INTERNAL_IMPLEMENTATION",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/current-public-surface-inventory.py",
+        "tools/release/tasks/ch-t003/e0001/verify.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Machine view of every claim row, exact evidence text, active-state disposition, and non-expansive evidence tier."
+    },
+    {
+      "path": "audit/generated/CH-T003_FILE_REVIEW_OVERLAY.json",
+      "planned_status": "A",
+      "classification": "INTERNAL_IMPLEMENTATION",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/current-public-surface-inventory.py",
+        "tools/release/tasks/ch-t003/e0001/verify.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Exact signed-F and planned-I assignment overlay that closes every candidate path without claiming qualification review early."
+    },
+    {
+      "path": "audit/generated/CH-T003_GITHUB_METADATA.json",
+      "planned_status": "A",
+      "classification": "INTERNAL_IMPLEMENTATION",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/current-public-surface-inventory.py",
+        "tools/release/tasks/ch-t003/e0001/verify.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Bounded, paginated, status-aware GitHub repository metadata captured between signed F and signed I."
+    },
+    {
+      "path": "audit/generated/CH-T003_LEDGER_COMPOSITION.json",
+      "planned_status": "A",
+      "classification": "INTERNAL_IMPLEMENTATION",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/current-public-surface-inventory.py",
+        "tools/release/tasks/ch-t003/e0001/verify.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Exact bridge from the activated CH-T002 ledger and lifecycle into the complete CH-T003 candidate partition."
+    },
+    {
+      "path": "audit/generated/CH-T003_PUBLIC_SURFACE_INVENTORY.json",
+      "planned_status": "A",
+      "classification": "INTERNAL_IMPLEMENTATION",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/current-public-surface-inventory.py",
+        "tools/release/tasks/ch-t003/e0001/verify.py",
+        "tools/release/test_current_public_surface_inventory.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Complete signed-F file inventory plus compiler-resolved Rust exports and exact package, CLI, IPC, schema, documentation, archive, build, and deployment surfaces."
+    },
+    {
+      "path": "audit/generated/CLAIM_LANGUAGE.json",
+      "planned_status": "A",
+      "classification": "INTERNAL_IMPLEMENTATION",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/current-public-surface-inventory.py",
+        "tools/release/tasks/ch-t003/e0001/verify.py",
+        "tools/release/test_current_public_surface_inventory.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Bounded word-boundary scan of the exact handoff vocabulary plus extended claim language over tracked text, archive text, CLI output, and GitHub description."
+    },
+    {
+      "path": "docs/CLAIM-LEDGER.md",
+      "planned_status": "M",
+      "classification": "PUBLIC_DOCUMENTATION",
+      "claim_relevance": "PUBLIC_CLAIM_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/verify-current-audit.py",
+        "tools/verify-claims.py"
+      ],
+      "external_consumers": [
+        "Repository readers and downstream documentation tooling"
+      ],
+      "rationale": "One claim row is repaired and narrowed to repository verification while higher evidence tiers remain excluded."
+    },
+    {
+      "path": "tools/release/current-public-surface-inventory.py",
+      "planned_status": "A",
+      "classification": "TEST_OR_TOOLING",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/tasks/ch-t003/e0001/verify.py",
+        "tools/release/test_current_public_surface_inventory.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Deterministic builder for all six generated CH-T003 records."
+    },
+    {
+      "path": "tools/release/test_current_public_surface_inventory.py",
+      "planned_status": "A",
+      "classification": "TEST_OR_TOOLING",
+      "claim_relevance": "SEMANTIC_REVIEW_REQUIRED",
+      "in_repository_consumers": [
+        "tools/release/tasks/ch-t003/e0001/verify.py"
+      ],
+      "external_consumers": [],
+      "rationale": "Positive, hostile-input, metamorphic, differential, mutation, and exact-bound tests for the product tool."
+    }
+  ],
+  "normative_controls": [
+    {
+      "id": "CH-T003-N01",
+      "statement": "The signed F freeze SHALL bind CH-T003 epoch 1, release 0.9.0, Sepehr Mahmoudian, and a null persistent identifier.",
+      "accepted_test_id": "test_n01_accepted",
+      "rejected_test_id": "test_n01_rejected"
+    },
+    {
+      "id": "CH-T003-N02",
+      "statement": "The signed F freeze SHALL declare exactly the nine sorted implementation paths and the same exact verification-trigger path set.",
+      "accepted_test_id": "test_n02_accepted",
+      "rejected_test_id": "test_n02_rejected"
+    },
+    {
+      "id": "CH-T003-N03",
+      "statement": "The public-surface inventory SHALL include every regular Git blob at the signed F tree with exactly one in-scope or closed-exclusion disposition.",
+      "accepted_test_id": "test_n03_accepted",
+      "rejected_test_id": "test_n03_rejected"
+    },
+    {
+      "id": "CH-T003-N04",
+      "statement": "Every signed-F public inventory record SHALL bind exact Git mode, object type, object id, SHA-256, byte count, line count, content kind, classifications, and claim identifiers.",
+      "accepted_test_id": "test_n04_accepted",
+      "rejected_test_id": "test_n04_rejected"
+    },
+    {
+      "id": "CH-T003-N05",
+      "statement": "Typed surfaces SHALL inventory compiler-resolved Rust exports for every library and frozen feature and target profile, all Cargo targets, all command-line entry points plus the declared critical runtime observations, IPC routes, schemas, documentation, archives, packages, build inputs, deployment inputs, and release records.",
+      "accepted_test_id": "test_n05_accepted",
+      "rejected_test_id": "test_n05_rejected"
+    },
+    {
+      "id": "CH-T003-N06",
+      "statement": "The claim-tier ledger SHALL parse every unique claim row and SHALL bind the exact statement and evidence hashes without accepting a missing or duplicate status.",
+      "accepted_test_id": "test_n06_accepted",
+      "rejected_test_id": "test_n06_rejected"
+    },
+    {
+      "id": "CH-T003-N07",
+      "statement": "The claim-tier ledger SHALL use only IMPLEMENTED, VERIFIED, VALIDATED, DEPLOYMENT_QUALIFIED, FIELD_VALIDATED, and NOT_CLAIMED; no CH-T003 tier SHALL create release authority.",
+      "accepted_test_id": "test_n07_accepted",
+      "rejected_test_id": "test_n07_rejected"
+    },
+    {
+      "id": "CH-T003-N08",
+      "statement": "The implementation SHALL change exactly one claim row, SHALL retain its PROVEN status, and SHALL narrow CL-PUBLICATION-EVIDENCE-PRIMITIVE-01 to VERIFIED without changing non-row claim-ledger bytes.",
+      "accepted_test_id": "test_n08_accepted",
+      "rejected_test_id": "test_n08_rejected"
+    },
+    {
+      "id": "CH-T003-N09",
+      "statement": "The claim-language record SHALL preserve the exact handoff word-boundary baseline and add tracked source, archive member, CLI output, package, and GitHub-description coverage with source and line digests.",
+      "accepted_test_id": "test_n09_accepted",
+      "rejected_test_id": "test_n09_rejected"
+    },
+    {
+      "id": "CH-T003-N10",
+      "statement": "The GitHub metadata record SHALL retain bounded paginated captures with API version and status. It SHALL retain validators and raw body identity only for non-sensitive responses. It SHALL retain canonical sanitized-document identity for sensitive responses. It SHALL report repository, branch, protection, workflow, rule, release, tag, community, and security state. GitHub Packages are not observed.",
+      "accepted_test_id": "test_n10_accepted",
+      "rejected_test_id": "test_n10_rejected"
+    },
+    {
+      "id": "CH-T003-N11",
+      "statement": "The review overlay and ledger composition SHALL bind the exact activated CH-T002 lifecycle and prove a disjoint, duplicate-free, gap-free partition of all 434 planned I-tree regular blobs.",
+      "accepted_test_id": "test_n11_accepted",
+      "rejected_test_id": "test_n11_rejected"
+    },
+    {
+      "id": "CH-T003-N12",
+      "statement": "All generated JSON SHALL be duplicate-free, finite, bounded, canonical UTF-8 JSON with one trailing newline.",
+      "accepted_test_id": "test_n12_accepted",
+      "rejected_test_id": "test_n12_rejected"
+    },
+    {
+      "id": "CH-T003-N13",
+      "statement": "The product and registered verifiers SHALL reject missing, extra, reordered, duplicated, stale, unsafe, or hash-mismatched paths, archive members, exports, targets, routes, schemas, claims, and GitHub pages.",
+      "accepted_test_id": "test_n13_accepted",
+      "rejected_test_id": "test_n13_rejected"
+    },
+    {
+      "id": "CH-T003-N14",
+      "statement": "The claim partition SHALL remain exact across active, non-claimed, and removed sets; CH-T003 SHALL add only the one frozen narrowed-claim disposition.",
+      "accepted_test_id": "test_n14_accepted",
+      "rejected_test_id": "test_n14_rejected"
+    },
+    {
+      "id": "CH-T003-N15",
+      "statement": "Every retained composition and metadata record SHALL distinguish source declarations, compiler verification, local runtime observations, live bindings, deployment qualification, later external state, and independent-person review.",
+      "accepted_test_id": "test_n15_accepted",
+      "rejected_test_id": "test_n15_rejected"
+    },
+    {
+      "id": "CH-T003-N16",
+      "statement": "CH-T003 SHALL remain NO_GO and SHALL authorize no tag, GitHub release, DOI, Zenodo record, archive, deployment, or publication.",
+      "accepted_test_id": "test_n16_accepted",
+      "rejected_test_id": "test_n16_rejected"
+    },
+    {
+      "id": "CH-T003-N17",
+      "statement": "Every binary and archive SHALL be explicitly bounded and safely classified; undecodable, encrypted, duplicate, traversing, linked, nested, oversized, or ambiguous content SHALL fail closed.",
+      "accepted_test_id": "test_n17_accepted",
+      "rejected_test_id": "test_n17_rejected"
+    },
+    {
+      "id": "CH-T003-N18",
+      "statement": "Every claim and surface identifier SHALL be sorted, unique, and bidirectionally reconciled; a dangling claim-to-surface or surface-to-claim reference SHALL fail closed.",
+      "accepted_test_id": "test_n18_accepted",
+      "rejected_test_id": "test_n18_rejected"
+    },
+    {
+      "id": "CH-T003-N19",
+      "statement": "The F outcome SHALL narrow exactly CL-PUBLICATION-EVIDENCE-PRIMITIVE-01 and SHALL keep every prior active, removed, and non-claimed claim in its prior partition.",
+      "accepted_test_id": "test_n19_accepted",
+      "rejected_test_id": "test_n19_rejected"
+    },
+    {
+      "id": "CH-T003-N20",
+      "statement": "The registered verifier SHALL accept only the adjacent signed F, I, C, and D subjects and SHALL emit one exact canonical PASS record.",
+      "accepted_test_id": "test_n20_accepted",
+      "rejected_test_id": "test_n20_rejected"
+    }
+  ],
+  "lead_approval": {
+    "kind": "AUTOMATED_NON_HUMAN_LEAD_SUPPORT",
+    "human": false,
+    "external_authority": false,
+    "freeze_packet_sha256": "2825a73bec3b1537d95e626915cc9d49246c3e051610cd76cb23225e3f190656",
+    "effective_on": "SIGNED_F_COMMIT_CONTAINING_EXACT_PREIMPLEMENTATION_PACKET"
+  },
+  "mandatory_counterfactuals": [
+    {
+      "id": "CH-T003-CF01",
+      "statement": "valid syntax with contradictory semantics",
+      "accepted_test_id": "test_cf01_accepted",
+      "rejected_test_id": "test_cf01_rejected"
+    },
+    {
+      "id": "CH-T003-CF02",
+      "statement": "authenticated but unauthorized producer",
+      "accepted_test_id": "test_cf02_accepted",
+      "rejected_test_id": "test_cf02_rejected"
+    },
+    {
+      "id": "CH-T003-CF03",
+      "statement": "stale yet correctly signed data",
+      "accepted_test_id": "test_cf03_accepted",
+      "rejected_test_id": "test_cf03_rejected"
+    },
+    {
+      "id": "CH-T003-CF04",
+      "statement": "correct version string with wrong contract/algorithm digest",
+      "accepted_test_id": "test_cf04_accepted",
+      "rejected_test_id": "test_cf04_rejected"
+    },
+    {
+      "id": "CH-T003-CF05",
+      "statement": "clean synthetic result under nonrepresentative distribution",
+      "accepted_test_id": "test_cf05_accepted",
+      "rejected_test_id": "test_cf05_rejected"
+    },
+    {
+      "id": "CH-T003-CF06",
+      "statement": "timeout or capacity exhaustion followed by convenience fallback",
+      "accepted_test_id": "test_cf06_accepted",
+      "rejected_test_id": "test_cf06_rejected"
+    },
+    {
+      "id": "CH-T003-CF07",
+      "statement": "feature unification activating a privileged/experimental path",
+      "accepted_test_id": "test_cf07_accepted",
+      "rejected_test_id": "test_cf07_rejected"
+    },
+    {
+      "id": "CH-T003-CF08",
+      "statement": "partial migration accepted through default values",
+      "accepted_test_id": "test_cf08_accepted",
+      "rejected_test_id": "test_cf08_rejected"
+    },
+    {
+      "id": "CH-T003-CF09",
+      "statement": "crash between decision/output and durable evidence",
+      "accepted_test_id": "test_cf09_accepted",
+      "rejected_test_id": "test_cf09_rejected"
+    },
+    {
+      "id": "CH-T003-CF10",
+      "statement": "simple but odd input unlikely to resemble training examples",
+      "accepted_test_id": "test_cf10_accepted",
+      "rejected_test_id": "test_cf10_rejected"
+    }
+  ],
+  "combined_attack_matrix": [
+    {
+      "id": "CH-T003-CA01",
+      "statement": "valid signature plus stale epoch or wrong route",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N03",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E01",
+        "CH-T003-E03"
+      ],
+      "accepted_test_id": "test_cf01_accepted",
+      "rejected_test_id": "test_cf01_rejected"
+    },
+    {
+      "id": "CH-T003-CA02",
+      "statement": "authenticated peer plus oversized payload and expensive logging",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N04",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E02",
+        "CH-T003-E03"
+      ],
+      "accepted_test_id": "test_cf02_accepted",
+      "rejected_test_id": "test_cf02_rejected"
+    },
+    {
+      "id": "CH-T003-CA03",
+      "statement": "valid schema plus contradictory semantics",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N05",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03"
+      ],
+      "accepted_test_id": "test_cf03_accepted",
+      "rejected_test_id": "test_cf03_rejected"
+    },
+    {
+      "id": "CH-T003-CA04",
+      "statement": "green unit tests plus divergent generated binding",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N06",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E04"
+      ],
+      "accepted_test_id": "test_cf04_accepted",
+      "rejected_test_id": "test_cf04_rejected"
+    },
+    {
+      "id": "CH-T003-CA05",
+      "statement": "nominal statistic plus missing lifecycle/projection evidence",
+      "disposition": "NOT_APPLICABLE",
+      "rationale": "CH-T003 records offline inventory and claim scope and does not perform this runtime operation.",
+      "falsifier": "A CH-T003 implementation path begins performing the described runtime or statistical operation.",
+      "control_ids": [
+        "CH-T003-N07",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E05"
+      ],
+      "accepted_test_id": null,
+      "rejected_test_id": null
+    },
+    {
+      "id": "CH-T003-CA06",
+      "statement": "ALLOW then crash before/after publication and restart",
+      "disposition": "NOT_APPLICABLE",
+      "rationale": "CH-T003 records offline inventory and claim scope and does not perform this runtime operation.",
+      "falsifier": "A CH-T003 implementation path begins performing the described runtime or statistical operation.",
+      "control_ids": [
+        "CH-T003-N08",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E06"
+      ],
+      "accepted_test_id": null,
+      "rejected_test_id": null
+    },
+    {
+      "id": "CH-T003-CA07",
+      "statement": "matching package version plus wrong algorithm/contract digest",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N09",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E07"
+      ],
+      "accepted_test_id": "test_cf07_accepted",
+      "rejected_test_id": "test_cf07_rejected"
+    },
+    {
+      "id": "CH-T003-CA08",
+      "statement": "timeout or optional-component loss plus convenience fallback",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N10",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E08"
+      ],
+      "accepted_test_id": "test_cf08_accepted",
+      "rejected_test_id": "test_cf08_rejected"
+    },
+    {
+      "id": "CH-T003-CA09",
+      "statement": "correct local ACL file plus wrong real router",
+      "disposition": "NOT_APPLICABLE",
+      "rationale": "CH-T003 records offline inventory and claim scope and does not perform this runtime operation.",
+      "falsifier": "A CH-T003 implementation path begins performing the described runtime or statistical operation.",
+      "control_ids": [
+        "CH-T003-N11",
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E09"
+      ],
+      "accepted_test_id": null,
+      "rejected_test_id": null
+    },
+    {
+      "id": "CH-T003-CA10",
+      "statement": "synthetic success plus representative-distribution failure",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N12"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E10"
+      ],
+      "accepted_test_id": "test_cf10_accepted",
+      "rejected_test_id": "test_cf10_rejected"
+    },
+    {
+      "id": "CH-T003-CA11",
+      "statement": "canonical payload plus noncanonical signing bytes",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N12",
+        "CH-T003-N13"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E11"
+      ],
+      "accepted_test_id": "test_cf01_accepted",
+      "rejected_test_id": "test_cf01_rejected"
+    },
+    {
+      "id": "CH-T003-CA12",
+      "statement": "feature unification plus privileged adapter",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N12",
+        "CH-T003-N14"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E12"
+      ],
+      "accepted_test_id": "test_cf02_accepted",
+      "rejected_test_id": "test_cf02_rejected"
+    },
+    {
+      "id": "CH-T003-CA13",
+      "statement": "partial migration plus legacy default",
+      "disposition": "APPLICABLE",
+      "rationale": "The exact inventory, lifecycle, and evidence bindings reject this combined mismatch.",
+      "falsifier": null,
+      "control_ids": [
+        "CH-T003-N12",
+        "CH-T003-N15"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E13"
+      ],
+      "accepted_test_id": "test_cf03_accepted",
+      "rejected_test_id": "test_cf03_rejected"
+    },
+    {
+      "id": "CH-T003-CA14",
+      "statement": "clock rollback plus apparently valid TTL/lease",
+      "disposition": "NOT_APPLICABLE",
+      "rationale": "CH-T003 records offline inventory and claim scope and does not perform this runtime operation.",
+      "falsifier": "A CH-T003 implementation path begins performing the described runtime or statistical operation.",
+      "control_ids": [
+        "CH-T003-N12",
+        "CH-T003-N16"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E13"
+      ],
+      "accepted_test_id": null,
+      "rejected_test_id": null
+    },
+    {
+      "id": "CH-T003-CA15",
+      "statement": "cancellation request plus already-selected event and duplicate effect",
+      "disposition": "NOT_APPLICABLE",
+      "rationale": "CH-T003 records offline inventory and claim scope and does not perform this runtime operation.",
+      "falsifier": "A CH-T003 implementation path begins performing the described runtime or statistical operation.",
+      "control_ids": [
+        "CH-T003-N12",
+        "CH-T003-N17"
+      ],
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E13"
+      ],
+      "accepted_test_id": null,
+      "rejected_test_id": null
+    }
+  ],
+  "handoff_command_mapping": [
+    {
+      "id": "HC01",
+      "source_command": "python repo_work/check_frozen_head.py --expected 9cf56e149a105026b072c9073d7e87b93103966e",
+      "disposition": "SATISFIED_BY_RETAINED_SIGNED_ARTIFACT",
+      "replacement_commands": [
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/verify-current-audit.py --repo ."
+      ],
+      "evidence_ids": [
+        "CH-T003-E06",
+        "CH-T003-E08"
+      ],
+      "task_boundary": "CH-T000",
+      "rationale": "The exact prior signed task artifact is retained and re-bound by CH-T003 composition evidence."
+    },
+    {
+      "id": "HC02",
+      "source_command": "python repo_work/audit_tracked_files.py --repo . --out audit/generated",
+      "disposition": "SATISFIED_BY_RETAINED_SIGNED_ARTIFACT",
+      "replacement_commands": [
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/current-file-review-ledger.py verify --repo . --source-commit SIGNED_CH_T001_F_COMMIT --implementation-commit SIGNED_CH_T001_I_COMMIT --ignored-policy reject --ledger audit/generated/FILE_REVIEW_LEDGER.csv"
+      ],
+      "evidence_ids": [
+        "CH-T003-E06",
+        "CH-T003-E08"
+      ],
+      "task_boundary": "CH-T001",
+      "rationale": "The exact prior signed task artifact is retained and re-bound by CH-T003 composition evidence."
+    },
+    {
+      "id": "HC03",
+      "source_command": "python repo_work/make_review_packets.py audit/generated/FILE_REVIEW_LEDGER.csv --lanes 3",
+      "disposition": "SATISFIED_BY_RETAINED_SIGNED_ARTIFACT",
+      "replacement_commands": [
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/current-file-review-packets.py render --repo . --implementation-commit SIGNED_I_COMMIT --ledger audit/generated/FILE_REVIEW_LEDGER.csv --overlay audit/generated/CH-T002_FILE_REVIEW_OVERLAY.json --output-dir RETAINED_PACKET_DIRECTORY --reviewer-registry release/0.9.0/current-head/tasks/ch-t002/e0002/freeze.json",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/current-file-review-packets.py verify --repo . --implementation-commit SIGNED_I_COMMIT --ledger audit/generated/FILE_REVIEW_LEDGER.csv --overlay audit/generated/CH-T002_FILE_REVIEW_OVERLAY.json --output-dir RETAINED_PACKET_DIRECTORY --reviewer-registry release/0.9.0/current-head/tasks/ch-t002/e0002/freeze.json",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/tasks/ch-t002/e0002/test_verify.py",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/tasks/ch-t002/e0002/test_verify.py -k reject",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/tasks/ch-t002/e0002/test_verify.py -k technique_",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/tasks/ch-t002/e0002/verify.py --repo . --freeze-commit SIGNED_F_COMMIT --implementation-commit SIGNED_I_COMMIT --inventory-only",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/test_current_file_review_packets.py"
+      ],
+      "evidence_ids": [
+        "CH-T003-E06",
+        "CH-T003-E08"
+      ],
+      "task_boundary": "CH-T002",
+      "rationale": "The exact prior signed task artifact is retained and re-bound by CH-T003 composition evidence."
+    },
+    {
+      "id": "HC04",
+      "source_command": "python repo_work/scan_claim_language.py --repo . --out audit/generated/CLAIM_LANGUAGE.json",
+      "disposition": "SUPERSEDED_BY_STRONGER_BOUND_EQUIVALENT",
+      "replacement_commands": [
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/current-public-surface-inventory.py verify --repo . --implementation-commit SIGNED_I_COMMIT",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/tasks/ch-t003/e0001/test_verify.py",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/tasks/ch-t003/e0001/verify.py --repo . --freeze-commit SIGNED_F_COMMIT --implementation-commit SIGNED_I_COMMIT --qualification-commit SIGNED_C_COMMIT --activation-commit SIGNED_D_COMMIT --current-commit SIGNED_D_COMMIT",
+        "/opt/homebrew/bin/python3.14 -B -I -P tools/release/test_current_public_surface_inventory.py"
+      ],
+      "evidence_ids": [
+        "CH-T003-E02",
+        "CH-T003-E03",
+        "CH-T003-E09",
+        "CH-T003-E10",
+        "CH-T003-E11"
+      ],
+      "task_boundary": "CH-T003",
+      "rationale": "The replacement commands scan every conservative public surface, verify typed declarations and claim tiers, and run independent lifecycle checks."
+    }
+  ],
+  "threat_model": [
+    {
+      "threat_id": "CH-T003-TH01",
+      "asset_or_claim": "public-surface completeness",
+      "actor": "generated patch",
+      "preconditions": "ability to alter one candidate input or retained artifact",
+      "sequence": "omit one public file while preserving category totals",
+      "trust_boundary": "exact signed Git objects and retained raw evidence versus derived inventory claims",
+      "observable_symptoms": "path, digest, count, state, chronology, or authority mismatch",
+      "worst_consequence": "a reader accepts a public-surface or claim tier that the exact evidence does not support",
+      "preventive_controls": [
+        "CH-T003-N03",
+        "CH-T003-N12"
+      ],
+      "detective_controls": [
+        "CH-T003-N04",
+        "CH-T003-N20"
+      ],
+      "recovery": "stop qualification, restore the exact prior activated state, correct the record, and start a new signed epoch if F changed",
+      "tests": [
+        "test_n03_rejected"
+      ],
+      "evidence": [
+        "CH-T003-E03",
+        "CH-T003-E06"
+      ],
+      "residual_risk": "deterministic inventory proves bounded repository facts and does not establish later external state or operational fitness",
+      "claim_impact": "the task remains NO_GO and the affected inventory assertion fails closed",
+      "owner": "CH-T003"
+    },
+    {
+      "threat_id": "CH-T003-TH02",
+      "asset_or_claim": "claim-tier truth",
+      "actor": "documentation editor",
+      "preconditions": "ability to alter one candidate input or retained artifact",
+      "sequence": "label a repository-proven claim as release qualified",
+      "trust_boundary": "exact signed Git objects and retained raw evidence versus derived inventory claims",
+      "observable_symptoms": "path, digest, count, state, chronology, or authority mismatch",
+      "worst_consequence": "a reader accepts a public-surface or claim tier that the exact evidence does not support",
+      "preventive_controls": [
+        "CH-T003-N06",
+        "CH-T003-N12"
+      ],
+      "detective_controls": [
+        "CH-T003-N07",
+        "CH-T003-N20"
+      ],
+      "recovery": "stop qualification, restore the exact prior activated state, correct the record, and start a new signed epoch if F changed",
+      "tests": [
+        "test_n09_rejected"
+      ],
+      "evidence": [
+        "CH-T003-E03",
+        "CH-T003-E06"
+      ],
+      "residual_risk": "deterministic inventory proves bounded repository facts and does not establish later external state or operational fitness",
+      "claim_impact": "the task remains NO_GO and the affected inventory assertion fails closed",
+      "owner": "CH-T003"
+    },
+    {
+      "threat_id": "CH-T003-TH03",
+      "asset_or_claim": "GitHub metadata identity",
+      "actor": "stale metadata cache",
+      "preconditions": "ability to alter one candidate input or retained artifact",
+      "sequence": "substitute another owner or a nonempty release list",
+      "trust_boundary": "exact signed Git objects and retained raw evidence versus derived inventory claims",
+      "observable_symptoms": "path, digest, count, state, chronology, or authority mismatch",
+      "worst_consequence": "a reader accepts a public-surface or claim tier that the exact evidence does not support",
+      "preventive_controls": [
+        "CH-T003-N10",
+        "CH-T003-N12"
+      ],
+      "detective_controls": [
+        "CH-T003-N12",
+        "CH-T003-N20"
+      ],
+      "recovery": "stop qualification, restore the exact prior activated state, correct the record, and start a new signed epoch if F changed",
+      "tests": [
+        "test_n12_rejected"
+      ],
+      "evidence": [
+        "CH-T003-E03",
+        "CH-T003-E06"
+      ],
+      "residual_risk": "deterministic inventory proves bounded repository facts and does not establish later external state or operational fitness",
+      "claim_impact": "the task remains NO_GO and the affected inventory assertion fails closed",
+      "owner": "CH-T003"
+    },
+    {
+      "threat_id": "CH-T003-TH04",
+      "asset_or_claim": "review-ledger composition",
+      "actor": "scope-laundering change",
+      "preconditions": "ability to alter one candidate input or retained artifact",
+      "sequence": "claim that new files were retroactive CH-T002 subjects",
+      "trust_boundary": "exact signed Git objects and retained raw evidence versus derived inventory claims",
+      "observable_symptoms": "path, digest, count, state, chronology, or authority mismatch",
+      "worst_consequence": "a reader accepts a public-surface or claim tier that the exact evidence does not support",
+      "preventive_controls": [
+        "CH-T003-N11",
+        "CH-T003-N12"
+      ],
+      "detective_controls": [
+        "CH-T003-N15",
+        "CH-T003-N20"
+      ],
+      "recovery": "stop qualification, restore the exact prior activated state, correct the record, and start a new signed epoch if F changed",
+      "tests": [
+        "test_n15_rejected"
+      ],
+      "evidence": [
+        "CH-T003-E03",
+        "CH-T003-E06"
+      ],
+      "residual_risk": "deterministic inventory proves bounded repository facts and does not establish later external state or operational fitness",
+      "claim_impact": "the task remains NO_GO and the affected inventory assertion fails closed",
+      "owner": "CH-T003"
+    },
+    {
+      "threat_id": "CH-T003-TH05",
+      "asset_or_claim": "bounded parser behavior",
+      "actor": "hostile repository input",
+      "preconditions": "ability to alter one candidate input or retained artifact",
+      "sequence": "supply duplicate keys, deep JSON, invalid UTF-8, or an unsafe path",
+      "trust_boundary": "exact signed Git objects and retained raw evidence versus derived inventory claims",
+      "observable_symptoms": "path, digest, count, state, chronology, or authority mismatch",
+      "worst_consequence": "a reader accepts a public-surface or claim tier that the exact evidence does not support",
+      "preventive_controls": [
+        "CH-T003-N12"
+      ],
+      "detective_controls": [
+        "CH-T003-N17",
+        "CH-T003-N20"
+      ],
+      "recovery": "stop qualification, restore the exact prior activated state, correct the record, and start a new signed epoch if F changed",
+      "tests": [
+        "test_cf06_rejected"
+      ],
+      "evidence": [
+        "CH-T003-E03",
+        "CH-T003-E06"
+      ],
+      "residual_risk": "deterministic inventory proves bounded repository facts and does not establish later external state or operational fitness",
+      "claim_impact": "the task remains NO_GO and the affected inventory assertion fails closed",
+      "owner": "CH-T003"
+    },
+    {
+      "threat_id": "CH-T003-TH06",
+      "asset_or_claim": "release authority boundary",
+      "actor": "misleading release automation",
+      "preconditions": "ability to alter one candidate input or retained artifact",
+      "sequence": "treat inventory PASS as authority for a tag, archive, or deployment",
+      "trust_boundary": "exact signed Git objects and retained raw evidence versus derived inventory claims",
+      "observable_symptoms": "path, digest, count, state, chronology, or authority mismatch",
+      "worst_consequence": "a reader accepts a public-surface or claim tier that the exact evidence does not support",
+      "preventive_controls": [
+        "CH-T003-N12",
+        "CH-T003-N16"
+      ],
+      "detective_controls": [
+        "CH-T003-N19",
+        "CH-T003-N20"
+      ],
+      "recovery": "stop qualification, restore the exact prior activated state, correct the record, and start a new signed epoch if F changed",
+      "tests": [
+        "test_n16_rejected"
+      ],
+      "evidence": [
+        "CH-T003-E03",
+        "CH-T003-E06"
+      ],
+      "residual_risk": "deterministic inventory proves bounded repository facts and does not establish later external state or operational fitness",
+      "claim_impact": "the task remains NO_GO and the affected inventory assertion fails closed",
+      "owner": "CH-T003"
+    }
+  ],
+  "misuse_resistant_interfaces": [
+    {
+      "id": "CH-T003-MI01",
+      "surface": "claim-tier ledger",
+      "disposition": "APPLICABLE",
+      "justification": "This surface can overstate scope unless it is bound to exact lifecycle objects and non-expansive claim semantics.",
+      "falsifier": null,
+      "correct_example": "Use the exact claim row and active-state partition.",
+      "wrong_example": "Treat PROVEN as release qualified.",
+      "exact_refusal_or_error": "CLAIM_TIER",
+      "non_proofs": [
+        "inventory verification is not release qualification, named-human review, deployment approval, or field validation"
+      ],
+      "evidence_tier": "bounded signed-repository technical verification",
+      "evidence_ids": [
+        "CH-T003-E07",
+        "CH-T003-E10"
+      ],
+      "invariant_ids": [
+        "CH-T003-N06",
+        "CH-T003-N07"
+      ],
+      "test_ids": [
+        "test_n09_accepted",
+        "test_n09_rejected"
+      ]
+    },
+    {
+      "id": "CH-T003-MI02",
+      "surface": "github metadata capture",
+      "disposition": "APPLICABLE",
+      "justification": "This surface can overstate scope unless it is bound to exact lifecycle objects and non-expansive claim semantics.",
+      "falsifier": null,
+      "correct_example": "Retain exact raw API body identity (byte count and SHA-256) for non-sensitive responses, canonical sanitized documents for sensitive responses, and normalized zero tag/release counts.",
+      "wrong_example": "Trust an uncaptured dashboard view or later cache.",
+      "exact_refusal_or_error": "GITHUB_CAPTURE_BINDING",
+      "non_proofs": [
+        "inventory verification is not release qualification, named-human review, deployment approval, or field validation"
+      ],
+      "evidence_tier": "bounded signed-repository technical verification",
+      "evidence_ids": [
+        "CH-T003-E06",
+        "CH-T003-E11"
+      ],
+      "invariant_ids": [
+        "CH-T003-N10",
+        "CH-T003-N12"
+      ],
+      "test_ids": [
+        "test_n12_accepted",
+        "test_n12_rejected"
+      ]
+    },
+    {
+      "id": "CH-T003-MI03",
+      "surface": "public-surface inventory",
+      "disposition": "APPLICABLE",
+      "justification": "This surface can overstate scope unless it is bound to exact lifecycle objects and non-expansive claim semantics.",
+      "falsifier": null,
+      "correct_example": "Inventory every conservative public file and typed declaration at signed I.",
+      "wrong_example": "Inventory only obvious Rust exports or documentation.",
+      "exact_refusal_or_error": "PUBLIC_INVENTORY",
+      "non_proofs": [
+        "inventory verification is not release qualification, named-human review, deployment approval, or field validation"
+      ],
+      "evidence_tier": "bounded signed-repository technical verification",
+      "evidence_ids": [
+        "CH-T003-E03",
+        "CH-T003-E09"
+      ],
+      "invariant_ids": [
+        "CH-T003-N03",
+        "CH-T003-N05"
+      ],
+      "test_ids": [
+        "test_n03_accepted",
+        "test_n03_rejected"
+      ]
+    },
+    {
+      "id": "CH-T003-MI04",
+      "surface": "registered CH-T003 lifecycle verifier",
+      "disposition": "APPLICABLE",
+      "justification": "This surface can overstate scope unless it is bound to exact lifecycle objects and non-expansive claim semantics.",
+      "falsifier": null,
+      "correct_example": "Run only with exact signed F, I, C, D, and current commits.",
+      "wrong_example": "Run against worktree bytes or infer release authority from PASS.",
+      "exact_refusal_or_error": "LIFECYCLE_ADJACENCY",
+      "non_proofs": [
+        "inventory verification is not release qualification, named-human review, deployment approval, or field validation"
+      ],
+      "evidence_tier": "bounded signed-repository technical verification",
+      "evidence_ids": [
+        "CH-T003-E02",
+        "CH-T003-E06"
+      ],
+      "invariant_ids": [
+        "CH-T003-N16",
+        "CH-T003-N20"
+      ],
+      "test_ids": [
+        "test_n20_accepted",
+        "test_n20_rejected"
+      ]
+    }
+  ],
+  "qualification_evidence_requirements": [
+    {
+      "id": "CH-T003-E01",
+      "kind": "FILE_REVIEW_TRACEABILITY",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/file-review-traceability.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E02",
+      "kind": "COMPLETE_COMMAND_LOG",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/complete-command-log.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E03",
+      "kind": "POSITIVE_NEGATIVE_VECTORS",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/positive-negative-vectors.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E04",
+      "kind": "COVERAGE_FUZZ_MUTATION_MODEL",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/coverage-fuzz-mutation-model.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E05",
+      "kind": "RESOURCE_TIME_MAXIMA",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/resource-time-maxima.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E06",
+      "kind": "EXACT_IDENTITIES_CHECKSUMS",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/exact-identities-checksums.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E07",
+      "kind": "CLAIM_MIGRATION_DISPOSITION",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/claim-migration-disposition.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E08",
+      "kind": "COMPLETE_REVIEWED_ASSIGNED_FILE_LEDGER",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/complete-reviewed-assigned-file-ledger.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E09",
+      "kind": "PUBLIC_SURFACE_INVENTORY",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/public-surface-inventory.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E10",
+      "kind": "CLAIM_TIER_LEDGER",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/claim-tier-ledger.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E11",
+      "kind": "GITHUB_METADATA_CAPTURE",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/github-metadata-capture.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E12",
+      "kind": "POST_IMPLEMENTATION_GITHUB_HEAD_CAPTURE",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/post-implementation-github-head-capture.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-E13",
+      "kind": "COMPILER_RESOLVED_RUST_API",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/evidence/compiler-resolved-rust-api.json",
+      "max_bytes": 4194304
+    }
+  ],
+  "review_requirements": [
+    {
+      "id": "CH-T003-R01",
+      "kind": "INDEPENDENT_REVIEW",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lane-01-independent-review.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-R02",
+      "kind": "INDEPENDENT_REVIEW_LANE_02",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lane-02-independent-review.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-R03",
+      "kind": "INDEPENDENT_REVIEW_LANE_03",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lane-03-independent-review.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-R04",
+      "kind": "LEAD_IMPLEMENTATION_REVIEW",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lead-implementation-review.json",
+      "max_bytes": 4194304
+    }
+  ],
+  "reviewer_registry": [
+    {
+      "requirement_id": "CH-T003-R01",
+      "kind": "INDEPENDENT_REVIEW",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lane-01-independent-review.json",
+      "reviewer": {
+        "name": "CH-T003 Independent Automated Reviewer Lane 01",
+        "principal": "ch-t003-e0001-lane-01@local.invalid",
+        "classification": "INDEPENDENT_AUTOMATED",
+        "organization": "Independent Automated Technical Review"
+      },
+      "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDHTgA+c6LucuvuT8LQEwU9gTY4qDC0hRM5+QYkHSxX2",
+      "key_fingerprint": "SHA256:8kSalXtsyhMmX/ytaJsSc2e0B5XG+IaXasGlGFR8FSk",
+      "trust_basis": "SOURCE_SIGNER_ASSERTED_KEY_FROZEN_IN_SIGNED_F"
+    },
+    {
+      "requirement_id": "CH-T003-R02",
+      "kind": "INDEPENDENT_REVIEW_LANE_02",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lane-02-independent-review.json",
+      "reviewer": {
+        "name": "CH-T003 Independent Automated Reviewer Lane 02",
+        "principal": "ch-t003-e0001-lane-02@local.invalid",
+        "classification": "INDEPENDENT_AUTOMATED",
+        "organization": "Independent Automated Technical Review"
+      },
+      "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOYK0C9wLiiJo0bBiKVkilKPq4rncVyoBpP8/NRM9Xpi",
+      "key_fingerprint": "SHA256:Yt+LRRcJlTdu9wuaDUz0sKHs44Yv3FB5CcuH3lBYwaQ",
+      "trust_basis": "SOURCE_SIGNER_ASSERTED_KEY_FROZEN_IN_SIGNED_F"
+    },
+    {
+      "requirement_id": "CH-T003-R03",
+      "kind": "INDEPENDENT_REVIEW_LANE_03",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lane-03-independent-review.json",
+      "reviewer": {
+        "name": "CH-T003 Independent Automated Reviewer Lane 03",
+        "principal": "ch-t003-e0001-lane-03@local.invalid",
+        "classification": "INDEPENDENT_AUTOMATED",
+        "organization": "Independent Automated Technical Review"
+      },
+      "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ1yfcm6f9atBR79YKDiAff8GHAr6f1U2wyaVcgjhNQl",
+      "key_fingerprint": "SHA256:j3f6bfWe5MMpeg8bOJe6XgVDJ85Y0kU4kz/VxhB1pIo",
+      "trust_basis": "SOURCE_SIGNER_ASSERTED_KEY_FROZEN_IN_SIGNED_F"
+    },
+    {
+      "requirement_id": "CH-T003-R04",
+      "kind": "LEAD_IMPLEMENTATION_REVIEW",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/reviews/lead-implementation-review.json",
+      "reviewer": {
+        "name": "CH-T003 Automated Lead Support",
+        "principal": "ch-t003-e0001-automated-lead-support@local.invalid",
+        "classification": "AUTOMATED_LEAD_SUPPORT",
+        "organization": "Automated Technical Review"
+      },
+      "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILs3NZSnvIfAVcKu23eaA6uMRRfxP1q3ZlU1J4qjk/KX",
+      "key_fingerprint": "SHA256:3R2ZZPJE+uRR1jzGddEQB5cCPYGFpj9AP9wHeFOEBg4",
+      "trust_basis": "SOURCE_SIGNER_ASSERTED_KEY_FROZEN_IN_SIGNED_F"
+    }
+  ],
+  "activation_evidence_requirements": [
+    {
+      "id": "CH-T003-A01",
+      "kind": "SUBSYSTEM_GATE",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/activation-evidence/subsystem-gate.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-A02",
+      "kind": "WAVE_GATE",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/activation-evidence/wave-gate.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-A03",
+      "kind": "FULL_LOCKED_CI",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/activation-evidence/full-locked-ci.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-A04",
+      "kind": "DOWNSTREAM_CONFORMANCE_DISPOSITION",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/activation-evidence/downstream-conformance-disposition.json",
+      "max_bytes": 4194304
+    },
+    {
+      "id": "CH-T003-A05",
+      "kind": "FULL_LOCKED_CI_LOG_ARCHIVE",
+      "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/activation-evidence/full-locked-ci-attempt-logs.zip",
+      "max_bytes": 2097152
+    }
+  ],
+  "lens_questions": [
+    {
+      "id": "L01",
+      "name": "Claims and scope",
+      "question": "Can a reader infer more than the exact evidence tier supports? Separate implemented, verified, validated, deployment-qualified, field-validated, and not-claimed."
+    },
+    {
+      "id": "L02",
+      "name": "First-principles semantics",
+      "question": "Are inputs, state, transitions, outputs, invariants, units, and failure states explicit rather than implied by names?"
+    },
+    {
+      "id": "L03",
+      "name": "Mathematics and statistics",
+      "question": "Are definitions, assumptions, estimands, finite-sample behavior, multiplicity, uncertainty, calibration, and failure regions correct and explicit?"
+    },
+    {
+      "id": "L04",
+      "name": "Type and state integrity",
+      "question": "Can invalid combinations be constructed through safe APIs, deserialization, FFI, feature flags, defaults, or migration?"
+    },
+    {
+      "id": "L05",
+      "name": "Time, ordering, and replay",
+      "question": "Are clock domains, freshness, deadlines, sessions, epochs, generations, sequence numbers, duplicates, restart, and rollover unambiguous?"
+    },
+    {
+      "id": "L06",
+      "name": "Identity and provenance",
+      "question": "Can every result, command, model, dataset, scene, schema, configuration, build, and evidence artifact be traced immutably?"
+    },
+    {
+      "id": "L07",
+      "name": "Authentication and cryptography",
+      "question": "Are canonical bytes, domain separation, algorithms, identities, rotation, revocation, downgrade resistance, and failure semantics complete?"
+    },
+    {
+      "id": "L08",
+      "name": "Authority and safety",
+      "question": "Who may observe, advise, intend, authorize, publish, apply, and confirm? Can any fallback or optional component widen authority?"
+    },
+    {
+      "id": "L09",
+      "name": "Hostile inputs and parsers",
+      "question": "What happens with duplicates, unknown fields, unsafe integers, NaN/Inf, Unicode ambiguity, malformed nesting, path tricks, and contradictory metadata?"
+    },
+    {
+      "id": "L10",
+      "name": "Resource and denial-of-service bounds",
+      "question": "Are bytes, allocations, dimensions, states, queues, retries, threads, log volume, GPU/CPU work, and serialization bounded before expensive work?"
+    },
+    {
+      "id": "L11",
+      "name": "Concurrency and lifecycle",
+      "question": "Are initialization, callback ownership, races, cancellation, selected events, cleanup, crash consistency, and shutdown fully specified?"
+    },
+    {
+      "id": "L12",
+      "name": "Determinism and reproducibility",
+      "question": "Can independent clean machines reproduce code generation, builds, fixtures, simulations, proofs, benchmarks, evidence, and archives?"
+    },
+    {
+      "id": "L13",
+      "name": "API, FFI, and SemVer",
+      "question": "Is the stable surface minimal and are panic, ownership, allocation, thread safety, features, MSRV/runtime, and compatibility explicit?"
+    },
+    {
+      "id": "L14",
+      "name": "Schema, wire, and language parity",
+      "question": "Is there one normative semantic source and do all languages/encodings accept and reject the same corpus?"
+    },
+    {
+      "id": "L15",
+      "name": "Configuration and deployment",
+      "question": "Can invalid profiles start? Are paths, secrets, permissions, ACLs, certificates, environments, startup order, and rollback safe?"
+    },
+    {
+      "id": "L16",
+      "name": "Observability and forensics",
+      "question": "Can disabled, unavailable, stale, incompatible, insufficient, anomalous, denied, and internal-fault states be distinguished without leaking secrets?"
+    },
+    {
+      "id": "L17",
+      "name": "Verification and evidence quality",
+      "question": "Does each claim have the right proof: theorem, model, property, fuzz, mutation, clean-room, real-router, statistical, or physical evidence?"
+    },
+    {
+      "id": "L18",
+      "name": "Ecosystem composition",
+      "question": "Are pid-rs, NCP, Engram, Prisoma, Crebain, Galadriel, Haldir, ROS, and external authority relationships explicit and acyclic?"
+    },
+    {
+      "id": "L19",
+      "name": "Human factors and governance",
+      "question": "Are naming, docs, examples, runbooks, review roles, incident response, support, deprecation, and withdrawal usable under stress?"
+    },
+    {
+      "id": "L20",
+      "name": "Counterfactual and quirky-case review",
+      "question": "How would a malicious peer, rushed operator, odd-but-simple dataset, future maintainer, or AI-generated patch falsify the intended claim?"
+    }
+  ],
+  "resource_budgets": {
+    "json_bytes": 262144,
+    "decompressed_evidence_bytes": 4194304,
+    "protocol_path_bytes": 240,
+    "verifier_output_bytes_per_stream": 65536,
+    "verifier_seconds": 10
+  },
+  "verification_triggers": {
+    "paths": [
+      "audit/generated/CH-T003_CLAIM_TIER_LEDGER.json",
+      "audit/generated/CH-T003_FILE_REVIEW_OVERLAY.json",
+      "audit/generated/CH-T003_GITHUB_METADATA.json",
+      "audit/generated/CH-T003_LEDGER_COMPOSITION.json",
+      "audit/generated/CH-T003_PUBLIC_SURFACE_INVENTORY.json",
+      "audit/generated/CLAIM_LANGUAGE.json",
+      "docs/CLAIM-LEDGER.md",
+      "tools/release/current-public-surface-inventory.py",
+      "tools/release/test_current_public_surface_inventory.py"
+    ],
+    "roots": []
+  },
+  "claim_outcomes": [
+    {
+      "id": "CH-T003-O01-PUBLIC-CLAIM-NARROWED",
+      "claim_disposition": "PUBLIC_CLAIMS_NARROWED",
+      "overall_status": "NO_GO",
+      "active_claims": [
+        "CL-ALLOW-HONEST-01",
+        "CL-AUTHORITY-MODEL-01",
+        "CL-CBOR-01",
+        "CL-CHALLENGE-01",
+        "CL-CI-01",
+        "CL-CI-02",
+        "CL-CONFIG-01",
+        "CL-COSE-01",
+        "CL-DECISION-ID-01",
+        "CL-DEPLOYMENT-PACKAGE-01",
+        "CL-DEPLOYMENT-PRIMITIVE-01",
+        "CL-DURABLE-PRIMITIVE-01",
+        "CL-DURABLE-STARTUP-DEV-01",
+        "CL-DUTY-01",
+        "CL-ERROR-01",
+        "CL-EVIDENCE-01",
+        "CL-EVIDENCE-MANAGER-01",
+        "CL-EVIDENCE-SEGMENT-PRIMITIVE-01",
+        "CL-FAULT-STATE-01",
+        "CL-FIXEDPOINT-01",
+        "CL-FORMAL-01",
+        "CL-GATE-JOURNAL-BINDING-01",
+        "CL-GATE-JOURNAL-REPLAY-01",
+        "CL-GATE-LIFECYCLE-01",
+        "CL-GATE-MEDIATION-01",
+        "CL-HARDWARE-01",
+        "CL-IDENTITY-01",
+        "CL-INTEROP-01",
+        "CL-LEASE-USAGE-01",
+        "CL-LIVE-ACTIVATION-01",
+        "CL-LIVE-CONTROL-PLANE-01",
+        "CL-LIVE-GATE-DEV-BIND-01",
+        "CL-LIVE-INGRESS-BINDING-01",
+        "CL-LIVE-TRANSPORT-01",
+        "CL-LOCAL-ANCHOR-DEV-01",
+        "CL-NCP-COMPATIBILITY-01",
+        "CL-NCP-MODEL-01",
+        "CL-NCP-REAL-01",
+        "CL-PHASE-01",
+        "CL-PRODUCTION-01",
+        "CL-PROTECTION-MODEL-01",
+        "CL-PUBLICATION-EVIDENCE-PRIMITIVE-01",
+        "CL-PUBLICATION-STATE-01",
+        "CL-RECEIPT-01",
+        "CL-SLEW-01",
+        "CL-STATE-DIGEST-01",
+        "CL-STATE-INGRESS-01",
+        "CL-TIMING-01",
+        "CL-TRANSPORT-BOUNDARY-01",
+        "CL-TRUST-01"
+      ],
+      "release_qualified_claims": [],
+      "removed_claims": [],
+      "non_claimed_claims": [
+        "CL-BACKEND-01",
+        "CL-DURABLE-01"
+      ],
+      "narrowed_claims": [
+        "CL-PUBLICATION-EVIDENCE-PRIMITIVE-01"
+      ],
+      "limitations": [
+        "Automated technical review does not constitute named-human or external review.",
+        "Compiler-resolved Rust API output is bound to cargo-public-api 0.52.0 and Rust 1.96.0; the external API tool is version-pinned for this evidence but is not a workspace dependency.",
+        "GitHub metadata is an exact bounded capture; the I record does not prove later GitHub state, and C must bind hosted main to the exact I commit.",
+        "No release, deployment, publication, tag, GitHub release, DOI, Zenodo record, or archive authority is granted.",
+        "The claim-row change narrows one repository claim to VERIFIED and explicitly excludes VALIDATED, DEPLOYMENT_QUALIFIED, FIELD_VALIDATED, and release-qualified interpretations.",
+        "The package version 0.1.0-experimental, author Sepahead, and publish=false disagree with the planned 0.9.0 author metadata and remain visible for successor correction."
+      ],
+      "public_surfaces": [
+        "docs/CLAIM-LEDGER.md"
+      ],
+      "migration": {
+        "required": true,
+        "paths": [
+          "audit/generated/CH-T003_CLAIM_TIER_LEDGER.json",
+          "audit/generated/CH-T003_FILE_REVIEW_OVERLAY.json",
+          "audit/generated/CH-T003_GITHUB_METADATA.json",
+          "audit/generated/CH-T003_LEDGER_COMPOSITION.json",
+          "audit/generated/CH-T003_PUBLIC_SURFACE_INVENTORY.json",
+          "audit/generated/CLAIM_LANGUAGE.json",
+          "docs/CLAIM-LEDGER.md",
+          "tools/release/current-public-surface-inventory.py",
+          "tools/release/test_current_public_surface_inventory.py"
+        ],
+        "disposition": "ADD_EXACT_PUBLIC_SURFACE_AND_CLAIM_TIER_RECORDS_AND_NARROW_ONE_AMBIGUOUS_CLAIM_ROW"
+      },
+      "rollback": {
+        "strategy": "RESTORE_EXACT_PRIOR_ACTIVATED_TREE_ENTRIES",
+        "paths": [
+          "audit/generated/CH-T003_CLAIM_TIER_LEDGER.json",
+          "audit/generated/CH-T003_FILE_REVIEW_OVERLAY.json",
+          "audit/generated/CH-T003_GITHUB_METADATA.json",
+          "audit/generated/CH-T003_LEDGER_COMPOSITION.json",
+          "audit/generated/CH-T003_PUBLIC_SURFACE_INVENTORY.json",
+          "audit/generated/CLAIM_LANGUAGE.json",
+          "docs/CLAIM-LEDGER.md",
+          "tools/release/current-public-surface-inventory.py",
+          "tools/release/test_current_public_surface_inventory.py"
+        ],
+        "verification": "GIT_MODE_TYPE_AND_OBJECT_IDENTITY"
+      }
+    }
+  ],
+  "qualification_path": "release/0.9.0/current-head/tasks/ch-t003/e0001/qualification.json",
+  "activation_path": "release/0.9.0/current-head/tasks/ch-t003/e0001/activation.json",
+  "verifier_receipt_path": "release/0.9.0/current-head/tasks/ch-t003/e0001/verifier-receipt.json"
+}

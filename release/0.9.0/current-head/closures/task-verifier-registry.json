@@ -157,6 +157,41 @@
       "activation_path": "release/0.9.0/current-head/tasks/ch-t002/e0002/activation.json",
       "verifier_receipt_path": "release/0.9.0/current-head/tasks/ch-t002/e0002/verifier-receipt.json",
       "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_REGISTRATION_FREEZE_AND_GATES"
+    },
+    {
+      "task_id": "CH-T003",
+      "epoch": 1,
+      "verifier": {
+        "path": "tools/release/tasks/ch-t003/e0001/verify.py",
+        "sha256": "7e145bc1b7148aea77a8d410ac32c4d2d798adb541fa6a3ced637a61b9ca4917",
+        "bytes": 255996,
+        "lines": 1758,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "7942605b759a79848ee6390117bd3a11400f48e5"
+      },
+      "tests": {
+        "path": "tools/release/tasks/ch-t003/e0001/test_verify.py",
+        "sha256": "d63a35f8ddd29ca286de9cd161d3ff24221e8aa689985807bd053e2b8ebcc5e5",
+        "bytes": 177677,
+        "lines": 4669,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "9a1a6469ca18d975a32f96964e2ac1f850c85996"
+      },
+      "freeze_contract": {
+        "path": "release/0.9.0/current-head/tasks/ch-t003/e0001/freeze.json",
+        "sha256": "b0aa38d964731f95395aed5ab82a16abb8abb5f6045fd09713208d17386678ca",
+        "bytes": 67395,
+        "lines": 1546,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "ff449f56b6e51e1328076894b154b9ecb9a35e16"
+      },
+      "qualification_path": "release/0.9.0/current-head/tasks/ch-t003/e0001/qualification.json",
+      "activation_path": "release/0.9.0/current-head/tasks/ch-t003/e0001/activation.json",
+      "verifier_receipt_path": "release/0.9.0/current-head/tasks/ch-t003/e0001/verifier-receipt.json",
+      "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_REGISTRATION_FREEZE_AND_GATES"
     }
   ],
   "release_authority_boundary": {
