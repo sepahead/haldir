@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0.0",
+  "record_id": "R0003-E01",
+  "kind": "VERIFIER_DEFECT_EVIDENCE",
+  "task_id": "CH-T003",
+  "epoch": 1,
+  "release_target": "0.9.0",
+  "author": {
+    "name": "Sepehr Mahmoudian",
+    "email": "sepmhn@gmail.com"
+  },
+  "persistent_identifier": null,
+  "frozen_subject": {
+    "freeze_commit": "d1079acc9c13448bdc6eb97c9fa199df07507b25",
+    "freeze_tree": "e794e5551eae7eac696519d1d5db5ed7ec1c1855",
+    "implementation_commit": "367a1e5b7cee8b6fbe7aba5230197f964b3787d7",
+    "implementation_tree": "4e971dc533905bcc02d95e653495a3c70300ae5c",
+    "prior_activation_commit": "590ba767b32a27d9dd61a2462968306c1052434e"
+  },
+  "affected_files": [
+    {
+      "path": "tools/release/current-public-surface-inventory.py",
+      "sha256": "c3207fd7929ca595615a480c94d69da213210bfe070cb9845ac949da6123c21f",
+      "bytes": 211679,
+      "lines": 5837,
+      "git_mode": "100644",
+      "git_object_type": "blob",
+      "git_object_id": "a6eee7fab38a781b2d87c9b0dd8979e9dfa37088",
+      "function": "command"
+    },
+    {
+      "path": "tools/release/tasks/ch-t003/e0001/verify.py",
+      "sha256": "7e145bc1b7148aea77a8d410ac32c4d2d798adb541fa6a3ced637a61b9ca4917",
+      "bytes": 255996,
+      "lines": 1758,
+      "git_mode": "100644",
+      "git_object_type": "blob",
+      "git_object_id": "7942605b759a79848ee6390117bd3a11400f48e5",
+      "function": "run_bounded"
+    }
+  ],
+  "defect": {
+    "code": "POST_REAP_PROCESS_GROUP_SIGNAL_CAN_TARGET_REUSED_IDENTITY",
+    "severity": "P0_RELEASE_BLOCKER",
+    "summary": "Both bounded runners can reap the direct child and then send a signal to the numerical process-group ID that was derived from the former child PID.",
+    "unsafe_sequence": [
+      "The runner starts the direct child as a new process-group leader.",
+      "The runner calls poll or wait and can reap that leader.",
+      "The kernel can reuse the released numerical PID as an unrelated process-group ID.",
+      "The runner later calls killpg with the released number."
+    ],
+    "setsid_case": "A descendant can start a new session and retain an inherited output pipe. The direct leader can then exit. The original process group can cease to exist while the runner still waits for pipe closure. A later cleanup signal can use a recycled group ID.",
+    "normal_completion_case": "The success path waits for and reaps the leader before it calls killpg. This creates a process-group identity reuse window even when no descendant retains a pipe.",
+    "violated_contract": "A bounded verifier must not signal a process that does not belong to its invocation.",
+    "consequence": "CH-T003 epoch 1 cannot provide trustworthy bounded-process evidence or a trustworthy registered-verifier result.",
+    "qualification_status": "NOT_STARTED",
+    "public_claim_change": "NONE"
+  },
+  "decisive_observations": [
+    {
+      "id": "O01",
+      "source": "tools/release/current-public-surface-inventory.py",
+      "observation": "The command function calls poll while it drains pipes, calls wait after the drain, and then calls killpg with process.pid."
+    },
+    {
+      "id": "O02",
+      "source": "tools/release/tasks/ch-t003/e0001/verify.py",
+      "observation": "The run_bounded function has the same poll, wait, and later killpg order."
+    },
+    {
+      "id": "O03",
+      "source": "release/0.9.0/current-head/tasks/ch-t003/e0001/freeze.json",
+      "observation": "The epoch 1 verifier and implementation plan are immutable F-stage values. An I-stage amendment cannot replace the registered verifier."
+    },
+    {
+      "id": "O04",
+      "source": "tools/release/verify-current-audit.py",
+      "observation": "The signed protocol supports an INFLIGHT_ABORT at stage I. It restores every product path to the last verified snapshot and deactivates the defective registration."
+    }
+  ],
+  "required_resolution": {
+    "transition": "INFLIGHT_ABORT_THEN_MONOTONIC_EPOCH_REFREEZE",
+    "steps": [
+      "Append this verifier-defect record and deactivate CH-T003:e0001 without a history rewrite.",
+      "Restore all nine epoch 1 implementation paths from the CH-T002 activation snapshot.",
+      "Create CH-T003 epoch 2 with a registered runner that keeps the direct child identity reserved until process-group cleanup is complete.",
+      "Use the same identity-preserving order in the product runner.",
+      "Add tests that reject poll-before-cleanup, wait-before-cleanup, post-reap group signaling, retained same-group descendants, and unrelated-process signaling.",
+      "State that process-group cleanup cannot stop a descendant that starts a new session. Use the file and network sandbox to limit that residual case. Do not qualify host-resource containment or availability.",
+      "Run all signed F, I, C, and D checks for epoch 2 before any CH-T003 activation."
+    ]
+  },
+  "review_boundary": {
+    "automated_technical_discovery": true,
+    "named_human_review": false,
+    "external_review": false,
+    "release_approval": false
+  },
+  "release_authority": {
+    "overall_status": "NO_GO",
+    "deployment_authorized": false,
+    "publication_authorized": false,
+    "tag_or_release_authorized": false,
+    "doi_or_zenodo_authorized": false
+  }
+}

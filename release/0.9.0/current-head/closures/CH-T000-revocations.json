@@ -141,6 +141,78 @@
         "git_object_id": "4cbf14812f92be0cb9d2a78b66f4f0c44a5914a3"
       },
       "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_INFLIGHT_ABORT_AND_ROLLBACK"
+    },
+    {
+      "record_id": "R0003",
+      "record_type": "INFLIGHT_ABORT",
+      "author": {
+        "name": "Sepehr Mahmoudian",
+        "email": "sepmhn@gmail.com"
+      },
+      "target_task": "CH-T003",
+      "target_epoch": 1,
+      "reason": "VERIFIER_DEFECT",
+      "prior_head": "367a1e5b7cee8b6fbe7aba5230197f964b3787d7",
+      "previous_verified_prefix": 3,
+      "retained_prefix": 3,
+      "invalidated_epochs": [],
+      "deactivated_registrations": [
+        "CH-T003:e0001"
+      ],
+      "aborted_candidate": {
+        "task_id": "CH-T003",
+        "epoch": 1,
+        "stage": "I",
+        "freeze_commit": "d1079acc9c13448bdc6eb97c9fa199df07507b25",
+        "implementation_commit": "367a1e5b7cee8b6fbe7aba5230197f964b3787d7",
+        "qualification_commit": null
+      },
+      "rollback_source": "590ba767b32a27d9dd61a2462968306c1052434e",
+      "restored_product_paths": [
+        "audit/generated/CH-T003_CLAIM_TIER_LEDGER.json",
+        "audit/generated/CH-T003_FILE_REVIEW_OVERLAY.json",
+        "audit/generated/CH-T003_GITHUB_METADATA.json",
+        "audit/generated/CH-T003_LEDGER_COMPOSITION.json",
+        "audit/generated/CH-T003_PUBLIC_SURFACE_INVENTORY.json",
+        "audit/generated/CLAIM_LANGUAGE.json",
+        "docs/CLAIM-LEDGER.md",
+        "tools/release/current-public-surface-inventory.py",
+        "tools/release/test_current_public_surface_inventory.py"
+      ],
+      "cause_evidence_records": [
+        {
+          "id": "R0003-E01",
+          "kind": "VERIFIER_DEFECT_EVIDENCE",
+          "file": {
+            "path": "release/0.9.0/current-head/tasks/revocations/R0003/process-group-identity-reuse.json",
+            "sha256": "d314a242ddf4b877ed8dfd5d8dd1560efe8c405568eae689cc7eb56df45e6267",
+            "bytes": 5213,
+            "lines": 106,
+            "git_mode": "100644",
+            "git_object_type": "blob",
+            "git_object_id": "9f8ba1b5615326deacebae40b708856ffa6f7667"
+          }
+        }
+      ],
+      "requirements_record": {
+        "path": "release/0.9.0/current-head/requirements.json",
+        "sha256": "0963891fbfb1a174972f22b2d6e253df8531506b92bb2fd3f46708f8fff782e7",
+        "bytes": 189708,
+        "lines": 4702,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "da3bf2edd60efb4071d3dbb63f39b9bdfcd1176e"
+      },
+      "active_claims_record": {
+        "path": "release/0.9.0/current-head/closures/active-claims.json",
+        "sha256": "aaedcf26501b9023f3cbe898a86cb2ad82e53a850c1dfd060a30ef3f8d70b367",
+        "bytes": 35029,
+        "lines": 771,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "6567c8695b6b7ae99ff6092feee1b8a21a0d47b9"
+      },
+      "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_INFLIGHT_ABORT_AND_ROLLBACK"
     }
   ],
   "human_review_boundary": {
