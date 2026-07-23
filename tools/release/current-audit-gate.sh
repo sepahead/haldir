@@ -10,5 +10,6 @@ PYTHON3="$(builtin type -P python3)"
 readonly PYTHON3
 
 "$PYTHON3" -I tools/release/test_verify_current_audit.py
+"$PYTHON3" -I -W error::ResourceWarning tools/release/test_verify_current_audit_fr_0002.py
 "$PYTHON3" -I tools/release/test_current_audit_resource_profile.py
 "$PYTHON3" -I tools/release/verify-current-audit.py

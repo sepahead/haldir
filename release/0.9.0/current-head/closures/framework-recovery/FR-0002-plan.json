@@ -1,0 +1,1129 @@
+{
+  "activation_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0002-activation.json",
+  "activation_requirements": [
+    {
+      "id": "FR-0002-A01",
+      "kind": "QUALIFICATION_HOSTED_CI",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-q-ci.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-q-ci-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-q-ci.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0002-A02",
+      "kind": "QUALIFICATION_HOSTED_FORMAL",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-q-formal.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-q-formal-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-q-formal.log.gz"
+      ]
+    }
+  ],
+  "assurance_boundary": {
+    "historical_protocol_execution_revalidated_under_epoch_3": true,
+    "human_review_performed": false,
+    "independent_human_review_performed": false,
+    "prior_ledger_and_claim_judgments_changed": false,
+    "same_key_detached_signature_is_independent_approval": false
+  },
+  "author": {
+    "email": "sepmhn@gmail.com",
+    "name": "Sepehr Mahmoudian"
+  },
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "qualification_trust_root_changed": true,
+    "release_authority_changed": false,
+    "runtime_authority_changed": false,
+    "tag_authorized": false,
+    "zenodo_authorized": false
+  },
+  "changed_core_files": [
+    {
+      "new": {
+        "bytes": 711179,
+        "git_mode": "100644",
+        "git_object_id": "a031a9c663ea3e9bb981f19e42c8dfa0a83772d7",
+        "git_object_type": "blob",
+        "lines": 18127,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "5e49d62c00e33361b34a5d9652a61ce12426a43482d731a41cc8de8283c1bad3"
+      },
+      "old": {
+        "bytes": 536370,
+        "git_mode": "100644",
+        "git_object_id": "9859e73a86689382b33cc4ceac6c92decc551e40",
+        "git_object_type": "blob",
+        "lines": 13561,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "5c9356c08790996ff2a42e8139519b4b930a41473fd7a021a726ac0558c85dce"
+      },
+      "status": "M"
+    },
+    {
+      "new": {
+        "bytes": 164569,
+        "git_mode": "100644",
+        "git_object_id": "5bce6a15e43ca25ab1bcb45618386fb5db083ad2",
+        "git_object_type": "blob",
+        "lines": 4483,
+        "path": "tools/release/test_verify_current_audit_fr_0002.py",
+        "sha256": "a0d785ecd741e809faaa959cf3d20aa01cb90d8fd03ca5716680092d2d383e7c"
+      },
+      "old": null,
+      "status": "A"
+    },
+    {
+      "new": {
+        "bytes": 576,
+        "git_mode": "100755",
+        "git_object_id": "5255d9b4ff685231cf86bd30368a71f26e2d69fa",
+        "git_object_type": "blob",
+        "lines": 15,
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "09aff5096b384f8e85766d6cc9fe0f1ac9f1d0495b7aeae1276254e0a251b216"
+      },
+      "old": {
+        "bytes": 485,
+        "git_mode": "100755",
+        "git_object_id": "b6dfb981751812d95486671138364ccbe5973d11",
+        "git_object_type": "blob",
+        "lines": 14,
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "0201235128c932b54babe6c9fd03fe5f0977916a05bda07e10fc065009b6bd05"
+      },
+      "status": "M"
+    }
+  ],
+  "code_diff": {
+    "base": "ab37e9fae7414981628eaa0dad185408f3b9323a",
+    "name_status_sha256": "0dc4df12da8f37469ec63021a6908168c22f924b2e8ad55e4d19d558ff823bdc",
+    "numstat_sha256": "fe62e70a3fdd542368a2b79c4bd2aba5b8fdfd76f4c48547314a91013c0752a3",
+    "patch_bytes": 431734,
+    "patch_command_template": [
+      "/usr/bin/git",
+      "-c",
+      "diff.algorithm=myers",
+      "diff",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--no-renames",
+      "--no-color",
+      "--src-prefix=a/",
+      "--dst-prefix=b/",
+      "--binary",
+      "--full-index",
+      "ab37e9fae7414981628eaa0dad185408f3b9323a..<REPAIR_COMMIT>",
+      "--",
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit_fr_0002.py",
+      "tools/release/current-audit-gate.sh"
+    ],
+    "patch_lines": 11067,
+    "patch_sha256": "0436cab08116c7e4dbff4f23e66079a4fc1735342d500ad9dcae3c748de0bced",
+    "paths": [
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit_fr_0002.py",
+      "tools/release/current-audit-gate.sh"
+    ],
+    "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+  },
+  "correction": {
+    "abandonment_rule": "If bounded reap cannot release a live leader, abandon all signalling authority and return a cleanup error.",
+    "different_uid_residual": "EPERM does not prove cleanup of a different-UID group member.",
+    "eperm_rule": "Accept EPERM only on Darwin when the leader exited before cleanup and both capture pipes reached EOF before cleanup.",
+    "esrch_rule": "Treat ESRCH as an absent owned group.",
+    "exit_observation": "WAITID_WNOWAIT_PREFERRED_WITH_BOUNDED_WAITPID_WNOHANG_FALLBACK_AFTER_FINAL_KILL",
+    "group_rule": "Signal the owned group before the direct child is reaped.",
+    "identity_rule": "Keep the direct child unreaped until the final group signal.",
+    "mandatory_order": [
+      "SIGTERM_GROUP_ATTEMPT",
+      "FINAL_SIGKILL_GROUP_ATTEMPT",
+      "REAP_STARTED",
+      "BOUNDED_WAITPID_WNOHANG",
+      "NO_LATER_GROUP_SIGNAL"
+    ],
+    "other_error_rule": "Fail closed for every other signal error.",
+    "signal_rule": "Do not send a process-group signal after reap.",
+    "supported_host_family": "POSIX_LINUX_AND_MACOS_ONLY",
+    "terminal_residual_codes": [
+      "STOP_TIMEOUT",
+      "SIGNALLING_AUTHORITY_ABANDONED_WITH_LIVE_LEADER"
+    ]
+  },
+  "created_at_utc": "2026-07-23T15:51:19Z",
+  "defect": {
+    "affected_functions": [
+      "tools/release/verify-current-audit.py::_stop_bounded_process",
+      "tools/release/verify-current-audit.py::_run_bounded"
+    ],
+    "cause_record": {
+      "bytes": 5213,
+      "git_mode": "100644",
+      "git_object_id": "9f8ba1b5615326deacebae40b708856ffa6f7667",
+      "git_object_type": "blob",
+      "lines": 106,
+      "path": "release/0.9.0/current-head/tasks/revocations/R0003/process-group-identity-reuse.json",
+      "sha256": "d314a242ddf4b877ed8dfd5d8dd1560efe8c405568eae689cc7eb56df45e6267"
+    },
+    "code": "POST_REAP_PROCESS_GROUP_SIGNAL_CAN_TARGET_REUSED_IDENTITY",
+    "severity": "P0_RELEASE_BLOCKER",
+    "unsafe_order": [
+      "The runner reaps the direct child.",
+      "The kernel can reuse the released number.",
+      "The runner sends a signal to that number as a process-group ID."
+    ]
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0002-v1",
+    "principal": "sepmhn@gmail.com",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDuKh9+1+qdjbO6MP/NHD/ai3JtumsKPiz2KBx3lQwLI",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAAkaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDAyLXYx\nAAAAAAAAAAZzaGE1MTIAAABTAAAAC3NzaC1lZDI1NTE5AAAAQKii3G52+f47BbEJA93+4l\n0NuAA3/HAdYUxU6xZqr5jTH8hpRKvpOzdq82KufH3g9qHUibv3UYLnxAjGbxB9nwA=\n-----END SSH SIGNATURE-----\n"
+  },
+  "deterministic_parent_reproduction": {
+    "capture": "MERGED_STDOUT_STDERR_RAW_BYTES",
+    "command": [
+      "python3",
+      "-I",
+      "tools/release/test_verify_current_audit_fr_0002.py",
+      "FrameworkRecovery2Tests.test_framework_recovery_2_parent_runner_reproduces_post_reap_signal"
+    ],
+    "evidence_paths": [
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-d-reproduction.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-d-reproduction.log.gz"
+    ],
+    "expected_exit_status": 0,
+    "expected_result": "PARENT_DEFECT_REPRODUCED",
+    "parent_commit": "ab37e9fae7414981628eaa0dad185408f3b9323a",
+    "required_event": "SIGKILL_GROUP_SIGNAL_AFTER_WAIT",
+    "structured_evidence_id": "FR-0002-E01",
+    "test_id": "FrameworkRecovery2Tests.test_framework_recovery_2_parent_runner_reproduces_post_reap_signal"
+  },
+  "framework_epoch": {
+    "next": 3,
+    "prior": 2
+  },
+  "history_binding": {
+    "ch_t003_epoch_1_abort_retained": true,
+    "inflight": null,
+    "parent_first_parent_position": 21,
+    "repair_first_parent_position": 22,
+    "t000_through_t002_state_changed": false,
+    "verified_prefix": 3
+  },
+  "parent_commit": "ab37e9fae7414981628eaa0dad185408f3b9323a",
+  "parent_tree": "2b35f6a8309820bf0e08c43121a80ee5632767be",
+  "persistent_identifier": null,
+  "preserved_state_records": [
+    {
+      "bytes": 189708,
+      "git_mode": "100644",
+      "git_object_id": "da3bf2edd60efb4071d3dbb63f39b9bdfcd1176e",
+      "git_object_type": "blob",
+      "lines": 4702,
+      "path": "release/0.9.0/current-head/requirements.json",
+      "sha256": "0963891fbfb1a174972f22b2d6e253df8531506b92bb2fd3f46708f8fff782e7"
+    },
+    {
+      "bytes": 35029,
+      "git_mode": "100644",
+      "git_object_id": "6567c8695b6b7ae99ff6092feee1b8a21a0d47b9",
+      "git_object_type": "blob",
+      "lines": 771,
+      "path": "release/0.9.0/current-head/closures/active-claims.json",
+      "sha256": "aaedcf26501b9023f3cbe898a86cb2ad82e53a850c1dfd060a30ef3f8d70b367"
+    },
+    {
+      "bytes": 8689,
+      "git_mode": "100644",
+      "git_object_id": "537e1171867ea2771bacfb7f57558d1776bffd0b",
+      "git_object_type": "blob",
+      "lines": 205,
+      "path": "release/0.9.0/current-head/closures/task-verifier-registry.json",
+      "sha256": "52b32984a9bfee338caecee166bc47095a1c908cf6263624e892d0db3dfbf271"
+    },
+    {
+      "bytes": 8687,
+      "git_mode": "100644",
+      "git_object_id": "491b97e67f509786ca6e8ddedd2506092ba82c11",
+      "git_object_type": "blob",
+      "lines": 233,
+      "path": "release/0.9.0/current-head/closures/CH-T000-revocations.json",
+      "sha256": "82e7f69d76bd3a316cdea1cb3766bc5ce382915d7b21dad59fc8945ae5bd72a2"
+    },
+    {
+      "bytes": 204291,
+      "git_mode": "100644",
+      "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+      "git_object_type": "blob",
+      "lines": 4738,
+      "path": "tools/release/test_verify_current_audit.py",
+      "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+    },
+    {
+      "bytes": 5213,
+      "git_mode": "100644",
+      "git_object_id": "9f8ba1b5615326deacebae40b708856ffa6f7667",
+      "git_object_type": "blob",
+      "lines": 106,
+      "path": "release/0.9.0/current-head/tasks/revocations/R0003/process-group-identity-reuse.json",
+      "sha256": "d314a242ddf4b877ed8dfd5d8dd1560efe8c405568eae689cc7eb56df45e6267"
+    },
+    {
+      "bytes": 12679,
+      "git_mode": "100644",
+      "git_object_id": "d2e7a1205010e2165ce73e126bb0a1412860c2a1",
+      "git_object_type": "blob",
+      "lines": 320,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-plan.json",
+      "sha256": "1e8b6eb3b80162ef6458163ff88da6c6a9c3bf2bc07e9d3b71ccbd4990a391fb"
+    },
+    {
+      "bytes": 14440,
+      "git_mode": "100644",
+      "git_object_id": "0617c3e881025762676ac8966e92bdebe0148127",
+      "git_object_type": "blob",
+      "lines": 373,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json",
+      "sha256": "ecc64353b5952a76f59afda5add29e1770574a13a9db1e5eeae28f593f9283c2"
+    },
+    {
+      "bytes": 2641,
+      "git_mode": "100644",
+      "git_object_id": "3804cb277795f9925bf0ffbd7ae30bc3500bf2fd",
+      "git_object_type": "blob",
+      "lines": 89,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json",
+      "sha256": "ec279c081e02583ae47f35ac3c4992853d53f18d6a319c12eff120be7023be4f"
+    },
+    {
+      "bytes": 7708,
+      "git_mode": "100644",
+      "git_object_id": "f6fc4747dbc69704919d74c91bccf4c045e446c4",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz",
+      "sha256": "79f12396914db0aba4b66b003428866f2b2ea561c4c6ba06ee7d20fdba1f8dc3"
+    },
+    {
+      "bytes": 2287,
+      "git_mode": "100644",
+      "git_object_id": "d7ae907c9ba943ba2d2c107805adf30e8ad618de",
+      "git_object_type": "blob",
+      "lines": 78,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json",
+      "sha256": "f04ce45b06e12c2b9010dc0d3a145a89de7de042f1c92ba0b3e957eed467edc5"
+    },
+    {
+      "bytes": 18074,
+      "git_mode": "100644",
+      "git_object_id": "15110a02c6eec8c513eaaa39cb10c54b2a1f7472",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz",
+      "sha256": "e37c8917c7b6f9199b401a7e47b7105b48b0e8842a5467d9bc5e2b9cb55d6255"
+    },
+    {
+      "bytes": 1020,
+      "git_mode": "100644",
+      "git_object_id": "9429ab79f94c57b0009b51738c7023051b01906a",
+      "git_object_type": "blob",
+      "lines": 33,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json",
+      "sha256": "893e8aa1eb78f7d446e9aa546befced46d82c9ecdfcc5e20232b0f87b431bb4e"
+    },
+    {
+      "bytes": 692,
+      "git_mode": "100644",
+      "git_object_id": "d963cdae35ea71af2f2e06bfff1a07ca3e302bfd",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz",
+      "sha256": "9f6253f38e1a1f61e70a610d698eba5811ad23cf1828a7864a6479a407db10a5"
+    },
+    {
+      "bytes": 1890,
+      "git_mode": "100644",
+      "git_object_id": "81a13abdacdd41db45747c7dc7838d2dcaf18f3b",
+      "git_object_type": "blob",
+      "lines": 69,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json",
+      "sha256": "f28d35892e41e72b284ce675de1c8cab87eeeb0b16832e6364d904fdf1ba5de1"
+    },
+    {
+      "bytes": 23795,
+      "git_mode": "100644",
+      "git_object_id": "46f511f184bcd5600b94c57eadb3eb5f7f35914d",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz",
+      "sha256": "8f42767c35df2b71d4ea2dec89097b53546a3600f2689bab112f91af9dbf9a02"
+    },
+    {
+      "bytes": 4976,
+      "git_mode": "100644",
+      "git_object_id": "f87378eed9e91673fd8b971ac08a90f9e81b587f",
+      "git_object_type": "blob",
+      "lines": 127,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json",
+      "sha256": "acd1004ca05c0e3fcbbeb9b4a9bdcb2d57dc9d708a59e21c0eb8fc4e5313ad39"
+    },
+    {
+      "bytes": 6483,
+      "git_mode": "100644",
+      "git_object_id": "7daad15a4691fae96f84e5db821d41da4f078774",
+      "git_object_type": "blob",
+      "lines": 139,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json",
+      "sha256": "e93e121b2806dabdd336e65f80843efd6631a1480ca8cc9aeee48ead114296fc"
+    },
+    {
+      "bytes": 17663,
+      "git_mode": "100644",
+      "git_object_id": "05b80ded01ac7615133106ff182d68560721fc76",
+      "git_object_type": "blob",
+      "lines": 439,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-activation.json",
+      "sha256": "fe9e65b1f28249e4f92a35518eeb83289c1581fb18389625cb8d7b5633be3503"
+    }
+  ],
+  "prior_framework_commit": "e747747418f94371348450e6b7205291c1441216",
+  "prior_recovery": {
+    "activation_commit": "2167b0b1b8580298b8474e676893f97292c3d7c7",
+    "qualification_commit": "00e453b4a19c96c890655336605b043dbb29838f",
+    "recovery_id": "FR-0001",
+    "repair_commit": "dde6512d615f54fac26b2728a05b9c53dca68666",
+    "state": "ACTIVE"
+  },
+  "qualification_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0002-qualification.json",
+  "qualification_requirements": [
+    {
+      "id": "FR-0002-E01",
+      "kind": "DETERMINISTIC_PARENT_DEFECT_REPRODUCTION",
+      "max_bytes": [
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-d-reproduction.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-d-reproduction.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0002-E02",
+      "kind": "REPAIR_HOSTED_CI",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-ci.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-ci-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-ci.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0002-E03",
+      "kind": "REPAIR_HOSTED_FORMAL",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-formal.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-formal-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-formal.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0002-E04",
+      "kind": "REPAIR_LOCAL_VALIDATION",
+      "max_bytes": [
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-local.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0002-r-local.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0002-R01",
+      "kind": "INTERNAL_AUTOMATED_DESIGN_REVIEW",
+      "max_bytes": [
+        131072
+      ],
+      "paths": [
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0002-design.json"
+      ]
+    },
+    {
+      "id": "FR-0002-R02",
+      "kind": "INTERNAL_AUTOMATED_IMPLEMENTATION_REVIEW",
+      "max_bytes": [
+        131072
+      ],
+      "paths": [
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0002-implementation.json"
+      ]
+    }
+  ],
+  "recovery_id": "FR-0002",
+  "release_target": "0.9.0",
+  "repair_subject": "release: repair bounded process-group identity handling",
+  "residual_boundary": {
+    "accepted_darwin_eperm_proves_no_signalable_member": false,
+    "different_uid_group_member_cleanup_proved": false,
+    "host_availability_claimed": false,
+    "host_process_cleanup_proved": false,
+    "host_resource_containment_claimed": false,
+    "registered_container_network": "NONE",
+    "registered_container_root_filesystem": "READ_ONLY",
+    "setsid_descendant_contained_by_host_process_group": false,
+    "setsid_inherited_pipe_result": "FAIL_CLOSED",
+    "untrusted_registered_code_runs_in_container": true
+  },
+  "schema_version": "1.0.0",
+  "source_retention": {
+    "allowed_changes": {
+      "import_replacement": {
+        "new": {
+          "ast_sha256": "567bfd8741b5c1754b0d1838b547143b4f04a26275ce98937689a425962e33dc",
+          "kind": "Import",
+          "source_sha256": "385a620a3c2f63074dc133c9ca6e5d5983064ceb7f19c12881b2fecaf68f217b"
+        },
+        "old": {
+          "ast_sha256": "80f21c52b46d18d972ae93db225486a900db10799e9bdba98d07dbcc819ff502",
+          "kind": "Import",
+          "source_sha256": "90781f3efdcb4ec0fcc56cd2214ffbf3333758a8b7d36c672a661660246717df"
+        }
+      },
+      "modified_assignments": [
+        "FRAMEWORK_CORE_FROZEN_PATHS"
+      ],
+      "modified_definitions": [
+        "_run_bounded",
+        "_stop_bounded_process",
+        "_verify_forward_protocol_history",
+        "_verify_framework_history",
+        "_verify_post_activation_gate_retention"
+      ],
+      "new_assignments": [
+        "BOUNDED_PIPE_COALESCE_AFTER_BYTES",
+        "BOUNDED_PIPE_COALESCE_SECONDS",
+        "BOUNDED_PIPE_EOF_SETTLE_SECONDS",
+        "FRAMEWORK_RECOVERY_2_ACTIVATION_PATH",
+        "FRAMEWORK_RECOVERY_2_ACTIVATION_REQUIREMENTS",
+        "FRAMEWORK_RECOVERY_2_ACTIVATION_STATUSES",
+        "FRAMEWORK_RECOVERY_2_ACTIVATION_SUBJECT",
+        "FRAMEWORK_RECOVERY_2_CAPTURE_SCHEMA",
+        "FRAMEWORK_RECOVERY_2_CORE_PATHS",
+        "FRAMEWORK_RECOVERY_2_ID",
+        "FRAMEWORK_RECOVERY_2_PARENT",
+        "FRAMEWORK_RECOVERY_2_PARENT_TREE",
+        "FRAMEWORK_RECOVERY_2_PLAN_PATH",
+        "FRAMEWORK_RECOVERY_2_PRESERVED_PATHS",
+        "FRAMEWORK_RECOVERY_2_PRIOR_ACTIVATION",
+        "FRAMEWORK_RECOVERY_2_PRIOR_QUALIFICATION",
+        "FRAMEWORK_RECOVERY_2_QUALIFICATION_PATH",
+        "FRAMEWORK_RECOVERY_2_QUALIFICATION_REQUIREMENTS",
+        "FRAMEWORK_RECOVERY_2_QUALIFICATION_STATUSES",
+        "FRAMEWORK_RECOVERY_2_QUALIFICATION_SUBJECT",
+        "FRAMEWORK_RECOVERY_2_REPAIR_STATUSES",
+        "FRAMEWORK_RECOVERY_2_REQUIRED_TEST_IDS",
+        "FRAMEWORK_RECOVERY_2_SUBJECT",
+        "FRAMEWORK_RECOVERY_2_TEST_BYTES",
+        "FRAMEWORK_RECOVERY_2_TEST_PATH",
+        "FRAMEWORK_RECOVERY_2_TEST_SHA256"
+      ],
+      "new_definitions": [
+        "_BoundedProcessState",
+        "_bounded_darwin_eperm_is_acceptable",
+        "_bounded_process_exited_unreaped",
+        "_bounded_reap_signal_set",
+        "_framework_recovery_2_catalog_record",
+        "_framework_recovery_2_code_diff",
+        "_framework_recovery_2_decision",
+        "_framework_recovery_2_expected_activation",
+        "_framework_recovery_2_expected_gate_payload",
+        "_framework_recovery_2_expected_local_validation",
+        "_framework_recovery_2_expected_parent_reproduction",
+        "_framework_recovery_2_expected_plan",
+        "_framework_recovery_2_expected_qualification",
+        "_framework_recovery_2_expected_review",
+        "_framework_recovery_2_hosted_entry",
+        "_framework_recovery_2_local_commands",
+        "_framework_recovery_2_parent_reproduction_command",
+        "_framework_recovery_2_parent_reproduction_log",
+        "_framework_recovery_2_review_contracts",
+        "_framework_recovery_2_run_attempt_identity",
+        "_framework_recovery_2_source_index",
+        "_framework_recovery_2_source_retention_manifest",
+        "_framework_recovery_2_test_contract",
+        "_framework_recovery_2_transition_identity",
+        "_framework_recovery_2_validate_local_resource_profile",
+        "_framework_recovery_2_validate_test_source",
+        "_framework_recovery_2_verify_capture_operations",
+        "_framework_recovery_2_verify_ci_markers",
+        "_framework_recovery_2_verify_local_log",
+        "_framework_recovery_2_verify_parent_reproduction_log",
+        "_framework_recovery_2_verify_review_key_separation",
+        "_framework_recovery_2_verify_run_attempt_uniqueness",
+        "_framework_recovery_2_verify_stage_modes",
+        "_reap_bounded_process",
+        "_record_bounded_cleanup_error",
+        "_signal_bounded_process_group",
+        "_validate_framework_recovery_2_local_document",
+        "_validate_framework_recovery_2_parent_reproduction",
+        "_validate_framework_recovery_2_review",
+        "_verify_framework_recovery_2_activation",
+        "_verify_framework_recovery_2_history",
+        "_verify_framework_recovery_2_qualification",
+        "_verify_framework_recovery_2_repair",
+        "_verify_framework_recovery_transition",
+        "_wait_for_bounded_exit"
+      ],
+      "removed_definitions": [
+        "_process_group_exists"
+      ]
+    },
+    "new_assignment_records": {
+      "BOUNDED_PIPE_COALESCE_AFTER_BYTES": {
+        "ast_sha256": "cd2c3d5df0b1ab52bba55a1f648f8d04d6afe49f75afd3f53c0ca1077a52e463",
+        "kind": "Assign",
+        "source_sha256": "60276054d8eaeb68be7cd237ad5e3d66dee7bcec96f19e34f1c339750ad5e693"
+      },
+      "BOUNDED_PIPE_COALESCE_SECONDS": {
+        "ast_sha256": "62d550db5faddb8ac148b5f3abed8de37ffc4839cb9049c762064f72ad05b084",
+        "kind": "Assign",
+        "source_sha256": "b30a70e5f9d3c4836e7ed98e41ea1b4c353870b2b7eaee0d908a690f79c6c449"
+      },
+      "BOUNDED_PIPE_EOF_SETTLE_SECONDS": {
+        "ast_sha256": "acff9fdc48103da1e6f8306998bace37f0bc80bca1b56da20cf9b2ed29e023fb",
+        "kind": "Assign",
+        "source_sha256": "a733b6f0400b98776e0af6308d15a01b1979cfd6528d26c4f6650bc2dd72d517"
+      },
+      "FRAMEWORK_RECOVERY_2_ACTIVATION_PATH": {
+        "ast_sha256": "085fbed7d32497a98663bc65dcdff2e726c5bda4cb5f1a279c5488ca88347c49",
+        "kind": "Assign",
+        "source_sha256": "20042ed569a344416cbcd72470da0b2d7609ce28593bd32762d91972226c3962"
+      },
+      "FRAMEWORK_RECOVERY_2_ACTIVATION_REQUIREMENTS": {
+        "ast_sha256": "06e2d897a800ccc67a6f7ca15618297f7a1bf2e3a0a01f60f4e37d8cd6dfb9de",
+        "kind": "Assign",
+        "source_sha256": "ce05d759125f41383ceb2826d2dbfd0fc5e521c64f2e7f325dc06e60a3db020d"
+      },
+      "FRAMEWORK_RECOVERY_2_ACTIVATION_STATUSES": {
+        "ast_sha256": "f18731e9f2eafa00e53f7c1fb07b59ab89cde0d207f8857e4e2d0958be1937d3",
+        "kind": "Assign",
+        "source_sha256": "ba40564ffc09de3ba01cc7e9a83d3638e12cbaf92b8bbc0949797547113232ed"
+      },
+      "FRAMEWORK_RECOVERY_2_ACTIVATION_SUBJECT": {
+        "ast_sha256": "828af3efde744213cd61d0e22357e44b74f3d1b2f883a22caa315cef4dc2711d",
+        "kind": "Assign",
+        "source_sha256": "c2f03e2b9db76bda34e4192647e0d19cf2262a33fe8a5ed2795be88a6e02ddff"
+      },
+      "FRAMEWORK_RECOVERY_2_CAPTURE_SCHEMA": {
+        "ast_sha256": "d9ca4fdbc3f606f6fe73b6ce5b5d4504ca9696f4cefd9c2977b9803de2a279f1",
+        "kind": "Assign",
+        "source_sha256": "6456d773c99dfa5f0169fe8f5e2e55b54d96ba595d44d9ca3ccfaf423d79c3f4"
+      },
+      "FRAMEWORK_RECOVERY_2_CORE_PATHS": {
+        "ast_sha256": "635c90222491623ca102d8c5d1d370292d40f2f73424a696e83b40ffc5ea57ad",
+        "kind": "Assign",
+        "source_sha256": "2cc942f3da4e8a36070726f82aeca12f85bc4db69068d2a9616b8476e45c6c3b"
+      },
+      "FRAMEWORK_RECOVERY_2_ID": {
+        "ast_sha256": "dceea8f62feb5223eb388f8e8682a5d283b2199eb0d407b1d4ae0f9120fea0a2",
+        "kind": "Assign",
+        "source_sha256": "89df127935e0a29ce5959a058882ae799b2b2977772b57acab57ab5aa0954f3a"
+      },
+      "FRAMEWORK_RECOVERY_2_PARENT": {
+        "ast_sha256": "f1c82ed0d90f2159420f061ee58554211726a09fdbaa5bb7afe7b05c11404f35",
+        "kind": "Assign",
+        "source_sha256": "5c62238bc83f150a0de61f897e725d3bce1bfedfd55f2810183f1ba3fa6cc17b"
+      },
+      "FRAMEWORK_RECOVERY_2_PARENT_TREE": {
+        "ast_sha256": "3adc54f89cebd5782934cd5db8fa3c3602c555ae4294c6556674b7fc88129354",
+        "kind": "Assign",
+        "source_sha256": "955116d0872757bb134bd63e66131362a601cceabbad726505f83be47cf28408"
+      },
+      "FRAMEWORK_RECOVERY_2_PLAN_PATH": {
+        "ast_sha256": "0d31fceb83d50d89a8d7c9966546570677294bb6e895a8f9395165a050932444",
+        "kind": "Assign",
+        "source_sha256": "118e3815474e4a53ff40e46bfa155455d3aad6d9a4489cb8b9d26fef62ea56d4"
+      },
+      "FRAMEWORK_RECOVERY_2_PRESERVED_PATHS": {
+        "ast_sha256": "f36c7f2625a1744eca76fefecb95738fa3fb76923071fc8e0a4e77d7d5b89934",
+        "kind": "Assign",
+        "source_sha256": "f413e2dd1f59e7c8d7f504b6ff8e03f9f4dea238735e14d52d7ee2f7951c303c"
+      },
+      "FRAMEWORK_RECOVERY_2_PRIOR_ACTIVATION": {
+        "ast_sha256": "582b6159642d85c7a1067179b6331b9f1c5093b957a7683f91037f71c6d785d1",
+        "kind": "Assign",
+        "source_sha256": "b1bdb4280c1d4ed3e29bab9baba7cd87954cc92da5613ac6218c7ba99f2a16a1"
+      },
+      "FRAMEWORK_RECOVERY_2_PRIOR_QUALIFICATION": {
+        "ast_sha256": "f1bfa1871908e2749778aed3f2e397570aee8dfbab8d408ef6b37f5cfc1317bf",
+        "kind": "Assign",
+        "source_sha256": "e03f1c0b2e830e3ad0f3c62e16f3611cae553bda4d16c871e2b0bf56f11f6f1b"
+      },
+      "FRAMEWORK_RECOVERY_2_QUALIFICATION_PATH": {
+        "ast_sha256": "00a929c4ee69f5efd287431817e48ea1aaa7d0f447861d01ad1ed5d3570f7afa",
+        "kind": "Assign",
+        "source_sha256": "5cfdcd856f8059520ec23756ceaed8f5aebaad97b212391239d1d7979fec9bcd"
+      },
+      "FRAMEWORK_RECOVERY_2_QUALIFICATION_REQUIREMENTS": {
+        "ast_sha256": "6d3410058cf1cf2dca857ca54f10400ca7835054b8ce60555ec2229e772e6888",
+        "kind": "Assign",
+        "source_sha256": "5f54875beeb544bd5f5aadffe457163d38236105f8c5b202112a34670b1d9f0b"
+      },
+      "FRAMEWORK_RECOVERY_2_QUALIFICATION_STATUSES": {
+        "ast_sha256": "0fa623e9cd8a74da0b3e3d5dab4eef73363350bbc29c3322d96a66d493d21978",
+        "kind": "Assign",
+        "source_sha256": "992fff98afd965d1cfc30eea9d1909d590039970962c27852891a8c4cf9ddb64"
+      },
+      "FRAMEWORK_RECOVERY_2_QUALIFICATION_SUBJECT": {
+        "ast_sha256": "2af74e41e85f636ba1bb3121bf05ff5fbb768bf080617b1055dadd95d914d9fa",
+        "kind": "Assign",
+        "source_sha256": "e3e2dc0143f98ff43b5970634e8a225ef958aed13eed57e3e71296b6be60f15d"
+      },
+      "FRAMEWORK_RECOVERY_2_REPAIR_STATUSES": {
+        "ast_sha256": "9612b9c16b103f10e64fab3e259d543fd9777c342d8f9f80956ab22b237f2c9d",
+        "kind": "Assign",
+        "source_sha256": "e0c7b5aba397e8b3a5b6e56e4d4c9f89b1a63e233f9335b3b3b4fba445c7ffdd"
+      },
+      "FRAMEWORK_RECOVERY_2_REQUIRED_TEST_IDS": {
+        "ast_sha256": "5128360794a2861f1fbd54f2a5db0e29838e4f6f5d02eb5237a7ee55758924b1",
+        "kind": "Assign",
+        "source_sha256": "8a5781b2f75db3b47c30acbc898f860b30827c8390ca47a170d33af0fed568df"
+      },
+      "FRAMEWORK_RECOVERY_2_SUBJECT": {
+        "ast_sha256": "5127b1ef0289a734d1904b6e12c1270609cd452eec5f0061a6000026d7392005",
+        "kind": "Assign",
+        "source_sha256": "8a3a745bdc392fc7920b7fb79fd5ecb2e0bb3e8c38b8b578f7de5574fe1606c2"
+      },
+      "FRAMEWORK_RECOVERY_2_TEST_BYTES": {
+        "ast_sha256": "a467f999084d27c610192b44dcfbba1c8e3d2597560b5d650d3748a3038238cb",
+        "kind": "Assign",
+        "source_sha256": "3c41f8d43e396780271970819af79d910a7fe7bedbcb58e2b775f275a2395d6a"
+      },
+      "FRAMEWORK_RECOVERY_2_TEST_PATH": {
+        "ast_sha256": "b6369af6d1189d25200384cbfcb74251db0d6b2071eff126fa36da98d1e0a97a",
+        "kind": "Assign",
+        "source_sha256": "da579e3c3a4a95aaf01392ca32ca4df194279fd2e86f61152b7c6446c9f4b792"
+      },
+      "FRAMEWORK_RECOVERY_2_TEST_SHA256": {
+        "ast_sha256": "5656b8e1630c27c08d41224e671101614576f64875aadea560ae76b2ec45adf9",
+        "kind": "Assign",
+        "source_sha256": "d67176f44bcb5d9f12eb934e70f731b5f0855a4586dc2e2730a2286a09a12f86"
+      }
+    },
+    "new_definition_records": {
+      "_BoundedProcessState": {
+        "ast_sha256": "f7afb192f7b212197adbb75a4c2d43cd5d516f1f335936ac139fa116149f4968",
+        "kind": "ClassDef",
+        "source_sha256": "f998a20127a69d9ebd8cac3d22a3d84d04068429d33a24e6aa46362b3239f492"
+      },
+      "_bounded_darwin_eperm_is_acceptable": {
+        "ast_sha256": "9a3c1772bee812a05d48eeec0b0cca68e90f5a6396f2220183a42cd66d8578bb",
+        "kind": "FunctionDef",
+        "source_sha256": "6247613e2a1d2af973f403c4f39c03752b09487c2a836fb3c6ca948f9be5b153"
+      },
+      "_bounded_process_exited_unreaped": {
+        "ast_sha256": "3eba738869f0d0cddea06c4d785c18de442622ce392dceeecede61241c52e348",
+        "kind": "FunctionDef",
+        "source_sha256": "b5bd0e8e9d65a7e3ecdac27a630a71a90d413fa68d3396fb2b9467b05a407f2a"
+      },
+      "_bounded_reap_signal_set": {
+        "ast_sha256": "973cb9d9ca5e801d57345801953e3224692ad50541ae53104d2bcf492b3c31b2",
+        "kind": "FunctionDef",
+        "source_sha256": "1ab26c509db24895e9aec53ac1ea29d3a2acc3b1a48014ef56aaa8d635b88a62"
+      },
+      "_framework_recovery_2_catalog_record": {
+        "ast_sha256": "5d3b3631c393eb179e384316b17f72aec21f7bce63eee4008e7577e163d52369",
+        "kind": "FunctionDef",
+        "source_sha256": "6034dc85add0a893a27ecd3d885c31c751d5fa11e2f868e3c60398bd7a2b9a19"
+      },
+      "_framework_recovery_2_code_diff": {
+        "ast_sha256": "734d2845cbdc4a4ad0aebfcf91dfabd6a504eeac1f6b874e38c612a16879519f",
+        "kind": "FunctionDef",
+        "source_sha256": "5dbedde16b1af0d927329d0b688a13077b4a6b32508e2d5b8b7ab7c17f3157ee"
+      },
+      "_framework_recovery_2_decision": {
+        "ast_sha256": "12d265258dc078465f8abb4646b29f618830c4151b669b3eeec1397ea41d9dac",
+        "kind": "FunctionDef",
+        "source_sha256": "fa1bc26e53ff6a01edab285991a509a2707098e256d7ee2c83e044d108f945ae"
+      },
+      "_framework_recovery_2_expected_activation": {
+        "ast_sha256": "583553c89bed65475e6a7744a1f32e6ff07852118f8a6d5e06fd7dff63553991",
+        "kind": "FunctionDef",
+        "source_sha256": "9dd18eac05c60536313015f09bbdfb9066903e6eff8f0123fe27f9ad4a5d6d35"
+      },
+      "_framework_recovery_2_expected_gate_payload": {
+        "ast_sha256": "013263d96fc547252e7a618ca221995aaced3e2f5c94975cbe87072f49067166",
+        "kind": "FunctionDef",
+        "source_sha256": "8599c10b4a5e9f1de565b7bbfb8b654a9dba0943fce928a322a2ce20948799ab"
+      },
+      "_framework_recovery_2_expected_local_validation": {
+        "ast_sha256": "6a9514f488429104f1c47f99f4c8e3cf6ad8dd2cd9e67b1e05e02b8235a59316",
+        "kind": "FunctionDef",
+        "source_sha256": "9a981159f7692128bddfaca2262c457fed613984723f5a07dcbcfb898965a922"
+      },
+      "_framework_recovery_2_expected_parent_reproduction": {
+        "ast_sha256": "ad8be5239c79c6573221fb33183102c09ba8f9b3716f33426cb9d09f4bf557df",
+        "kind": "FunctionDef",
+        "source_sha256": "f44d54eb587630dda641e935abbd66b17aa77ab297523a3d4db3c9feae9ae5cb"
+      },
+      "_framework_recovery_2_expected_plan": {
+        "ast_sha256": "249547997b1b3eb717726c4e5febdd1bb3c49ced20a21361b0c3df481fbb87c3",
+        "kind": "FunctionDef",
+        "source_sha256": "64b16c4ec1a0313d5e21221d267e5584917a857a7990a10980382b1546462552"
+      },
+      "_framework_recovery_2_expected_qualification": {
+        "ast_sha256": "0c95c39f18c1386b59573b11759c5fe77c1887b86a0c2d90130bcb1fa7697802",
+        "kind": "FunctionDef",
+        "source_sha256": "e79211b0b6cc24bf6777afe7da9b8cc247fac46239eb1134a3e55f46b78e95ee"
+      },
+      "_framework_recovery_2_expected_review": {
+        "ast_sha256": "fa154ad217032300fa8dc2e80dcee367e92751b8204401ac83d12a211a5b8082",
+        "kind": "FunctionDef",
+        "source_sha256": "13565d7dd5c25f207915f3ef8dbd4380f5c3aa70bb6a427a220df28bb75fb46c"
+      },
+      "_framework_recovery_2_hosted_entry": {
+        "ast_sha256": "859a0ed57bd5e2c8cdbf51990d356cfaad5971ff5c7a7a3eaec69a8435cfd47a",
+        "kind": "FunctionDef",
+        "source_sha256": "12555033b8ffaceebc9d96957359883ab37592e254ec4ef15c352049ccf61d36"
+      },
+      "_framework_recovery_2_local_commands": {
+        "ast_sha256": "c4f7e6343ba6d96e2c72ab89051bc79a7afe6122d8c3c0913cf9b7adfd787363",
+        "kind": "FunctionDef",
+        "source_sha256": "194fe236edda729edc9cac494322d5f24ab0d2e2f5484adcf728ab2c5e578797"
+      },
+      "_framework_recovery_2_parent_reproduction_command": {
+        "ast_sha256": "8fdc309325f8352f2b62aa1c8340af62cf2b4e645da5ae8e16c1f9e3d420e357",
+        "kind": "FunctionDef",
+        "source_sha256": "7feda7f5c6b9ebd7d14d28a912416f7f417db5e33bab13af461a85d12308eb90"
+      },
+      "_framework_recovery_2_parent_reproduction_log": {
+        "ast_sha256": "39c6fab923e83d6cf1c0e8fb366579aee62232654aae045fa00ff41880f3267a",
+        "kind": "FunctionDef",
+        "source_sha256": "bfe8c1515d63d8bac81dd3e6a75f6ac599791e87c84bbed0d1a3c51238a29742"
+      },
+      "_framework_recovery_2_review_contracts": {
+        "ast_sha256": "16bd983e4d6de92bb710a3b3ce24f7ed08fe1218775fd2ac87d84fa5eff3de09",
+        "kind": "FunctionDef",
+        "source_sha256": "9f4334931079021589f74f3f9cde95af61515fde1ed4389d6ac151720f21b2c5"
+      },
+      "_framework_recovery_2_run_attempt_identity": {
+        "ast_sha256": "3685637e295babc8618e11218d84cc7ed83a0d08d50ef1d421194ce44fe01341",
+        "kind": "FunctionDef",
+        "source_sha256": "eeb5e3b7ce5cf79608945361ecdfc9ff84dc51e0c6691e899cf7b386d2d3abe5"
+      },
+      "_framework_recovery_2_source_index": {
+        "ast_sha256": "3f3fe10c290867e7d22169f9ea3585c9d7b856edc5ebd44157d65dc42c0b5c29",
+        "kind": "FunctionDef",
+        "source_sha256": "8e2dcd4cea0f3698d38ceb17dbcebd5c337b567ac462e0c3ab4295daccb1a1d3"
+      },
+      "_framework_recovery_2_source_retention_manifest": {
+        "ast_sha256": "abdf685f0e18de3a303d03711690369d633251c510f8a2e6c76c4349d7f8566b",
+        "kind": "FunctionDef",
+        "source_sha256": "9ddc7eba931d643fa3695782d1874f477629b684a752fb1c5e70f849014a9a2b"
+      },
+      "_framework_recovery_2_test_contract": {
+        "ast_sha256": "c52e276a8a46c2441f7551dea602e66c2f5126504a6afc6e2affab6d30d2627d",
+        "kind": "FunctionDef",
+        "source_sha256": "6f40ae2bbf583269943d6c64979efddef2d97cd5f44942c70c9c52925851058b"
+      },
+      "_framework_recovery_2_transition_identity": {
+        "ast_sha256": "889cd24973a438be959233e620860792a879b3213e7f43359ee2253797d56188",
+        "kind": "FunctionDef",
+        "source_sha256": "11fd38fcb193aa4e29f739d598c767a5afb501107bef0c29f83028fa326da62f"
+      },
+      "_framework_recovery_2_validate_local_resource_profile": {
+        "ast_sha256": "c314fefa351f470c7f337d206c641c3ee5d17a26cd071725915c98a59bc5e580",
+        "kind": "FunctionDef",
+        "source_sha256": "1bc7c432a0b6f58767baa946de3ff5357336bb412280d49061a370fa1ca1f705"
+      },
+      "_framework_recovery_2_validate_test_source": {
+        "ast_sha256": "42fbad57a6eace63cb079188900705f21025765741aa9ede4aaf1b2391d5f353",
+        "kind": "FunctionDef",
+        "source_sha256": "f550e3d3dd3c1711edc1daafcc8bd95f932f11dd4c8e6750f72ad09505ddaa18"
+      },
+      "_framework_recovery_2_verify_capture_operations": {
+        "ast_sha256": "5c4b39379e26b5714600349051b78b9d7967c3d776c62d60b606afc692e1c10f",
+        "kind": "FunctionDef",
+        "source_sha256": "13f1dad4eafd604eb9825f0566d1e7af2a22815a3d6e802b9aaf20c8dbb8dac6"
+      },
+      "_framework_recovery_2_verify_ci_markers": {
+        "ast_sha256": "2142d1ca56871fb8e404090c61bbd8efa3d92f59625dd49fffcd9a3de1cb227c",
+        "kind": "FunctionDef",
+        "source_sha256": "c26dfd0b750c56036f3e65f8bfd46da1d0e4f7e1637005de5a010b413a8a7153"
+      },
+      "_framework_recovery_2_verify_local_log": {
+        "ast_sha256": "d106fd9b62c6c23bfad67d95333ce57bc695db44677164d6ad836a08070ec174",
+        "kind": "FunctionDef",
+        "source_sha256": "d80c69684aed077ac12912b633385f55d2fe31d4a9d58601d57fd6bda9f6b7c2"
+      },
+      "_framework_recovery_2_verify_parent_reproduction_log": {
+        "ast_sha256": "88faf19b6d63909ebe44f2c337f8473b043ca1e8b0436a048041714ff952e210",
+        "kind": "FunctionDef",
+        "source_sha256": "a8c4a99e5edcdfc96269fcf1f03434f7a6febc559d618ab10760e114a21839d7"
+      },
+      "_framework_recovery_2_verify_review_key_separation": {
+        "ast_sha256": "14f03a4e2b3d3e7aed5e1ce33c14f3adbcb021f25b9218b38b7250fc2f7c5457",
+        "kind": "FunctionDef",
+        "source_sha256": "96b7b621663acfe7631fb820d119cf825b7b55716d51903d17534a6637c5b21f"
+      },
+      "_framework_recovery_2_verify_run_attempt_uniqueness": {
+        "ast_sha256": "d1988e71032d36aced4751bd6652dc45f45f1135b02b4d92dcfbd9d0ac025231",
+        "kind": "FunctionDef",
+        "source_sha256": "783110131360b11ca527add8992d9005c2130b2663c3cac04fae0f95d8fd278b"
+      },
+      "_framework_recovery_2_verify_stage_modes": {
+        "ast_sha256": "21abc03a78ed864088a29227c1be4caadd53f7e27e319bcb4f83f5e45c67ca95",
+        "kind": "FunctionDef",
+        "source_sha256": "2065f6d9733703d035b9af4eeb56bbad88bcc223a323b50e5eb4abb5e4d9e3a1"
+      },
+      "_reap_bounded_process": {
+        "ast_sha256": "62947899893caa654c731d6820b27ef1ae8f57a5d9c47bc3413a11aad94e97b6",
+        "kind": "FunctionDef",
+        "source_sha256": "38c8210d96ffe59fd34a747c32e945ef22829aa4879bd7de6dd59b5fe6d0b93b"
+      },
+      "_record_bounded_cleanup_error": {
+        "ast_sha256": "7388e8ef28679bb18931ffbd887198e1491a1ef89f8b74c0943cf426495ec4c4",
+        "kind": "FunctionDef",
+        "source_sha256": "f9e121f7cd07c2a0fd20ff809946d3d1bc2120026da8cf892b10ce1e91cd739c"
+      },
+      "_signal_bounded_process_group": {
+        "ast_sha256": "25b364edc49d11ec138bf2e6af2672f2c43dca753c4ec7f4caa27c2cda4c7043",
+        "kind": "FunctionDef",
+        "source_sha256": "70607a91a2fb844f54a173dddbd441bbabbe2fc7a69d59989f61ef419eacea70"
+      },
+      "_validate_framework_recovery_2_local_document": {
+        "ast_sha256": "bd28e9e9217da09168cacc5b95f90cfe8f1fd5de11b52b86bf8a1cc7410c6169",
+        "kind": "FunctionDef",
+        "source_sha256": "32f5f92d7d6a4ffbe1fab52a9de3f47893f0426e97aa41d692e4026bcb531d98"
+      },
+      "_validate_framework_recovery_2_parent_reproduction": {
+        "ast_sha256": "337b220142096946ae73a5d356bf6a76402bc448d7b9bc874db7c7c12f05dd94",
+        "kind": "FunctionDef",
+        "source_sha256": "ecec3e26682478c413fba97212d03fd800e78ed08cdaa7e28ea2d291e96b582c"
+      },
+      "_validate_framework_recovery_2_review": {
+        "ast_sha256": "9cf69e97c34e033b6aa86c5265e17f47f68b73e7033bafb8f899f5697111cab9",
+        "kind": "FunctionDef",
+        "source_sha256": "8dfd5865964328c5617cea562499f0c7c567b6e5a3d4394d87bd0feeac17d580"
+      },
+      "_verify_framework_recovery_2_activation": {
+        "ast_sha256": "bacfa3f8c857101aa54a372f1ec2ce118869bbb80e8b5cb7494762f79962ff50",
+        "kind": "FunctionDef",
+        "source_sha256": "2e0657ae79e4faec884c03ba4430b681d45d8a4c3ca9d7013c9bd6b5be6016c4"
+      },
+      "_verify_framework_recovery_2_history": {
+        "ast_sha256": "ac51b258ef0fd45bf6cd16cb8e02d0a89a213256b627aac269b8f68292ecb43f",
+        "kind": "FunctionDef",
+        "source_sha256": "89a60dbe8381fafbbb14958415b91ae45abdcbf10ee7a64d4effa8120c3ffc42"
+      },
+      "_verify_framework_recovery_2_qualification": {
+        "ast_sha256": "aba2fe768c5a920d2aa3c9717751f51bda78f5a38ebe2c09162706044003c14a",
+        "kind": "FunctionDef",
+        "source_sha256": "b7c5d7f737413c78e402770dfb2efea76b2121113c6d3c1f43de8aeb9ec5bb50"
+      },
+      "_verify_framework_recovery_2_repair": {
+        "ast_sha256": "2ef5f201eb7ef31f60fa2d1543763349c98308e2a15d246e194767a088c4ca84",
+        "kind": "FunctionDef",
+        "source_sha256": "e604463fb9b44ab629c118bced8546467b9ad63c0b9884e0fa6701f511371ff9"
+      },
+      "_verify_framework_recovery_transition": {
+        "ast_sha256": "d69f22d6779a7199466350ead4d0b63f52b1c4c62db9f6f66825585c50f15c51",
+        "kind": "FunctionDef",
+        "source_sha256": "2d62c125dfc0cd8b4b31bd166b05ea7611aee1d31ebe69c08c4c271e0a4996a7"
+      },
+      "_wait_for_bounded_exit": {
+        "ast_sha256": "b309827a276ff0cbe1b9ecb238802c6b4b7644689601935a6ba2e9204de09e59",
+        "kind": "FunctionDef",
+        "source_sha256": "261adf4bc7a4e48536f5028658342ceb36837fea1990fa3092da6e20550f9bf5"
+      }
+    },
+    "parent": {
+      "bytes": 536370,
+      "lines": 13561,
+      "sha256": "5c9356c08790996ff2a42e8139519b4b930a41473fd7a021a726ac0558c85dce"
+    },
+    "path": "tools/release/verify-current-audit.py",
+    "preserved_counts": {
+      "assignments": 147,
+      "definitions": 199,
+      "imports": 26,
+      "other_nodes": 3
+    },
+    "preserved_manifest_sha256": "869a6426e5b910724f6e7be9da941a362a7b397b3d8d0ce4be6e7bbf44cb657d",
+    "protected_residual": {
+      "byte_exact": true,
+      "parent": {
+        "bytes": 489352,
+        "lines": 12467,
+        "removed_spans": 7,
+        "sha256": "6c3c5a9aae97ae517f81e02d47a03f23b82778b09b1e3a410593724f393f21c7"
+      },
+      "protects_interstitial_comments_and_stable_blank_gaps": true,
+      "target": {
+        "bytes": 489352,
+        "lines": 12467,
+        "removed_spans": 11,
+        "sha256": "6c3c5a9aae97ae517f81e02d47a03f23b82778b09b1e3a410593724f393f21c7"
+      }
+    },
+    "schema_version": "1.0.0",
+    "target": {
+      "bytes": 711179,
+      "lines": 18127,
+      "sha256": "5e49d62c00e33361b34a5d9652a61ce12426a43482d731a41cc8de8283c1bad3"
+    }
+  },
+  "state": {
+    "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_FR_0002_ACTIVATION",
+    "status": "PENDING_QUALIFICATION",
+    "successor_transitions_allowed": false
+  },
+  "test_contract": {
+    "fr_0002_ast_sha256": "0df18ac088f55998112d84eddf1059c86ca1a34a726fce51ec6ef5922896d7eb",
+    "fr_0002_count": 78,
+    "fr_0002_ids_sha256": "8404f75c71c81b2c1e8b192fc882cc26386e551348b7b47b27920719d802bf26",
+    "fr_0002_test_record": {
+      "bytes": 164569,
+      "git_mode": "100644",
+      "git_object_id": "5bce6a15e43ca25ab1bcb45618386fb5db083ad2",
+      "git_object_type": "blob",
+      "lines": 4483,
+      "path": "tools/release/test_verify_current_audit_fr_0002.py",
+      "sha256": "a0d785ecd741e809faaa959cf3d20aa01cb90d8fd03ca5716680092d2d383e7c"
+    },
+    "gate_record": {
+      "bytes": 576,
+      "git_mode": "100755",
+      "git_object_id": "5255d9b4ff685231cf86bd30368a71f26e2d69fa",
+      "git_object_type": "blob",
+      "lines": 15,
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "09aff5096b384f8e85766d6cc9fe0f1ac9f1d0495b7aeae1276254e0a251b216"
+    },
+    "legacy_count": 163,
+    "legacy_ids_sha256": "5be04ec6ec9fd4f5b0b1257decb807503d3b9a07f2042f12fa425edcbc6a9bbb",
+    "legacy_test_bytes_preserved": true,
+    "legacy_test_record": {
+      "bytes": 204291,
+      "git_mode": "100644",
+      "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+      "git_object_type": "blob",
+      "lines": 4738,
+      "path": "tools/release/test_verify_current_audit.py",
+      "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+    },
+    "required_regression_test_ids": [
+      "test_bounded_runner_arbitrary_base_exception_continues_cleanup",
+      "test_bounded_runner_clean_success_is_exact",
+      "test_bounded_runner_cleanup_base_exception_overrides_primary",
+      "test_bounded_runner_config_bounds_are_enforced_before_spawn",
+      "test_bounded_runner_constructs_no_reader_threads",
+      "test_bounded_runner_darwin_eperm_is_only_an_accepted_residual",
+      "test_bounded_runner_dual_stream_pressure_is_exact",
+      "test_bounded_runner_eperm_end_to_end_acceptance_is_narrow",
+      "test_bounded_runner_eperm_with_inherited_pipe_fails_closed",
+      "test_bounded_runner_error_precedence_retains_cleanup_detail",
+      "test_bounded_runner_interrupt_signals_before_wait",
+      "test_bounded_runner_kill_eintr_retries_are_bounded",
+      "test_bounded_runner_late_primary_state_is_not_lost_from_base_error",
+      "test_bounded_runner_never_signals_reused_unrelated_process_group",
+      "test_bounded_runner_normal_cleanup_exception_keeps_primary_status",
+      "test_bounded_runner_observes_exit_with_wnowait",
+      "test_bounded_runner_output_bound_final_write_has_no_spurious_cleanup",
+      "test_bounded_runner_persistent_kill_failure_reaps_before_error",
+      "test_bounded_runner_persistent_term_failure_reaps_before_error",
+      "test_bounded_runner_pipe_setup_failures_clean_resources",
+      "test_bounded_runner_platform_and_primitives_reject_before_spawn",
+      "test_bounded_runner_popen_base_exception_closes_stdin",
+      "test_bounded_runner_post_real_waitpid_interrupt_forbids_signal",
+      "test_bounded_runner_post_spawn_state_failure_still_cleans_child",
+      "test_bounded_runner_read_errors_are_bounded",
+      "test_bounded_runner_reap_base_exception_retains_prior_context",
+      "test_bounded_runner_reap_signal_mask_excludes_fault_signals",
+      "test_bounded_runner_reap_timeout_has_no_second_stop_churn",
+      "test_bounded_runner_rejects_mismatched_waitid_identity",
+      "test_bounded_runner_repeated_modes_preserve_fd_and_thread_counts",
+      "test_bounded_runner_resource_close_failures_are_aggregated",
+      "test_bounded_runner_same_group_descendant_is_killed_before_reap",
+      "test_bounded_runner_selector_constructor_failure_cleans_resources",
+      "test_bounded_runner_selector_eintr_retries_are_bounded",
+      "test_bounded_runner_setsid_escape_fails_without_reused_signal",
+      "test_bounded_runner_signal_mask_failures_have_stable_codes",
+      "test_bounded_runner_signals_before_wait_and_never_after_reap",
+      "test_bounded_runner_stdin_close_failure_cleans_owned_process",
+      "test_bounded_runner_term_eintr_retries_are_bounded",
+      "test_bounded_runner_timeout_and_pipe_errors_keep_precedence",
+      "test_bounded_runner_waitid_echild_forbids_later_group_signal",
+      "test_bounded_runner_waitid_eintr_retries_are_bounded",
+      "test_bounded_runner_waitid_eio_still_signals_and_reaps",
+      "test_bounded_runner_waitpid_interruption_abandons_authority",
+      "test_bounded_runner_zero_limit_and_multibyte_limits_are_exact",
+      "test_framework_recovery_2_activation_requires_qualification_checks",
+      "test_framework_recovery_2_activation_validator_is_exact",
+      "test_framework_recovery_2_added_file_old_record_is_null",
+      "test_framework_recovery_2_evidence_layout_is_exact",
+      "test_framework_recovery_2_exact_repair_verifies",
+      "test_framework_recovery_2_frozen_anchor_precedence",
+      "test_framework_recovery_2_gate_order_and_warning_policy_are_exact",
+      "test_framework_recovery_2_gate_rejects_missing_duplicate_lines",
+      "test_framework_recovery_2_historical_replay_ignores_live_wrapper",
+      "test_framework_recovery_2_history_requires_contiguous_stages",
+      "test_framework_recovery_2_hosted_capture_mutations_are_rejected",
+      "test_framework_recovery_2_local_log_order_and_commands_are_exact",
+      "test_framework_recovery_2_local_resource_profile_is_fully_validated",
+      "test_framework_recovery_2_local_validation_binding_is_exact",
+      "test_framework_recovery_2_old_test_suite_is_preserved",
+      "test_framework_recovery_2_parent_runner_reproduces_post_reap_signal",
+      "test_framework_recovery_2_plan_excludes_self_commit",
+      "test_framework_recovery_2_plan_field_mutations_are_rejected",
+      "test_framework_recovery_2_preserved_paths_reject_mutation",
+      "test_framework_recovery_2_qualification_validator_is_exact",
+      "test_framework_recovery_2_reproduction_binding_is_exact",
+      "test_framework_recovery_2_reproduction_log_is_exact",
+      "test_framework_recovery_2_review_false_provenance_is_rejected",
+      "test_framework_recovery_2_review_key_reuse_is_rejected",
+      "test_framework_recovery_2_run_attempt_reuse_is_rejected",
+      "test_framework_recovery_2_sequence_requires_verified_prefix_three",
+      "test_framework_recovery_2_signature_namespace_is_purpose_separated",
+      "test_framework_recovery_2_source_controls_reject_bypasses",
+      "test_framework_recovery_2_source_retention_contract",
+      "test_framework_recovery_2_source_retention_mutations_are_rejected",
+      "test_framework_recovery_2_test_contract_rejects_legacy_mutation",
+      "test_framework_recovery_2_test_contract_rejects_skip_and_loader_bypasses",
+      "test_framework_recovery_2_wrapper_is_epoch_aware"
+    ]
+  },
+  "transition_identity": {
+    "fr_0001_in_protocol_second_recovery_permitted": false,
+    "fr_0001_mechanism_reused": false,
+    "historical_fr_0001_no_second_recovery_statement_preserved": true,
+    "ordinary_successor_transition": false,
+    "prior_framework_accepts_transition": false,
+    "transition_kind": "NEW_SIGNED_TRUST_ROOT_REBASELINE"
+  }
+}
