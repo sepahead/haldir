@@ -11,6 +11,7 @@ readonly PYTHON3
 
 "$PYTHON3" -I tools/release/test_verify_current_audit.py
 FR2_COMPAT_DIR=
+FR3_COMPAT_DIR=
 cleanup_fr2_compat() {
   builtin trap - EXIT HUP INT TERM
   if [[ -n "$FR2_COMPAT_DIR" ]]; then
@@ -19,6 +20,15 @@ cleanup_fr2_compat() {
       "$FR2_COMPAT_DIR/test_verify_current_audit_fr_0002.py" \
       "$FR2_COMPAT_DIR/verify-current-audit.py"
     /bin/rmdir -- "$FR2_COMPAT_DIR"
+  fi
+  if [[ -n "$FR3_COMPAT_DIR" ]]; then
+    /bin/rm -f -- \
+      "$FR3_COMPAT_DIR/current-audit-gate.sh" \
+      "$FR3_COMPAT_DIR/current-audit-resource-profile.py" \
+      "$FR3_COMPAT_DIR/test_current_audit_resource_profile.py" \
+      "$FR3_COMPAT_DIR/test_verify_current_audit_fr_0003.py" \
+      "$FR3_COMPAT_DIR/verify-current-audit.py"
+    /bin/rmdir -- "$FR3_COMPAT_DIR"
   fi
 }
 builtin trap cleanup_fr2_compat EXIT
@@ -41,6 +51,31 @@ readonly FR2_COMPAT_DIR
   > "$FR2_COMPAT_DIR/current-audit-gate.sh"
 "$PYTHON3" -B -I -W error::ResourceWarning \
   "$FR2_COMPAT_DIR/test_verify_current_audit_fr_0002.py"
-"$PYTHON3" -I -W error tools/release/test_verify_current_audit_fr_0003.py
+FR3_COMPAT_DIR="$(/usr/bin/mktemp -d /tmp/haldir-fr3-gate.XXXXXX)"
+readonly FR3_COMPAT_DIR
+/bin/ln -s \
+  "$PWD/tools/release/test_verify_current_audit_fr_0003.py" \
+  "$FR3_COMPAT_DIR/test_verify_current_audit_fr_0003.py"
+/bin/ln -s \
+  "$PWD/tools/release/current-audit-resource-profile.py" \
+  "$FR3_COMPAT_DIR/current-audit-resource-profile.py"
+/bin/ln -s \
+  "$PWD/tools/release/test_current_audit_resource_profile.py" \
+  "$FR3_COMPAT_DIR/test_current_audit_resource_profile.py"
+/usr/bin/env \
+  -i \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git cat-file blob f8651670f456f4e1a1c6add10aca2e7b245e62ff \
+  > "$FR3_COMPAT_DIR/current-audit-gate.sh"
+/usr/bin/env \
+  -i \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git cat-file blob e053e120851d15502bb64a7b5e18db205244118a \
+  > "$FR3_COMPAT_DIR/verify-current-audit.py"
+"$PYTHON3" -B -I -W error \
+  "$FR3_COMPAT_DIR/test_verify_current_audit_fr_0003.py"
 "$PYTHON3" -I -W error tools/release/test_current_audit_resource_profile.py
+"$PYTHON3" -I -W error tools/release/test_verify_current_audit_fr_0004.py
 "$PYTHON3" -I tools/release/verify-current-audit.py

@@ -914,6 +914,299 @@ FRAMEWORK_RECOVERY_3_BOUNDED_RUNNER_DEFINITIONS = {
     "_stop_bounded_process",
     "_wait_for_bounded_exit",
 }
+FRAMEWORK_RECOVERY_4_PARENT = "555108666cb82e8a36dcd4b08b5b30c62367a6f4"
+FRAMEWORK_RECOVERY_4_PARENT_TREE = "579e182affefb69cf4113446eebfad0215b00cc6"
+FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_SHA256 = (
+    "c01d25cc34c972d38cdfa386f40ff3723c3de8b270a9137793a0640e5c7da788"
+)
+FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES = 894_092
+FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_SHA256 = (
+    "25bbf246640cc4795266cb0d439042ba1077b1094fbe09db4e76d05154c08348"
+)
+FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_BYTES = 186_879
+FRAMEWORK_RECOVERY_4_ID = "FR-0004"
+FRAMEWORK_RECOVERY_4_SUBJECT = "release: repair framework review traceability"
+FRAMEWORK_RECOVERY_4_QUALIFICATION_SUBJECT = (
+    "release: qualify epoch-5 audit validation"
+)
+FRAMEWORK_RECOVERY_4_ACTIVATION_SUBJECT = (
+    "release: activate epoch-5 audit validation"
+)
+FRAMEWORK_RECOVERY_4_PLAN_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0004-plan.json"
+)
+FRAMEWORK_RECOVERY_4_QUALIFICATION_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/"
+    "FR-0004-qualification.json"
+)
+FRAMEWORK_RECOVERY_4_ACTIVATION_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/"
+    "FR-0004-activation.json"
+)
+FRAMEWORK_RECOVERY_4_TEST_PATH = (
+    "tools/release/test_verify_current_audit_fr_0004.py"
+)
+FRAMEWORK_RECOVERY_4_TEST_SHA256 = (
+    "d33e0b30586a77717e282947a375253a816ce84b53620cba300f5d30657234f4"
+)
+FRAMEWORK_RECOVERY_4_TEST_BYTES = 38_855
+FRAMEWORK_RECOVERY_4_CORE_PATHS = (
+    "tools/release/verify-current-audit.py",
+    FRAMEWORK_RECOVERY_4_TEST_PATH,
+    "tools/release/current-audit-gate.sh",
+)
+FRAMEWORK_RECOVERY_4_REPAIR_STATUSES = {
+    FRAMEWORK_RECOVERY_4_PLAN_PATH: "A",
+    FRAMEWORK_RECOVERY_4_TEST_PATH: "A",
+    "tools/release/current-audit-gate.sh": "M",
+    "tools/release/verify-current-audit.py": "M",
+}
+FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS = (
+    {
+        "id": "FR-0004-E01",
+        "kind": "DETERMINISTIC_PARENT_DEFECT_REPRODUCTION",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-d-reproduction.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-d-reproduction.log.gz",
+        ],
+        "max_bytes": [65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0004-E02",
+        "kind": "REPAIR_HOSTED_CI",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-ci.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-ci-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-ci.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0004-E03",
+        "kind": "REPAIR_HOSTED_FORMAL",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-formal.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-formal-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-formal.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0004-E04",
+        "kind": "REPAIR_LOCAL_VALIDATION",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-local.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-r-local.log.gz",
+        ],
+        "max_bytes": [65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0004-R01",
+        "kind": "INTERNAL_AUTOMATED_DESIGN_REVIEW",
+        "paths": [
+            "release/0.9.0/current-head/reviews/"
+            "framework-recovery-fr-0004-design.json"
+        ],
+        "max_bytes": [131_072],
+    },
+    {
+        "id": "FR-0004-R02",
+        "kind": "INTERNAL_AUTOMATED_IMPLEMENTATION_REVIEW",
+        "paths": [
+            "release/0.9.0/current-head/reviews/"
+            "framework-recovery-fr-0004-implementation.json"
+        ],
+        "max_bytes": [131_072],
+    },
+)
+FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES = {
+    FRAMEWORK_RECOVERY_4_QUALIFICATION_PATH: "A",
+    **{
+        path: "A"
+        for requirement in FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS
+        for path in requirement["paths"]
+    },
+}
+FRAMEWORK_RECOVERY_4_ACTIVATION_REQUIREMENTS = (
+    {
+        "id": "FR-0004-A01",
+        "kind": "QUALIFICATION_HOSTED_CI",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-q-ci.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-q-ci-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-q-ci.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0004-A02",
+        "kind": "QUALIFICATION_HOSTED_FORMAL",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-q-formal.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-q-formal-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0004-q-formal.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+)
+FRAMEWORK_RECOVERY_4_ACTIVATION_STATUSES = {
+    FRAMEWORK_RECOVERY_4_ACTIVATION_PATH: "A",
+    **{
+        path: "A"
+        for requirement in FRAMEWORK_RECOVERY_4_ACTIVATION_REQUIREMENTS
+        for path in requirement["paths"]
+    },
+}
+FRAMEWORK_RECOVERY_4_PRESERVED_PATHS = tuple(
+    sorted(
+        {
+            *FRAMEWORK_RECOVERY_3_PRESERVED_PATHS,
+            FRAMEWORK_RECOVERY_3_PLAN_PATH,
+            FRAMEWORK_RECOVERY_3_TEST_PATH,
+            FRAMEWORK_RECOVERY_3_RESOURCE_TEST_PATH,
+            "tools/release/current-audit-resource-profile.py",
+        }
+    )
+)
+FRAMEWORK_RECOVERY_4_FALSE_F104_TEST_IDS = (
+    "test_anomaly_manifest_is_sorted_by_stable_identity",
+    "test_input_is_not_mutated",
+)
+FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS = (
+    "test_framework_recovery_3_run_attempt_namespace_includes_parent",
+)
+FRAMEWORK_RECOVERY_4_REQUIRED_TEST_IDS = {
+    "test_framework_recovery_4_activation_scope_is_exact",
+    "test_framework_recovery_4_code_diff_excludes_plan",
+    "test_framework_recovery_4_decision_is_fail_closed",
+    "test_framework_recovery_4_defect_reproduction_is_exact",
+    "test_framework_recovery_4_evidence_signatures_and_chronology_are_bound",
+    "test_framework_recovery_4_epoch_4_is_not_reusable",
+    "test_framework_recovery_4_expected_gate_payload_is_exact",
+    "test_framework_recovery_4_expected_plan_has_exact_fields",
+    "test_framework_recovery_4_f104_mapping_is_corrected",
+    "test_framework_recovery_4_forward_replay_has_pre_activation_guard",
+    "test_framework_recovery_4_history_requires_exact_position",
+    "test_framework_recovery_4_hosted_entries_bind_subject",
+    "test_framework_recovery_4_identity_constants_are_exact",
+    "test_framework_recovery_4_local_markers_reject_missing_suite",
+    "test_framework_recovery_4_parent_bytes_are_pinned",
+    "test_framework_recovery_4_parent_has_no_q_or_a",
+    "test_framework_recovery_4_materialization_is_inherited",
+    "test_framework_recovery_4_preserves_prior_test_suites",
+    "test_framework_recovery_4_qualification_scope_is_exact",
+    "test_framework_recovery_4_rejects_cross_phase_run_reuse",
+    "test_framework_recovery_4_repair_scope_is_exact",
+    "test_framework_recovery_4_retires_fr_0003_without_qualification",
+    "test_framework_recovery_4_review_contract_cites_actual_test",
+    "test_framework_recovery_4_resource_bounds_are_inherited",
+    "test_framework_recovery_4_source_retention_rejects_unrelated_change",
+    "test_framework_recovery_4_stage_modes_are_regular",
+    "test_framework_recovery_4_successor_requires_activation",
+    "test_framework_recovery_4_test_contract_is_warning_strict",
+    "test_framework_recovery_4_transition_creates_epoch_5",
+    "test_framework_recovery_4_wrapper_accepts_epochs_2_through_5",
+}
+FRAMEWORK_RECOVERY_4_NEW_DEFINITIONS = {
+    "_framework_recovery_4_assurance_boundary",
+    "_framework_recovery_4_authority",
+    "_framework_recovery_4_code_diff",
+    "_framework_recovery_4_decision",
+    "_framework_recovery_4_expected_activation",
+    "_framework_recovery_4_expected_gate_payload",
+    "_framework_recovery_4_expected_parent_reproduction",
+    "_framework_recovery_4_expected_plan",
+    "_framework_recovery_4_expected_qualification",
+    "_framework_recovery_4_expected_review",
+    "_framework_recovery_4_historical_f104_mapping",
+    "_framework_recovery_4_hosted_entry",
+    "_framework_recovery_4_local_commands",
+    "_framework_recovery_4_parent_defect",
+    "_framework_recovery_4_parent_reproduction_command",
+    "_framework_recovery_4_parent_reproduction_log",
+    "_framework_recovery_4_review_contracts",
+    "_framework_recovery_4_review_limitations",
+    "_framework_recovery_4_run_attempt_identity",
+    "_framework_recovery_4_source_retention_manifest",
+    "_framework_recovery_4_test_contract",
+    "_framework_recovery_4_transition_identity",
+    "_framework_recovery_4_validate_local_document",
+    "_framework_recovery_4_validate_parent_reproduction",
+    "_framework_recovery_4_validate_review",
+    "_framework_recovery_4_validate_source_compatibility",
+    "_framework_recovery_4_validate_test_source",
+    "_framework_recovery_4_verify_ci_markers",
+    "_framework_recovery_4_verify_hosted_entry",
+    "_framework_recovery_4_verify_local_markers",
+    "_framework_recovery_4_verify_review_key_separation",
+    "_framework_recovery_4_verify_run_attempt_uniqueness",
+    "_framework_recovery_4_verify_successor_guard",
+    "_framework_recovery_4_verify_stage_modes",
+    "_verify_framework_recovery_4_activation",
+    "_verify_framework_recovery_4_history",
+    "_verify_framework_recovery_4_qualification",
+    "_verify_framework_recovery_4_repair",
+}
+FRAMEWORK_RECOVERY_4_MODIFIED_DEFINITIONS = {
+    "_framework_recovery_2_source_retention_manifest",
+    "_framework_recovery_3_review_contracts",
+    "_framework_recovery_3_source_retention_manifest",
+    "_verify_forward_protocol_history",
+    "_verify_framework_history",
+    "_verify_framework_recovery_3_history",
+    "_verify_post_activation_gate_retention",
+}
+FRAMEWORK_RECOVERY_4_NEW_ASSIGNMENTS = {
+    "FRAMEWORK_RECOVERY_4_ACTIVATION_PATH",
+    "FRAMEWORK_RECOVERY_4_ACTIVATION_REQUIREMENTS",
+    "FRAMEWORK_RECOVERY_4_ACTIVATION_STATUSES",
+    "FRAMEWORK_RECOVERY_4_ACTIVATION_SUBJECT",
+    "FRAMEWORK_RECOVERY_4_CORE_PATHS",
+    "FRAMEWORK_RECOVERY_4_FALSE_F104_TEST_IDS",
+    "FRAMEWORK_RECOVERY_4_ID",
+    "FRAMEWORK_RECOVERY_4_MODIFIED_ASSIGNMENTS",
+    "FRAMEWORK_RECOVERY_4_MODIFIED_DEFINITIONS",
+    "FRAMEWORK_RECOVERY_4_NEW_ASSIGNMENTS",
+    "FRAMEWORK_RECOVERY_4_NEW_DEFINITIONS",
+    "FRAMEWORK_RECOVERY_4_PARENT",
+    "FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_BYTES",
+    "FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_SHA256",
+    "FRAMEWORK_RECOVERY_4_PARENT_TREE",
+    "FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES",
+    "FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_SHA256",
+    "FRAMEWORK_RECOVERY_4_PLAN_PATH",
+    "FRAMEWORK_RECOVERY_4_PRESERVED_PATHS",
+    "FRAMEWORK_RECOVERY_4_QUALIFICATION_PATH",
+    "FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS",
+    "FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES",
+    "FRAMEWORK_RECOVERY_4_QUALIFICATION_SUBJECT",
+    "FRAMEWORK_RECOVERY_4_REPAIR_STATUSES",
+    "FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS",
+    "FRAMEWORK_RECOVERY_4_REQUIRED_TEST_IDS",
+    "FRAMEWORK_RECOVERY_4_SUBJECT",
+    "FRAMEWORK_RECOVERY_4_TEST_BYTES",
+    "FRAMEWORK_RECOVERY_4_TEST_PATH",
+    "FRAMEWORK_RECOVERY_4_TEST_SHA256",
+}
+FRAMEWORK_RECOVERY_4_MODIFIED_ASSIGNMENTS = {
+    "FRAMEWORK_CORE_FROZEN_PATHS",
+}
 BOOTSTRAP_REQUIREMENTS_SHA256 = (
     "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40"
 )
@@ -1015,6 +1308,7 @@ FRAMEWORK_CORE_FROZEN_PATHS = tuple(
             "tools/release/test_verify_current_audit.py",
             "tools/release/test_verify_current_audit_fr_0002.py",
             "tools/release/test_verify_current_audit_fr_0003.py",
+            "tools/release/test_verify_current_audit_fr_0004.py",
             "tools/release/current-audit-resource-profile.py",
             "tools/release/test_current_audit_resource_profile.py",
             "tools/release/current_audit_test_fixtures.py",
@@ -5895,11 +6189,49 @@ def _framework_recovery_2_source_retention_manifest(
     path = "tools/release/verify-current-audit.py"
     parent_payload = _git_file(repo, FRAMEWORK_RECOVERY_2_PARENT, path)
     target_payload = _git_file(repo, repair_commit, path)
+    if (
+        b"\nFRAMEWORK_RECOVERY_4_" in target_payload
+        or b"\ndef _framework_recovery_4_" in target_payload
+    ):
+        if b'\nFRAMEWORK_RECOVERY_4_PARENT = "' not in target_payload:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+            )
+        frozen_entry = _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_4_PARENT, path
+        )
+        if (
+            frozen_entry is None
+            or frozen_entry["mode"] != "100644"
+            or frozen_entry["type"] != "blob"
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+            )
+        frozen_target = _git(
+            repo, "cat-file", "blob", frozen_entry["oid"]
+        )
+        if (
+            len(frozen_target) != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES
+            or _sha256(frozen_target)
+            != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_SHA256
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+            )
+        _framework_recovery_4_validate_source_compatibility(
+            frozen_target, target_payload
+        )
+        target_payload = frozen_target
     if b'\nFRAMEWORK_RECOVERY_3_PARENT = "' in target_payload:
         frozen_entry = _git_tree_entry(
             repo, FRAMEWORK_RECOVERY_3_PARENT, path
         )
-        if frozen_entry is None or frozen_entry["type"] != "blob":
+        if (
+            frozen_entry is None
+            or frozen_entry["mode"] != "100644"
+            or frozen_entry["type"] != "blob"
+        ):
             raise CurrentAuditError(
                 "CURRENT_AUDIT_FRAMEWORK_RECOVERY_2_SOURCE_COMPATIBILITY"
             )
@@ -6670,6 +7002,1193 @@ def _framework_recovery_3_expected_gate_payload() -> bytes:
     ).encode("utf-8")
 
 
+def _framework_recovery_4_expected_gate_payload() -> bytes:
+    """Return the exact candidate-epoch-5 audit entry point."""
+
+    prior = _framework_recovery_3_expected_gate_payload()
+    replacements = (
+        (
+            b"FR2_COMPAT_DIR=\n",
+            b"FR2_COMPAT_DIR=\nFR3_COMPAT_DIR=\n",
+        ),
+        (
+            b'    /bin/rmdir -- "$FR2_COMPAT_DIR"\n'
+            b"  fi\n"
+            b"}\n",
+            b'    /bin/rmdir -- "$FR2_COMPAT_DIR"\n'
+            b"  fi\n"
+            b'  if [[ -n "$FR3_COMPAT_DIR" ]]; then\n'
+            b"    /bin/rm -f -- \\\n"
+            b'      "$FR3_COMPAT_DIR/current-audit-gate.sh" \\\n'
+            b'      "$FR3_COMPAT_DIR/current-audit-resource-profile.py" \\\n'
+            b'      "$FR3_COMPAT_DIR/test_current_audit_resource_profile.py" \\\n'
+            b'      "$FR3_COMPAT_DIR/test_verify_current_audit_fr_0003.py" \\\n'
+            b'      "$FR3_COMPAT_DIR/verify-current-audit.py"\n'
+            b'    /bin/rmdir -- "$FR3_COMPAT_DIR"\n'
+            b"  fi\n"
+            b"}\n",
+        ),
+        (
+            b'"$PYTHON3" -I -W error '
+            b"tools/release/test_verify_current_audit_fr_0003.py\n",
+            b'FR3_COMPAT_DIR="$(/usr/bin/mktemp -d '
+            b'/tmp/haldir-fr3-gate.XXXXXX)"\n'
+            b"readonly FR3_COMPAT_DIR\n"
+            b"/bin/ln -s \\\n"
+            b'  "$PWD/tools/release/test_verify_current_audit_fr_0003.py" \\\n'
+            b'  "$FR3_COMPAT_DIR/test_verify_current_audit_fr_0003.py"\n'
+            b"/bin/ln -s \\\n"
+            b'  "$PWD/tools/release/current-audit-resource-profile.py" \\\n'
+            b'  "$FR3_COMPAT_DIR/current-audit-resource-profile.py"\n'
+            b"/bin/ln -s \\\n"
+            b'  "$PWD/tools/release/test_current_audit_resource_profile.py" \\\n'
+            b'  "$FR3_COMPAT_DIR/test_current_audit_resource_profile.py"\n'
+            b"/usr/bin/env \\\n"
+            b"  -i \\\n"
+            b"  GIT_NO_REPLACE_OBJECTS=1 \\\n"
+            b"  PATH=/usr/bin:/bin \\\n"
+            b"  /usr/bin/git cat-file blob "
+            b"f8651670f456f4e1a1c6add10aca2e7b245e62ff \\\n"
+            b'  > "$FR3_COMPAT_DIR/current-audit-gate.sh"\n'
+            b"/usr/bin/env \\\n"
+            b"  -i \\\n"
+            b"  GIT_NO_REPLACE_OBJECTS=1 \\\n"
+            b"  PATH=/usr/bin:/bin \\\n"
+            b"  /usr/bin/git cat-file blob "
+            b"e053e120851d15502bb64a7b5e18db205244118a \\\n"
+            b'  > "$FR3_COMPAT_DIR/verify-current-audit.py"\n'
+            b'"$PYTHON3" -B -I -W error \\\n'
+            b'  "$FR3_COMPAT_DIR/test_verify_current_audit_fr_0003.py"\n',
+        ),
+    )
+    for old, new in replacements:
+        if prior.count(old) != 1:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PRIOR_GATE_INVALID"
+            )
+        prior = prior.replace(old, new)
+    suffix = (
+        b'"$PYTHON3" -I -W error '
+        b"tools/release/test_current_audit_resource_profile.py\n"
+        b'"$PYTHON3" -I tools/release/verify-current-audit.py\n'
+    )
+    replacement = (
+        b'"$PYTHON3" -I -W error '
+        b"tools/release/test_current_audit_resource_profile.py\n"
+        b'"$PYTHON3" -I -W error '
+        b"tools/release/test_verify_current_audit_fr_0004.py\n"
+        b'"$PYTHON3" -I tools/release/verify-current-audit.py\n'
+    )
+    if prior.count(suffix) != 1:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PRIOR_GATE_INVALID"
+        )
+    return prior.replace(suffix, replacement)
+
+
+def _framework_recovery_4_authority() -> dict[str, Any]:
+    """Return the fail-closed authority boundary for FR-0004."""
+
+    return {
+        "runtime_authority_changed": False,
+        "release_authority_changed": False,
+        "deployment_authorized": False,
+        "publication_authorized": False,
+        "tag_authorized": False,
+        "github_release_authorized": False,
+        "doi_authorized": False,
+        "zenodo_authorized": False,
+        "archive_authorized": False,
+        "overall_release_status": "NO_GO",
+    }
+
+
+def _framework_recovery_4_assurance_boundary() -> dict[str, Any]:
+    """Return the exact FR-0004 assurance boundary."""
+
+    return {
+        "historical_protocol_execution_revalidated_under_epoch_5": True,
+        "fr_0003_qualification_reclassified_as_valid": False,
+        "prior_ledger_and_claim_judgments_changed": False,
+        "human_review_performed": False,
+        "external_independence": False,
+        "release_authority_from_review": False,
+        "review_signatures_scope": "LOCAL_RECORD_INTEGRITY_ONLY",
+    }
+
+
+def _framework_recovery_4_decision(state: str) -> dict[str, Any]:
+    """Return the exact fail-closed decision for one FR-0004 state."""
+
+    if state not in {
+        "PENDING_QUALIFICATION",
+        "QUALIFIED_PENDING_ACTIVATION",
+        "ACTIVE",
+    }:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_DECISION_STATE"
+        )
+    return {
+        "state": state,
+        "framework_epoch": 5,
+        "active_framework_epoch": 5 if state == "ACTIVE" else 2,
+        "framework_activation_authorized": state == "ACTIVE",
+        "successor_transitions_allowed": state == "ACTIVE",
+        **_framework_recovery_4_authority(),
+    }
+
+
+def _framework_recovery_4_transition_identity() -> dict[str, Any]:
+    """Describe the append-only FR-0003 retirement and epoch-5 candidate."""
+
+    return {
+        "transition_kind": "NEW_SIGNED_TRUST_ROOT_REBASELINE",
+        "prior_framework_accepts_transition": False,
+        "ordinary_successor_transition": False,
+        "fr_0003_mechanism_reused": False,
+        "epoch_4_reused": False,
+        "epoch_4_state": "ABORTED_BEFORE_QUALIFICATION",
+        "epoch_5_candidate_created": True,
+        "active_epoch_before_activation": 2,
+    }
+
+
+def _framework_recovery_4_historical_f104_mapping(
+    repo: Path,
+) -> dict[str, Any]:
+    """Read the exact F104 mapping from the immutable FR-0003 parent."""
+
+    path = "tools/release/verify-current-audit.py"
+    payload = _git_file(repo, FRAMEWORK_RECOVERY_4_PARENT, path)
+    if (
+        len(payload) != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES
+        or _sha256(payload) != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES"
+        )
+    try:
+        tree = ast.parse(payload, filename=f"{FRAMEWORK_RECOVERY_4_PARENT}:{path}")
+    except (SyntaxError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_SOURCE"
+        ) from error
+    functions = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_framework_recovery_3_review_contracts"
+    ]
+    returns = [
+        node
+        for node in functions[0].body
+        if isinstance(node, ast.Return)
+    ] if len(functions) == 1 else []
+    try:
+        contracts = (
+            ast.literal_eval(returns[0].value)
+            if len(returns) == 1 and returns[0].value is not None
+            else None
+        )
+        mapping = contracts["FR-0003-R02"]["F104"]
+    except (KeyError, TypeError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_F104_SOURCE"
+        ) from error
+    if (
+        not isinstance(mapping, dict)
+        or mapping.get("resolving_test_ids")
+        != list(FRAMEWORK_RECOVERY_4_FALSE_F104_TEST_IDS)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_F104_MAPPING"
+        )
+    expected_current = copy.deepcopy(contracts)
+    expected_current["FR-0003-R02"]["F104"]["resolving_test_ids"] = list(
+        FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS
+    )
+    if not _strict_equal(
+        _framework_recovery_3_review_contracts(), expected_current
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_UNRELATED_CONTRACT_CHANGE"
+        )
+    return copy.deepcopy(mapping)
+
+
+def _framework_recovery_4_parent_defect(repo: Path) -> dict[str, Any]:
+    """Reproduce the exact FR-0003 review-traceability defect."""
+
+    fr3_test_payload = _git_file(
+        repo, FRAMEWORK_RECOVERY_4_PARENT, FRAMEWORK_RECOVERY_3_TEST_PATH
+    )
+    if (
+        len(fr3_test_payload) != FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_BYTES
+        or _sha256(fr3_test_payload)
+        != FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_BYTES"
+        )
+    test_ids = _discover_unittest_test_ids(
+        fr3_test_payload,
+        FRAMEWORK_RECOVERY_3_TEST_PATH,
+        strict_runtime=True,
+    )
+    try:
+        test_tree = ast.parse(
+            fr3_test_payload,
+            filename=(
+                f"{FRAMEWORK_RECOVERY_4_PARENT}:"
+                f"{FRAMEWORK_RECOVERY_3_TEST_PATH}"
+            ),
+        )
+    except (SyntaxError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_FR3_TEST_SOURCE"
+        ) from error
+    test_functions = {
+        node.name: node
+        for node in ast.walk(test_tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+    }
+    required_test = FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS[0]
+    historical = _framework_recovery_4_historical_f104_mapping(repo)
+    current = _framework_recovery_3_review_contracts()["FR-0003-R02"]["F104"]
+    required_node = test_functions.get(required_test)
+    false_nodes = [
+        test_functions.get(test_id)
+        for test_id in FRAMEWORK_RECOVERY_4_FALSE_F104_TEST_IDS
+    ]
+
+    def calls_uniqueness(node: ast.AST | None) -> bool:
+        return node is not None and any(
+            isinstance(candidate, ast.Call)
+            and isinstance(candidate.func, ast.Attribute)
+            and candidate.func.attr
+            == "_framework_recovery_3_verify_run_attempt_uniqueness"
+            for candidate in ast.walk(node)
+        )
+
+    required_error = "CURRENT_AUDIT_FRAMEWORK_RECOVERY_3_RUN_ATTEMPT_REUSED"
+    required_asserts_error = required_node is not None and any(
+        isinstance(candidate, ast.Constant)
+        and candidate.value == required_error
+        for candidate in ast.walk(required_node)
+    )
+    if (
+        required_test not in test_ids
+        or not calls_uniqueness(required_node)
+        or not required_asserts_error
+        or any(calls_uniqueness(node) for node in false_nodes)
+        or current.get("resolving_test_ids")
+        != list(FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS)
+        or current.get("affected_functions")
+        != historical.get("affected_functions")
+        or current.get("resolving_evidence_ids")
+        != historical.get("resolving_evidence_ids")
+        or _git_path_exists(
+            repo,
+            FRAMEWORK_RECOVERY_4_PARENT,
+            FRAMEWORK_RECOVERY_3_QUALIFICATION_PATH,
+        )
+        or _git_path_exists(
+            repo,
+            FRAMEWORK_RECOVERY_4_PARENT,
+            FRAMEWORK_RECOVERY_3_ACTIVATION_PATH,
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_CORRECTION_INVALID"
+        )
+    return {
+        "code": "REVIEW_FINDING_TEST_TRACEABILITY_MISMATCH",
+        "severity": "QUALIFICATION_BLOCKER",
+        "affected_review_id": "FR-0003-R02",
+        "affected_finding_id": "F104",
+        "parent_resolving_test_ids": list(
+            FRAMEWORK_RECOVERY_4_FALSE_F104_TEST_IDS
+        ),
+        "required_resolving_test_ids": list(
+            FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS
+        ),
+        "required_test_exists_in_parent_suite": True,
+        "required_test_directly_calls_uniqueness_validator": True,
+        "required_test_asserts_reused_attempt_error": True,
+        "historical_false_tests_call_uniqueness_validator": False,
+        "parent_mapping_does_not_test_run_attempt_reuse": True,
+        "fr_0003_qualification_commit": None,
+        "fr_0003_activation_commit": None,
+    }
+
+
+def _framework_recovery_4_code_diff(
+    repo: Path, repair_commit: str
+) -> dict[str, Any]:
+    """Bind the exact FR-0004 core patch without its plan."""
+
+    common = (
+        "-c",
+        "diff.algorithm=myers",
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-renames",
+        "--no-color",
+    )
+    selected = ("--", *FRAMEWORK_RECOVERY_4_CORE_PATHS)
+    patch = _git(
+        repo,
+        *common,
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--binary",
+        "--full-index",
+        f"{FRAMEWORK_RECOVERY_4_PARENT}..{repair_commit}",
+        *selected,
+    )
+    name_status = _git(
+        repo,
+        *common,
+        "--name-status",
+        "-z",
+        f"{FRAMEWORK_RECOVERY_4_PARENT}..{repair_commit}",
+        *selected,
+    )
+    numstat = _git(
+        repo,
+        *common,
+        "--numstat",
+        "-z",
+        f"{FRAMEWORK_RECOVERY_4_PARENT}..{repair_commit}",
+        *selected,
+    )
+    return {
+        "base": FRAMEWORK_RECOVERY_4_PARENT,
+        "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN",
+        "paths": list(FRAMEWORK_RECOVERY_4_CORE_PATHS),
+        "patch_command_template": [
+            GIT_EXECUTABLE,
+            *common,
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+            "--binary",
+            "--full-index",
+            f"{FRAMEWORK_RECOVERY_4_PARENT}..<REPAIR_COMMIT>",
+            *selected,
+        ],
+        "patch_sha256": _sha256(patch),
+        "patch_bytes": len(patch),
+        "patch_lines": len(patch.splitlines()),
+        "name_status_sha256": _sha256(name_status),
+        "numstat_sha256": _sha256(numstat),
+    }
+
+
+def _framework_recovery_4_validate_test_source(
+    payload: bytes, path: str
+) -> ast.Module:
+    """Reject FR-0004 discovery, skip, and dynamic-override bypasses."""
+
+    try:
+        source = payload.decode("utf-8")
+        tree = ast.parse(source, filename=path)
+    except (UnicodeDecodeError, SyntaxError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_SOURCE_INVALID"
+        ) from error
+    if ast.get_docstring(tree, clean=False) != (
+        "Test the FR-0004 review-traceability recovery."
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_SOURCE_INVALID"
+        )
+    expected_imports = ast.parse(
+        "from __future__ import annotations\n"
+        "import copy\n"
+        "import hashlib\n"
+        "import importlib.util\n"
+        "import subprocess\n"
+        "import sys\n"
+        "import unittest\n"
+        "from pathlib import Path\n"
+        "from unittest import mock\n"
+    ).body
+    observed_imports = [
+        node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
+    ]
+    if [ast.dump(node, include_attributes=False) for node in observed_imports] != [
+        ast.dump(node, include_attributes=False) for node in expected_imports
+    ]:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_IMPORTS_INVALID"
+        )
+    assignments = [
+        node for node in tree.body if isinstance(node, (ast.Assign, ast.AnnAssign))
+    ]
+    observed_assignments: dict[str, Any] = {}
+    for node in assignments:
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if (
+            len(targets) != 1
+            or not isinstance(targets[0], ast.Name)
+            or not isinstance(node.value, ast.Constant)
+            or not isinstance(node.value.value, str)
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_ASSIGNMENTS_INVALID"
+            )
+        observed_assignments[targets[0].id] = node.value.value
+    if observed_assignments != {
+        "PARENT_COMMIT": FRAMEWORK_RECOVERY_4_PARENT,
+        "PARENT_TREE": FRAMEWORK_RECOVERY_4_PARENT_TREE,
+    }:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_ASSIGNMENTS_INVALID"
+        )
+    functions = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef)
+    ]
+    expected_helpers = {
+        "_load_verify",
+        "_repo",
+        "_git",
+        "_repair_commit",
+        "_framework_commit",
+        "_repair_plan",
+        "_function_source",
+    }
+    if (
+        {node.name for node in functions} != expected_helpers
+        or any(node.decorator_list for node in functions)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_HELPERS_INVALID"
+        )
+    expected_loader = ast.parse(
+        "def _load_verify():\n"
+        '    """Load one isolated verifier module for a test."""\n'
+        '    module_path = Path(__file__).with_name("verify-current-audit.py")\n'
+        "    spec = importlib.util.spec_from_file_location(\n"
+        '        "verify_current_audit_fr_0004", module_path\n'
+        "    )\n"
+        "    if spec is None or spec.loader is None:\n"
+        '        raise RuntimeError("cannot load the current-audit verifier")\n'
+        "    module = importlib.util.module_from_spec(spec)\n"
+        "    spec.loader.exec_module(module)\n"
+        "    return module\n"
+    ).body[0]
+    loader = next(node for node in functions if node.name == "_load_verify")
+    if ast.dump(loader, include_attributes=False) != ast.dump(
+        expected_loader, include_attributes=False
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_LOADER_INVALID"
+        )
+    classes = [node for node in tree.body if isinstance(node, ast.ClassDef)]
+    expected_base = ast.parse("class C(unittest.TestCase):\n    pass\n").body[0].bases
+    if (
+        len(classes) != 1
+        or classes[0].name != "FrameworkRecovery4Tests"
+        or classes[0].decorator_list
+        or classes[0].keywords
+        or [ast.dump(base, include_attributes=False) for base in classes[0].bases]
+        != [ast.dump(base, include_attributes=False) for base in expected_base]
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_CLASS_INVALID"
+        )
+    class_methods = [
+        node
+        for node in classes[0].body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    if (
+        {node.name for node in class_methods}
+        != FRAMEWORK_RECOVERY_4_REQUIRED_TEST_IDS
+        or any(
+            not isinstance(node, ast.FunctionDef) or node.decorator_list
+            for node in class_methods
+        )
+        or any(
+            not isinstance(node, (ast.Expr, ast.FunctionDef))
+            for node in classes[0].body
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_CLASS_INVALID"
+        )
+    allowed_top_level = (
+        ast.Expr,
+        ast.Import,
+        ast.ImportFrom,
+        ast.Assign,
+        ast.FunctionDef,
+        ast.ClassDef,
+        ast.If,
+    )
+    if any(not isinstance(node, allowed_top_level) for node in tree.body):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_TOP_LEVEL_INVALID"
+        )
+    forbidden_calls = {
+        "compile",
+        "delattr",
+        "eval",
+        "exec",
+        "globals",
+        "locals",
+        "setattr",
+        "vars",
+    }
+    if any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in forbidden_calls
+        for node in ast.walk(tree)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_DYNAMIC_OVERRIDE"
+        )
+    imported_roots = {
+        "copy",
+        "hashlib",
+        "importlib",
+        "subprocess",
+        "sys",
+        "unittest",
+        "Path",
+        "mock",
+    }
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Attribute) or not isinstance(
+            node.ctx, ast.Store
+        ):
+            continue
+        root: ast.AST = node
+        while isinstance(root, (ast.Attribute, ast.Subscript)):
+            root = root.value
+        if isinstance(root, ast.Name) and root.id in imported_roots:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_DYNAMIC_OVERRIDE"
+            )
+    if any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+        and node.decorator_list
+        for node in ast.walk(tree)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_SKIP_INVALID"
+        )
+    main_guards = [node for node in tree.body if isinstance(node, ast.If)]
+    expected_main_guard = ast.parse(
+        'if __name__ == "__main__":\n    unittest.main()\n'
+    ).body[0]
+    if len(main_guards) != 1 or ast.dump(
+        main_guards[0], include_attributes=False
+    ) != ast.dump(expected_main_guard, include_attributes=False):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_MAIN_INVALID"
+        )
+    return tree
+
+
+def _framework_recovery_4_test_contract(
+    repo: Path, repair_commit: str
+) -> dict[str, Any]:
+    """Require all prior suites and the exact FR-0004 suite."""
+
+    prior_paths = (
+        "tools/release/test_verify_current_audit.py",
+        FRAMEWORK_RECOVERY_2_TEST_PATH,
+        FRAMEWORK_RECOVERY_3_TEST_PATH,
+        FRAMEWORK_RECOVERY_3_RESOURCE_TEST_PATH,
+    )
+    for path in prior_paths:
+        if _git_tree_entry(repo, repair_commit, path) != _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_4_PARENT, path
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PRIOR_TEST_DRIFT"
+            )
+    payload = _git_file(repo, repair_commit, FRAMEWORK_RECOVERY_4_TEST_PATH)
+    if (
+        len(payload) != FRAMEWORK_RECOVERY_4_TEST_BYTES
+        or _sha256(payload) != FRAMEWORK_RECOVERY_4_TEST_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_BYTES_INVALID"
+        )
+    tree = _framework_recovery_4_validate_test_source(
+        payload, FRAMEWORK_RECOVERY_4_TEST_PATH
+    )
+    ids = _discover_unittest_test_ids(
+        payload, FRAMEWORK_RECOVERY_4_TEST_PATH, strict_runtime=True
+    )
+    if (
+        len(ids) != len(set(ids))
+        or set(ids) != FRAMEWORK_RECOVERY_4_REQUIRED_TEST_IDS
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_TEST_NARROWING"
+        )
+    gate_payload = _git_file(
+        repo, repair_commit, "tools/release/current-audit-gate.sh"
+    )
+    if gate_payload != _framework_recovery_4_expected_gate_payload():
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_GATE_WIRING"
+        )
+
+    def suite_record(path: str) -> dict[str, Any]:
+        suite_payload = _git_file(repo, repair_commit, path)
+        suite_ids = _discover_unittest_test_ids(suite_payload, path)
+        return {
+            "count": len(suite_ids),
+            "ids_sha256": _sha256(
+                ("\n".join(sorted(suite_ids)) + "\n").encode("utf-8")
+            ),
+            "file": _commit_regular_file_record(repo, repair_commit, path),
+        }
+
+    return {
+        "legacy": suite_record(prior_paths[0]),
+        "fr_0002": suite_record(prior_paths[1]),
+        "fr_0003": suite_record(prior_paths[2]),
+        "resource": suite_record(prior_paths[3]),
+        "fr_0004": {
+            **suite_record(FRAMEWORK_RECOVERY_4_TEST_PATH),
+            "ast_sha256": _sha256(
+                ast.dump(tree, include_attributes=False).encode("utf-8")
+            ),
+        },
+        "required_regression_test_ids": sorted(
+            FRAMEWORK_RECOVERY_4_REQUIRED_TEST_IDS
+        ),
+        "historical_traceability_test_ids": list(
+            FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS
+        ),
+        "prior_test_bytes_preserved": True,
+        "warning_policy": "-W error",
+        "gate_record": _commit_regular_file_record(
+            repo, repair_commit, "tools/release/current-audit-gate.sh"
+        ),
+    }
+
+
+def _framework_recovery_4_validate_source_compatibility(
+    parent_payload: bytes,
+    target_payload: bytes,
+) -> None:
+    """Accept only the exact FR-0004 verifier source delta."""
+
+    parent = _framework_recovery_2_source_index(
+        parent_payload, label="framework_recovery_4.compatibility.parent"
+    )
+    target = _framework_recovery_2_source_index(
+        target_payload, label="framework_recovery_4.compatibility.target"
+    )
+    parent_definitions = parent["definitions"]
+    target_definitions = target["definitions"]
+    parent_assignments = parent["assignments"]
+    target_assignments = target["assignments"]
+    if (
+        set(target_definitions) - set(parent_definitions)
+        != FRAMEWORK_RECOVERY_4_NEW_DEFINITIONS
+        or {
+            name
+            for name in set(parent_definitions) & set(target_definitions)
+            if parent_definitions[name] != target_definitions[name]
+        }
+        != FRAMEWORK_RECOVERY_4_MODIFIED_DEFINITIONS
+        or set(parent_definitions) - set(target_definitions)
+        or set(target_assignments) - set(parent_assignments)
+        != FRAMEWORK_RECOVERY_4_NEW_ASSIGNMENTS
+        or {
+            name
+            for name in set(parent_assignments) & set(target_assignments)
+            if parent_assignments[name] != target_assignments[name]
+        }
+        != FRAMEWORK_RECOVERY_4_MODIFIED_ASSIGNMENTS
+        or set(parent_assignments) - set(target_assignments)
+        or parent["imports"] != target["imports"]
+        or parent["other_nodes"] != target["other_nodes"]
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+        )
+
+    def protected_residual(
+        payload: bytes, *, target_side: bool
+    ) -> bytes:
+        try:
+            tree = ast.parse(payload.decode("utf-8"))
+        except (UnicodeDecodeError, SyntaxError, ValueError) as error:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+            ) from error
+        starts = [0]
+        starts.extend(match.end() for match in re.finditer(rb"\n", payload))
+        definition_names = set(
+            FRAMEWORK_RECOVERY_4_MODIFIED_DEFINITIONS
+        )
+        assignment_names = set(
+            FRAMEWORK_RECOVERY_4_MODIFIED_ASSIGNMENTS
+        )
+        if target_side:
+            definition_names.update(FRAMEWORK_RECOVERY_4_NEW_DEFINITIONS)
+            assignment_names.update(FRAMEWORK_RECOVERY_4_NEW_ASSIGNMENTS)
+        intervals: list[tuple[int, int]] = []
+        for node in tree.body:
+            remove = (
+                isinstance(
+                    node,
+                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+                )
+                and node.name in definition_names
+            )
+            node_assignment_names: set[str] = set()
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = (
+                    node.targets
+                    if isinstance(node, ast.Assign)
+                    else [node.target]
+                )
+                node_assignment_names = {
+                    item.id for item in targets if isinstance(item, ast.Name)
+                }
+                remove = remove or bool(
+                    node_assignment_names & assignment_names
+                )
+            if not remove:
+                continue
+            decorator_lines = [
+                item.lineno
+                for item in getattr(node, "decorator_list", [])
+            ]
+            start_line = min([node.lineno, *decorator_lines])
+            start = starts[start_line - 1]
+            end = (
+                starts[node.end_lineno]
+                if node.end_lineno is not None
+                and node.end_lineno < len(starts)
+                else len(payload)
+            )
+            is_new_target_node = target_side and (
+                (
+                    isinstance(
+                        node,
+                        (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+                    )
+                    and node.name in FRAMEWORK_RECOVERY_4_NEW_DEFINITIONS
+                )
+                or bool(
+                    node_assignment_names
+                    & FRAMEWORK_RECOVERY_4_NEW_ASSIGNMENTS
+                )
+            )
+            if is_new_target_node:
+                blank_lines = re.match(
+                    rb"(?:[ \t]*\r?\n)*", payload[end:]
+                )
+                if blank_lines is None:
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+                    )
+                end += len(blank_lines.group())
+            intervals.append((start, end))
+        merged: list[tuple[int, int]] = []
+        for start, end in sorted(intervals):
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (
+                    merged[-1][0],
+                    max(end, merged[-1][1]),
+                )
+            else:
+                merged.append((start, end))
+        residual = payload
+        for start, end in reversed(merged):
+            residual = residual[:start] + residual[end:]
+        return residual
+
+    if protected_residual(
+        parent_payload, target_side=False
+    ) != protected_residual(target_payload, target_side=True):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+        )
+
+
+def _framework_recovery_4_source_retention_manifest(
+    repo: Path, repair_commit: str
+) -> dict[str, Any]:
+    """Prove that FR-0004 changes only its declared verifier surface."""
+
+    path = "tools/release/verify-current-audit.py"
+    parent_payload = _git_file(repo, FRAMEWORK_RECOVERY_4_PARENT, path)
+    target_payload = _git_file(repo, repair_commit, path)
+    if (
+        len(parent_payload) != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES
+        or _sha256(parent_payload)
+        != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES"
+        )
+    _framework_recovery_4_validate_source_compatibility(
+        parent_payload, target_payload
+    )
+    parent = _framework_recovery_2_source_index(
+        parent_payload, label=f"{FRAMEWORK_RECOVERY_4_PARENT}:{path}"
+    )
+    target = _framework_recovery_2_source_index(
+        target_payload, label=f"{repair_commit}:{path}"
+    )
+    parent_definitions = parent["definitions"]
+    target_definitions = target["definitions"]
+    parent_assignments = parent["assignments"]
+    target_assignments = target["assignments"]
+    removed_definitions = set(parent_definitions) - set(target_definitions)
+    removed_assignments = set(parent_assignments) - set(target_assignments)
+    new_definitions = set(target_definitions) - set(parent_definitions)
+    new_assignments = set(target_assignments) - set(parent_assignments)
+    modified_definitions = {
+        name
+        for name in set(parent_definitions) & set(target_definitions)
+        if parent_definitions[name] != target_definitions[name]
+    }
+    modified_assignments = {
+        name
+        for name in set(parent_assignments) & set(target_assignments)
+        if parent_assignments[name] != target_assignments[name]
+    }
+    if (
+        removed_definitions
+        or removed_assignments
+        or new_definitions != FRAMEWORK_RECOVERY_4_NEW_DEFINITIONS
+        or modified_definitions
+        != FRAMEWORK_RECOVERY_4_MODIFIED_DEFINITIONS
+        or new_assignments != FRAMEWORK_RECOVERY_4_NEW_ASSIGNMENTS
+        or modified_assignments
+        != FRAMEWORK_RECOVERY_4_MODIFIED_ASSIGNMENTS
+        or parent["imports"] != target["imports"]
+        or parent["other_nodes"] != target["other_nodes"]
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_SCOPE"
+        )
+    unchanged_definitions = {
+        name: parent_definitions[name]
+        for name in set(parent_definitions) & set(target_definitions)
+        if name not in modified_definitions
+    }
+    unchanged_assignments = {
+        name: parent_assignments[name]
+        for name in set(parent_assignments) & set(target_assignments)
+        if name not in modified_assignments
+    }
+    return {
+        "parent_file": {
+            "path": path,
+            "sha256": _sha256(parent_payload),
+            "bytes": len(parent_payload),
+            "lines": len(parent_payload.splitlines()),
+        },
+        "repair_file": _commit_regular_file_record(repo, repair_commit, path),
+        "new_definitions": sorted(new_definitions),
+        "modified_definitions": sorted(modified_definitions),
+        "new_assignments": sorted(new_assignments),
+        "modified_assignments": sorted(modified_assignments),
+        "unchanged_definition_count": len(unchanged_definitions),
+        "unchanged_definition_index_sha256": _sha256(
+            _canonical_json_bytes(
+                dict(sorted(unchanged_definitions.items()))
+            )
+        ),
+        "unchanged_assignment_count": len(unchanged_assignments),
+        "unchanged_assignment_index_sha256": _sha256(
+            _canonical_json_bytes(
+                dict(sorted(unchanged_assignments.items()))
+            )
+        ),
+        "imports_preserved": True,
+        "other_top_level_nodes_preserved": True,
+    }
+
+
+def _framework_recovery_4_expected_plan(
+    repo: Path,
+    repair_commit: str,
+    framework_commit: str,
+) -> dict[str, Any]:
+    """Return the exact unsigned FR-0004 repair plan."""
+
+    parent_plan, parent_plan_payload = _read_commit_json(
+        repo,
+        FRAMEWORK_RECOVERY_4_PARENT,
+        FRAMEWORK_RECOVERY_3_PLAN_PATH,
+        "framework_recovery_4.parent_plan",
+    )
+    if (
+        not isinstance(parent_plan, dict)
+        or parent_plan_payload
+        != _canonical_json_bytes(parent_plan, pretty=True)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_PLAN"
+        )
+    changed_core_files: list[dict[str, Any]] = []
+    for path in FRAMEWORK_RECOVERY_4_CORE_PATHS:
+        status = FRAMEWORK_RECOVERY_4_REPAIR_STATUSES[path]
+        changed_core_files.append(
+            {
+                "status": status,
+                "old": (
+                    None
+                    if status == "A"
+                    else _commit_regular_file_record(
+                        repo, FRAMEWORK_RECOVERY_4_PARENT, path
+                    )
+                ),
+                "new": _commit_regular_file_record(
+                    repo, repair_commit, path
+                ),
+            }
+        )
+    defect = _framework_recovery_4_parent_defect(repo)
+    return {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_4_ID,
+        "release_target": "0.9.0",
+        "author": {
+            "name": "Sepehr Mahmoudian",
+            "email": "sepmhn@gmail.com",
+        },
+        "persistent_identifier": None,
+        "framework_epoch": {
+            "active": 2,
+            "retired_candidate": 4,
+            "next_candidate": 5,
+        },
+        "parent_commit": FRAMEWORK_RECOVERY_4_PARENT,
+        "parent_tree": FRAMEWORK_RECOVERY_4_PARENT_TREE,
+        "prior_framework_commit": framework_commit,
+        "repair_subject": FRAMEWORK_RECOVERY_4_SUBJECT,
+        "transition_identity": _framework_recovery_4_transition_identity(),
+        "retired_recovery": {
+            "recovery_id": FRAMEWORK_RECOVERY_3_ID,
+            "repair": _signed_commit_binding(
+                repo,
+                FRAMEWORK_RECOVERY_4_PARENT,
+                FRAMEWORK_RECOVERY_3_PARENT,
+            ),
+            "plan_record": _commit_regular_file_record(
+                repo,
+                FRAMEWORK_RECOVERY_4_PARENT,
+                FRAMEWORK_RECOVERY_3_PLAN_PATH,
+            ),
+            "state_before": "PENDING_QUALIFICATION",
+            "state_after": "ABORTED_BEFORE_QUALIFICATION",
+            "reason": "VERIFIER_DEFECT",
+            "defect_code": defect["code"],
+            "qualification_commit": None,
+            "activation_commit": None,
+            "epoch_reusable": False,
+        },
+        "defect": defect,
+        "correction": {
+            "review_id": "FR-0003-R02",
+            "finding_id": "F104",
+            "field": "resolving_test_ids",
+            "before": list(FRAMEWORK_RECOVERY_4_FALSE_F104_TEST_IDS),
+            "after": list(FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS),
+            "unrelated_mapping_fields_changed": False,
+            "fr_0003_qualification_reused": False,
+            "new_review_records_required": True,
+        },
+        "boundary_policy": _framework_recovery_3_boundary_policy(),
+        "registered_snapshot_materialization": copy.deepcopy(
+            parent_plan["registered_snapshot_materialization"]
+        ),
+        "changed_core_files": changed_core_files,
+        "code_diff": _framework_recovery_4_code_diff(repo, repair_commit),
+        "source_retention": _framework_recovery_4_source_retention_manifest(
+            repo, repair_commit
+        ),
+        "test_contract": _framework_recovery_4_test_contract(
+            repo, repair_commit
+        ),
+        "preserved_state_records": [
+            _commit_regular_file_record(
+                repo, FRAMEWORK_RECOVERY_4_PARENT, path
+            )
+            for path in FRAMEWORK_RECOVERY_4_PRESERVED_PATHS
+        ],
+        "qualification_path": FRAMEWORK_RECOVERY_4_QUALIFICATION_PATH,
+        "qualification_requirements": [
+            copy.deepcopy(requirement)
+            for requirement in FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS
+        ],
+        "activation_path": FRAMEWORK_RECOVERY_4_ACTIVATION_PATH,
+        "activation_requirements": [
+            copy.deepcopy(requirement)
+            for requirement in FRAMEWORK_RECOVERY_4_ACTIVATION_REQUIREMENTS
+        ],
+        "state": {
+            "status": "PENDING_QUALIFICATION",
+            "candidate_epoch": 5,
+            "active_epoch": 2,
+            "successor_transitions_allowed": False,
+            "effective_on": (
+                "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_"
+                "FRAMEWORK_RECOVERY_4_ACTIVATION"
+            ),
+        },
+        "authority": _framework_recovery_4_authority(),
+        "assurance_boundary": _framework_recovery_4_assurance_boundary(),
+    }
+
+
+def _framework_recovery_4_verify_stage_modes(
+    repo: Path,
+    commit: str,
+    expected_modes: dict[str, str],
+    *,
+    label: str,
+) -> None:
+    """Require regular-file modes for every FR-0004 artifact."""
+
+    for path, expected_mode in expected_modes.items():
+        entry = _git_tree_entry(repo, commit, path)
+        if (
+            expected_mode not in {"100644", "100755"}
+            or entry is None
+            or entry.get("mode") != expected_mode
+            or entry.get("type") != "blob"
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_MODE:"
+                + label
+                + ":"
+                + path
+            )
+
+
+def _verify_framework_recovery_4_repair(
+    repo: Path,
+    repair_commit: str,
+    *,
+    framework_commit: str,
+) -> dict[str, Any]:
+    """Verify the exact FR-0004 repair commit and signed plan."""
+
+    parent_metadata = _commit_metadata(repo, FRAMEWORK_RECOVERY_4_PARENT)
+    metadata = _commit_metadata(repo, repair_commit)
+    if (
+        parent_metadata["tree"] != FRAMEWORK_RECOVERY_4_PARENT_TREE
+        or metadata["parent"] != FRAMEWORK_RECOVERY_4_PARENT
+        or metadata["subject"] != FRAMEWORK_RECOVERY_4_SUBJECT
+        or metadata["author_name"] != "Sepehr Mahmoudian"
+        or metadata["author_email"] != "sepmhn@gmail.com"
+        or metadata["committer_name"] != "Sepehr Mahmoudian"
+        or metadata["committer_email"] != "sepmhn@gmail.com"
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_COMMIT_IDENTITY"
+        )
+    _verify_named_commit_signature(
+        repo, repair_commit, "FRAMEWORK_RECOVERY_4"
+    )
+    if not _strict_equal(
+        _changed_path_statuses(
+            repo, FRAMEWORK_RECOVERY_4_PARENT, repair_commit
+        ),
+        dict(sorted(FRAMEWORK_RECOVERY_4_REPAIR_STATUSES.items())),
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_DIFF"
+        )
+    _framework_recovery_4_verify_stage_modes(
+        repo,
+        repair_commit,
+        {
+            FRAMEWORK_RECOVERY_4_PLAN_PATH: "100644",
+            FRAMEWORK_RECOVERY_4_TEST_PATH: "100644",
+            "tools/release/current-audit-gate.sh": "100755",
+            "tools/release/verify-current-audit.py": "100644",
+        },
+        label="repair",
+    )
+    for path in FRAMEWORK_RECOVERY_4_PRESERVED_PATHS:
+        if _git_tree_entry(repo, repair_commit, path) != _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_4_PARENT, path
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_STATE_DRIFT"
+            )
+    plan, payload = _read_commit_json(
+        repo,
+        repair_commit,
+        FRAMEWORK_RECOVERY_4_PLAN_PATH,
+        "framework_recovery_4.plan",
+    )
+    if (
+        not isinstance(plan, dict)
+        or payload != _canonical_json_bytes(plan, pretty=True)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PLAN_CANONICAL"
+        )
+    expected = _framework_recovery_4_expected_plan(
+        repo, repair_commit, framework_commit
+    )
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    if set(plan) != expected_fields:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PLAN_FIELDS"
+        )
+    unsigned = {
+        key: copy.deepcopy(value)
+        for key, value in plan.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: value
+        for key, value in unsigned.items()
+        if key != "created_at_utc"
+    }
+    if not _strict_equal(comparable, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PLAN_INVALID"
+        )
+    created = _parse_utc(
+        plan.get("created_at_utc"),
+        "framework_recovery_4.plan.created",
+    )
+    if not (
+        _commit_datetime(repo, FRAMEWORK_RECOVERY_4_PARENT)
+        <= created
+        <= _commit_datetime(repo, repair_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PLAN_CHRONOLOGY"
+        )
+    signer = _source_release_signer(repo)
+    _verify_ssh_detached_attestation(
+        repo,
+        plan["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0004-plan-v1",
+        label="framework_recovery_4.plan",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return plan
+
+
 def _framework_recovery_3_code_diff(repo: Path, repair_commit: str) -> dict[str, Any]:
     """Bind the exact FR-0003 core patch without a self-commit reference."""
 
@@ -7124,6 +8643,40 @@ def _framework_recovery_3_source_retention_manifest(
     path = "tools/release/verify-current-audit.py"
     parent_payload = _git_file(repo, FRAMEWORK_RECOVERY_3_PARENT, path)
     target_payload = _git_file(repo, repair_commit, path)
+    if (
+        b"\nFRAMEWORK_RECOVERY_4_" in target_payload
+        or b"\ndef _framework_recovery_4_" in target_payload
+    ):
+        if b'\nFRAMEWORK_RECOVERY_4_PARENT = "' not in target_payload:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+            )
+        frozen_entry = _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_4_PARENT, path
+        )
+        if (
+            frozen_entry is None
+            or frozen_entry["mode"] != "100644"
+            or frozen_entry["type"] != "blob"
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+            )
+        frozen_target = _git(
+            repo, "cat-file", "blob", frozen_entry["oid"]
+        )
+        if (
+            len(frozen_target) != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_BYTES
+            or _sha256(frozen_target)
+            != FRAMEWORK_RECOVERY_4_PARENT_VERIFIER_SHA256
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SOURCE_COMPATIBILITY"
+            )
+        _framework_recovery_4_validate_source_compatibility(
+            frozen_target, target_payload
+        )
+        target_payload = frozen_target
     parent = _framework_recovery_2_source_index(
         parent_payload, label=f"{FRAMEWORK_RECOVERY_3_PARENT}:{path}"
     )
@@ -12711,8 +14264,8 @@ def _framework_recovery_3_review_contracts(
                     "_verify_framework_recovery_3_activation",
                 ],
                 "resolving_test_ids": [
-                    "test_anomaly_manifest_is_sorted_by_stable_identity",
-                    "test_input_is_not_mutated",
+                    "test_framework_recovery_3_run_attempt_namespace_"
+                    "includes_parent",
                 ],
                 "resolving_evidence_ids": [
                     "FR-0003-E03",
@@ -13670,6 +15223,1718 @@ def _verify_framework_recovery_3_activation(
     return activation
 
 
+def _framework_recovery_4_parent_reproduction_command(
+) -> tuple[str, ...]:
+    """Return the exact one-test FR-0004 reproduction command."""
+
+    return (
+        "python3",
+        "-I",
+        FRAMEWORK_RECOVERY_4_TEST_PATH,
+        (
+            "FrameworkRecovery4Tests."
+            "test_framework_recovery_4_defect_reproduction_is_exact"
+        ),
+    )
+
+
+def _framework_recovery_4_parent_reproduction_log(repo: Path) -> bytes:
+    """Return the stable semantic trace for the parent review defect."""
+
+    defect = _framework_recovery_4_parent_defect(repo)
+    return (
+        f"FR-0004-REPRO parent_commit={FRAMEWORK_RECOVERY_4_PARENT}\n"
+        f"FR-0004-REPRO review_id={defect['affected_review_id']} "
+        f"finding_id={defect['affected_finding_id']}\n"
+        "FR-0004-REPRO observed_tests="
+        "test_anomaly_manifest_is_sorted_by_stable_identity,"
+        "test_input_is_not_mutated\n"
+        "FR-0004-REPRO required_test="
+        "test_framework_recovery_3_run_attempt_namespace_includes_parent\n"
+        "FR-0004-REPRO required_test_calls_uniqueness_validator=true\n"
+        "FR-0004-REPRO required_test_asserts_reused_attempt_error=true\n"
+        "FR-0004-REPRO historical_false_tests_call_uniqueness_validator=false\n"
+        "FR-0004-REPRO result=DEFECT_REPRODUCED\n"
+    ).encode("ascii")
+
+
+def _framework_recovery_4_expected_parent_reproduction(
+    repo: Path,
+    repair_commit: str,
+    containing_commit: str,
+    *,
+    defect: dict[str, Any],
+    command: list[str],
+    exit_status: int,
+    started_at_utc: str,
+    completed_at_utc: str,
+) -> dict[str, Any]:
+    """Return the exact structured FR-0004 parent-defect record."""
+
+    log_path = FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS[0]["paths"][1]
+    compressed = _git_file(repo, containing_commit, log_path)
+    raw_log = _decompress_unbound_gzip(
+        compressed, "framework_recovery_4.parent_reproduction"
+    )
+    expected_defect = _framework_recovery_4_parent_defect(repo)
+    if not _strict_equal(defect, expected_defect):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REPRODUCTION_DEFECT"
+        )
+    if (
+        command != list(_framework_recovery_4_parent_reproduction_command())
+        or exit_status != 0
+        or type(exit_status) is not int
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REPRODUCTION_EXECUTION"
+        )
+    return {
+        "schema_version": "1.0.0",
+        "evidence_id": "FR-0004-E01",
+        "kind": "DETERMINISTIC_PARENT_DEFECT_REPRODUCTION",
+        "parent_commit": FRAMEWORK_RECOVERY_4_PARENT,
+        "parent_tree": FRAMEWORK_RECOVERY_4_PARENT_TREE,
+        "repair_commit": repair_commit,
+        "parent_verifier_record": _commit_regular_file_record(
+            repo,
+            FRAMEWORK_RECOVERY_4_PARENT,
+            "tools/release/verify-current-audit.py",
+        ),
+        "parent_fr_0003_test_record": _commit_regular_file_record(
+            repo,
+            FRAMEWORK_RECOVERY_4_PARENT,
+            FRAMEWORK_RECOVERY_3_TEST_PATH,
+        ),
+        "defect": copy.deepcopy(defect),
+        "test_id": (
+            "FrameworkRecovery4Tests."
+            "test_framework_recovery_4_defect_reproduction_is_exact"
+        ),
+        "command": copy.deepcopy(command),
+        "capture": "MERGED_STDOUT_STDERR_RAW_BYTES",
+        "exit_status": exit_status,
+        "raw_log": {
+            "file": _commit_regular_file_record(
+                repo, containing_commit, log_path
+            ),
+            "uncompressed": {
+                "sha256": _sha256(raw_log),
+                "bytes": len(raw_log),
+                "lines": len(raw_log.splitlines()),
+            },
+        },
+        "started_at_utc": started_at_utc,
+        "completed_at_utc": completed_at_utc,
+        "result": "PARENT_DEFECT_REPRODUCED",
+    }
+
+
+def _framework_recovery_4_validate_parent_reproduction(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    value: dict[str, Any],
+    *,
+    evidence_record: dict[str, Any],
+) -> None:
+    """Validate the exact semantic parent-defect reproduction."""
+
+    expected_fields = {
+        "schema_version",
+        "evidence_id",
+        "kind",
+        "parent_commit",
+        "parent_tree",
+        "repair_commit",
+        "parent_verifier_record",
+        "parent_fr_0003_test_record",
+        "defect",
+        "test_id",
+        "command",
+        "capture",
+        "exit_status",
+        "raw_log",
+        "started_at_utc",
+        "completed_at_utc",
+        "result",
+    }
+    if not isinstance(value, dict) or set(value) != expected_fields:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REPRODUCTION_INVALID"
+        )
+    expected = _framework_recovery_4_expected_parent_reproduction(
+        repo,
+        repair_commit,
+        qualification_commit,
+        defect=value.get("defect"),
+        command=value.get("command"),
+        exit_status=value.get("exit_status"),
+        started_at_utc=value.get("started_at_utc"),
+        completed_at_utc=value.get("completed_at_utc"),
+    )
+    if not _strict_equal(value, expected) or not _strict_equal(
+        value.get("raw_log"),
+        {
+            "file": evidence_record["files"][1],
+            "uncompressed": evidence_record["uncompressed"][1],
+        },
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REPRODUCTION_INVALID"
+        )
+    log_path = FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS[0]["paths"][1]
+    log = _decompress_unbound_gzip(
+        _git_file(repo, qualification_commit, log_path),
+        "framework_recovery_4.reproduction.log",
+    )
+    pattern = (
+        rb"\A\.\n-{70}\nRan 1 test in \d+(?:\.\d+)?s\n\nOK\n"
+        + re.escape(_framework_recovery_4_parent_reproduction_log(repo))
+        + rb"\Z"
+    )
+    if re.fullmatch(pattern, log) is None:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REPRODUCTION_LOG"
+        )
+    started = _parse_utc(
+        value.get("started_at_utc"),
+        "framework_recovery_4.reproduction.started",
+    )
+    completed = _parse_utc(
+        value.get("completed_at_utc"),
+        "framework_recovery_4.reproduction.completed",
+    )
+    if not (
+        _commit_datetime(repo, repair_commit)
+        <= started
+        <= completed
+        <= _commit_datetime(repo, qualification_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REPRODUCTION_CHRONOLOGY"
+        )
+
+
+def _framework_recovery_4_hosted_entry(
+    repo: Path,
+    containing_commit: str,
+    *,
+    paths: tuple[str, str, str],
+    subject_commit: str,
+    workflow: str,
+    capture_operations: dict[str, Any],
+    anomaly_manifest: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build one epoch-5 hosted-evidence entry."""
+
+    return _framework_recovery_3_hosted_entry(
+        repo,
+        containing_commit,
+        paths=paths,
+        subject_commit=subject_commit,
+        workflow=workflow,
+        capture_operations=capture_operations,
+        anomaly_manifest=anomaly_manifest,
+    )
+
+
+def _framework_recovery_4_verify_hosted_entry(
+    repo: Path,
+    containing_commit: str,
+    observed: dict[str, Any],
+    *,
+    paths: tuple[str, str, str],
+    subject_commit: str,
+    workflow: str,
+    lane: str,
+) -> tuple[dict[str, Any], datetime]:
+    """Verify one epoch-5 hosted-evidence entry."""
+
+    return _framework_recovery_3_verify_hosted_entry(
+        repo,
+        containing_commit,
+        observed,
+        paths=paths,
+        subject_commit=subject_commit,
+        workflow=workflow,
+        lane=f"fr_0004_{lane}",
+    )
+
+
+def _framework_recovery_4_run_attempt_identity(
+    repo: Path,
+    containing_commit: str,
+    entry: dict[str, Any],
+    *,
+    label: str,
+) -> tuple[int, int]:
+    """Return one retained FR-0004 run-attempt identity."""
+
+    return _framework_recovery_2_run_attempt_identity(
+        repo, containing_commit, entry, label=f"fr_0004_{label}"
+    )
+
+
+def _framework_recovery_4_verify_run_attempt_uniqueness(
+    repo: Path,
+    entries: list[tuple[str, str, dict[str, Any]]],
+) -> None:
+    """Reject parent, retired-repair, and cross-phase run reuse."""
+
+    observed: set[tuple[int, int]] = {
+        (30_023_626_301, 1),
+        (30_093_828_629, 1),
+        (30_093_828_642, 1),
+    }
+    for label, containing_commit, entry in entries:
+        identity = _framework_recovery_4_run_attempt_identity(
+            repo, containing_commit, entry, label=label
+        )
+        if identity in observed:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_RUN_ATTEMPT_REUSED"
+            )
+        observed.add(identity)
+
+
+def _framework_recovery_4_verify_ci_markers(
+    repo: Path,
+    containing_commit: str,
+    entry: dict[str, Any],
+    *,
+    test_contract: dict[str, Any],
+    label: str,
+) -> None:
+    """Require one marker for every epoch-5 gate suite."""
+
+    counts = tuple(
+        test_contract.get(key, {}).get("count")
+        for key in ("legacy", "fr_0002", "fr_0003", "resource", "fr_0004")
+    )
+    if (
+        any(type(count) is not int or count < 1 for count in counts)
+        or len(set(counts)) != len(counts)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_CI_TEST_COUNT:" + label
+        )
+    files = entry.get("files")
+    if not isinstance(files, list) or len(files) != 3:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_CI_FILES:" + label
+        )
+    log = _decompress_unbound_gzip(
+        _git_file(repo, containing_commit, files[2]["path"]),
+        f"framework_recovery_4.{label}.log",
+    )
+    marker_log = _hosted_step_log_lines(
+        log, "supply-chain", "Verify current-head 0.9 audit cut"
+    )
+    timestamp_prefix = rb"^.*\t\d{4}-\d{2}-\d{2}T[^\n ]+Z "
+    run_patterns = [
+        timestamp_prefix
+        + rb"Ran "
+        + str(count).encode("ascii")
+        + rb" tests in \d+(?:\.\d+)?s$"
+        for count in counts
+    ]
+    forbidden = (
+        b"FAILED",
+        b"ERROR",
+        b"Traceback",
+        b"ResourceWarning",
+        b"skipped=",
+        b"expected failure",
+        b"unexpected success",
+    )
+    if (
+        any(
+            len(re.findall(pattern, marker_log, flags=re.MULTILINE)) != 1
+            for pattern in run_patterns
+        )
+        or len(
+            re.findall(
+                timestamp_prefix + rb"OK$",
+                marker_log,
+                flags=re.MULTILINE,
+            )
+        )
+        != len(counts)
+        or len(
+            re.findall(
+                timestamp_prefix + rb"verify-current-audit: OK$",
+                marker_log,
+                flags=re.MULTILINE,
+            )
+        )
+        != 1
+        or any(token in marker_log for token in forbidden)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_CI_LOG_MARKERS:" + label
+        )
+
+
+def _framework_recovery_4_local_commands() -> tuple[tuple[str, ...], ...]:
+    """Return the exact FR-0004 local validation command order."""
+
+    return (
+        ("tools/release/current-audit-gate.sh",),
+        ("tools/p0r-exit-gate.sh",),
+        (
+            "python3",
+            "-I",
+            "tools/release/current-audit-resource-profile.py",
+        ),
+    )
+
+
+def _framework_recovery_4_verify_local_markers(
+    payload: bytes,
+    *,
+    test_contract: dict[str, Any],
+) -> None:
+    """Require exact direct-gate and P0 suite markers."""
+
+    sections = (
+        b"=== CURRENT_AUDIT_GATE ===\n"
+        b"$ tools/release/current-audit-gate.sh\n",
+        b"=== P0R_EXIT_GATE ===\n$ tools/p0r-exit-gate.sh\n",
+        b"=== RESOURCE_PROFILE ===\n"
+        b"$ python3 -I tools/release/current-audit-resource-profile.py\n",
+    )
+    positions = [payload.find(section) for section in sections]
+    counts = tuple(
+        test_contract.get(key, {}).get("count")
+        for key in ("legacy", "fr_0002", "fr_0003", "resource", "fr_0004")
+    )
+    if (
+        any(type(count) is not int or count < 1 for count in counts)
+        or any(
+            position < 0 or payload.count(section) != 1
+            for position, section in zip(positions, sections, strict=True)
+        )
+        or positions != sorted(positions)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_LOG"
+        )
+    direct = payload[positions[0] : positions[1]]
+    p0 = payload[positions[1] : positions[2]]
+
+    def run_counts(chunk: bytes) -> list[int]:
+        return [
+            len(
+                re.findall(
+                    rb"^Ran "
+                    + str(count).encode("ascii")
+                    + rb" tests in \d+(?:\.\d+)?s$",
+                    chunk,
+                    flags=re.MULTILINE,
+                )
+            )
+            for count in counts
+        ]
+
+    if (
+        run_counts(direct) != [1, 1, 1, 1, 1]
+        or len(re.findall(rb"^OK$", direct, flags=re.MULTILINE)) != 5
+        or direct.count(b"verify-current-audit: OK") != 1
+        or run_counts(p0) != [1, 1, 1, 2, 1]
+        or len(re.findall(rb"^OK$", p0, flags=re.MULTILINE)) != 11
+        or p0.count(b"verify-current-audit: OK") != 1
+        or p0.count(b"P0-R exit gate: 30 passed, 0 failed") != 1
+        or any(
+            token in payload
+            for token in (
+                b"\nFAILED",
+                b"\nERROR",
+                b"Traceback",
+                b"ResourceWarning",
+                b"skipped=",
+                b"unexpected success",
+                b"##[error]",
+            )
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_LOG"
+        )
+
+
+def _framework_recovery_4_validate_local_document(
+    repo: Path,
+    qualification_commit: str,
+    repair_commit: str,
+    value: dict[str, Any],
+    *,
+    evidence_record: dict[str, Any],
+    test_contract: dict[str, Any],
+) -> None:
+    """Validate the exact FR-0004 local command and log record."""
+
+    fields = {
+        "schema_version",
+        "evidence_id",
+        "kind",
+        "subject_commit",
+        "subject_tree",
+        "platform",
+        "tool_versions",
+        "commands",
+        "raw_log",
+        "started_at_utc",
+        "completed_at_utc",
+        "overall_result",
+    }
+    if (
+        not isinstance(value, dict)
+        or set(value) != fields
+        or value.get("schema_version") != "1.0.0"
+        or value.get("evidence_id") != "FR-0004-E04"
+        or value.get("kind") != "REPAIR_LOCAL_VALIDATION"
+        or value.get("subject_commit") != repair_commit
+        or value.get("subject_tree")
+        != _commit_metadata(repo, repair_commit)["tree"]
+        or value.get("overall_result") != "PASS"
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_INVALID"
+        )
+    platform = value.get("platform")
+    versions = value.get("tool_versions")
+    if (
+        not isinstance(platform, dict)
+        or set(platform) != {"architecture", "operating_system"}
+        or any(
+            not isinstance(item, str) or not item.strip()
+            for item in platform.values()
+        )
+        or not isinstance(versions, dict)
+        or set(versions) != {"cargo", "docker", "git", "python", "rustc"}
+        or any(
+            not isinstance(item, str) or not item.strip()
+            for item in versions.values()
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_PLATFORM"
+        )
+    commands = value.get("commands")
+    expected_argv = _framework_recovery_4_local_commands()
+    if not isinstance(commands, list) or len(commands) != len(expected_argv):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_COMMANDS"
+        )
+    prior_completed: datetime | None = None
+    command_ids = (
+        "CURRENT_AUDIT_GATE",
+        "P0R_EXIT_GATE",
+        "RESOURCE_PROFILE",
+    )
+    for index, (record, argv) in enumerate(
+        zip(commands, expected_argv, strict=True)
+    ):
+        if (
+            not isinstance(record, dict)
+            or set(record)
+            != {
+                "argv",
+                "completed_at_utc",
+                "exit_status",
+                "id",
+                "result",
+                "started_at_utc",
+            }
+            or record.get("argv") != list(argv)
+            or record.get("exit_status") != 0
+            or record.get("result") != "PASS"
+            or record.get("id") != command_ids[index]
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_COMMANDS"
+            )
+        started = _parse_utc(
+            record.get("started_at_utc"),
+            f"framework_recovery_4.local.{index}.started",
+        )
+        completed = _parse_utc(
+            record.get("completed_at_utc"),
+            f"framework_recovery_4.local.{index}.completed",
+        )
+        if (
+            started > completed
+            or (prior_completed is not None and started != prior_completed)
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_COMMAND_TIMES"
+            )
+        prior_completed = completed
+    started = _parse_utc(
+        value.get("started_at_utc"),
+        "framework_recovery_4.local.started",
+    )
+    completed = _parse_utc(
+        value.get("completed_at_utc"),
+        "framework_recovery_4.local.completed",
+    )
+    if (
+        _commit_datetime(repo, repair_commit) > started
+        or completed > _commit_datetime(repo, qualification_commit)
+        or started
+        != _parse_utc(
+            commands[0]["started_at_utc"],
+            "framework_recovery_4.local.first",
+        )
+        or completed != prior_completed
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_CHRONOLOGY"
+        )
+    log_path = FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS[3]["paths"][1]
+    compressed = _git_file(repo, qualification_commit, log_path)
+    log = _decompress_unbound_gzip(
+        compressed, "framework_recovery_4.local.log"
+    )
+    _framework_recovery_4_verify_local_markers(
+        log, test_contract=test_contract
+    )
+    raw_log = value.get("raw_log")
+    if (
+        not isinstance(raw_log, dict)
+        or set(raw_log) != {"file", "uncompressed"}
+        or not _strict_equal(raw_log["file"], evidence_record["files"][1])
+        or not _strict_equal(
+            raw_log["uncompressed"], evidence_record["uncompressed"][1]
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_LOG_BINDING"
+        )
+    resource_section = (
+        b"=== RESOURCE_PROFILE ===\n"
+        b"$ python3 -I tools/release/current-audit-resource-profile.py\n"
+    )
+    resource_body = log[log.index(resource_section) + len(resource_section) :]
+    resource_document = _load_json_bytes(
+        resource_body, "framework_recovery_4.local.resource_profile"
+    )
+    if (
+        not isinstance(resource_document, dict)
+        or resource_body
+        != _canonical_json_bytes(resource_document, pretty=True)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_LOCAL_LOG"
+        )
+    _framework_recovery_3_validate_local_resource_profile(
+        repo,
+        repair_commit,
+        resource_document,
+        generated_not_before=_parse_utc(
+            commands[2]["started_at_utc"],
+            "framework_recovery_4.local.resource.started",
+        ),
+        generated_not_after=_parse_utc(
+            commands[2]["completed_at_utc"],
+            "framework_recovery_4.local.resource.completed",
+        ),
+    )
+
+
+def _framework_recovery_4_review_limitations() -> list[str]:
+    """Return the exact FR-0004 automated-review limitations."""
+
+    return [
+        "FR_0002_QUALIFICATION_REMAINS_INVALID",
+        "FR_0003_WAS_NEVER_QUALIFIED",
+        "EPOCH_4_IS_PERMANENTLY_NONREUSABLE",
+        (
+            "HISTORICAL_FR_0003_REPAIR_REMAINS_IMMUTABLE_AND_"
+            "TRACEABILITY_DEFECTIVE"
+        ),
+        "UNPUBLISHED_CANDIDATE_OBJECTS_HAVE_NO_AUTHORITY",
+        "ACTIVE_FRAMEWORK_EPOCH_REMAINS_2_UNTIL_FR_0004_ACTIVATION",
+        "FR_0004_IS_A_NEW_SIGNED_TRUST_ROOT_REBASELINE",
+        "ONE_SECOND_POLICY_APPLIES_ONLY_TO_EXPLICIT_EPOCH_5_VALIDATION",
+        "MATERIALIZATION_AVAILABILITY_REQUIRES_TWO_DAEMON_CPUS",
+        "MATERIALIZATION_AVAILABILITY_REQUIRES_1280_MIB_DAEMON_MEMORY",
+        "MAXIMUM_MATERIALIZATION_BOUNDARY_AVAILABILITY_IS_NOT_UNIVERSAL",
+        "MATERIALIZATION_ADDS_DIRECTORY_DEPTH_64_AND_FILE_DEPTH_65_CONSTRAINTS",
+        "BIND_MOUNT_COMPARATIVE_PERFORMANCE_IS_NOT_QUALIFICATION_EVIDENCE",
+        "MATERIALIZATION_RESOURCE_PROFILE_IS_SINGLE_HOST_DIAGNOSTIC_EVIDENCE",
+        "MATERIALIZATION_RESOURCE_PROFILE_USES_METADATA_ONLY_RECEIPT_FIXTURES",
+        "HOST_SNAPSHOT_HASHING_READS_EACH_FILE_INTO_BOUNDED_MEMORY",
+        "INTERNAL_AUTOMATED_REVIEW_IS_NOT_HUMAN_OR_EXTERNAL_REVIEW",
+        "LOCAL_RECORD_INTEGRITY_SIGNATURE_IS_NOT_REVIEW_APPROVAL",
+    ]
+
+
+def _framework_recovery_4_review_contracts(
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Return the exact FR-0004 automated review contracts."""
+
+    return {
+        "FR-0004-R01": {
+            "F001": {
+                "affected_functions": [
+                    "_framework_recovery_3_review_contracts",
+                    "_framework_recovery_4_historical_f104_mapping",
+                    "_framework_recovery_4_parent_defect",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_defect_reproduction_is_exact",
+                    "test_framework_recovery_4_f104_mapping_is_corrected",
+                ],
+                "resolving_evidence_ids": ["FR-0004-E01"],
+            },
+            "F002": {
+                "affected_functions": [
+                    "_verify_framework_recovery_3_history",
+                    "_verify_framework_recovery_4_history",
+                    "_verify_framework_history",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_retires_fr_0003_"
+                    "without_qualification",
+                    "test_framework_recovery_4_parent_has_no_q_or_a",
+                ],
+                "resolving_evidence_ids": [
+                    "FR-0004-E01",
+                    "FR-0004-E04",
+                ],
+            },
+            "F003": {
+                "affected_functions": [
+                    "_framework_recovery_4_verify_successor_guard",
+                    "_verify_forward_protocol_history",
+                    "_verify_post_activation_gate_retention",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_epoch_4_is_not_reusable",
+                    "test_framework_recovery_4_transition_creates_epoch_5",
+                    "test_framework_recovery_4_successor_requires_activation",
+                ],
+                "resolving_evidence_ids": ["FR-0004-E04"],
+            },
+            "F004": {
+                "affected_functions": [
+                    "_framework_recovery_2_source_retention_manifest",
+                    "_framework_recovery_3_source_retention_manifest",
+                    "_framework_recovery_4_source_retention_manifest",
+                    "_framework_recovery_4_validate_source_compatibility",
+                    "_verify_framework_recovery_4_repair",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_parent_bytes_are_pinned",
+                    "test_framework_recovery_4_repair_scope_is_exact",
+                    "test_framework_recovery_4_source_retention_rejects_"
+                    "unrelated_change",
+                ],
+                "resolving_evidence_ids": [
+                    "FR-0004-E01",
+                    "FR-0004-E04",
+                ],
+            },
+            "F005": {
+                "affected_functions": [
+                    "_framework_recovery_4_verify_hosted_entry",
+                    "_framework_recovery_4_verify_run_attempt_uniqueness",
+                    "_verify_framework_recovery_4_qualification",
+                    "_verify_framework_recovery_4_activation",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_evidence_signatures_and_"
+                    "chronology_are_bound",
+                    "test_framework_recovery_4_rejects_cross_phase_run_reuse",
+                ],
+                "resolving_evidence_ids": [
+                    "FR-0004-E02",
+                    "FR-0004-E03",
+                    "FR-0004-E04",
+                ],
+            },
+        },
+        "FR-0004-R02": {
+            "F101": {
+                "affected_functions": [
+                    "_framework_recovery_3_review_contracts",
+                    "_framework_recovery_4_parent_defect",
+                    "_framework_recovery_4_review_contracts",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_3_run_attempt_namespace_"
+                    "includes_parent",
+                    "test_framework_recovery_4_f104_mapping_is_corrected",
+                    "test_framework_recovery_4_review_contract_cites_actual_test",
+                ],
+                "resolving_evidence_ids": [
+                    "FR-0004-E01",
+                    "FR-0004-E04",
+                ],
+            },
+            "F102": {
+                "affected_functions": [
+                    "_framework_recovery_2_source_retention_manifest",
+                    "_framework_recovery_3_source_retention_manifest",
+                    "_framework_recovery_4_source_retention_manifest",
+                    "_framework_recovery_4_test_contract",
+                    "_framework_recovery_4_expected_gate_payload",
+                    "_framework_recovery_4_validate_source_compatibility",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_preserves_prior_test_suites",
+                    "test_framework_recovery_4_expected_gate_payload_is_exact",
+                    "test_framework_recovery_4_source_retention_rejects_"
+                    "unrelated_change",
+                    "test_framework_recovery_4_test_contract_is_warning_strict",
+                ],
+                "resolving_evidence_ids": [
+                    "FR-0004-E02",
+                    "FR-0004-E03",
+                    "FR-0004-E04",
+                ],
+            },
+            "F103": {
+                "affected_functions": [
+                    "_verify_framework_recovery_4_repair",
+                    "_verify_framework_recovery_4_qualification",
+                    "_verify_framework_recovery_4_activation",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_repair_scope_is_exact",
+                    "test_framework_recovery_4_qualification_scope_is_exact",
+                    "test_framework_recovery_4_activation_scope_is_exact",
+                    "test_framework_recovery_4_stage_modes_are_regular",
+                ],
+                "resolving_evidence_ids": ["FR-0004-E04"],
+            },
+            "F104": {
+                "affected_functions": [
+                    "_framework_recovery_4_verify_hosted_entry",
+                    "_framework_recovery_4_verify_run_attempt_uniqueness",
+                    "_verify_framework_recovery_4_qualification",
+                    "_verify_framework_recovery_4_activation",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_rejects_cross_phase_run_reuse",
+                    "test_framework_recovery_4_hosted_entries_bind_subject",
+                ],
+                "resolving_evidence_ids": [
+                    "FR-0004-E02",
+                    "FR-0004-E03",
+                    "FR-0004-E04",
+                ],
+            },
+            "F105": {
+                "affected_functions": [
+                    "_framework_recovery_3_validate_local_resource_profile",
+                    "_run_registered_container",
+                    "_run_registered_verifier_v2",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_4_materialization_is_inherited",
+                    "test_framework_recovery_4_resource_bounds_are_inherited",
+                    "test_framework_recovery_4_decision_is_fail_closed",
+                ],
+                "resolving_evidence_ids": [
+                    "FR-0004-E02",
+                    "FR-0004-E03",
+                    "FR-0004-E04",
+                ],
+            },
+        },
+    }
+
+
+def _framework_recovery_4_expected_review(
+    *,
+    review_id: str,
+    kind: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+    narratives: dict[str, dict[str, str]],
+) -> dict[str, Any]:
+    """Return one exact unsigned FR-0004 automated review."""
+
+    contract = _framework_recovery_4_review_contracts().get(review_id)
+    if contract is None or set(narratives) != set(contract):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REVIEW_NARRATIVE_SET"
+        )
+    findings: list[dict[str, Any]] = []
+    for finding_id, mapping in contract.items():
+        narrative = _require_fields(
+            narratives[finding_id],
+            {"summary", "disposition"},
+            f"framework_recovery_4.review.{review_id}.{finding_id}.narrative",
+        )
+        if any(
+            not isinstance(narrative[field], str)
+            or not narrative[field].strip()
+            or len(narrative[field].encode("utf-8")) > 4096
+            for field in ("summary", "disposition")
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REVIEW_NARRATIVE"
+            )
+        findings.append(
+            {
+                "id": finding_id,
+                "severity": "BLOCKING",
+                "initial_status": "OPEN",
+                "final_status": "RESOLVED",
+                "summary": narrative["summary"],
+                **copy.deepcopy(mapping),
+                "disposition": narrative["disposition"],
+            }
+        )
+    return {
+        "schema_version": "1.0.0",
+        "review_id": review_id,
+        "kind": kind,
+        "subject": {
+            "parent_commit": FRAMEWORK_RECOVERY_4_PARENT,
+            "repair_commit": repair_commit,
+            "code_diff": plan["code_diff"],
+            "source_retention": plan["source_retention"],
+            "transition_identity": plan["transition_identity"],
+            "defect": plan["defect"],
+            "correction": plan["correction"],
+        },
+        "reviewer": {
+            "classification": "INTERNAL_AUTOMATED",
+            "human_review_performed": False,
+            "named_human_review_performed": False,
+            "external_independence": False,
+            "release_authority": False,
+            "capture_key_role": "LOCAL_RECORD_INTEGRITY_ONLY",
+        },
+        "initial_verdict": "NO_GO",
+        "final_verdict": "GO_FOR_FRAMEWORK_QUALIFICATION",
+        "findings": findings,
+        "limitations": _framework_recovery_4_review_limitations(),
+        "integrity_scope": "LOCAL_RECORD_INTEGRITY_ONLY",
+    }
+
+
+def _framework_recovery_4_validate_review(
+    repo: Path,
+    value: dict[str, Any],
+    *,
+    review_id: str,
+    kind: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+) -> dict[str, str]:
+    """Validate one purpose-separated FR-0004 automated review."""
+
+    expected_fields = {
+        "schema_version",
+        "review_id",
+        "kind",
+        "subject",
+        "reviewer",
+        "initial_verdict",
+        "final_verdict",
+        "findings",
+        "limitations",
+        "integrity_scope",
+        "detached_signature",
+    }
+    contract = _framework_recovery_4_review_contracts().get(review_id)
+    findings = value.get("findings") if isinstance(value, dict) else None
+    if (
+        not isinstance(value, dict)
+        or set(value) != expected_fields
+        or contract is None
+        or not isinstance(findings, list)
+        or len(findings) != len(contract)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REVIEW_FIELDS"
+        )
+    finding_ids: set[str] = set()
+    narratives: dict[str, dict[str, str]] = {}
+    allowed_evidence_ids = {
+        requirement["id"]
+        for requirement in FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS
+    }
+    required_test_ids = set(
+        plan["test_contract"]["required_regression_test_ids"]
+    ) | set(FRAMEWORK_RECOVERY_4_REQUIRED_F104_TEST_IDS)
+    for index, raw_finding in enumerate(findings):
+        finding = _require_fields(
+            raw_finding,
+            {
+                "id",
+                "severity",
+                "initial_status",
+                "final_status",
+                "summary",
+                "affected_functions",
+                "resolving_test_ids",
+                "resolving_evidence_ids",
+                "disposition",
+            },
+            f"framework_recovery_4.review.{review_id}.finding.{index}",
+        )
+        finding_id = finding.get("id")
+        if (
+            not isinstance(finding_id, str)
+            or re.fullmatch(r"F\d{1,3}", finding_id) is None
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REVIEW_FINDINGS"
+            )
+        mapping = contract.get(finding_id)
+        if (
+            finding_id in finding_ids
+            or mapping is None
+            or finding.get("severity") != "BLOCKING"
+            or finding.get("initial_status") != "OPEN"
+            or finding.get("final_status") != "RESOLVED"
+            or any(
+                not isinstance(finding.get(field), str)
+                or not finding[field].strip()
+                or len(finding[field].encode("utf-8")) > 4096
+                for field in ("summary", "disposition")
+            )
+            or any(
+                finding.get(field) != mapping[field]
+                for field in (
+                    "affected_functions",
+                    "resolving_test_ids",
+                    "resolving_evidence_ids",
+                )
+            )
+            or not set(finding["resolving_test_ids"]).issubset(
+                required_test_ids
+            )
+            or not set(finding["resolving_evidence_ids"]).issubset(
+                allowed_evidence_ids
+            )
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REVIEW_FINDINGS"
+            )
+        finding_ids.add(finding_id)
+        narratives[finding_id] = {
+            "summary": finding["summary"],
+            "disposition": finding["disposition"],
+        }
+    unsigned = {
+        key: copy.deepcopy(item)
+        for key, item in value.items()
+        if key != "detached_signature"
+    }
+    if (
+        finding_ids != set(contract)
+        or not _strict_equal(
+            unsigned,
+            _framework_recovery_4_expected_review(
+                review_id=review_id,
+                kind=kind,
+                repair_commit=repair_commit,
+                plan=plan,
+                narratives=narratives,
+            ),
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REVIEW_INVALID"
+        )
+    principal = (
+        "fr-0004-design@automated.invalid"
+        if review_id == "FR-0004-R01"
+        else "fr-0004-implementation@automated.invalid"
+    )
+    attestation = _verify_ssh_detached_attestation(
+        repo,
+        value["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0004-local-integrity-v1",
+        label=f"framework_recovery_4.review.{review_id}",
+        expected_principal=principal,
+    )
+    return {
+        "public_key": attestation["public_key"],
+        "key_fingerprint": attestation["key_fingerprint"],
+    }
+
+
+def _framework_recovery_4_verify_review_key_separation(
+    source_signer: dict[str, str],
+    review_keys: list[dict[str, str]],
+) -> None:
+    """Require two review-integrity keys distinct from the release key."""
+
+    fingerprints = {item.get("key_fingerprint") for item in review_keys}
+    public_keys = {item.get("public_key") for item in review_keys}
+    if (
+        len(review_keys) != 2
+        or None in fingerprints
+        or None in public_keys
+        or len(fingerprints) != 2
+        or len(public_keys) != 2
+        or source_signer.get("key_fingerprint") in fingerprints
+        or source_signer.get("public_key") in public_keys
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REVIEW_KEY_SEPARATION"
+        )
+
+
+def _framework_recovery_4_expected_qualification(
+    repo: Path,
+    repair_commit: str,
+    containing_commit: str,
+    *,
+    plan: dict[str, Any],
+    evidence_catalog: list[dict[str, Any]],
+    hosted_evidence: dict[str, Any],
+    review_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return the exact unsigned FR-0004 qualification record."""
+
+    reproduction_record = next(
+        (
+            copy.deepcopy(item)
+            for item in evidence_catalog
+            if item.get("id") == "FR-0004-E01"
+        ),
+        None,
+    )
+    if reproduction_record is None:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_REPRODUCTION_RECORD"
+        )
+    return {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_4_ID,
+        "release_target": "0.9.0",
+        "author": {
+            "name": "Sepehr Mahmoudian",
+            "email": "sepmhn@gmail.com",
+        },
+        "persistent_identifier": None,
+        "state_before": "PENDING_QUALIFICATION",
+        "state_after": "QUALIFIED_PENDING_ACTIVATION",
+        "qualified_repair": _signed_commit_binding(
+            repo, repair_commit, FRAMEWORK_RECOVERY_4_PARENT
+        ),
+        "plan_record": _commit_regular_file_record(
+            repo, repair_commit, FRAMEWORK_RECOVERY_4_PLAN_PATH
+        ),
+        "amended_core_records": [
+            _commit_regular_file_record(repo, repair_commit, path)
+            for path in FRAMEWORK_RECOVERY_4_CORE_PATHS
+        ],
+        "preserved_state_records": [
+            _commit_regular_file_record(
+                repo, FRAMEWORK_RECOVERY_4_PARENT, path
+            )
+            for path in FRAMEWORK_RECOVERY_4_PRESERVED_PATHS
+        ],
+        "transition_identity": _framework_recovery_4_transition_identity(),
+        "retired_recovery": copy.deepcopy(plan["retired_recovery"]),
+        "source_retention": plan["source_retention"],
+        "test_contract": plan["test_contract"],
+        "boundary_policy": plan["boundary_policy"],
+        "registered_snapshot_materialization": copy.deepcopy(
+            plan["registered_snapshot_materialization"]
+        ),
+        "parent_defect": {
+            "defect": copy.deepcopy(plan["defect"]),
+            "correction": copy.deepcopy(plan["correction"]),
+            "reproduction_evidence": reproduction_record,
+            "fr_0003_qualification_commit": None,
+            "fr_0003_activation_commit": None,
+            "historical_repair_bytes_changed": False,
+        },
+        "evidence_catalog": copy.deepcopy(evidence_catalog),
+        "hosted_evidence": copy.deepcopy(hosted_evidence),
+        "hosted_run_attempts": [
+            {
+                "lane": lane,
+                "run_id": identity[0],
+                "attempt": identity[1],
+            }
+            for lane, identity in (
+                (
+                    "repair_ci",
+                    _framework_recovery_4_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        hosted_evidence["repair_ci"],
+                        label="repair_ci",
+                    ),
+                ),
+                (
+                    "repair_formal",
+                    _framework_recovery_4_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        hosted_evidence["repair_formal"],
+                        label="repair_formal",
+                    ),
+                ),
+            )
+        ],
+        "review_records": copy.deepcopy(review_records),
+        "assurance_boundary": _framework_recovery_4_assurance_boundary(),
+        "decision": _framework_recovery_4_decision(
+            "QUALIFIED_PENDING_ACTIVATION"
+        ),
+        "limitations": _framework_recovery_4_review_limitations(),
+    }
+
+
+def _verify_framework_recovery_4_qualification(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    *,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    """Verify FR-0004 repair evidence and signed qualification."""
+
+    metadata = _verify_data_only_commit(
+        repo,
+        commit=qualification_commit,
+        parent=repair_commit,
+        expected_statuses=dict(
+            sorted(FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES.items())
+        ),
+        label="FRAMEWORK_RECOVERY_4_QUALIFICATION",
+    )
+    if metadata["subject"] != FRAMEWORK_RECOVERY_4_QUALIFICATION_SUBJECT:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_QUALIFICATION_IDENTITY"
+        )
+    _framework_recovery_4_verify_stage_modes(
+        repo,
+        qualification_commit,
+        {
+            path: "100644"
+            for path in FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES
+        },
+        label="qualification",
+    )
+    for path in (
+        *FRAMEWORK_RECOVERY_4_PRESERVED_PATHS,
+        *FRAMEWORK_RECOVERY_4_CORE_PATHS,
+        FRAMEWORK_RECOVERY_4_PLAN_PATH,
+    ):
+        if _git_tree_entry(repo, qualification_commit, path) != _git_tree_entry(
+            repo, repair_commit, path
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_QUALIFICATION_DRIFT"
+            )
+    qualification, payload = _read_commit_json(
+        repo,
+        qualification_commit,
+        FRAMEWORK_RECOVERY_4_QUALIFICATION_PATH,
+        "framework_recovery_4.qualification",
+    )
+    if (
+        not isinstance(qualification, dict)
+        or payload != _canonical_json_bytes(qualification, pretty=True)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_QUALIFICATION_CANONICAL"
+        )
+    catalog: list[dict[str, Any]] = []
+    payloads: dict[str, list[bytes]] = {}
+    documents: dict[str, dict[str, Any]] = {}
+    for requirement in FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS:
+        is_parent_proof = requirement["id"] == "FR-0004-E01"
+        record, retained = _framework_recovery_2_catalog_record(
+            repo,
+            qualification_commit,
+            requirement,
+            subject_commit=(
+                FRAMEWORK_RECOVERY_4_PARENT
+                if is_parent_proof
+                else repair_commit
+            ),
+            result=("EXPECTED_DEFECT" if is_parent_proof else "PASS"),
+        )
+        catalog.append(record)
+        payloads[requirement["id"]] = retained
+        if requirement["id"] in {
+            "FR-0004-E01",
+            "FR-0004-E04",
+            "FR-0004-R01",
+            "FR-0004-R02",
+        }:
+            documents[requirement["id"]] = _load_json_bytes(
+                retained[0],
+                f"framework_recovery_4.{requirement['id']}",
+            )
+    _framework_recovery_4_validate_parent_reproduction(
+        repo,
+        repair_commit,
+        qualification_commit,
+        documents["FR-0004-E01"],
+        evidence_record=catalog[0],
+    )
+    _framework_recovery_4_validate_local_document(
+        repo,
+        qualification_commit,
+        repair_commit,
+        documents["FR-0004-E04"],
+        evidence_record=catalog[3],
+        test_contract=plan["test_contract"],
+    )
+    hosted_evidence = qualification.get("hosted_evidence")
+    if not isinstance(hosted_evidence, dict) or set(hosted_evidence) != {
+        "repair_ci",
+        "repair_formal",
+    }:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_HOSTED_FIELDS"
+        )
+    hosted_specs = (
+        (
+            "repair_ci",
+            "ci",
+            tuple(
+                FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS[1]["paths"]
+            ),
+        ),
+        (
+            "repair_formal",
+            "formal",
+            tuple(
+                FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS[2]["paths"]
+            ),
+        ),
+    )
+    hosted_capture_completed: list[datetime] = []
+    verified_hosted: dict[str, Any] = {}
+    for lane, workflow, paths in hosted_specs:
+        entry, captured = _framework_recovery_4_verify_hosted_entry(
+            repo,
+            qualification_commit,
+            hosted_evidence[lane],
+            paths=paths,
+            subject_commit=repair_commit,
+            workflow=workflow,
+            lane=lane,
+        )
+        verified_hosted[lane] = entry
+        hosted_capture_completed.append(captured)
+    _framework_recovery_4_verify_ci_markers(
+        repo,
+        qualification_commit,
+        hosted_evidence["repair_ci"],
+        test_contract=plan["test_contract"],
+        label="repair_ci",
+    )
+    _framework_recovery_4_verify_run_attempt_uniqueness(
+        repo,
+        [
+            ("repair_ci", qualification_commit, hosted_evidence["repair_ci"]),
+            (
+                "repair_formal",
+                qualification_commit,
+                hosted_evidence["repair_formal"],
+            ),
+        ],
+    )
+    review_keys: list[dict[str, str]] = []
+    review_records: list[dict[str, Any]] = []
+    for requirement in FRAMEWORK_RECOVERY_4_QUALIFICATION_REQUIREMENTS[-2:]:
+        key = _framework_recovery_4_validate_review(
+            repo,
+            documents[requirement["id"]],
+            review_id=requirement["id"],
+            kind=requirement["kind"],
+            repair_commit=repair_commit,
+            plan=plan,
+        )
+        review_keys.append(key)
+        record = next(
+            item for item in catalog if item["id"] == requirement["id"]
+        )
+        review_records.append(
+            {
+                "review_id": requirement["id"],
+                "file": record["files"][0],
+                "integrity_scope": "LOCAL_RECORD_INTEGRITY_ONLY",
+                "local_integrity_key": key,
+            }
+        )
+    signer = _source_release_signer(repo)
+    _framework_recovery_4_verify_review_key_separation(
+        signer, review_keys
+    )
+    expected = _framework_recovery_4_expected_qualification(
+        repo,
+        repair_commit,
+        qualification_commit,
+        plan=plan,
+        evidence_catalog=catalog,
+        hosted_evidence=verified_hosted,
+        review_records=review_records,
+    )
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    if set(qualification) != expected_fields:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_QUALIFICATION_FIELDS"
+        )
+    unsigned = {
+        key: copy.deepcopy(value)
+        for key, value in qualification.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: value
+        for key, value in unsigned.items()
+        if key != "created_at_utc"
+    }
+    if not _strict_equal(comparable, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_QUALIFICATION_INVALID"
+        )
+    created = _parse_utc(
+        qualification.get("created_at_utc"),
+        "framework_recovery_4.qualification.created",
+    )
+    completed = [
+        _parse_utc(
+            documents[evidence_id].get("completed_at_utc"),
+            f"framework_recovery_4.{evidence_id}.completed",
+        )
+        for evidence_id in ("FR-0004-E01", "FR-0004-E04")
+    ]
+    if not (
+        _commit_datetime(repo, repair_commit)
+        <= max(*completed, *hosted_capture_completed)
+        <= created
+        <= _commit_datetime(repo, qualification_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_QUALIFICATION_CHRONOLOGY"
+        )
+    _verify_ssh_detached_attestation(
+        repo,
+        qualification["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0004-qualification-v1",
+        label="framework_recovery_4.qualification",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return qualification
+
+
+def _framework_recovery_4_expected_activation(
+    repo: Path,
+    qualification_commit: str,
+    containing_commit: str,
+    *,
+    qualification: dict[str, Any],
+    evidence_catalog: list[dict[str, Any]],
+    hosted_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the exact unsigned FR-0004 activation record."""
+
+    repair_commit = _commit_metadata(repo, qualification_commit)["parent"]
+    all_hosted = {
+        **qualification["hosted_evidence"],
+        **hosted_evidence,
+    }
+    return {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_4_ID,
+        "release_target": "0.9.0",
+        "author": {
+            "name": "Sepehr Mahmoudian",
+            "email": "sepmhn@gmail.com",
+        },
+        "persistent_identifier": None,
+        "state_before": "QUALIFIED_PENDING_ACTIVATION",
+        "state_after": "ACTIVE",
+        "repair_commit": repair_commit,
+        "qualification_commit": qualification_commit,
+        "qualified_qualification": _signed_commit_binding(
+            repo, qualification_commit, repair_commit
+        ),
+        "plan_record": _commit_regular_file_record(
+            repo, repair_commit, FRAMEWORK_RECOVERY_4_PLAN_PATH
+        ),
+        "qualification_record": _commit_regular_file_record(
+            repo,
+            qualification_commit,
+            FRAMEWORK_RECOVERY_4_QUALIFICATION_PATH,
+        ),
+        "qualification_evidence_records": qualification[
+            "evidence_catalog"
+        ],
+        "activation_evidence_catalog": copy.deepcopy(evidence_catalog),
+        "qualification_hosted_evidence": qualification["hosted_evidence"],
+        "activation_hosted_evidence": copy.deepcopy(hosted_evidence),
+        "all_hosted_run_attempts": [
+            {
+                "lane": lane,
+                "run_id": identity[0],
+                "attempt": identity[1],
+            }
+            for lane, identity in (
+                (
+                    "repair_ci",
+                    _framework_recovery_4_run_attempt_identity(
+                        repo,
+                        qualification_commit,
+                        all_hosted["repair_ci"],
+                        label="repair_ci",
+                    ),
+                ),
+                (
+                    "repair_formal",
+                    _framework_recovery_4_run_attempt_identity(
+                        repo,
+                        qualification_commit,
+                        all_hosted["repair_formal"],
+                        label="repair_formal",
+                    ),
+                ),
+                (
+                    "qualification_ci",
+                    _framework_recovery_4_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        all_hosted["qualification_ci"],
+                        label="qualification_ci",
+                    ),
+                ),
+                (
+                    "qualification_formal",
+                    _framework_recovery_4_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        all_hosted["qualification_formal"],
+                        label="qualification_formal",
+                    ),
+                ),
+            )
+        ],
+        "review_records": qualification["review_records"],
+        "amended_core_records": [
+            _commit_regular_file_record(repo, repair_commit, path)
+            for path in FRAMEWORK_RECOVERY_4_CORE_PATHS
+        ],
+        "preserved_state_records": [
+            _commit_regular_file_record(
+                repo, FRAMEWORK_RECOVERY_4_PARENT, path
+            )
+            for path in FRAMEWORK_RECOVERY_4_PRESERVED_PATHS
+        ],
+        "transition_identity": _framework_recovery_4_transition_identity(),
+        "boundary_policy": qualification["boundary_policy"],
+        "registered_snapshot_materialization": copy.deepcopy(
+            qualification["registered_snapshot_materialization"]
+        ),
+        "assurance_boundary": qualification["assurance_boundary"],
+        "decision": _framework_recovery_4_decision("ACTIVE"),
+        "effective_on": (
+            "SIGNED_COMMIT_FIRST_CONTAINING_THIS_EXACT_ACTIVATION_RECORD"
+        ),
+    }
+
+
+def _verify_framework_recovery_4_activation(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    activation_commit: str,
+    *,
+    qualification: dict[str, Any],
+) -> dict[str, Any]:
+    """Verify Q-stage runs and activate framework epoch 5."""
+
+    metadata = _verify_data_only_commit(
+        repo,
+        commit=activation_commit,
+        parent=qualification_commit,
+        expected_statuses=dict(
+            sorted(FRAMEWORK_RECOVERY_4_ACTIVATION_STATUSES.items())
+        ),
+        label="FRAMEWORK_RECOVERY_4_ACTIVATION",
+    )
+    if metadata["subject"] != FRAMEWORK_RECOVERY_4_ACTIVATION_SUBJECT:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_IDENTITY"
+        )
+    _framework_recovery_4_verify_stage_modes(
+        repo,
+        activation_commit,
+        {
+            path: "100644"
+            for path in FRAMEWORK_RECOVERY_4_ACTIVATION_STATUSES
+        },
+        label="activation",
+    )
+    for path in (
+        *FRAMEWORK_RECOVERY_4_PRESERVED_PATHS,
+        *FRAMEWORK_RECOVERY_4_CORE_PATHS,
+        FRAMEWORK_RECOVERY_4_PLAN_PATH,
+        *FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES,
+    ):
+        if _git_tree_entry(repo, activation_commit, path) != _git_tree_entry(
+            repo, qualification_commit, path
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_DRIFT"
+            )
+    activation, payload = _read_commit_json(
+        repo,
+        activation_commit,
+        FRAMEWORK_RECOVERY_4_ACTIVATION_PATH,
+        "framework_recovery_4.activation",
+    )
+    if (
+        not isinstance(activation, dict)
+        or payload != _canonical_json_bytes(activation, pretty=True)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_CANONICAL"
+        )
+    catalog: list[dict[str, Any]] = []
+    for requirement in FRAMEWORK_RECOVERY_4_ACTIVATION_REQUIREMENTS:
+        record, _retained = _framework_recovery_2_catalog_record(
+            repo,
+            activation_commit,
+            requirement,
+            subject_commit=qualification_commit,
+            result="PASS",
+        )
+        catalog.append(record)
+    hosted_evidence = activation.get("activation_hosted_evidence")
+    if not isinstance(hosted_evidence, dict) or set(hosted_evidence) != {
+        "qualification_ci",
+        "qualification_formal",
+    }:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_HOSTED_FIELDS"
+        )
+    hosted_specs = (
+        (
+            "qualification_ci",
+            "ci",
+            tuple(FRAMEWORK_RECOVERY_4_ACTIVATION_REQUIREMENTS[0]["paths"]),
+        ),
+        (
+            "qualification_formal",
+            "formal",
+            tuple(FRAMEWORK_RECOVERY_4_ACTIVATION_REQUIREMENTS[1]["paths"]),
+        ),
+    )
+    hosted_capture_completed: list[datetime] = []
+    verified_hosted: dict[str, Any] = {}
+    for lane, workflow, paths in hosted_specs:
+        entry, captured = _framework_recovery_4_verify_hosted_entry(
+            repo,
+            activation_commit,
+            hosted_evidence[lane],
+            paths=paths,
+            subject_commit=qualification_commit,
+            workflow=workflow,
+            lane=lane,
+        )
+        verified_hosted[lane] = entry
+        hosted_capture_completed.append(captured)
+    _framework_recovery_4_verify_ci_markers(
+        repo,
+        activation_commit,
+        hosted_evidence["qualification_ci"],
+        test_contract=qualification["test_contract"],
+        label="qualification_ci",
+    )
+    _framework_recovery_4_verify_run_attempt_uniqueness(
+        repo,
+        [
+            (
+                "repair_ci",
+                qualification_commit,
+                qualification["hosted_evidence"]["repair_ci"],
+            ),
+            (
+                "repair_formal",
+                qualification_commit,
+                qualification["hosted_evidence"]["repair_formal"],
+            ),
+            (
+                "qualification_ci",
+                activation_commit,
+                hosted_evidence["qualification_ci"],
+            ),
+            (
+                "qualification_formal",
+                activation_commit,
+                hosted_evidence["qualification_formal"],
+            ),
+        ],
+    )
+    expected = _framework_recovery_4_expected_activation(
+        repo,
+        qualification_commit,
+        activation_commit,
+        qualification=qualification,
+        evidence_catalog=catalog,
+        hosted_evidence=verified_hosted,
+    )
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    if set(activation) != expected_fields:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_FIELDS"
+        )
+    unsigned = {
+        key: copy.deepcopy(value)
+        for key, value in activation.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: value
+        for key, value in unsigned.items()
+        if key != "created_at_utc"
+    }
+    if not _strict_equal(comparable, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_INVALID"
+        )
+    created = _parse_utc(
+        activation.get("created_at_utc"),
+        "framework_recovery_4.activation.created",
+    )
+    if not (
+        _commit_datetime(repo, qualification_commit)
+        <= max(hosted_capture_completed)
+        <= created
+        <= _commit_datetime(repo, activation_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_CHRONOLOGY"
+        )
+    signer = _source_release_signer(repo)
+    _verify_ssh_detached_attestation(
+        repo,
+        activation["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0004-activation-v1",
+        label="framework_recovery_4.activation",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return activation
+
+
 def _verify_framework_recovery_2_history(
     repo: Path,
     chain: list[str],
@@ -13808,6 +17073,7 @@ def _verify_framework_recovery_3_history(
         "repair_commit": repair_commit,
         "qualification_commit": None,
         "activation_commit": None,
+        "retirement_commit": None,
         "plan": plan,
         "qualification": None,
         "protocol_parent": FRAMEWORK_RECOVERY_3_PARENT,
@@ -13829,6 +17095,24 @@ def _verify_framework_recovery_3_history(
     suffix = chain[parent_index + 2 :]
     if not suffix:
         return result
+    if repair_commit == FRAMEWORK_RECOVERY_4_PARENT:
+        retirement_metadata = _commit_metadata(repo, suffix[0])
+        if (
+            retirement_metadata["parent"] == repair_commit
+            and retirement_metadata["subject"] == FRAMEWORK_RECOVERY_4_SUBJECT
+        ):
+            _verify_framework_recovery_4_repair(
+                repo,
+                suffix[0],
+                framework_commit=framework_commit,
+            )
+            result.update(
+                {
+                    "state": "ABORTED_BEFORE_QUALIFICATION",
+                    "retirement_commit": suffix[0],
+                }
+            )
+            return result
     qualification_commit = suffix[0]
     qualification = _verify_framework_recovery_3_qualification(
         repo,
@@ -13858,6 +17142,96 @@ def _verify_framework_recovery_3_history(
             "state": "ACTIVE",
             "activation_commit": activation_commit,
             "active_framework_epoch": 4,
+            "successor_transitions_allowed": True,
+        }
+    )
+    return result
+
+
+def _verify_framework_recovery_4_history(
+    repo: Path,
+    chain: list[str],
+    *,
+    framework_commit: str,
+) -> dict[str, Any]:
+    """Verify the contiguous FR-0004 repair, qualification, and activation."""
+
+    try:
+        parent_index = chain.index(FRAMEWORK_RECOVERY_4_PARENT)
+    except ValueError as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PARENT_MISSING"
+        ) from error
+    if (
+        parent_index != 23
+        or parent_index + 1 >= len(chain)
+        or chain[parent_index - 1] != FRAMEWORK_RECOVERY_3_PARENT
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_POSITION"
+        )
+    repair_commit = chain[parent_index + 1]
+    plan = _verify_framework_recovery_4_repair(
+        repo,
+        repair_commit,
+        framework_commit=framework_commit,
+    )
+    result: dict[str, Any] = {
+        "state": "PENDING_QUALIFICATION",
+        "repair_commit": repair_commit,
+        "qualification_commit": None,
+        "activation_commit": None,
+        "retirement_commit": None,
+        "plan": plan,
+        "qualification": None,
+        "protocol_parent": FRAMEWORK_RECOVERY_4_PARENT,
+        "required_verified_prefix": 3,
+        "repair_statuses": dict(
+            sorted(FRAMEWORK_RECOVERY_4_REPAIR_STATUSES.items())
+        ),
+        "qualification_statuses": dict(
+            sorted(FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES.items())
+        ),
+        "activation_statuses": dict(
+            sorted(FRAMEWORK_RECOVERY_4_ACTIVATION_STATUSES.items())
+        ),
+        "preserved_paths": list(FRAMEWORK_RECOVERY_4_PRESERVED_PATHS),
+        "candidate_framework_epoch": 5,
+        "active_framework_epoch": 2,
+        "successor_transitions_allowed": False,
+    }
+    suffix = chain[parent_index + 2 :]
+    if not suffix:
+        return result
+    qualification_commit = suffix[0]
+    qualification = _verify_framework_recovery_4_qualification(
+        repo,
+        repair_commit,
+        qualification_commit,
+        plan=plan,
+    )
+    result.update(
+        {
+            "state": "QUALIFIED_PENDING_ACTIVATION",
+            "qualification_commit": qualification_commit,
+            "qualification": qualification,
+        }
+    )
+    if len(suffix) == 1:
+        return result
+    activation_commit = suffix[1]
+    _verify_framework_recovery_4_activation(
+        repo,
+        repair_commit,
+        qualification_commit,
+        activation_commit,
+        qualification=qualification,
+    )
+    result.update(
+        {
+            "state": "ACTIVE",
+            "activation_commit": activation_commit,
+            "active_framework_epoch": 5,
             "successor_transitions_allowed": True,
         }
     )
@@ -14015,17 +17389,53 @@ def _verify_framework_history(
             raise CurrentAuditError(
                 "CURRENT_AUDIT_FRAMEWORK_RECOVERY_3_RETIREMENT_INVALID"
             )
+    recovery_4: dict[str, Any] | None = None
+    recovery_4_parent_index = (
+        chain.index(FRAMEWORK_RECOVERY_4_PARENT)
+        if FRAMEWORK_RECOVERY_4_PARENT in chain
+        else None
+    )
+    if (
+        recovery_4_parent_index is not None
+        and recovery_4_parent_index + 1 < len(chain)
+    ):
+        recovery_4 = _verify_framework_recovery_4_history(
+            repo, chain, framework_commit=framework_commit
+        )
+        if (
+            recovery_3 is None
+            or recovery_3["state"] != "ABORTED_BEFORE_QUALIFICATION"
+            or recovery_3["qualification_commit"] is not None
+            or recovery_3["activation_commit"] is not None
+            or recovery_3["retirement_commit"]
+            != recovery_4["repair_commit"]
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_RETIREMENT_INVALID"
+            )
     recovery["subsequent_recoveries"] = [
         recovery_2,
         *([] if recovery_3 is None else [recovery_3]),
+        *([] if recovery_4 is None else [recovery_4]),
     ]
     recovery_2_commit = recovery_2["repair_commit"]
     recovery_3_commit = (
         None if recovery_3 is None else recovery_3["repair_commit"]
     )
+    recovery_4_commit = (
+        None if recovery_4 is None else recovery_4["repair_commit"]
+    )
     frozen_paths = FRAMEWORK_CORE_FROZEN_PATHS
     for path in frozen_paths:
-        if recovery_3_commit is not None and path in FRAMEWORK_RECOVERY_3_CORE_PATHS:
+        if (
+            recovery_4_commit is not None
+            and path in FRAMEWORK_RECOVERY_4_CORE_PATHS
+        ):
+            anchor = recovery_4_commit
+        elif (
+            recovery_3_commit is not None
+            and path in FRAMEWORK_RECOVERY_3_CORE_PATHS
+        ):
             anchor = recovery_3_commit
         elif path in FRAMEWORK_RECOVERY_2_CORE_PATHS:
             anchor = recovery_2_commit
@@ -14143,10 +17553,54 @@ def _verify_framework_history(
                     raise CurrentAuditError(
                         "CURRENT_AUDIT_FRAMEWORK_RECOVERY_3_ACTIVATION_DRIFT"
                     )
+    if recovery_4 is not None and recovery_4_commit is not None:
+        if _git_tree_entry(
+            repo, head, FRAMEWORK_RECOVERY_4_PLAN_PATH
+        ) != _git_tree_entry(
+            repo, recovery_4_commit, FRAMEWORK_RECOVERY_4_PLAN_PATH
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PLAN_DRIFT"
+            )
+        recovery_4_plan_worktree = _read_repo_relative_bounded(
+            repo,
+            FRAMEWORK_RECOVERY_4_PLAN_PATH,
+            MAX_JSON_BYTES,
+            "framework_recovery_4.plan.worktree",
+        )
+        if recovery_4_plan_worktree != _git_file(
+            repo, recovery_4_commit, FRAMEWORK_RECOVERY_4_PLAN_PATH
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_PLAN_WORKTREE_DRIFT"
+            )
+        qualification_4_commit = recovery_4["qualification_commit"]
+        if qualification_4_commit is not None:
+            for path in FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES:
+                if _git_tree_entry(repo, head, path) != _git_tree_entry(
+                    repo, qualification_4_commit, path
+                ):
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_"
+                        "QUALIFICATION_DRIFT"
+                    )
+        activation_4_commit = recovery_4["activation_commit"]
+        if activation_4_commit is not None:
+            for path in FRAMEWORK_RECOVERY_4_ACTIVATION_STATUSES:
+                if _git_tree_entry(repo, head, path) != _git_tree_entry(
+                    repo, activation_4_commit, path
+                ):
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_ACTIVATION_DRIFT"
+                    )
     _verify_post_activation_gate_retention(
         repo,
         head,
-        framework_epoch=4 if recovery_3 is not None else 3,
+        framework_epoch=(
+            5
+            if recovery_4 is not None
+            else (4 if recovery_3 is not None else 3)
+        ),
         compare_worktree=True,
     )
     _verify_cited_test_ids(repo, framework_commit)
@@ -16861,7 +20315,8 @@ def _verify_post_activation_gate_retention(
     """Verify historical gate bytes and, only for HEAD, worktree bytes."""
 
     if framework_epoch is not None and (
-        type(framework_epoch) is not int or framework_epoch not in {2, 3, 4}
+        type(framework_epoch) is not int
+        or framework_epoch not in {2, 3, 4, 5}
     ):
         raise CurrentAuditError("CURRENT_AUDIT_POST_ACTIVATION_EPOCH_INVALID")
     gate_records = {
@@ -16919,6 +20374,8 @@ def _verify_post_activation_gate_retention(
             framework_epoch = 3
         elif wrapper == _framework_recovery_3_expected_gate_payload():
             framework_epoch = 4
+        elif wrapper == _framework_recovery_4_expected_gate_payload():
+            framework_epoch = 5
         else:
             raise CurrentAuditError(
                 "CURRENT_AUDIT_POST_ACTIVATION_WRAPPER_DRIFT"
@@ -16927,6 +20384,7 @@ def _verify_post_activation_gate_retention(
         2: epoch_2_wrapper,
         3: _framework_recovery_2_expected_gate_payload(),
         4: _framework_recovery_3_expected_gate_payload(),
+        5: _framework_recovery_4_expected_gate_payload(),
     }[framework_epoch]
     wrapper_entry = _git_tree_entry(repo, head, wrapper_path)
     if (
@@ -22413,6 +25871,30 @@ def _verify_framework_recovery_transition(
             raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_STATE_DRIFT")
 
 
+def _framework_recovery_4_verify_successor_guard(
+    chain: list[str],
+    position: int,
+    *,
+    repair_commit: str | None,
+    activation_commit: str | None,
+    recovery_transition: dict[str, Any] | None,
+) -> None:
+    """Reject every non-recovery successor before FR-0004 activation."""
+
+    if (
+        repair_commit is not None
+        and position > chain.index(repair_commit)
+        and (
+            activation_commit is None
+            or position < chain.index(activation_commit)
+        )
+        and recovery_transition is None
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_4_SUCCESSOR_BEFORE_ACTIVATION"
+        )
+
+
 def _verify_forward_protocol_history(
     repo: Path,
     chain: list[str],
@@ -22478,6 +25960,9 @@ def _verify_forward_protocol_history(
         FRAMEWORK_RECOVERY_3_PLAN_PATH,
         *FRAMEWORK_RECOVERY_3_QUALIFICATION_STATUSES,
         *FRAMEWORK_RECOVERY_3_ACTIVATION_STATUSES,
+        FRAMEWORK_RECOVERY_4_PLAN_PATH,
+        *FRAMEWORK_RECOVERY_4_QUALIFICATION_STATUSES,
+        *FRAMEWORK_RECOVERY_4_ACTIVATION_STATUSES,
     }
     verified_prefix = 1
     inflight: dict[str, Any] | None = None
@@ -22501,7 +25986,9 @@ def _verify_forward_protocol_history(
     recovery_commits: dict[str, dict[str, Any]] = {}
     recovery_2_repair_commit: str | None = None
     recovery_3_repair_commit: str | None = None
-    recovery_3_activation_commit: str | None = None
+    recovery_3_terminal_commit: str | None = None
+    recovery_4_repair_commit: str | None = None
+    recovery_4_activation_commit: str | None = None
     if recovery is not None:
         recovery_descriptors = [
             {
@@ -22526,7 +26013,13 @@ def _verify_forward_protocol_history(
                 recovery_2_repair_commit = descriptor["repair_commit"]
             elif descriptor.get("protocol_parent") == FRAMEWORK_RECOVERY_3_PARENT:
                 recovery_3_repair_commit = descriptor["repair_commit"]
-                recovery_3_activation_commit = descriptor["activation_commit"]
+                recovery_3_terminal_commit = (
+                    descriptor.get("activation_commit")
+                    or descriptor.get("retirement_commit")
+                )
+            elif descriptor.get("protocol_parent") == FRAMEWORK_RECOVERY_4_PARENT:
+                recovery_4_repair_commit = descriptor["repair_commit"]
+                recovery_4_activation_commit = descriptor["activation_commit"]
             common = {
                 "required_verified_prefix": descriptor[
                     "required_verified_prefix"
@@ -22590,14 +26083,19 @@ def _verify_forward_protocol_history(
     for position, commit in enumerate(chain[3:], start=3):
         _verify_protocol_commit_identity(repo, commit, previous)
         framework_epoch = (
-            4
-            if recovery_3_repair_commit is not None
-            and chain.index(recovery_3_repair_commit) <= position
+            5
+            if recovery_4_repair_commit is not None
+            and chain.index(recovery_4_repair_commit) <= position
             else (
-                3
-                if recovery_2_repair_commit is not None
-                and chain.index(recovery_2_repair_commit) <= position
-                else 2
+                4
+                if recovery_3_repair_commit is not None
+                and chain.index(recovery_3_repair_commit) <= position
+                else (
+                    3
+                    if recovery_2_repair_commit is not None
+                    and chain.index(recovery_2_repair_commit) <= position
+                    else 2
+                )
             )
         )
         _verify_post_activation_gate_retention(
@@ -22614,14 +26112,21 @@ def _verify_forward_protocol_history(
             recovery_3_repair_commit is not None
             and position > chain.index(recovery_3_repair_commit)
             and (
-                recovery_3_activation_commit is None
-                or position < chain.index(recovery_3_activation_commit)
+                recovery_3_terminal_commit is None
+                or position < chain.index(recovery_3_terminal_commit)
             )
             and recovery_transition is None
         ):
             raise CurrentAuditError(
                 "CURRENT_AUDIT_FRAMEWORK_RECOVERY_3_SUCCESSOR_BEFORE_ACTIVATION"
             )
+        _framework_recovery_4_verify_successor_guard(
+            chain,
+            position,
+            repair_commit=recovery_4_repair_commit,
+            activation_commit=recovery_4_activation_commit,
+            recovery_transition=recovery_transition,
+        )
         if recovery_transition is not None:
             _verify_framework_recovery_transition(
                 repo,
