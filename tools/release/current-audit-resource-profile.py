@@ -50,6 +50,8 @@ LIMIT_NAMES = (
     "MAX_REVOCATION_CAUSE_TOTAL_BYTES",
     "MAX_PROTOCOL_PATH_BYTES",
     "MAX_VERIFIER_OUTPUT_BYTES",
+    "MAX_REGISTERED_MATERIALIZED_FILE_BYTES",
+    "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES",
     "MAX_ZIP_ENTRY_BYTES",
     "MAX_ZIP_TOTAL_BYTES",
 )
@@ -70,6 +72,8 @@ EXPECTED_LIMITS_BYTES = {
     "MAX_REVOCATION_CAUSE_TOTAL_BYTES": 16 * 1024 * 1024,
     "MAX_PROTOCOL_PATH_BYTES": 240,
     "MAX_VERIFIER_OUTPUT_BYTES": 64 * 1024,
+    "MAX_REGISTERED_MATERIALIZED_FILE_BYTES": 512 * 1024 * 1024,
+    "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES": 512 * 1024 * 1024,
     "MAX_ZIP_ENTRY_BYTES": 4 * 1024 * 1024,
     "MAX_ZIP_TOTAL_BYTES": 16 * 1024 * 1024,
 }
@@ -88,6 +92,7 @@ REQUIRED_CALLABLES = (
     "_bounded_revocation_cause_total",
     "_require_protocol_path",
     "_require_verifier_output_bound",
+    "_registered_snapshot_materialization_receipt",
     "_run_bounded",
     "_sanitized_git_environment",
     "_verify_trusted_executable",
@@ -309,6 +314,13 @@ def _load_verifier(path: Path) -> tuple[types.ModuleType, bytes]:
         raise ProfileError("verifier runtime JSON limits contradict their declarations")
     if module.MAX_ZIP_TOTAL_BYTES <= module.MAX_ZIP_ENTRY_BYTES:
         raise ProfileError("verifier ZIP limits cannot produce a valid aggregate case")
+    if (
+        module.MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES
+        < module.MAX_REGISTERED_MATERIALIZED_FILE_BYTES
+    ):
+        raise ProfileError(
+            "verifier materialization limits cannot produce a valid aggregate case"
+        )
     for name in REQUIRED_ATTRIBUTES:
         value = getattr(module, name)
         if not isinstance(value, str) or not Path(value).is_absolute():
@@ -347,6 +359,8 @@ def _empty_fixture() -> dict[str, Any]:
         "revocation_cause_file_bytes": None,
         "protocol_path_bytes": None,
         "verifier_output_bytes": None,
+        "materialized_file_bytes": None,
+        "materialized_total_bytes": None,
         "json_depth": None,
         "json_nodes": None,
         "json_string_bytes": None,
@@ -1442,6 +1456,121 @@ def generate_profile(verifier_path: Path) -> dict[str, Any]:
                 )
             )
 
+        materialized_file_limit = limits[
+            "MAX_REGISTERED_MATERIALIZED_FILE_BYTES"
+        ]
+        materialized_total_limit = limits[
+            "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES"
+        ]
+        materialized_root = ("directory", "", 0o755, 0, 0, 2, 0, 0, 0)
+
+        def materialized_file_record(index: int, size: int) -> tuple[Any, ...]:
+            relative = f"file-{index}"
+            return (
+                "file",
+                relative,
+                0o644,
+                0,
+                0,
+                1,
+                size,
+                0,
+                0,
+                _sha256(relative.encode("utf-8")),
+            )
+
+        for suffix, size, expected, error_code in (
+            ("exact", materialized_file_limit, "ACCEPT", None),
+            (
+                "over",
+                materialized_file_limit + 1,
+                "REJECT",
+                "CURRENT_AUDIT_REGISTERED_MATERIALIZATION_FILE_BOUND",
+            ),
+        ):
+            snapshot = (materialized_root, materialized_file_record(0, size))
+            cases.append(
+                _measure_case(
+                    case_id=(
+                        "registered_materialization."
+                        f"MAX_REGISTERED_MATERIALIZED_FILE_BYTES.{suffix}"
+                    ),
+                    primitive="_registered_snapshot_materialization_receipt",
+                    limit_name="MAX_REGISTERED_MATERIALIZED_FILE_BYTES",
+                    subject="REGISTERED_MATERIALIZED_FILE_BYTES",
+                    unit="BYTES",
+                    limit_value=materialized_file_limit,
+                    input_value=size,
+                    fixture=_fixture(
+                        materialized_file_bytes=size,
+                        materialized_total_bytes=size,
+                    ),
+                    expected_outcome=expected,
+                    expected_error_code=error_code,
+                    action=partial(
+                        verifier._registered_snapshot_materialization_receipt,
+                        snapshot,
+                    ),
+                    expected_exception=verifier.CurrentAuditError,
+                )
+            )
+
+        for suffix, size, expected, error_code in (
+            ("exact", materialized_total_limit, "ACCEPT", None),
+            (
+                "over",
+                materialized_total_limit + 1,
+                "REJECT",
+                "CURRENT_AUDIT_REGISTERED_MATERIALIZATION_TOTAL_BOUND",
+            ),
+        ):
+            first_size = materialized_total_limit // 2
+            materialized_sizes = [
+                first_size,
+                materialized_total_limit - first_size,
+            ]
+            if size > materialized_total_limit:
+                materialized_sizes.append(size - materialized_total_limit)
+            if (
+                sum(materialized_sizes) != size
+                or max(materialized_sizes) > materialized_file_limit
+            ):
+                raise ProfileError(
+                    "materialized aggregate fixture dimensions are invalid"
+                )
+            snapshot = (
+                materialized_root,
+                *(
+                    materialized_file_record(index, file_size)
+                    for index, file_size in enumerate(materialized_sizes)
+                ),
+            )
+            cases.append(
+                _measure_case(
+                    case_id=(
+                        "registered_materialization."
+                        f"MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES.{suffix}"
+                    ),
+                    primitive="_registered_snapshot_materialization_receipt",
+                    limit_name="MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES",
+                    subject="REGISTERED_MATERIALIZED_TOTAL_BYTES",
+                    unit="BYTES",
+                    limit_value=materialized_total_limit,
+                    input_value=size,
+                    fixture=_fixture(
+                        materialized_file_bytes=max(materialized_sizes),
+                        materialized_total_bytes=size,
+                    ),
+                    expected_outcome=expected,
+                    expected_error_code=error_code,
+                    action=partial(
+                        verifier._registered_snapshot_materialization_receipt,
+                        snapshot,
+                    ),
+                    expected_exception=verifier.CurrentAuditError,
+                )
+            )
+
     environment = _tool_environment(verifier)
     completed_at_utc = _utc_now()
     profile = {
@@ -1659,6 +1788,20 @@ def _expected_case_specs(
         "REGISTERED_VERIFIER_OUTPUT_BYTES",
         "CURRENT_AUDIT_VERIFIER_OUTPUT_BOUND:profile.verifier.output",
     )
+    pair(
+        "registered_materialization.MAX_REGISTERED_MATERIALIZED_FILE_BYTES",
+        "_registered_snapshot_materialization_receipt",
+        "MAX_REGISTERED_MATERIALIZED_FILE_BYTES",
+        "REGISTERED_MATERIALIZED_FILE_BYTES",
+        "CURRENT_AUDIT_REGISTERED_MATERIALIZATION_FILE_BOUND",
+    )
+    pair(
+        "registered_materialization.MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES",
+        "_registered_snapshot_materialization_receipt",
+        "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES",
+        "REGISTERED_MATERIALIZED_TOTAL_BYTES",
+        "CURRENT_AUDIT_REGISTERED_MATERIALIZATION_TOTAL_BOUND",
+    )
     return specs
 
 
@@ -1801,6 +1944,35 @@ def _validate_fixture(
         expected_non_null = {"verifier_output_bytes"}
         if values["verifier_output_bytes"] != input_value:
             raise ProfileError(f"{label} contradicts verifier-output dimensions")
+    elif subject == "REGISTERED_MATERIALIZED_FILE_BYTES":
+        expected_non_null = {
+            "materialized_file_bytes",
+            "materialized_total_bytes",
+        }
+        if (
+            values["materialized_file_bytes"] != input_value
+            or values["materialized_total_bytes"] != input_value
+        ):
+            raise ProfileError(
+                f"{label} contradicts materialized-file dimensions"
+            )
+    elif subject == "REGISTERED_MATERIALIZED_TOTAL_BYTES":
+        expected_non_null = {
+            "materialized_file_bytes",
+            "materialized_total_bytes",
+        }
+        if (
+            values["materialized_file_bytes"]
+            != max(
+                limits["MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES"] // 2,
+                limits["MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES"]
+                - limits["MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES"] // 2,
+            )
+            or values["materialized_total_bytes"] != input_value
+        ):
+            raise ProfileError(
+                f"{label} contradicts materialized-total dimensions"
+            )
     elif subject in {
         "JSON_MAXIMUM_DEPTH",
         "JSON_NODE_COUNT",
@@ -2023,6 +2195,11 @@ def validate_profile(profile: object, *, verifier_payload: bytes | None = None) 
         raise ProfileError("configuration limits contradict the verifier snapshot")
     if typed_limits["MAX_ZIP_TOTAL_BYTES"] <= typed_limits["MAX_ZIP_ENTRY_BYTES"]:
         raise ProfileError("configuration ZIP limits are contradictory")
+    if (
+        typed_limits["MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES"]
+        < typed_limits["MAX_REGISTERED_MATERIALIZED_FILE_BYTES"]
+    ):
+        raise ProfileError("configuration materialization limits are contradictory")
     json_limits = _require_exact_keys(
         configuration["json_structure_limits"],
         set(JSON_STRUCTURE_LIMIT_NAMES),

@@ -73,6 +73,10 @@ def _verifier_fixture(marker: str, *, omit: str | None = None) -> bytes:
         "_require_verifier_output_bound": (
             "def _require_verifier_output_bound(*args, **kwargs):\n    return b''"
         ),
+        "_registered_snapshot_materialization_receipt": (
+            "def _registered_snapshot_materialization_receipt(*args, **kwargs):\n"
+            "    return {}"
+        ),
         "_run_bounded": (
             "def _run_bounded(*args, **kwargs):\n"
             "    return (0, b'git version fixture', b'')"
@@ -257,6 +261,8 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
     def test_verifier_requires_all_limits_and_end_to_end_callables(self) -> None:
         for missing in (
             "MAX_ZIP_TOTAL_BYTES",
+            "MAX_REGISTERED_MATERIALIZED_FILE_BYTES",
+            "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES",
             "MAX_JSON_DEPTH",
             "GIT_EXECUTABLE",
             "_load_json",
@@ -268,6 +274,7 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
             "_bounded_revocation_cause_total",
             "_require_protocol_path",
             "_require_verifier_output_bound",
+            "_registered_snapshot_materialization_receipt",
             "_run_bounded",
             "_sanitized_git_environment",
             "_verify_trusted_executable",
@@ -277,7 +284,7 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
                 snapshot.write_bytes(_verifier_fixture("MISSING", omit=missing))
                 expected = (
                     "does not declare every profiled limit"
-                    if missing == "MAX_ZIP_TOTAL_BYTES"
+                    if missing in profiler.LIMIT_NAMES
                     else "does not declare every profiled JSON limit"
                     if missing == "MAX_JSON_DEPTH"
                     else f"verifier member is missing: {missing}"
@@ -312,6 +319,19 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
                     b"class CurrentAuditError(BaseException):",
                 ),
                 "CurrentAuditError is not an exception type",
+            ),
+            (
+                _verifier_fixture("NONCALLABLE_RECEIPT").replace(
+                    (
+                        b"def _registered_snapshot_materialization_receipt"
+                        b"(*args, **kwargs):\n    return {}\n"
+                    ),
+                    b"_registered_snapshot_materialization_receipt = None\n",
+                ),
+                (
+                    "verifier member is not callable: "
+                    "_registered_snapshot_materialization_receipt"
+                ),
             ),
         )
         for payload, expected in hostile_fixtures:
@@ -405,10 +425,26 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
 
     def test_all_exact_and_one_unit_over_cases_are_exercised(self) -> None:
         cases = {case["id"]: case for case in self.profile["cases"]}
-        self.assertEqual(len(cases), 34)
+        self.assertEqual(len(cases), 38)
         self.assertEqual(
             set(self.profile["configuration"]["limits_bytes"]),
             set(profiler.LIMIT_NAMES),
+        )
+        self.assertEqual(
+            self.profile["configuration"]["limits_bytes"][
+                "MAX_REGISTERED_MATERIALIZED_FILE_BYTES"
+            ],
+            self.profile["configuration"]["limits_bytes"][
+                "MAX_HYGIENE_TOTAL_BYTES"
+            ],
+        )
+        self.assertEqual(
+            self.profile["configuration"]["limits_bytes"][
+                "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES"
+            ],
+            self.profile["configuration"]["limits_bytes"][
+                "MAX_HYGIENE_TOTAL_BYTES"
+            ],
         )
         self.assertEqual(
             set(self.profile["configuration"]["json_structure_limits"]),
@@ -429,6 +465,7 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
                 "_bounded_revocation_cause_total",
                 "_require_protocol_path",
                 "_require_verifier_output_bound",
+                "_registered_snapshot_materialization_receipt",
                 "_validate_json_structure",
             },
         )
@@ -455,6 +492,44 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
                         case["observed_error_codes"],
                         [case["expected_error_code"]],
                     )
+
+        materialized_file_exact = cases[
+            "registered_materialization."
+            "MAX_REGISTERED_MATERIALIZED_FILE_BYTES.exact"
+        ]
+        materialized_file_over = cases[
+            "registered_materialization."
+            "MAX_REGISTERED_MATERIALIZED_FILE_BYTES.over"
+        ]
+        for case in (materialized_file_exact, materialized_file_over):
+            self.assertEqual(
+                case["fixture"]["materialized_file_bytes"],
+                case["input_value"],
+            )
+            self.assertEqual(
+                case["fixture"]["materialized_total_bytes"],
+                case["input_value"],
+            )
+        materialized_total_exact = cases[
+            "registered_materialization."
+            "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES.exact"
+        ]
+        materialized_total_over = cases[
+            "registered_materialization."
+            "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES.over"
+        ]
+        for case in (materialized_total_exact, materialized_total_over):
+            self.assertEqual(
+                case["fixture"]["materialized_file_bytes"],
+                profiler.EXPECTED_LIMITS_BYTES[
+                    "MAX_REGISTERED_MATERIALIZED_TOTAL_BYTES"
+                ]
+                // 2,
+            )
+            self.assertEqual(
+                case["fixture"]["materialized_total_bytes"],
+                case["input_value"],
+            )
 
     def test_json_path_and_gzip_boundaries_are_distinct_and_non_confounding(
         self,
@@ -754,6 +829,10 @@ class CurrentAuditResourceProfileTests(unittest.TestCase):
             (28, "revocation_cause_total_bytes", 1),
             (30, "protocol_path_bytes", 1),
             (32, "verifier_output_bytes", 1),
+            (34, "materialized_file_bytes", 1),
+            (34, "materialized_total_bytes", 1),
+            (36, "materialized_file_bytes", 1),
+            (36, "materialized_total_bytes", 1),
         )
         for index, field, delta in mutations:
             with self.subTest(index=index, field=field):
