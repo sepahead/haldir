@@ -1,0 +1,1143 @@
+{
+  "activation_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0006-activation.json",
+  "activation_requirements": [
+    {
+      "id": "FR-0006-A01",
+      "kind": "QUALIFICATION_HOSTED_CI",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-q-ci.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-q-ci-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-q-ci.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0006-A02",
+      "kind": "QUALIFICATION_HOSTED_FORMAL",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-q-formal.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-q-formal-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-q-formal.log.gz"
+      ]
+    }
+  ],
+  "assurance_boundary": {
+    "external_independence": false,
+    "fr_0005_qualification_reclassified_as_valid": false,
+    "historical_protocol_execution_revalidated_under_epoch_7": true,
+    "human_review_performed": false,
+    "prior_ledger_and_claim_judgments_changed": false,
+    "release_authority_from_review": false,
+    "review_signatures_scope": "LOCAL_RECORD_INTEGRITY_ONLY"
+  },
+  "author": {
+    "email": "sepmhn@gmail.com",
+    "name": "Sepehr Mahmoudian"
+  },
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authority_changed": false,
+    "runtime_authority_changed": false,
+    "tag_authorized": false,
+    "zenodo_authorized": false
+  },
+  "boundary_policy": {
+    "historical_default_strict": true,
+    "job_boundary_skew_seconds": 1,
+    "job_must_remain_inside_workflow_run": true,
+    "ordinary_and_attempt_jobs_must_match": true,
+    "raw_timestamps_changed": false,
+    "step_interval_must_not_reverse": true,
+    "step_must_remain_inside_workflow_run": true
+  },
+  "changed_core_files": [
+    {
+      "new": {
+        "bytes": 1331973,
+        "git_mode": "100644",
+        "git_object_id": "4c8dedc5ab1fa84299fc1bcc613c3900324d1d2e",
+        "git_object_type": "blob",
+        "lines": 34662,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "9e141713d1a7048b753d54323606fbbcd807485f4e7a4d9dd3da3bfc5f60eebd"
+      },
+      "old": {
+        "bytes": 1180876,
+        "git_mode": "100644",
+        "git_object_id": "98a71c9c83f9ff305a431b5a1ed473113b65b7a6",
+        "git_object_type": "blob",
+        "lines": 30722,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "9215a8dfa7434376ada64f0b1d299d2ac1e84885a3d2974b4beb48eccf6ee8ec"
+      },
+      "status": "M"
+    },
+    {
+      "new": {
+        "bytes": 83045,
+        "git_mode": "100644",
+        "git_object_id": "b9689ba7461cc16130efa9c128d41690635d2d3b",
+        "git_object_type": "blob",
+        "lines": 1995,
+        "path": "tools/release/test_verify_current_audit_fr_0006.py",
+        "sha256": "a2c7638f24c7f44a22695d4b45b308115373005e9d9b88508471d9a131f01449"
+      },
+      "old": null,
+      "status": "A"
+    },
+    {
+      "new": {
+        "bytes": 5955,
+        "git_mode": "100755",
+        "git_object_id": "6260a482a62c10cea8961ad0be136ac0b3023ba7",
+        "git_object_type": "blob",
+        "lines": 162,
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "90823d2183335f3e6f7fb9646ffdd10ea212178556b10ddbb6c974ee7640cfb7"
+      },
+      "old": {
+        "bytes": 5007,
+        "git_mode": "100755",
+        "git_object_id": "e03f6ace75dc6256cffc1979d1ef5c73b3ec425e",
+        "git_object_type": "blob",
+        "lines": 135,
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "b9a7cb00789abfaac38c3ace754c57d5df22210e4c86c84cc1285f23fb4cd005"
+      },
+      "status": "M"
+    }
+  ],
+  "code_diff": {
+    "base": "5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e",
+    "name_status_sha256": "f204797de8640025be46d434fc3198b8c7f2142195144fc717b151ef1733df89",
+    "numstat_sha256": "54162eb99885277a73f7fe545180b8c212e4ef9b123a3f3cabc2cf08dc9095f6",
+    "patch_bytes": 265727,
+    "patch_command_template": [
+      "/usr/bin/git",
+      "-c",
+      "diff.algorithm=myers",
+      "diff",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--no-renames",
+      "--no-color",
+      "--src-prefix=a/",
+      "--dst-prefix=b/",
+      "--binary",
+      "--full-index",
+      "5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e..<REPAIR_COMMIT>",
+      "--",
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit_fr_0006.py",
+      "tools/release/current-audit-gate.sh"
+    ],
+    "patch_lines": 6516,
+    "patch_sha256": "668ada7413815ca45deb44db3da145695cacf196e696ad3f9dac75db4b240efb",
+    "paths": [
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit_fr_0006.py",
+      "tools/release/current-audit-gate.sh"
+    ],
+    "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+  },
+  "correction": {
+    "capture_configuration": {
+      "close_fds": true,
+      "cwd": "REPOSITORY_ROOT",
+      "encoding": null,
+      "max_merged_bytes": 16384,
+      "merge_model": "SINGLE_OS_PIPE",
+      "newline_translation": "NONE",
+      "postprocessing": "NONE",
+      "receipt_concatenation": false,
+      "runner": "BOUNDED_SUBPROCESS_SINGLE_PIPE_V1",
+      "schema_version": "1.0.0",
+      "separate_stderr_bytes": 0,
+      "shell": false,
+      "start_new_session": true,
+      "stderr": "STDOUT",
+      "stdin": "DEVNULL",
+      "stdout": "PIPE",
+      "text": false,
+      "timeout_seconds": 300
+    },
+    "capture_configuration_canonical_json_sha256": "9ad534cbc9bda2f3b703582bd943b58b032b00383b50d3d7f4d12fd2819fec41",
+    "command": [
+      "python3",
+      "-I",
+      "tools/release/test_verify_current_audit_fr_0005.py",
+      "FrameworkRecovery5Tests.test_framework_recovery_5_parent_rejects_rerun_attempt"
+    ],
+    "command_canonical_json_sha256": "7bba97b8450de6e28889843a0ff6b6183eaa0cb706c6e9f95ca4770d8712022e",
+    "contract_id": "HALDIR_FR_0006_REPRODUCTION_V2",
+    "fr_0005_qualification_reused": false,
+    "new_evidence_required": true,
+    "new_review_records_required": true,
+    "normalization_algorithm": "UNITTEST_ELAPSED_FIELD_REPLACEMENT_V1",
+    "normalized_transcript_retained_as_file": false,
+    "normalized_transcript_sha256": "3e0c311b413385b8632fb597dd4a716c0925df61dde35b5714039eb42aae110d",
+    "raw_capture": "CLOSED_MERGED_STDOUT_STDERR_DESCRIPTOR_BYTES_ONLY",
+    "semantic_receipt": "DETACHED_NOT_CONCATENATED"
+  },
+  "created_at_utc": "2026-07-25T17:23:02Z",
+  "defect": {
+    "claimed_capture": "MERGED_STDOUT_STDERR_RAW_BYTES",
+    "code": "FR_0005_REPRODUCTION_CAPTURE_PROVENANCE_CONTRADICTION",
+    "fr_0005_repair_commit": "5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e",
+    "fr_0005_reproduction_contract_satisfiable": false,
+    "fr_0005_state_before_retirement": "PENDING_QUALIFICATION",
+    "frozen_command_emits_semantic_receipt": false,
+    "parent_required_semantic_suffix": {
+      "bytes": 561,
+      "lines": 10,
+      "sha256": "75c3be766628c2406e29b0ef108c91ca61c6e9a2d56229890444800bd2c8b730"
+    },
+    "parent_validator_requires_semantic_suffix": true,
+    "parent_validator_requires_unittest_transcript": true,
+    "private_helper_append_would_falsify_capture": true,
+    "raw_transcript_and_required_composite_are_distinct": true,
+    "selected_test_semantic_value_use": "IN_MEMORY_VALIDATOR_FIXTURE_ONLY",
+    "severity": "QUALIFICATION_BLOCKER"
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0006-plan-v1",
+    "principal": "sepmhn@gmail.com",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDuKh9+1+qdjbO6MP/NHD/ai3JtumsKPiz2KBx3lQwLI",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAApaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDA2LXBs\nYW4tdjEAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAOoKycisM4BAX9K\nyxkcZAzboE9mjVkO47TCaEL9CqTTKshP3QfScPC1e9nlB6NK+Latr/CUio1H3YoVSbU9wb\nBQ==\n-----END SSH SIGNATURE-----\n"
+  },
+  "framework_epoch": {
+    "active": 2,
+    "next_candidate": 7,
+    "retired_candidate": 6
+  },
+  "hosted_attempt_policy": {
+    "anomaly_identity": {
+      "attempt_source": "RETAINED_ATTEMPT_JSON",
+      "fields": [
+        "run_id",
+        "attempt"
+      ]
+    },
+    "capture_commands": {
+      "attempt_metadata_template": "gh run view {run_id} --repo sepahead/haldir --attempt {attempt} --json <ATTEMPT_FIELDS> > <RAW_PATH>",
+      "must_bind_source_value": true,
+      "ordinary_metadata_template": "gh run view {run_id} --repo sepahead/haldir --json attempt,<ORDINARY_FIELDS> > <RAW_PATH>",
+      "raw_log_template": "gh run view {run_id} --repo sepahead/haldir --attempt {attempt} --log > <RAW_PATH>"
+    },
+    "positive_attempt": {
+      "booleans_allowed": false,
+      "minimum": 1,
+      "type": "BUILTIN_INT"
+    },
+    "timestamp_boundary": {
+      "attempt_1": [
+        "attempt.createdAt == ordinary.createdAt",
+        "subject_commit_time <= ordinary.createdAt",
+        "attempt.createdAt <= attempt.startedAt + 1 second",
+        "attempt.startedAt <= ordinary.updatedAt",
+        "ordinary.updatedAt <= attempt.updatedAt",
+        "attempt.updatedAt <= containing_commit_time"
+      ],
+      "attempt_2_or_later": [
+        "subject_commit_time <= ordinary.createdAt",
+        "ordinary.createdAt < attempt.createdAt",
+        "attempt.createdAt <= attempt.startedAt + 1 second",
+        "ordinary.createdAt <= attempt.startedAt",
+        "attempt.startedAt <= ordinary.updatedAt",
+        "ordinary.updatedAt <= attempt.updatedAt",
+        "attempt.createdAt <= attempt.updatedAt",
+        "attempt.updatedAt <= containing_commit_time"
+      ],
+      "attempt_start_skew_seconds": 1,
+      "raw_timestamps_changed": false
+    },
+    "url": {
+      "must_bind_source_value": true,
+      "template": "https://github.com/sepahead/haldir/actions/runs/{run_id}/attempts/{attempt}"
+    },
+    "value_source": {
+      "artifact": "RETAINED_ATTEMPT_JSON",
+      "capture_command_is_source": false,
+      "field": "attempt",
+      "ordinary_metadata_must_match": true,
+      "url_is_source": false
+    }
+  },
+  "parent_commit": "5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e",
+  "parent_tree": "eb20644bccf64c42998ab2c5e340165fb4886142",
+  "persistent_identifier": null,
+  "preserved_state_records": [
+    {
+      "bytes": 8687,
+      "git_mode": "100644",
+      "git_object_id": "491b97e67f509786ca6e8ddedd2506092ba82c11",
+      "git_object_type": "blob",
+      "lines": 233,
+      "path": "release/0.9.0/current-head/closures/CH-T000-revocations.json",
+      "sha256": "82e7f69d76bd3a316cdea1cb3766bc5ce382915d7b21dad59fc8945ae5bd72a2"
+    },
+    {
+      "bytes": 35029,
+      "git_mode": "100644",
+      "git_object_id": "6567c8695b6b7ae99ff6092feee1b8a21a0d47b9",
+      "git_object_type": "blob",
+      "lines": 771,
+      "path": "release/0.9.0/current-head/closures/active-claims.json",
+      "sha256": "aaedcf26501b9023f3cbe898a86cb2ad82e53a850c1dfd060a30ef3f8d70b367"
+    },
+    {
+      "bytes": 17663,
+      "git_mode": "100644",
+      "git_object_id": "05b80ded01ac7615133106ff182d68560721fc76",
+      "git_object_type": "blob",
+      "lines": 439,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-activation.json",
+      "sha256": "fe9e65b1f28249e4f92a35518eeb83289c1581fb18389625cb8d7b5633be3503"
+    },
+    {
+      "bytes": 12679,
+      "git_mode": "100644",
+      "git_object_id": "d2e7a1205010e2165ce73e126bb0a1412860c2a1",
+      "git_object_type": "blob",
+      "lines": 320,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-plan.json",
+      "sha256": "1e8b6eb3b80162ef6458163ff88da6c6a9c3bf2bc07e9d3b71ccbd4990a391fb"
+    },
+    {
+      "bytes": 14440,
+      "git_mode": "100644",
+      "git_object_id": "0617c3e881025762676ac8966e92bdebe0148127",
+      "git_object_type": "blob",
+      "lines": 373,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json",
+      "sha256": "ecc64353b5952a76f59afda5add29e1770574a13a9db1e5eeae28f593f9283c2"
+    },
+    {
+      "bytes": 51257,
+      "git_mode": "100644",
+      "git_object_id": "58b28280f66fdd8e113803f5647d9aafb6ea676c",
+      "git_object_type": "blob",
+      "lines": 1129,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0002-plan.json",
+      "sha256": "623d7cfcf6d3be8e82dab6669496df8064f5cd9206c65c29268d9aef6dd135de"
+    },
+    {
+      "bytes": 66461,
+      "git_mode": "100644",
+      "git_object_id": "5076442cc86c9c4729b2c226148672cf0627cf5b",
+      "git_object_type": "blob",
+      "lines": 1473,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0003-plan.json",
+      "sha256": "3f0afddf871f1d577dde2a617d53c4068f6f8feddb684f0830a895dc2b2601f1"
+    },
+    {
+      "bytes": 38345,
+      "git_mode": "100644",
+      "git_object_id": "8b41891fe59787d49a51514481f8e74ccb8c93e3",
+      "git_object_type": "blob",
+      "lines": 969,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0004-plan.json",
+      "sha256": "42a1a17105af29088c1dd8fb6defdf03da3af00cd8257c60474b0e9ddc99a652"
+    },
+    {
+      "bytes": 42413,
+      "git_mode": "100644",
+      "git_object_id": "dab05db6abfbaacb6975f010e097b48f0beeb79a",
+      "git_object_type": "blob",
+      "lines": 1055,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0005-plan.json",
+      "sha256": "993f9a4c588b4777d66d47eac7923f4ac8c171810bdf9f4080f4d2f8ef318392"
+    },
+    {
+      "bytes": 8689,
+      "git_mode": "100644",
+      "git_object_id": "537e1171867ea2771bacfb7f57558d1776bffd0b",
+      "git_object_type": "blob",
+      "lines": 205,
+      "path": "release/0.9.0/current-head/closures/task-verifier-registry.json",
+      "sha256": "52b32984a9bfee338caecee166bc47095a1c908cf6263624e892d0db3dfbf271"
+    },
+    {
+      "bytes": 2641,
+      "git_mode": "100644",
+      "git_object_id": "3804cb277795f9925bf0ffbd7ae30bc3500bf2fd",
+      "git_object_type": "blob",
+      "lines": 89,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json",
+      "sha256": "ec279c081e02583ae47f35ac3c4992853d53f18d6a319c12eff120be7023be4f"
+    },
+    {
+      "bytes": 7708,
+      "git_mode": "100644",
+      "git_object_id": "f6fc4747dbc69704919d74c91bccf4c045e446c4",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz",
+      "sha256": "79f12396914db0aba4b66b003428866f2b2ea561c4c6ba06ee7d20fdba1f8dc3"
+    },
+    {
+      "bytes": 2287,
+      "git_mode": "100644",
+      "git_object_id": "d7ae907c9ba943ba2d2c107805adf30e8ad618de",
+      "git_object_type": "blob",
+      "lines": 78,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json",
+      "sha256": "f04ce45b06e12c2b9010dc0d3a145a89de7de042f1c92ba0b3e957eed467edc5"
+    },
+    {
+      "bytes": 18074,
+      "git_mode": "100644",
+      "git_object_id": "15110a02c6eec8c513eaaa39cb10c54b2a1f7472",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz",
+      "sha256": "e37c8917c7b6f9199b401a7e47b7105b48b0e8842a5467d9bc5e2b9cb55d6255"
+    },
+    {
+      "bytes": 1020,
+      "git_mode": "100644",
+      "git_object_id": "9429ab79f94c57b0009b51738c7023051b01906a",
+      "git_object_type": "blob",
+      "lines": 33,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json",
+      "sha256": "893e8aa1eb78f7d446e9aa546befced46d82c9ecdfcc5e20232b0f87b431bb4e"
+    },
+    {
+      "bytes": 692,
+      "git_mode": "100644",
+      "git_object_id": "d963cdae35ea71af2f2e06bfff1a07ca3e302bfd",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz",
+      "sha256": "9f6253f38e1a1f61e70a610d698eba5811ad23cf1828a7864a6479a407db10a5"
+    },
+    {
+      "bytes": 1890,
+      "git_mode": "100644",
+      "git_object_id": "81a13abdacdd41db45747c7dc7838d2dcaf18f3b",
+      "git_object_type": "blob",
+      "lines": 69,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json",
+      "sha256": "f28d35892e41e72b284ce675de1c8cab87eeeb0b16832e6364d904fdf1ba5de1"
+    },
+    {
+      "bytes": 23795,
+      "git_mode": "100644",
+      "git_object_id": "46f511f184bcd5600b94c57eadb3eb5f7f35914d",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz",
+      "sha256": "8f42767c35df2b71d4ea2dec89097b53546a3600f2689bab112f91af9dbf9a02"
+    },
+    {
+      "bytes": 189708,
+      "git_mode": "100644",
+      "git_object_id": "da3bf2edd60efb4071d3dbb63f39b9bdfcd1176e",
+      "git_object_type": "blob",
+      "lines": 4702,
+      "path": "release/0.9.0/current-head/requirements.json",
+      "sha256": "0963891fbfb1a174972f22b2d6e253df8531506b92bb2fd3f46708f8fff782e7"
+    },
+    {
+      "bytes": 4976,
+      "git_mode": "100644",
+      "git_object_id": "f87378eed9e91673fd8b971ac08a90f9e81b587f",
+      "git_object_type": "blob",
+      "lines": 127,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json",
+      "sha256": "acd1004ca05c0e3fcbbeb9b4a9bdcb2d57dc9d708a59e21c0eb8fc4e5313ad39"
+    },
+    {
+      "bytes": 6483,
+      "git_mode": "100644",
+      "git_object_id": "7daad15a4691fae96f84e5db821d41da4f078774",
+      "git_object_type": "blob",
+      "lines": 139,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json",
+      "sha256": "e93e121b2806dabdd336e65f80843efd6631a1480ca8cc9aeee48ead114296fc"
+    },
+    {
+      "bytes": 5213,
+      "git_mode": "100644",
+      "git_object_id": "9f8ba1b5615326deacebae40b708856ffa6f7667",
+      "git_object_type": "blob",
+      "lines": 106,
+      "path": "release/0.9.0/current-head/tasks/revocations/R0003/process-group-identity-reuse.json",
+      "sha256": "d314a242ddf4b877ed8dfd5d8dd1560efe8c405568eae689cc7eb56df45e6267"
+    },
+    {
+      "bytes": 98053,
+      "git_mode": "100644",
+      "git_object_id": "ae387e495796439e73ad02ae1cc892599b115b38",
+      "git_object_type": "blob",
+      "lines": 2564,
+      "path": "tools/release/current-audit-resource-profile.py",
+      "sha256": "b2d01af57727fb6a7138f5bc13797be0f2de032ae85c085b7dce444d74674675"
+    },
+    {
+      "bytes": 51592,
+      "git_mode": "100644",
+      "git_object_id": "51f857c10f390017c5d7d4ef707fc54931f350b1",
+      "git_object_type": "blob",
+      "lines": 1215,
+      "path": "tools/release/test_current_audit_resource_profile.py",
+      "sha256": "88198d7f3dc75b47f1bc61c1513f635b0c172846131ea4a1b5683275673850a1"
+    },
+    {
+      "bytes": 204291,
+      "git_mode": "100644",
+      "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+      "git_object_type": "blob",
+      "lines": 4738,
+      "path": "tools/release/test_verify_current_audit.py",
+      "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+    },
+    {
+      "bytes": 164569,
+      "git_mode": "100644",
+      "git_object_id": "5bce6a15e43ca25ab1bcb45618386fb5db083ad2",
+      "git_object_type": "blob",
+      "lines": 4483,
+      "path": "tools/release/test_verify_current_audit_fr_0002.py",
+      "sha256": "a0d785ecd741e809faaa959cf3d20aa01cb90d8fd03ca5716680092d2d383e7c"
+    },
+    {
+      "bytes": 186879,
+      "git_mode": "100644",
+      "git_object_id": "f8b96a7f1a3f218f3853bfa7353db39afd247eba",
+      "git_object_type": "blob",
+      "lines": 5072,
+      "path": "tools/release/test_verify_current_audit_fr_0003.py",
+      "sha256": "25bbf246640cc4795266cb0d439042ba1077b1094fbe09db4e76d05154c08348"
+    },
+    {
+      "bytes": 38855,
+      "git_mode": "100644",
+      "git_object_id": "73d14322a1c360142a83b96d638857fb141c57ad",
+      "git_object_type": "blob",
+      "lines": 1052,
+      "path": "tools/release/test_verify_current_audit_fr_0004.py",
+      "sha256": "d33e0b30586a77717e282947a375253a816ce84b53620cba300f5d30657234f4"
+    },
+    {
+      "bytes": 142730,
+      "git_mode": "100644",
+      "git_object_id": "b42a497ad45443daeb71951ac7de8405b5e204cc",
+      "git_object_type": "blob",
+      "lines": 3582,
+      "path": "tools/release/test_verify_current_audit_fr_0005.py",
+      "sha256": "c02f1cbdb8e7edc96c70086e02528c1a6f96528c01905025082cdd5d926d70a0"
+    }
+  ],
+  "prior_framework_commit": "e747747418f94371348450e6b7205291c1441216",
+  "qualification_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0006-qualification.json",
+  "qualification_requirements": [
+    {
+      "id": "FR-0006-E01",
+      "kind": "PARENT_EVIDENCE_CONTRACT_PROVENANCE_REPRODUCTION_V2",
+      "max_bytes": [
+        65536,
+        16384,
+        65536
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-d-reproduction-v2.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-d-reproduction-v2-raw.log.gz",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-d-reproduction-v2-semantic-receipt.json"
+      ]
+    },
+    {
+      "id": "FR-0006-E02",
+      "kind": "REPAIR_HOSTED_CI",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-ci.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-ci-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-ci.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0006-E03",
+      "kind": "REPAIR_HOSTED_FORMAL",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-formal.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-formal-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-formal.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0006-E04",
+      "kind": "REPAIR_LOCAL_VALIDATION",
+      "max_bytes": [
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-local.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0006-r-local.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0006-R01",
+      "kind": "INTERNAL_AUTOMATED_DESIGN_REVIEW",
+      "max_bytes": [
+        131072
+      ],
+      "paths": [
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0006-design.json"
+      ]
+    },
+    {
+      "id": "FR-0006-R02",
+      "kind": "INTERNAL_AUTOMATED_IMPLEMENTATION_REVIEW",
+      "max_bytes": [
+        131072
+      ],
+      "paths": [
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0006-implementation.json"
+      ]
+    }
+  ],
+  "recovery_id": "FR-0006",
+  "registered_snapshot_materialization": {
+    "bounds": {
+      "container_cpus": 2,
+      "container_fsize_bytes": 536870912,
+      "container_memory_bytes": 1342177280,
+      "container_memory_swap_bytes": 1342177280,
+      "container_swap_additional_bytes": 0,
+      "equal_ceiling_reason": "A_SINGLE_GIT_PACK_MAY_SPAN_THE_COMPLETE_REPOSITORY_HYGIENE_CEILING;_THE_FILE_CEILING_IS_A_REDUNDANT_FAIL_CLOSED_CONTROL",
+      "execution_tmpfs_bytes": 671088640,
+      "file_and_total_ceiling_equal": true,
+      "file_bytes": 536870912,
+      "host_bounded_process_ceiling_seconds": 255,
+      "host_containment_grace_seconds": 15,
+      "materialization_setup_seconds": 120,
+      "maximum_directory_depth": 64,
+      "maximum_file_component_depth": 65,
+      "minimum_daemon_cpus": 2,
+      "minimum_daemon_memory_bytes": 1342177280,
+      "nodes": 32768,
+      "path_bytes": 4096,
+      "staging_tmpfs_bytes": 1048576,
+      "streaming_copy_chunk_bytes": 1048576,
+      "temporary_tmpfs_bytes": 67108864,
+      "test_container_seconds": 240,
+      "test_execution_seconds": 120,
+      "total_bytes": 536870912,
+      "verifier_container_seconds": 150,
+      "verifier_execution_seconds": 30
+    },
+    "copy_policy": {
+      "aggregate_capacity_checked_before_destination_creation": true,
+      "clone_output_single_link_postcondition": true,
+      "container_file_copy_streaming": true,
+      "destination_rescanned_after_sealing": true,
+      "directory_fd_traversal": true,
+      "disposable_snapshot_special_bits_cleared": true,
+      "hard_links_allowed": false,
+      "nofollow_required": true,
+      "regular_files_only": true,
+      "source_nonregular_types_remain_rejected": true,
+      "source_relisted_after_descendants": true,
+      "special_files_allowed": false,
+      "symbolic_links_allowed": false
+    },
+    "exception_binding": {
+      "activation_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "epoch": 2,
+      "freeze_commit": "0795989aa7b682e6bc1108b532939c52b5d7fdfc",
+      "implementation_commit": "ab4eb7a99bebae88c5aad3684bccf3a85a4e7dc9",
+      "qualification_commit": "0957f4b0727e3dc6fb8cd52ca0e92a8012d1f5a7",
+      "registration_sha256": "60bf53ed1c975bc958bf26fc0aa5220fc71df95564c5247c469b6be594e28d28",
+      "task_id": "CH-T001",
+      "verifier_path": "tools/release/tasks/ch-t001/e0002/verify.py",
+      "verifier_sha256": "5696199ce75e5f198617efa310e2bfeec8a108361996ac532238549d1ebd8d21"
+    },
+    "execution_mount": {
+      "normalized_directory_mode": "0555",
+      "normalized_executable_file_mode": "0555",
+      "normalized_nonexecutable_file_mode": "0444",
+      "owner_gid": 0,
+      "owner_uid": 0,
+      "path": "/repo",
+      "storage": "FRESH_CONTAINER_LOCAL_TMPFS"
+    },
+    "execution_policy": {
+      "cache_warmth_relied_on": false,
+      "command_timeout_starts_after_materialization": true,
+      "container_network": "NONE",
+      "container_root_filesystem_read_only": true,
+      "effective_permitted_inheritable_ambient_capabilities": 0,
+      "failure_policy": "FAIL_CLOSED",
+      "final_gid": 65534,
+      "final_uid": 65534,
+      "no_new_privileges": true,
+      "original_python_command_preserved": true,
+      "registered_command_allowance_preserved": true,
+      "registered_tests_run_count": 1,
+      "registered_verifier_run_count": 1,
+      "retry_allowed": false,
+      "setup_and_command_clocks_are_separate": true,
+      "setup_capabilities": [
+        "SETGID",
+        "SETUID"
+      ],
+      "setup_gid": 0,
+      "setup_monotonic_postcondition": true,
+      "setup_uid": 0,
+      "setup_watchdog": "SIGALRM_ITIMER_REAL",
+      "setup_watchdog_armed_before_source_open": true,
+      "setup_watchdog_cancelled_before_exec": true,
+      "supplementary_groups": []
+    },
+    "purpose": "REMOVE_HOST_BIND_MOUNT_LATENCY_FROM_FROZEN_THREE_SECOND_GIT_COMMAND_BOUNDS",
+    "receipt": {
+      "algorithm": "SHA256-FRAMED-PATH-EXECUTABLE-CONTENT-V1",
+      "canonical_json": true,
+      "required_equal_views": [
+        "HOST_SNAPSHOT",
+        "CONTAINER_SOURCE_COPY",
+        "SEALED_EXECUTION_TREE"
+      ],
+      "stdout_framing_changed": false
+    },
+    "repository_view": {
+      "aggregate_bytes_align_with_repository_hygiene": true,
+      "complete_detached_snapshot": true,
+      "forward_active_verifier_rerun": true,
+      "materialization_depth_is_additional_successor_constraint": true,
+      "nodes_align_with_repository_hygiene": true,
+      "snapshot_commit": "FINAL_HEAD_UNDER_VERIFICATION"
+    },
+    "scope": "EXACT_CH-T001_EPOCH_2_REGISTRATION_RERUN_AT_CURRENT_AND_SUCCESSOR_HEADS",
+    "source_mount": {
+      "bind_propagation": "rprivate",
+      "hidden_after_identity_drop": true,
+      "path": "/staging/source",
+      "read_only": true
+    }
+  },
+  "release_target": "0.9.0",
+  "repair_subject": "release: repair reproduction evidence provenance",
+  "retired_recovery": {
+    "activation_commit": null,
+    "defect_code": "FR_0005_REPRODUCTION_CAPTURE_PROVENANCE_CONTRADICTION",
+    "epoch_reusable": false,
+    "plan_record": {
+      "bytes": 42413,
+      "git_mode": "100644",
+      "git_object_id": "dab05db6abfbaacb6975f010e097b48f0beeb79a",
+      "git_object_type": "blob",
+      "lines": 1055,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0005-plan.json",
+      "sha256": "993f9a4c588b4777d66d47eac7923f4ac8c171810bdf9f4080f4d2f8ef318392"
+    },
+    "qualification_commit": null,
+    "reason": "EVIDENCE_CONTRACT_UNSATISFIABLE",
+    "recovery_id": "FR-0005",
+    "repair": {
+      "author_email": "sepmhn@gmail.com",
+      "author_name": "Sepehr Mahmoudian",
+      "authored_at": "2026-07-25T14:18:31+02:00",
+      "changed_files": [
+        {
+          "bytes": 42413,
+          "lines": 1055,
+          "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0005-plan.json",
+          "sha256": "993f9a4c588b4777d66d47eac7923f4ac8c171810bdf9f4080f4d2f8ef318392",
+          "status": "A"
+        },
+        {
+          "bytes": 5007,
+          "lines": 135,
+          "path": "tools/release/current-audit-gate.sh",
+          "sha256": "b9a7cb00789abfaac38c3ace754c57d5df22210e4c86c84cc1285f23fb4cd005",
+          "status": "M"
+        },
+        {
+          "bytes": 142730,
+          "lines": 3582,
+          "path": "tools/release/test_verify_current_audit_fr_0005.py",
+          "sha256": "c02f1cbdb8e7edc96c70086e02528c1a6f96528c01905025082cdd5d926d70a0",
+          "status": "A"
+        },
+        {
+          "bytes": 1180876,
+          "lines": 30722,
+          "path": "tools/release/verify-current-audit.py",
+          "sha256": "9215a8dfa7434376ada64f0b1d299d2ac1e84885a3d2974b4beb48eccf6ee8ec",
+          "status": "M"
+        }
+      ],
+      "commit": "5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e",
+      "committed_at": "2026-07-25T14:18:31+02:00",
+      "committer_email": "sepmhn@gmail.com",
+      "committer_name": "Sepehr Mahmoudian",
+      "diff": {
+        "base": "4abfad7f2030257e7499d18f9502087b20dec04b",
+        "name_status_sha256": "b016a3eb074f9035959e27502cc4fd01ec0bfe15b80afd41688490522443aaf2",
+        "numstat_sha256": "629117d49ad9b2e85351d2535db483bead7b634244af89257eef33d78dbabb4f",
+        "patch_bytes": 414586,
+        "patch_command": "git -c diff.algorithm=myers diff --no-ext-diff --no-textconv --no-renames --no-color --src-prefix=a/ --dst-prefix=b/ --binary --full-index 4abfad7f2030257e7499d18f9502087b20dec04b..5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e",
+        "patch_lines": 10161,
+        "patch_sha256": "ec09f3407ac6c94d990d92d99299b9955f692f48bc5f7a07ab5dae4f34e66bf5",
+        "path_statuses": {
+          "release/0.9.0/current-head/closures/framework-recovery/FR-0005-plan.json": "A",
+          "tools/release/current-audit-gate.sh": "M",
+          "tools/release/test_verify_current_audit_fr_0005.py": "A",
+          "tools/release/verify-current-audit.py": "M"
+        }
+      },
+      "parent": "4abfad7f2030257e7499d18f9502087b20dec04b",
+      "signature": {
+        "allowed_signers_path": "release/0.9.0/allowed-signers",
+        "allowed_signers_sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed",
+        "format": "ssh",
+        "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+        "principal": "sepmhn@gmail.com",
+        "status": "verified"
+      },
+      "subject": "release: repair hosted attempt validation",
+      "tree": "eb20644bccf64c42998ab2c5e340165fb4886142"
+    },
+    "state_after": "ABORTED_BEFORE_QUALIFICATION",
+    "state_before": "PENDING_QUALIFICATION"
+  },
+  "schema_version": "1.0.0",
+  "source_retention": {
+    "imports_preserved": true,
+    "modified_assignments": [
+      "FRAMEWORK_CORE_FROZEN_PATHS"
+    ],
+    "modified_definitions": [
+      "_framework_recovery_2_source_retention_manifest",
+      "_framework_recovery_3_source_retention_manifest",
+      "_framework_recovery_4_source_retention_manifest",
+      "_framework_recovery_5_source_retention_manifest",
+      "_framework_recovery_5_verify_successor_guard",
+      "_verify_forward_protocol_history",
+      "_verify_framework_history",
+      "_verify_framework_recovery_5_history",
+      "_verify_post_activation_gate_retention"
+    ],
+    "new_assignments": [
+      "FRAMEWORK_RECOVERY_6_ACTIVATION_PATH",
+      "FRAMEWORK_RECOVERY_6_ACTIVATION_REQUIREMENTS",
+      "FRAMEWORK_RECOVERY_6_ACTIVATION_STATUSES",
+      "FRAMEWORK_RECOVERY_6_ACTIVATION_SUBJECT",
+      "FRAMEWORK_RECOVERY_6_CORE_PATHS",
+      "FRAMEWORK_RECOVERY_6_DEFECT_CODE",
+      "FRAMEWORK_RECOVERY_6_ID",
+      "FRAMEWORK_RECOVERY_6_MODIFIED_ASSIGNMENTS",
+      "FRAMEWORK_RECOVERY_6_MODIFIED_DEFINITIONS",
+      "FRAMEWORK_RECOVERY_6_NEW_ASSIGNMENTS",
+      "FRAMEWORK_RECOVERY_6_NEW_DEFINITIONS",
+      "FRAMEWORK_RECOVERY_6_PARENT",
+      "FRAMEWORK_RECOVERY_6_PARENT_FR5_PLAN_BYTES",
+      "FRAMEWORK_RECOVERY_6_PARENT_FR5_PLAN_SHA256",
+      "FRAMEWORK_RECOVERY_6_PARENT_FR5_TEST_BYTES",
+      "FRAMEWORK_RECOVERY_6_PARENT_FR5_TEST_OID",
+      "FRAMEWORK_RECOVERY_6_PARENT_FR5_TEST_SHA256",
+      "FRAMEWORK_RECOVERY_6_PARENT_GATE_BYTES",
+      "FRAMEWORK_RECOVERY_6_PARENT_GATE_SHA256",
+      "FRAMEWORK_RECOVERY_6_PARENT_REQUIRED_SEMANTIC_SUFFIX_BYTES",
+      "FRAMEWORK_RECOVERY_6_PARENT_REQUIRED_SEMANTIC_SUFFIX_LINES",
+      "FRAMEWORK_RECOVERY_6_PARENT_REQUIRED_SEMANTIC_SUFFIX_SHA256",
+      "FRAMEWORK_RECOVERY_6_PARENT_TREE",
+      "FRAMEWORK_RECOVERY_6_PARENT_VERIFIER_BYTES",
+      "FRAMEWORK_RECOVERY_6_PARENT_VERIFIER_OID",
+      "FRAMEWORK_RECOVERY_6_PARENT_VERIFIER_SHA256",
+      "FRAMEWORK_RECOVERY_6_PLAN_PATH",
+      "FRAMEWORK_RECOVERY_6_PRESERVED_PATHS",
+      "FRAMEWORK_RECOVERY_6_PROVENANCE_SCHEMA",
+      "FRAMEWORK_RECOVERY_6_QUALIFICATION_PATH",
+      "FRAMEWORK_RECOVERY_6_QUALIFICATION_REQUIREMENTS",
+      "FRAMEWORK_RECOVERY_6_QUALIFICATION_STATUSES",
+      "FRAMEWORK_RECOVERY_6_QUALIFICATION_SUBJECT",
+      "FRAMEWORK_RECOVERY_6_REPAIR_STATUSES",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_CAPTURE_CONFIGURATION_SHA256",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_COMMAND_SHA256",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_CONTRACT_ID",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_NORMALIZED_SHA256",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_NORMALIZED_TRANSCRIPT",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_RAW_MAX_BYTES",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_RAW_PATTERN",
+      "FRAMEWORK_RECOVERY_6_REPRODUCTION_REQUIREMENT",
+      "FRAMEWORK_RECOVERY_6_REQUIRED_TEST_IDS",
+      "FRAMEWORK_RECOVERY_6_REQUIRED_TEST_IDS_SHA256",
+      "FRAMEWORK_RECOVERY_6_SUBJECT",
+      "FRAMEWORK_RECOVERY_6_TEST_AST_SHA256",
+      "FRAMEWORK_RECOVERY_6_TEST_BYTES",
+      "FRAMEWORK_RECOVERY_6_TEST_PATH",
+      "FRAMEWORK_RECOVERY_6_TEST_SHA256"
+    ],
+    "new_definitions": [
+      "_framework_recovery_6_assurance_boundary",
+      "_framework_recovery_6_authority",
+      "_framework_recovery_6_capture_configuration",
+      "_framework_recovery_6_code_diff",
+      "_framework_recovery_6_decision",
+      "_framework_recovery_6_decode_raw_transcript",
+      "_framework_recovery_6_expected_activation",
+      "_framework_recovery_6_expected_gate_payload",
+      "_framework_recovery_6_expected_parent_reproduction",
+      "_framework_recovery_6_expected_plan",
+      "_framework_recovery_6_expected_qualification",
+      "_framework_recovery_6_expected_review",
+      "_framework_recovery_6_expected_semantic_receipt",
+      "_framework_recovery_6_has_forbidden_reference",
+      "_framework_recovery_6_hosted_attempt_policy",
+      "_framework_recovery_6_hosted_entry",
+      "_framework_recovery_6_local_commands",
+      "_framework_recovery_6_normalize_reproduction_transcript",
+      "_framework_recovery_6_parent_evidence_contract_defect",
+      "_framework_recovery_6_parent_reproduction_command",
+      "_framework_recovery_6_positive_attempt",
+      "_framework_recovery_6_review_contracts",
+      "_framework_recovery_6_review_limitations",
+      "_framework_recovery_6_run_attempt_identity",
+      "_framework_recovery_6_source_retention_manifest",
+      "_framework_recovery_6_test_contract",
+      "_framework_recovery_6_transition_identity",
+      "_framework_recovery_6_unwrap_source_layer",
+      "_framework_recovery_6_validate_local_document",
+      "_framework_recovery_6_validate_parent_reproduction",
+      "_framework_recovery_6_validate_review",
+      "_framework_recovery_6_validate_source_compatibility",
+      "_framework_recovery_6_validate_test_source",
+      "_framework_recovery_6_verify_ci_markers",
+      "_framework_recovery_6_verify_hosted_entry",
+      "_framework_recovery_6_verify_local_markers",
+      "_framework_recovery_6_verify_review_key_separation",
+      "_framework_recovery_6_verify_run_attempt_uniqueness",
+      "_framework_recovery_6_verify_stage_modes",
+      "_framework_recovery_6_verify_successor_guard",
+      "_verify_framework_recovery_6_activation",
+      "_verify_framework_recovery_6_history",
+      "_verify_framework_recovery_6_qualification",
+      "_verify_framework_recovery_6_repair"
+    ],
+    "other_top_level_nodes_preserved": true,
+    "parent_file": {
+      "bytes": 1180876,
+      "lines": 30722,
+      "path": "tools/release/verify-current-audit.py",
+      "sha256": "9215a8dfa7434376ada64f0b1d299d2ac1e84885a3d2974b4beb48eccf6ee8ec"
+    },
+    "repair_file": {
+      "bytes": 1331973,
+      "git_mode": "100644",
+      "git_object_id": "4c8dedc5ab1fa84299fc1bcc613c3900324d1d2e",
+      "git_object_type": "blob",
+      "lines": 34662,
+      "path": "tools/release/verify-current-audit.py",
+      "sha256": "9e141713d1a7048b753d54323606fbbcd807485f4e7a4d9dd3da3bfc5f60eebd"
+    },
+    "unchanged_assignment_count": 266,
+    "unchanged_assignment_index_sha256": "2a78988e5531bd42d1b3a234e451bf80e1818be3ecc849fb83f4f60dbbb43180",
+    "unchanged_definition_count": 356,
+    "unchanged_definition_index_sha256": "8a4b274636a75a4f877f7ac3d35c9c3f307659631609db50e76e2bb0229af13e"
+  },
+  "state": {
+    "active_epoch": 2,
+    "candidate_epoch": 7,
+    "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_FRAMEWORK_RECOVERY_6_ACTIVATION",
+    "status": "PENDING_QUALIFICATION",
+    "successor_transitions_allowed": false
+  },
+  "test_contract": {
+    "fr_0002": {
+      "count": 78,
+      "file": {
+        "bytes": 164569,
+        "git_mode": "100644",
+        "git_object_id": "5bce6a15e43ca25ab1bcb45618386fb5db083ad2",
+        "git_object_type": "blob",
+        "lines": 4483,
+        "path": "tools/release/test_verify_current_audit_fr_0002.py",
+        "sha256": "a0d785ecd741e809faaa959cf3d20aa01cb90d8fd03ca5716680092d2d383e7c"
+      },
+      "ids_sha256": "8404f75c71c81b2c1e8b192fc882cc26386e551348b7b47b27920719d802bf26"
+    },
+    "fr_0003": {
+      "count": 94,
+      "file": {
+        "bytes": 186879,
+        "git_mode": "100644",
+        "git_object_id": "f8b96a7f1a3f218f3853bfa7353db39afd247eba",
+        "git_object_type": "blob",
+        "lines": 5072,
+        "path": "tools/release/test_verify_current_audit_fr_0003.py",
+        "sha256": "25bbf246640cc4795266cb0d439042ba1077b1094fbe09db4e76d05154c08348"
+      },
+      "ids_sha256": "3e15e574559ac1862c37379975e725c183ebfc99aac2f5253db1342f4a3b9171"
+    },
+    "fr_0004": {
+      "count": 30,
+      "file": {
+        "bytes": 38855,
+        "git_mode": "100644",
+        "git_object_id": "73d14322a1c360142a83b96d638857fb141c57ad",
+        "git_object_type": "blob",
+        "lines": 1052,
+        "path": "tools/release/test_verify_current_audit_fr_0004.py",
+        "sha256": "d33e0b30586a77717e282947a375253a816ce84b53620cba300f5d30657234f4"
+      },
+      "ids_sha256": "c030fa49cdf25e9937f782fc3270cf612db4ccaf7097e477a6f990ad39a2328c"
+    },
+    "fr_0005": {
+      "count": 44,
+      "file": {
+        "bytes": 142730,
+        "git_mode": "100644",
+        "git_object_id": "b42a497ad45443daeb71951ac7de8405b5e204cc",
+        "git_object_type": "blob",
+        "lines": 3582,
+        "path": "tools/release/test_verify_current_audit_fr_0005.py",
+        "sha256": "c02f1cbdb8e7edc96c70086e02528c1a6f96528c01905025082cdd5d926d70a0"
+      },
+      "ids_sha256": "324ec4671d3b7c3dfa5bbfab69cfb2cf60bab6549e695299a1cd32d3b4fd3143"
+    },
+    "fr_0006": {
+      "ast_sha256": "51d9c01873c399e5f952fa5310925db938f971279f9db8a526bfd1911d40a265",
+      "count": 56,
+      "file": {
+        "bytes": 83045,
+        "git_mode": "100644",
+        "git_object_id": "b9689ba7461cc16130efa9c128d41690635d2d3b",
+        "git_object_type": "blob",
+        "lines": 1995,
+        "path": "tools/release/test_verify_current_audit_fr_0006.py",
+        "sha256": "a2c7638f24c7f44a22695d4b45b308115373005e9d9b88508471d9a131f01449"
+      },
+      "ids_sha256": "d448898701a6cd7e4415d8bc383bd78456ab66645b9fe98171a474e51de179e8"
+    },
+    "gate_record": {
+      "bytes": 5955,
+      "git_mode": "100755",
+      "git_object_id": "6260a482a62c10cea8961ad0be136ac0b3023ba7",
+      "git_object_type": "blob",
+      "lines": 162,
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "90823d2183335f3e6f7fb9646ffdd10ea212178556b10ddbb6c974ee7640cfb7"
+    },
+    "legacy": {
+      "count": 163,
+      "file": {
+        "bytes": 204291,
+        "git_mode": "100644",
+        "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+        "git_object_type": "blob",
+        "lines": 4738,
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+      },
+      "ids_sha256": "5be04ec6ec9fd4f5b0b1257decb807503d3b9a07f2042f12fa425edcbc6a9bbb"
+    },
+    "prior_test_bytes_preserved": true,
+    "required_regression_test_ids": [
+      "test_framework_recovery_6_activation_scope_is_exact",
+      "test_framework_recovery_6_code_diff_excludes_plan",
+      "test_framework_recovery_6_correction_policy_is_fail_closed",
+      "test_framework_recovery_6_decision_is_fail_closed",
+      "test_framework_recovery_6_defect_code_and_subject_are_exact",
+      "test_framework_recovery_6_epoch_6_is_not_reusable",
+      "test_framework_recovery_6_evidence_catalog_binds_raw_and_receipt",
+      "test_framework_recovery_6_evidence_signatures_and_chronology_are_bound",
+      "test_framework_recovery_6_expected_gate_payload_is_exact",
+      "test_framework_recovery_6_expected_plan_has_exact_fields",
+      "test_framework_recovery_6_forward_replay_has_pre_activation_guard",
+      "test_framework_recovery_6_framework_history_requires_exact_retirement_relationship",
+      "test_framework_recovery_6_gate_order_and_warning_policy_are_exact",
+      "test_framework_recovery_6_gate_rejects_missing_duplicate_or_reordered_suites",
+      "test_framework_recovery_6_gate_runs_fr_0005_compatibility_exactly_once",
+      "test_framework_recovery_6_history_requires_exact_position",
+      "test_framework_recovery_6_history_states_are_contiguous",
+      "test_framework_recovery_6_identity_constants_are_exact",
+      "test_framework_recovery_6_local_markers_require_every_suite",
+      "test_framework_recovery_6_materialization_is_inherited",
+      "test_framework_recovery_6_normalization_is_pure_and_input_is_unchanged",
+      "test_framework_recovery_6_normalization_rejects_non_ascii_crlf_nul_and_trailing_bytes",
+      "test_framework_recovery_6_normalization_rejects_zero_or_multiple_matches",
+      "test_framework_recovery_6_normalization_replaces_exactly_one_elapsed_value",
+      "test_framework_recovery_6_normalized_transcript_digest_is_bound",
+      "test_framework_recovery_6_parent_bytes_are_pinned",
+      "test_framework_recovery_6_parent_capture_provenance_contradiction_is_reproduced",
+      "test_framework_recovery_6_parent_command_emits_no_semantic_receipt",
+      "test_framework_recovery_6_parent_has_no_q_or_a",
+      "test_framework_recovery_6_preserves_all_prior_test_suites",
+      "test_framework_recovery_6_qualification_requires_provenance_v2",
+      "test_framework_recovery_6_qualification_scope_is_exact",
+      "test_framework_recovery_6_raw_capture_command_is_exact",
+      "test_framework_recovery_6_raw_capture_uses_one_merged_descriptor",
+      "test_framework_recovery_6_raw_transcript_grammar_is_exact",
+      "test_framework_recovery_6_raw_transcript_is_execution_output_only",
+      "test_framework_recovery_6_raw_transcript_record_is_bound",
+      "test_framework_recovery_6_raw_transcript_rejects_append_and_rewrite",
+      "test_framework_recovery_6_repair_scope_is_exact",
+      "test_framework_recovery_6_reproduction_chronology_is_bound",
+      "test_framework_recovery_6_resource_bounds_are_inherited",
+      "test_framework_recovery_6_retirement_absorbs_no_fr_0005_q_or_a",
+      "test_framework_recovery_6_retires_fr_0005_without_qualification",
+      "test_framework_recovery_6_review_contracts_cite_real_tests",
+      "test_framework_recovery_6_review_keys_are_separate",
+      "test_framework_recovery_6_semantic_receipt_binds_command_config_and_exit",
+      "test_framework_recovery_6_semantic_receipt_binds_raw_and_normalized_digests",
+      "test_framework_recovery_6_semantic_receipt_has_exact_fields",
+      "test_framework_recovery_6_semantic_receipt_mutations_are_rejected",
+      "test_framework_recovery_6_source_retention_projects_all_recoveries_and_rejects_drift",
+      "test_framework_recovery_6_stage_modes_are_regular",
+      "test_framework_recovery_6_successor_requires_activation",
+      "test_framework_recovery_6_test_contract_requires_exact_discovery_count",
+      "test_framework_recovery_6_test_source_ast_and_discovery_are_strict",
+      "test_framework_recovery_6_transition_creates_epoch_7",
+      "test_framework_recovery_6_wrapper_accepts_epochs_2_through_7"
+    ],
+    "resource": {
+      "count": 26,
+      "file": {
+        "bytes": 51592,
+        "git_mode": "100644",
+        "git_object_id": "51f857c10f390017c5d7d4ef707fc54931f350b1",
+        "git_object_type": "blob",
+        "lines": 1215,
+        "path": "tools/release/test_current_audit_resource_profile.py",
+        "sha256": "88198d7f3dc75b47f1bc61c1513f635b0c172846131ea4a1b5683275673850a1"
+      },
+      "ids_sha256": "4389db8a8b6f432e84863c5a47418785d9f01a9aceefc79ee20f8665841216c3"
+    },
+    "warning_policy": "-W error"
+  },
+  "transition_identity": {
+    "active_epoch_before_activation": 2,
+    "epoch_6_reused": false,
+    "epoch_6_state": "ABORTED_BEFORE_QUALIFICATION",
+    "epoch_7_candidate_created": true,
+    "fr_0005_mechanism_reused": false,
+    "ordinary_successor_transition": false,
+    "prior_framework_accepts_transition": false,
+    "transition_kind": "NEW_SIGNED_TRUST_ROOT_REBASELINE"
+  }
+}
