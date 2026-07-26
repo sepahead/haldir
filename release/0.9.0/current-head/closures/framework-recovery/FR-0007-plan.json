@@ -1,0 +1,1173 @@
+{
+  "activation_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0007-activation.json",
+  "activation_requirements": [
+    {
+      "id": "FR-0007-A01",
+      "kind": "QUALIFICATION_HOSTED_CI",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-q-ci.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-q-ci-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-q-ci.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0007-A02",
+      "kind": "QUALIFICATION_HOSTED_FORMAL",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-q-formal.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-q-formal-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-q-formal.log.gz"
+      ]
+    }
+  ],
+  "assurance_boundary": {
+    "external_independence": false,
+    "fr_0006_qualification_reclassified_as_valid": false,
+    "historical_protocol_execution_revalidated_under_epoch_8": true,
+    "human_review_performed": false,
+    "prior_ledger_and_claim_judgments_changed": false,
+    "release_authority_from_review": false,
+    "review_signatures_scope": "LOCAL_RECORD_INTEGRITY_ONLY"
+  },
+  "author": {
+    "email": "sepmhn@gmail.com",
+    "name": "Sepehr Mahmoudian"
+  },
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authority_changed": false,
+    "runtime_authority_changed": false,
+    "tag_authorized": false,
+    "zenodo_authorized": false
+  },
+  "boundary_policy": {
+    "historical_default_strict": true,
+    "job_boundary_skew_seconds": 1,
+    "job_must_remain_inside_workflow_run": true,
+    "ordinary_and_attempt_jobs_must_match": true,
+    "raw_timestamps_changed": false,
+    "step_interval_must_not_reverse": true,
+    "step_must_remain_inside_workflow_run": true
+  },
+  "changed_core_files": [
+    {
+      "new": {
+        "bytes": 1471069,
+        "git_mode": "100644",
+        "git_object_id": "2502af4b7d9466d86b22fa4f796b751588b7ffe2",
+        "git_object_type": "blob",
+        "lines": 38269,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "1e4f7f719d4f8c2d6afbade5a31388770a6ac6b0b5f3a8da9943967e3389a498"
+      },
+      "old": {
+        "bytes": 1331973,
+        "git_mode": "100644",
+        "git_object_id": "4c8dedc5ab1fa84299fc1bcc613c3900324d1d2e",
+        "git_object_type": "blob",
+        "lines": 34662,
+        "path": "tools/release/verify-current-audit.py",
+        "sha256": "9e141713d1a7048b753d54323606fbbcd807485f4e7a4d9dd3da3bfc5f60eebd"
+      },
+      "status": "M"
+    },
+    {
+      "new": {
+        "bytes": 53487,
+        "git_mode": "100644",
+        "git_object_id": "511fda019f190a7da09641c8910c7e1f1b8f33c3",
+        "git_object_type": "blob",
+        "lines": 1251,
+        "path": "tools/release/test_verify_current_audit_fr_0007.py",
+        "sha256": "59f0660cdee08155c5e9aee6dea72d18bd2bb8b813874744a3f65b825531b12b"
+      },
+      "old": null,
+      "status": "A"
+    },
+    {
+      "new": {
+        "bytes": 8080,
+        "git_mode": "100755",
+        "git_object_id": "e78c6434438fd98c91710f0a91da0e06239ba3cf",
+        "git_object_type": "blob",
+        "lines": 221,
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "3651cd0f66a17f0a1335e5715a4cbba362c5bd5a67bd23efb1d56386f04c0813"
+      },
+      "old": {
+        "bytes": 5955,
+        "git_mode": "100755",
+        "git_object_id": "6260a482a62c10cea8961ad0be136ac0b3023ba7",
+        "git_object_type": "blob",
+        "lines": 162,
+        "path": "tools/release/current-audit-gate.sh",
+        "sha256": "90823d2183335f3e6f7fb9646ffdd10ea212178556b10ddbb6c974ee7640cfb7"
+      },
+      "status": "M"
+    }
+  ],
+  "code_diff": {
+    "base": "c11907924e86e117d092ae4153581f1bad257e5a",
+    "name_status_sha256": "100fc2e10273658ca28aa6ce68ade63383fc49b4e31d5747ce7f68bd96a73392",
+    "numstat_sha256": "a5821ad49a5f48c6064f959de4ce9eafcb0b27d338187d7d7e80836610e2008a",
+    "patch_bytes": 236396,
+    "patch_command_template": [
+      "/usr/bin/git",
+      "-c",
+      "diff.algorithm=myers",
+      "diff",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--no-renames",
+      "--no-color",
+      "--src-prefix=a/",
+      "--dst-prefix=b/",
+      "--binary",
+      "--full-index",
+      "c11907924e86e117d092ae4153581f1bad257e5a..<REPAIR_COMMIT>",
+      "--",
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit_fr_0007.py",
+      "tools/release/current-audit-gate.sh"
+    ],
+    "patch_lines": 5893,
+    "patch_sha256": "9e03fdbcacf3e3a602fef6cd13b046aab71ccd1d4c1792879a9b4d952befada2",
+    "paths": [
+      "tools/release/verify-current-audit.py",
+      "tools/release/test_verify_current_audit_fr_0007.py",
+      "tools/release/current-audit-gate.sh"
+    ],
+    "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+  },
+  "correction": {
+    "contract_id": "HALDIR_FR_0007_LOCAL_MARKER_CARDINALITY_V1",
+    "expected_local_marker_counts": {
+      "direct_bare_ok": 8,
+      "direct_suite_run_multiplicity": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "p0_bare_ok": 14,
+      "p0_extra_unittest_command_count": 6,
+      "p0_suite_run_multiplicity": [
+        1,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "fr_0006_qualification_reused": false,
+    "marker_count_derivation": "GATE_UNITTEST_SUITES_PLUS_PINNED_P0_EXTRA_UNITTEST_COMMANDS",
+    "new_evidence_required": true,
+    "new_review_records_required": true,
+    "p0_extra_unittest_command_count": 6,
+    "p0_gate_changed": false,
+    "suite_keys": [
+      "legacy",
+      "fr_0002",
+      "fr_0003",
+      "resource",
+      "fr_0004",
+      "fr_0005",
+      "fr_0006",
+      "fr_0007"
+    ]
+  },
+  "created_at_utc": "2026-07-26T00:19:14Z",
+  "defect": {
+    "cardinality_difference": 1,
+    "code": "FR_0006_LOCAL_VALIDATION_P0_OK_CARDINALITY_UNSATISFIABLE",
+    "fr_0006_activation_commit": null,
+    "fr_0006_local_validation_contract_satisfiable": false,
+    "fr_0006_qualification_commit": null,
+    "fr_0006_repair_commit": "c11907924e86e117d092ae4153581f1bad257e5a",
+    "fr_0006_state_before_retirement": "PENDING_QUALIFICATION",
+    "genuine_p0_bare_ok_count": 13,
+    "p0_extra_unittest_command_count": 6,
+    "parent_gate_unittest_suite_count": 7,
+    "parent_required_p0_bare_ok_count": 14,
+    "parent_suite_keys": [
+      "legacy",
+      "fr_0002",
+      "fr_0003",
+      "resource",
+      "fr_0004",
+      "fr_0005",
+      "fr_0006"
+    ],
+    "parent_validator_function": "_framework_recovery_6_verify_local_markers",
+    "passing_local_transcript_rejected": true,
+    "severity": "QUALIFICATION_BLOCKER"
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0007-plan-v1",
+    "principal": "sepmhn@gmail.com",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDuKh9+1+qdjbO6MP/NHD/ai3JtumsKPiz2KBx3lQwLI",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAApaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDA3LXBs\nYW4tdjEAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJZCG+dhHcVGJPf\n+Yyj6sIbUX0qvpzECr8O45VuN+0Vv2ObV9sTUbMDUqpIIXALwUf0CR2EKLpIAHUfAoAx1K\nBg==\n-----END SSH SIGNATURE-----\n"
+  },
+  "framework_epoch": {
+    "active": 2,
+    "next_candidate": 8,
+    "retired_candidate": 7
+  },
+  "hosted_attempt_policy": {
+    "anomaly_identity": {
+      "attempt_source": "RETAINED_ATTEMPT_JSON",
+      "fields": [
+        "run_id",
+        "attempt"
+      ]
+    },
+    "capture_commands": {
+      "attempt_metadata_template": "gh run view {run_id} --repo sepahead/haldir --attempt {attempt} --json <ATTEMPT_FIELDS> > <RAW_PATH>",
+      "must_bind_source_value": true,
+      "ordinary_metadata_template": "gh run view {run_id} --repo sepahead/haldir --json attempt,<ORDINARY_FIELDS> > <RAW_PATH>",
+      "raw_log_template": "gh run view {run_id} --repo sepahead/haldir --attempt {attempt} --log > <RAW_PATH>"
+    },
+    "positive_attempt": {
+      "booleans_allowed": false,
+      "minimum": 1,
+      "type": "BUILTIN_INT"
+    },
+    "timestamp_boundary": {
+      "attempt_1": [
+        "attempt.createdAt == ordinary.createdAt",
+        "subject_commit_time <= ordinary.createdAt",
+        "attempt.createdAt <= attempt.startedAt + 1 second",
+        "attempt.startedAt <= ordinary.updatedAt",
+        "ordinary.updatedAt <= attempt.updatedAt",
+        "attempt.updatedAt <= containing_commit_time"
+      ],
+      "attempt_2_or_later": [
+        "subject_commit_time <= ordinary.createdAt",
+        "ordinary.createdAt < attempt.createdAt",
+        "attempt.createdAt <= attempt.startedAt + 1 second",
+        "ordinary.createdAt <= attempt.startedAt",
+        "attempt.startedAt <= ordinary.updatedAt",
+        "ordinary.updatedAt <= attempt.updatedAt",
+        "attempt.createdAt <= attempt.updatedAt",
+        "attempt.updatedAt <= containing_commit_time"
+      ],
+      "attempt_start_skew_seconds": 1,
+      "raw_timestamps_changed": false
+    },
+    "url": {
+      "must_bind_source_value": true,
+      "template": "https://github.com/sepahead/haldir/actions/runs/{run_id}/attempts/{attempt}"
+    },
+    "value_source": {
+      "artifact": "RETAINED_ATTEMPT_JSON",
+      "capture_command_is_source": false,
+      "field": "attempt",
+      "ordinary_metadata_must_match": true,
+      "url_is_source": false
+    }
+  },
+  "parent_commit": "c11907924e86e117d092ae4153581f1bad257e5a",
+  "parent_tree": "ab572f00a2d288049455e8bf35805024fc75a10b",
+  "persistent_identifier": null,
+  "preserved_state_records": [
+    {
+      "bytes": 8687,
+      "git_mode": "100644",
+      "git_object_id": "491b97e67f509786ca6e8ddedd2506092ba82c11",
+      "git_object_type": "blob",
+      "lines": 233,
+      "path": "release/0.9.0/current-head/closures/CH-T000-revocations.json",
+      "sha256": "82e7f69d76bd3a316cdea1cb3766bc5ce382915d7b21dad59fc8945ae5bd72a2"
+    },
+    {
+      "bytes": 35029,
+      "git_mode": "100644",
+      "git_object_id": "6567c8695b6b7ae99ff6092feee1b8a21a0d47b9",
+      "git_object_type": "blob",
+      "lines": 771,
+      "path": "release/0.9.0/current-head/closures/active-claims.json",
+      "sha256": "aaedcf26501b9023f3cbe898a86cb2ad82e53a850c1dfd060a30ef3f8d70b367"
+    },
+    {
+      "bytes": 17663,
+      "git_mode": "100644",
+      "git_object_id": "05b80ded01ac7615133106ff182d68560721fc76",
+      "git_object_type": "blob",
+      "lines": 439,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-activation.json",
+      "sha256": "fe9e65b1f28249e4f92a35518eeb83289c1581fb18389625cb8d7b5633be3503"
+    },
+    {
+      "bytes": 12679,
+      "git_mode": "100644",
+      "git_object_id": "d2e7a1205010e2165ce73e126bb0a1412860c2a1",
+      "git_object_type": "blob",
+      "lines": 320,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-plan.json",
+      "sha256": "1e8b6eb3b80162ef6458163ff88da6c6a9c3bf2bc07e9d3b71ccbd4990a391fb"
+    },
+    {
+      "bytes": 14440,
+      "git_mode": "100644",
+      "git_object_id": "0617c3e881025762676ac8966e92bdebe0148127",
+      "git_object_type": "blob",
+      "lines": 373,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0001-qualification.json",
+      "sha256": "ecc64353b5952a76f59afda5add29e1770574a13a9db1e5eeae28f593f9283c2"
+    },
+    {
+      "bytes": 51257,
+      "git_mode": "100644",
+      "git_object_id": "58b28280f66fdd8e113803f5647d9aafb6ea676c",
+      "git_object_type": "blob",
+      "lines": 1129,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0002-plan.json",
+      "sha256": "623d7cfcf6d3be8e82dab6669496df8064f5cd9206c65c29268d9aef6dd135de"
+    },
+    {
+      "bytes": 66461,
+      "git_mode": "100644",
+      "git_object_id": "5076442cc86c9c4729b2c226148672cf0627cf5b",
+      "git_object_type": "blob",
+      "lines": 1473,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0003-plan.json",
+      "sha256": "3f0afddf871f1d577dde2a617d53c4068f6f8feddb684f0830a895dc2b2601f1"
+    },
+    {
+      "bytes": 38345,
+      "git_mode": "100644",
+      "git_object_id": "8b41891fe59787d49a51514481f8e74ccb8c93e3",
+      "git_object_type": "blob",
+      "lines": 969,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0004-plan.json",
+      "sha256": "42a1a17105af29088c1dd8fb6defdf03da3af00cd8257c60474b0e9ddc99a652"
+    },
+    {
+      "bytes": 42413,
+      "git_mode": "100644",
+      "git_object_id": "dab05db6abfbaacb6975f010e097b48f0beeb79a",
+      "git_object_type": "blob",
+      "lines": 1055,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0005-plan.json",
+      "sha256": "993f9a4c588b4777d66d47eac7923f4ac8c171810bdf9f4080f4d2f8ef318392"
+    },
+    {
+      "bytes": 46954,
+      "git_mode": "100644",
+      "git_object_id": "9040105005cc6719e4a31dfd1305b23cbbf06868",
+      "git_object_type": "blob",
+      "lines": 1143,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0006-plan.json",
+      "sha256": "fe3957337447d1ba333393a6c9d13120ef85f308404d072eaaf5f8a6acaf889c"
+    },
+    {
+      "bytes": 8689,
+      "git_mode": "100644",
+      "git_object_id": "537e1171867ea2771bacfb7f57558d1776bffd0b",
+      "git_object_type": "blob",
+      "lines": 205,
+      "path": "release/0.9.0/current-head/closures/task-verifier-registry.json",
+      "sha256": "52b32984a9bfee338caecee166bc47095a1c908cf6263624e892d0db3dfbf271"
+    },
+    {
+      "bytes": 2641,
+      "git_mode": "100644",
+      "git_object_id": "3804cb277795f9925bf0ffbd7ae30bc3500bf2fd",
+      "git_object_type": "blob",
+      "lines": 89,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed-run.json",
+      "sha256": "ec279c081e02583ae47f35ac3c4992853d53f18d6a319c12eff120be7023be4f"
+    },
+    {
+      "bytes": 7708,
+      "git_mode": "100644",
+      "git_object_id": "f6fc4747dbc69704919d74c91bccf4c045e446c4",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-d-failed.log.gz",
+      "sha256": "79f12396914db0aba4b66b003428866f2b2ea561c4c6ba06ee7d20fdba1f8dc3"
+    },
+    {
+      "bytes": 2287,
+      "git_mode": "100644",
+      "git_object_id": "d7ae907c9ba943ba2d2c107805adf30e8ad618de",
+      "git_object_type": "blob",
+      "lines": 78,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci-run.json",
+      "sha256": "f04ce45b06e12c2b9010dc0d3a145a89de7de042f1c92ba0b3e957eed467edc5"
+    },
+    {
+      "bytes": 18074,
+      "git_mode": "100644",
+      "git_object_id": "15110a02c6eec8c513eaaa39cb10c54b2a1f7472",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-ci.log.gz",
+      "sha256": "e37c8917c7b6f9199b401a7e47b7105b48b0e8842a5467d9bc5e2b9cb55d6255"
+    },
+    {
+      "bytes": 1020,
+      "git_mode": "100644",
+      "git_object_id": "9429ab79f94c57b0009b51738c7023051b01906a",
+      "git_object_type": "blob",
+      "lines": 33,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal-run.json",
+      "sha256": "893e8aa1eb78f7d446e9aa546befced46d82c9ecdfcc5e20232b0f87b431bb4e"
+    },
+    {
+      "bytes": 692,
+      "git_mode": "100644",
+      "git_object_id": "d963cdae35ea71af2f2e06bfff1a07ca3e302bfd",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-formal.log.gz",
+      "sha256": "9f6253f38e1a1f61e70a610d698eba5811ad23cf1828a7864a6479a407db10a5"
+    },
+    {
+      "bytes": 1890,
+      "git_mode": "100644",
+      "git_object_id": "81a13abdacdd41db45747c7dc7838d2dcaf18f3b",
+      "git_object_type": "blob",
+      "lines": 69,
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.json",
+      "sha256": "f28d35892e41e72b284ce675de1c8cab87eeeb0b16832e6364d904fdf1ba5de1"
+    },
+    {
+      "bytes": 23795,
+      "git_mode": "100644",
+      "git_object_id": "46f511f184bcd5600b94c57eadb3eb5f7f35914d",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0001-r-local.log.gz",
+      "sha256": "8f42767c35df2b71d4ea2dec89097b53546a3600f2689bab112f91af9dbf9a02"
+    },
+    {
+      "bytes": 189708,
+      "git_mode": "100644",
+      "git_object_id": "da3bf2edd60efb4071d3dbb63f39b9bdfcd1176e",
+      "git_object_type": "blob",
+      "lines": 4702,
+      "path": "release/0.9.0/current-head/requirements.json",
+      "sha256": "0963891fbfb1a174972f22b2d6e253df8531506b92bb2fd3f46708f8fff782e7"
+    },
+    {
+      "bytes": 4976,
+      "git_mode": "100644",
+      "git_object_id": "f87378eed9e91673fd8b971ac08a90f9e81b587f",
+      "git_object_type": "blob",
+      "lines": 127,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-design.json",
+      "sha256": "acd1004ca05c0e3fcbbeb9b4a9bdcb2d57dc9d708a59e21c0eb8fc4e5313ad39"
+    },
+    {
+      "bytes": 6483,
+      "git_mode": "100644",
+      "git_object_id": "7daad15a4691fae96f84e5db821d41da4f078774",
+      "git_object_type": "blob",
+      "lines": 139,
+      "path": "release/0.9.0/current-head/reviews/framework-recovery-fr-0001-implementation.json",
+      "sha256": "e93e121b2806dabdd336e65f80843efd6631a1480ca8cc9aeee48ead114296fc"
+    },
+    {
+      "bytes": 5213,
+      "git_mode": "100644",
+      "git_object_id": "9f8ba1b5615326deacebae40b708856ffa6f7667",
+      "git_object_type": "blob",
+      "lines": 106,
+      "path": "release/0.9.0/current-head/tasks/revocations/R0003/process-group-identity-reuse.json",
+      "sha256": "d314a242ddf4b877ed8dfd5d8dd1560efe8c405568eae689cc7eb56df45e6267"
+    },
+    {
+      "bytes": 98053,
+      "git_mode": "100644",
+      "git_object_id": "ae387e495796439e73ad02ae1cc892599b115b38",
+      "git_object_type": "blob",
+      "lines": 2564,
+      "path": "tools/release/current-audit-resource-profile.py",
+      "sha256": "b2d01af57727fb6a7138f5bc13797be0f2de032ae85c085b7dce444d74674675"
+    },
+    {
+      "bytes": 51592,
+      "git_mode": "100644",
+      "git_object_id": "51f857c10f390017c5d7d4ef707fc54931f350b1",
+      "git_object_type": "blob",
+      "lines": 1215,
+      "path": "tools/release/test_current_audit_resource_profile.py",
+      "sha256": "88198d7f3dc75b47f1bc61c1513f635b0c172846131ea4a1b5683275673850a1"
+    },
+    {
+      "bytes": 204291,
+      "git_mode": "100644",
+      "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+      "git_object_type": "blob",
+      "lines": 4738,
+      "path": "tools/release/test_verify_current_audit.py",
+      "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+    },
+    {
+      "bytes": 164569,
+      "git_mode": "100644",
+      "git_object_id": "5bce6a15e43ca25ab1bcb45618386fb5db083ad2",
+      "git_object_type": "blob",
+      "lines": 4483,
+      "path": "tools/release/test_verify_current_audit_fr_0002.py",
+      "sha256": "a0d785ecd741e809faaa959cf3d20aa01cb90d8fd03ca5716680092d2d383e7c"
+    },
+    {
+      "bytes": 186879,
+      "git_mode": "100644",
+      "git_object_id": "f8b96a7f1a3f218f3853bfa7353db39afd247eba",
+      "git_object_type": "blob",
+      "lines": 5072,
+      "path": "tools/release/test_verify_current_audit_fr_0003.py",
+      "sha256": "25bbf246640cc4795266cb0d439042ba1077b1094fbe09db4e76d05154c08348"
+    },
+    {
+      "bytes": 38855,
+      "git_mode": "100644",
+      "git_object_id": "73d14322a1c360142a83b96d638857fb141c57ad",
+      "git_object_type": "blob",
+      "lines": 1052,
+      "path": "tools/release/test_verify_current_audit_fr_0004.py",
+      "sha256": "d33e0b30586a77717e282947a375253a816ce84b53620cba300f5d30657234f4"
+    },
+    {
+      "bytes": 142730,
+      "git_mode": "100644",
+      "git_object_id": "b42a497ad45443daeb71951ac7de8405b5e204cc",
+      "git_object_type": "blob",
+      "lines": 3582,
+      "path": "tools/release/test_verify_current_audit_fr_0005.py",
+      "sha256": "c02f1cbdb8e7edc96c70086e02528c1a6f96528c01905025082cdd5d926d70a0"
+    },
+    {
+      "bytes": 83045,
+      "git_mode": "100644",
+      "git_object_id": "b9689ba7461cc16130efa9c128d41690635d2d3b",
+      "git_object_type": "blob",
+      "lines": 1995,
+      "path": "tools/release/test_verify_current_audit_fr_0006.py",
+      "sha256": "a2c7638f24c7f44a22695d4b45b308115373005e9d9b88508471d9a131f01449"
+    }
+  ],
+  "prior_framework_commit": "e747747418f94371348450e6b7205291c1441216",
+  "qualification_path": "release/0.9.0/current-head/closures/framework-recovery/FR-0007-qualification.json",
+  "qualification_requirements": [
+    {
+      "id": "FR-0007-E01",
+      "kind": "PARENT_LOCAL_MARKER_CARDINALITY_REPRODUCTION",
+      "max_bytes": [
+        65536,
+        262144,
+        65536
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-d-reproduction.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-d-reproduction-raw.log.gz",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-d-reproduction-semantic-receipt.json"
+      ]
+    },
+    {
+      "id": "FR-0007-E02",
+      "kind": "REPAIR_HOSTED_CI",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-ci.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-ci-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-ci.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0007-E03",
+      "kind": "REPAIR_HOSTED_FORMAL",
+      "max_bytes": [
+        65536,
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-formal.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-formal-attempt.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-formal.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0007-E04",
+      "kind": "REPAIR_LOCAL_VALIDATION",
+      "max_bytes": [
+        65536,
+        262144
+      ],
+      "paths": [
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-local.json",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0007-r-local.log.gz"
+      ]
+    },
+    {
+      "id": "FR-0007-R01",
+      "kind": "INTERNAL_AUTOMATED_DESIGN_REVIEW",
+      "max_bytes": [
+        131072
+      ],
+      "paths": [
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0007-design.json"
+      ]
+    },
+    {
+      "id": "FR-0007-R02",
+      "kind": "INTERNAL_AUTOMATED_IMPLEMENTATION_REVIEW",
+      "max_bytes": [
+        131072
+      ],
+      "paths": [
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0007-implementation.json"
+      ]
+    }
+  ],
+  "recovery_id": "FR-0007",
+  "registered_snapshot_materialization": {
+    "bounds": {
+      "container_cpus": 2,
+      "container_fsize_bytes": 536870912,
+      "container_memory_bytes": 1342177280,
+      "container_memory_swap_bytes": 1342177280,
+      "container_swap_additional_bytes": 0,
+      "equal_ceiling_reason": "A_SINGLE_GIT_PACK_MAY_SPAN_THE_COMPLETE_REPOSITORY_HYGIENE_CEILING;_THE_FILE_CEILING_IS_A_REDUNDANT_FAIL_CLOSED_CONTROL",
+      "execution_tmpfs_bytes": 671088640,
+      "file_and_total_ceiling_equal": true,
+      "file_bytes": 536870912,
+      "host_bounded_process_ceiling_seconds": 255,
+      "host_containment_grace_seconds": 15,
+      "materialization_setup_seconds": 120,
+      "maximum_directory_depth": 64,
+      "maximum_file_component_depth": 65,
+      "minimum_daemon_cpus": 2,
+      "minimum_daemon_memory_bytes": 1342177280,
+      "nodes": 32768,
+      "path_bytes": 4096,
+      "staging_tmpfs_bytes": 1048576,
+      "streaming_copy_chunk_bytes": 1048576,
+      "temporary_tmpfs_bytes": 67108864,
+      "test_container_seconds": 240,
+      "test_execution_seconds": 120,
+      "total_bytes": 536870912,
+      "verifier_container_seconds": 150,
+      "verifier_execution_seconds": 30
+    },
+    "copy_policy": {
+      "aggregate_capacity_checked_before_destination_creation": true,
+      "clone_output_single_link_postcondition": true,
+      "container_file_copy_streaming": true,
+      "destination_rescanned_after_sealing": true,
+      "directory_fd_traversal": true,
+      "disposable_snapshot_special_bits_cleared": true,
+      "hard_links_allowed": false,
+      "nofollow_required": true,
+      "regular_files_only": true,
+      "source_nonregular_types_remain_rejected": true,
+      "source_relisted_after_descendants": true,
+      "special_files_allowed": false,
+      "symbolic_links_allowed": false
+    },
+    "exception_binding": {
+      "activation_commit": "c0e4b3d156500684329a92bcb16e0609894fd738",
+      "epoch": 2,
+      "freeze_commit": "0795989aa7b682e6bc1108b532939c52b5d7fdfc",
+      "implementation_commit": "ab4eb7a99bebae88c5aad3684bccf3a85a4e7dc9",
+      "qualification_commit": "0957f4b0727e3dc6fb8cd52ca0e92a8012d1f5a7",
+      "registration_sha256": "60bf53ed1c975bc958bf26fc0aa5220fc71df95564c5247c469b6be594e28d28",
+      "task_id": "CH-T001",
+      "verifier_path": "tools/release/tasks/ch-t001/e0002/verify.py",
+      "verifier_sha256": "5696199ce75e5f198617efa310e2bfeec8a108361996ac532238549d1ebd8d21"
+    },
+    "execution_mount": {
+      "normalized_directory_mode": "0555",
+      "normalized_executable_file_mode": "0555",
+      "normalized_nonexecutable_file_mode": "0444",
+      "owner_gid": 0,
+      "owner_uid": 0,
+      "path": "/repo",
+      "storage": "FRESH_CONTAINER_LOCAL_TMPFS"
+    },
+    "execution_policy": {
+      "cache_warmth_relied_on": false,
+      "command_timeout_starts_after_materialization": true,
+      "container_network": "NONE",
+      "container_root_filesystem_read_only": true,
+      "effective_permitted_inheritable_ambient_capabilities": 0,
+      "failure_policy": "FAIL_CLOSED",
+      "final_gid": 65534,
+      "final_uid": 65534,
+      "no_new_privileges": true,
+      "original_python_command_preserved": true,
+      "registered_command_allowance_preserved": true,
+      "registered_tests_run_count": 1,
+      "registered_verifier_run_count": 1,
+      "retry_allowed": false,
+      "setup_and_command_clocks_are_separate": true,
+      "setup_capabilities": [
+        "SETGID",
+        "SETUID"
+      ],
+      "setup_gid": 0,
+      "setup_monotonic_postcondition": true,
+      "setup_uid": 0,
+      "setup_watchdog": "SIGALRM_ITIMER_REAL",
+      "setup_watchdog_armed_before_source_open": true,
+      "setup_watchdog_cancelled_before_exec": true,
+      "supplementary_groups": []
+    },
+    "purpose": "REMOVE_HOST_BIND_MOUNT_LATENCY_FROM_FROZEN_THREE_SECOND_GIT_COMMAND_BOUNDS",
+    "receipt": {
+      "algorithm": "SHA256-FRAMED-PATH-EXECUTABLE-CONTENT-V1",
+      "canonical_json": true,
+      "required_equal_views": [
+        "HOST_SNAPSHOT",
+        "CONTAINER_SOURCE_COPY",
+        "SEALED_EXECUTION_TREE"
+      ],
+      "stdout_framing_changed": false
+    },
+    "repository_view": {
+      "aggregate_bytes_align_with_repository_hygiene": true,
+      "complete_detached_snapshot": true,
+      "forward_active_verifier_rerun": true,
+      "materialization_depth_is_additional_successor_constraint": true,
+      "nodes_align_with_repository_hygiene": true,
+      "snapshot_commit": "FINAL_HEAD_UNDER_VERIFICATION"
+    },
+    "scope": "EXACT_CH-T001_EPOCH_2_REGISTRATION_RERUN_AT_CURRENT_AND_SUCCESSOR_HEADS",
+    "source_mount": {
+      "bind_propagation": "rprivate",
+      "hidden_after_identity_drop": true,
+      "path": "/staging/source",
+      "read_only": true
+    }
+  },
+  "release_target": "0.9.0",
+  "repair_subject": "release: repair local validation marker cardinality",
+  "retired_recovery": {
+    "activation_commit": null,
+    "defect_code": "FR_0006_LOCAL_VALIDATION_P0_OK_CARDINALITY_UNSATISFIABLE",
+    "epoch_reusable": false,
+    "plan_record": {
+      "bytes": 46954,
+      "git_mode": "100644",
+      "git_object_id": "9040105005cc6719e4a31dfd1305b23cbbf06868",
+      "git_object_type": "blob",
+      "lines": 1143,
+      "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0006-plan.json",
+      "sha256": "fe3957337447d1ba333393a6c9d13120ef85f308404d072eaaf5f8a6acaf889c"
+    },
+    "qualification_commit": null,
+    "reason": "LOCAL_VALIDATION_MARKER_CARDINALITY_UNSATISFIABLE",
+    "recovery_id": "FR-0006",
+    "repair": {
+      "author_email": "sepmhn@gmail.com",
+      "author_name": "Sepehr Mahmoudian",
+      "authored_at": "2026-07-25T19:15:58+02:00",
+      "changed_files": [
+        {
+          "bytes": 46954,
+          "lines": 1143,
+          "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0006-plan.json",
+          "sha256": "fe3957337447d1ba333393a6c9d13120ef85f308404d072eaaf5f8a6acaf889c",
+          "status": "A"
+        },
+        {
+          "bytes": 5955,
+          "lines": 162,
+          "path": "tools/release/current-audit-gate.sh",
+          "sha256": "90823d2183335f3e6f7fb9646ffdd10ea212178556b10ddbb6c974ee7640cfb7",
+          "status": "M"
+        },
+        {
+          "bytes": 83045,
+          "lines": 1995,
+          "path": "tools/release/test_verify_current_audit_fr_0006.py",
+          "sha256": "a2c7638f24c7f44a22695d4b45b308115373005e9d9b88508471d9a131f01449",
+          "status": "A"
+        },
+        {
+          "bytes": 1331973,
+          "lines": 34662,
+          "path": "tools/release/verify-current-audit.py",
+          "sha256": "9e141713d1a7048b753d54323606fbbcd807485f4e7a4d9dd3da3bfc5f60eebd",
+          "status": "M"
+        }
+      ],
+      "commit": "c11907924e86e117d092ae4153581f1bad257e5a",
+      "committed_at": "2026-07-25T19:23:30+02:00",
+      "committer_email": "sepmhn@gmail.com",
+      "committer_name": "Sepehr Mahmoudian",
+      "diff": {
+        "base": "5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e",
+        "name_status_sha256": "e6d19493f8653dc68ebbd63d6970d4e6ec6cf249f97be41c921564f37da443ed",
+        "numstat_sha256": "616ee964368b00a8914cf17496c0afbd5024421b8ed026c8f6f48a9530251ab6",
+        "patch_bytes": 314207,
+        "patch_command": "git -c diff.algorithm=myers diff --no-ext-diff --no-textconv --no-renames --no-color --src-prefix=a/ --dst-prefix=b/ --binary --full-index 5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e..c11907924e86e117d092ae4153581f1bad257e5a",
+        "patch_lines": 7665,
+        "patch_sha256": "83c95c42091f5500d8efcb4b5cd25280a756434bf57e5b7c317746a1cb04473c",
+        "path_statuses": {
+          "release/0.9.0/current-head/closures/framework-recovery/FR-0006-plan.json": "A",
+          "tools/release/current-audit-gate.sh": "M",
+          "tools/release/test_verify_current_audit_fr_0006.py": "A",
+          "tools/release/verify-current-audit.py": "M"
+        }
+      },
+      "parent": "5c0131d8b6a1a64d9465a1eb5f7039dc72d8c41e",
+      "signature": {
+        "allowed_signers_path": "release/0.9.0/allowed-signers",
+        "allowed_signers_sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed",
+        "format": "ssh",
+        "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+        "principal": "sepmhn@gmail.com",
+        "status": "verified"
+      },
+      "subject": "release: repair reproduction evidence provenance",
+      "tree": "ab572f00a2d288049455e8bf35805024fc75a10b"
+    },
+    "state_after": "ABORTED_BEFORE_QUALIFICATION",
+    "state_before": "PENDING_QUALIFICATION"
+  },
+  "schema_version": "1.0.0",
+  "source_retention": {
+    "imports_preserved": true,
+    "modified_assignments": [
+      "FRAMEWORK_CORE_FROZEN_PATHS"
+    ],
+    "modified_definitions": [
+      "_framework_recovery_2_source_retention_manifest",
+      "_framework_recovery_3_source_retention_manifest",
+      "_framework_recovery_4_source_retention_manifest",
+      "_framework_recovery_5_source_retention_manifest",
+      "_framework_recovery_6_verify_local_markers",
+      "_verify_forward_protocol_history",
+      "_verify_framework_history",
+      "_verify_framework_recovery_6_history",
+      "_verify_post_activation_gate_retention"
+    ],
+    "new_assignments": [
+      "FRAMEWORK_RECOVERY_7_ACTIVATION_PATH",
+      "FRAMEWORK_RECOVERY_7_ACTIVATION_REQUIREMENTS",
+      "FRAMEWORK_RECOVERY_7_ACTIVATION_STATUSES",
+      "FRAMEWORK_RECOVERY_7_ACTIVATION_SUBJECT",
+      "FRAMEWORK_RECOVERY_7_CORE_PATHS",
+      "FRAMEWORK_RECOVERY_7_DEFECT_CODE",
+      "FRAMEWORK_RECOVERY_7_ID",
+      "FRAMEWORK_RECOVERY_7_MODIFIED_ASSIGNMENTS",
+      "FRAMEWORK_RECOVERY_7_MODIFIED_DEFINITIONS",
+      "FRAMEWORK_RECOVERY_7_NEW_ASSIGNMENTS",
+      "FRAMEWORK_RECOVERY_7_NEW_DEFINITIONS",
+      "FRAMEWORK_RECOVERY_7_P0_EXTRA_UNITTEST_COMMAND_COUNT",
+      "FRAMEWORK_RECOVERY_7_PARENT",
+      "FRAMEWORK_RECOVERY_7_PARENT_FR6_PLAN_BYTES",
+      "FRAMEWORK_RECOVERY_7_PARENT_FR6_PLAN_OID",
+      "FRAMEWORK_RECOVERY_7_PARENT_FR6_PLAN_SHA256",
+      "FRAMEWORK_RECOVERY_7_PARENT_FR6_TEST_BYTES",
+      "FRAMEWORK_RECOVERY_7_PARENT_FR6_TEST_OID",
+      "FRAMEWORK_RECOVERY_7_PARENT_FR6_TEST_SHA256",
+      "FRAMEWORK_RECOVERY_7_PARENT_GATE_BYTES",
+      "FRAMEWORK_RECOVERY_7_PARENT_GATE_OID",
+      "FRAMEWORK_RECOVERY_7_PARENT_GATE_SHA256",
+      "FRAMEWORK_RECOVERY_7_PARENT_P0_GATE_BYTES",
+      "FRAMEWORK_RECOVERY_7_PARENT_P0_GATE_OID",
+      "FRAMEWORK_RECOVERY_7_PARENT_P0_GATE_SHA256",
+      "FRAMEWORK_RECOVERY_7_PARENT_SUITE_KEYS",
+      "FRAMEWORK_RECOVERY_7_PARENT_TREE",
+      "FRAMEWORK_RECOVERY_7_PARENT_VERIFIER_BYTES",
+      "FRAMEWORK_RECOVERY_7_PARENT_VERIFIER_OID",
+      "FRAMEWORK_RECOVERY_7_PARENT_VERIFIER_SHA256",
+      "FRAMEWORK_RECOVERY_7_PLAN_PATH",
+      "FRAMEWORK_RECOVERY_7_PRESERVED_PATHS",
+      "FRAMEWORK_RECOVERY_7_QUALIFICATION_PATH",
+      "FRAMEWORK_RECOVERY_7_QUALIFICATION_REQUIREMENTS",
+      "FRAMEWORK_RECOVERY_7_QUALIFICATION_STATUSES",
+      "FRAMEWORK_RECOVERY_7_QUALIFICATION_SUBJECT",
+      "FRAMEWORK_RECOVERY_7_REPAIR_STATUSES",
+      "FRAMEWORK_RECOVERY_7_REPRODUCTION_REQUIREMENT",
+      "FRAMEWORK_RECOVERY_7_REQUIRED_TEST_COUNT",
+      "FRAMEWORK_RECOVERY_7_REQUIRED_TEST_IDS",
+      "FRAMEWORK_RECOVERY_7_REQUIRED_TEST_IDS_SHA256",
+      "FRAMEWORK_RECOVERY_7_SUBJECT",
+      "FRAMEWORK_RECOVERY_7_SUITE_KEYS",
+      "FRAMEWORK_RECOVERY_7_TEST_AST_SHA256",
+      "FRAMEWORK_RECOVERY_7_TEST_BYTES",
+      "FRAMEWORK_RECOVERY_7_TEST_OID",
+      "FRAMEWORK_RECOVERY_7_TEST_PATH",
+      "FRAMEWORK_RECOVERY_7_TEST_SHA256"
+    ],
+    "new_definitions": [
+      "_framework_recovery_7_assurance_boundary",
+      "_framework_recovery_7_authority",
+      "_framework_recovery_7_code_diff",
+      "_framework_recovery_7_count_pinned_unittest_methods",
+      "_framework_recovery_7_decision",
+      "_framework_recovery_7_expected_activation",
+      "_framework_recovery_7_expected_gate_payload",
+      "_framework_recovery_7_expected_local_marker_counts",
+      "_framework_recovery_7_expected_parent_reproduction",
+      "_framework_recovery_7_expected_plan",
+      "_framework_recovery_7_expected_qualification",
+      "_framework_recovery_7_expected_review",
+      "_framework_recovery_7_hosted_attempt_policy",
+      "_framework_recovery_7_hosted_entry",
+      "_framework_recovery_7_local_commands",
+      "_framework_recovery_7_parent_marker_defect",
+      "_framework_recovery_7_positive_attempt",
+      "_framework_recovery_7_review_contracts",
+      "_framework_recovery_7_review_limitations",
+      "_framework_recovery_7_run_attempt_identity",
+      "_framework_recovery_7_source_retention_manifest",
+      "_framework_recovery_7_test_contract",
+      "_framework_recovery_7_transition_identity",
+      "_framework_recovery_7_unwrap_source_layer",
+      "_framework_recovery_7_validate_local_document",
+      "_framework_recovery_7_validate_parent_reproduction",
+      "_framework_recovery_7_validate_parent_reproduction_chronology",
+      "_framework_recovery_7_validate_review",
+      "_framework_recovery_7_validate_source_compatibility",
+      "_framework_recovery_7_validate_test_source",
+      "_framework_recovery_7_verify_ci_markers",
+      "_framework_recovery_7_verify_frozen_parent_markers",
+      "_framework_recovery_7_verify_gate_payload",
+      "_framework_recovery_7_verify_hosted_entry",
+      "_framework_recovery_7_verify_local_markers",
+      "_framework_recovery_7_verify_review_key_separation",
+      "_framework_recovery_7_verify_run_attempt_uniqueness",
+      "_framework_recovery_7_verify_stage_modes",
+      "_framework_recovery_7_verify_successor_guard",
+      "_verify_framework_recovery_7_activation",
+      "_verify_framework_recovery_7_history",
+      "_verify_framework_recovery_7_qualification",
+      "_verify_framework_recovery_7_repair"
+    ],
+    "other_top_level_nodes_preserved": true,
+    "parent_file": {
+      "bytes": 1331973,
+      "lines": 34662,
+      "path": "tools/release/verify-current-audit.py",
+      "sha256": "9e141713d1a7048b753d54323606fbbcd807485f4e7a4d9dd3da3bfc5f60eebd"
+    },
+    "repair_file": {
+      "bytes": 1471069,
+      "git_mode": "100644",
+      "git_object_id": "2502af4b7d9466d86b22fa4f796b751588b7ffe2",
+      "git_object_type": "blob",
+      "lines": 38269,
+      "path": "tools/release/verify-current-audit.py",
+      "sha256": "1e4f7f719d4f8c2d6afbade5a31388770a6ac6b0b5f3a8da9943967e3389a498"
+    },
+    "unchanged_assignment_count": 315,
+    "unchanged_assignment_index_sha256": "46c3220d369d7f1accea7f721e25a8e89900d56bdb7d7c963ec1b89c81692f16",
+    "unchanged_definition_count": 400,
+    "unchanged_definition_index_sha256": "4376852ac6bdbced5cf97d50b54a045787ab1556dabeeb4a7725acb2e3a0f25f"
+  },
+  "state": {
+    "active_epoch": 2,
+    "candidate_epoch": 8,
+    "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_FRAMEWORK_RECOVERY_7_ACTIVATION",
+    "status": "PENDING_QUALIFICATION",
+    "successor_transitions_allowed": false
+  },
+  "test_contract": {
+    "fr_0002": {
+      "count": 78,
+      "file": {
+        "bytes": 164569,
+        "git_mode": "100644",
+        "git_object_id": "5bce6a15e43ca25ab1bcb45618386fb5db083ad2",
+        "git_object_type": "blob",
+        "lines": 4483,
+        "path": "tools/release/test_verify_current_audit_fr_0002.py",
+        "sha256": "a0d785ecd741e809faaa959cf3d20aa01cb90d8fd03ca5716680092d2d383e7c"
+      },
+      "ids_sha256": "8404f75c71c81b2c1e8b192fc882cc26386e551348b7b47b27920719d802bf26"
+    },
+    "fr_0003": {
+      "count": 94,
+      "file": {
+        "bytes": 186879,
+        "git_mode": "100644",
+        "git_object_id": "f8b96a7f1a3f218f3853bfa7353db39afd247eba",
+        "git_object_type": "blob",
+        "lines": 5072,
+        "path": "tools/release/test_verify_current_audit_fr_0003.py",
+        "sha256": "25bbf246640cc4795266cb0d439042ba1077b1094fbe09db4e76d05154c08348"
+      },
+      "ids_sha256": "3e15e574559ac1862c37379975e725c183ebfc99aac2f5253db1342f4a3b9171"
+    },
+    "fr_0004": {
+      "count": 30,
+      "file": {
+        "bytes": 38855,
+        "git_mode": "100644",
+        "git_object_id": "73d14322a1c360142a83b96d638857fb141c57ad",
+        "git_object_type": "blob",
+        "lines": 1052,
+        "path": "tools/release/test_verify_current_audit_fr_0004.py",
+        "sha256": "d33e0b30586a77717e282947a375253a816ce84b53620cba300f5d30657234f4"
+      },
+      "ids_sha256": "c030fa49cdf25e9937f782fc3270cf612db4ccaf7097e477a6f990ad39a2328c"
+    },
+    "fr_0005": {
+      "count": 44,
+      "file": {
+        "bytes": 142730,
+        "git_mode": "100644",
+        "git_object_id": "b42a497ad45443daeb71951ac7de8405b5e204cc",
+        "git_object_type": "blob",
+        "lines": 3582,
+        "path": "tools/release/test_verify_current_audit_fr_0005.py",
+        "sha256": "c02f1cbdb8e7edc96c70086e02528c1a6f96528c01905025082cdd5d926d70a0"
+      },
+      "ids_sha256": "324ec4671d3b7c3dfa5bbfab69cfb2cf60bab6549e695299a1cd32d3b4fd3143"
+    },
+    "fr_0006": {
+      "count": 56,
+      "file": {
+        "bytes": 83045,
+        "git_mode": "100644",
+        "git_object_id": "b9689ba7461cc16130efa9c128d41690635d2d3b",
+        "git_object_type": "blob",
+        "lines": 1995,
+        "path": "tools/release/test_verify_current_audit_fr_0006.py",
+        "sha256": "a2c7638f24c7f44a22695d4b45b308115373005e9d9b88508471d9a131f01449"
+      },
+      "ids_sha256": "d448898701a6cd7e4415d8bc383bd78456ab66645b9fe98171a474e51de179e8"
+    },
+    "fr_0007": {
+      "ast_sha256": "eed8d85f4f29d4e899c21d1ad6179ed0972eaa0d5d1de091aac3f7a1c55cf194",
+      "count": 37,
+      "file": {
+        "bytes": 53487,
+        "git_mode": "100644",
+        "git_object_id": "511fda019f190a7da09641c8910c7e1f1b8f33c3",
+        "git_object_type": "blob",
+        "lines": 1251,
+        "path": "tools/release/test_verify_current_audit_fr_0007.py",
+        "sha256": "59f0660cdee08155c5e9aee6dea72d18bd2bb8b813874744a3f65b825531b12b"
+      },
+      "ids_sha256": "14e741246aa3d1d46a4debdfa11b86b283c037bcb331710034d3a110632f36ae"
+    },
+    "gate_record": {
+      "bytes": 8080,
+      "git_mode": "100755",
+      "git_object_id": "e78c6434438fd98c91710f0a91da0e06239ba3cf",
+      "git_object_type": "blob",
+      "lines": 221,
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "3651cd0f66a17f0a1335e5715a4cbba362c5bd5a67bd23efb1d56386f04c0813"
+    },
+    "legacy": {
+      "count": 163,
+      "file": {
+        "bytes": 204291,
+        "git_mode": "100644",
+        "git_object_id": "323554b90f436e3f68a9188ea2f380f8aff4fa37",
+        "git_object_type": "blob",
+        "lines": 4738,
+        "path": "tools/release/test_verify_current_audit.py",
+        "sha256": "24a075e6ae631f7a725373b0dde8bdc79b78f366166b001c31a809071fbc440b"
+      },
+      "ids_sha256": "5be04ec6ec9fd4f5b0b1257decb807503d3b9a07f2042f12fa425edcbc6a9bbb"
+    },
+    "p0_extra_unittest_counts": [
+      6,
+      10,
+      23,
+      26,
+      22,
+      24
+    ],
+    "p0_gate_bytes_preserved": true,
+    "prior_test_bytes_preserved": true,
+    "required_regression_test_ids": [
+      "test_framework_recovery_7_activation_scope_is_exact",
+      "test_framework_recovery_7_code_diff_excludes_plan",
+      "test_framework_recovery_7_current_fr_0006_accepts_genuine_13",
+      "test_framework_recovery_7_decision_is_fail_closed",
+      "test_framework_recovery_7_epoch_7_is_not_reusable",
+      "test_framework_recovery_7_expected_gate_payload_is_exact",
+      "test_framework_recovery_7_expected_local_marker_counts_are_derived",
+      "test_framework_recovery_7_expected_plan_has_exact_contract",
+      "test_framework_recovery_7_forward_replay_has_pre_activation_guard",
+      "test_framework_recovery_7_framework_history_requires_retirement",
+      "test_framework_recovery_7_gate_order_and_warning_policy_are_exact",
+      "test_framework_recovery_7_history_requires_exact_position",
+      "test_framework_recovery_7_history_states_are_contiguous",
+      "test_framework_recovery_7_hosted_and_review_contracts_are_purpose_separated",
+      "test_framework_recovery_7_identity_constants_are_exact",
+      "test_framework_recovery_7_local_markers_accept_epoch_8_topology",
+      "test_framework_recovery_7_local_markers_reject_excess_ok",
+      "test_framework_recovery_7_local_markers_reject_failure_tokens",
+      "test_framework_recovery_7_local_markers_reject_parent_cardinality",
+      "test_framework_recovery_7_local_markers_reject_suite_mutations",
+      "test_framework_recovery_7_p0_gate_is_unchanged_and_pinned",
+      "test_framework_recovery_7_parent_bytes_are_pinned",
+      "test_framework_recovery_7_parent_defect_arithmetic_is_exact",
+      "test_framework_recovery_7_parent_fr_0006_accepts_synthetic_14",
+      "test_framework_recovery_7_parent_has_no_fr_0006_q_or_a",
+      "test_framework_recovery_7_preserves_all_prior_test_suites",
+      "test_framework_recovery_7_qualification_scope_is_exact",
+      "test_framework_recovery_7_repair_scope_is_exact",
+      "test_framework_recovery_7_retirement_absorbs_no_fr_0006_q_or_a",
+      "test_framework_recovery_7_retires_fr_0006_without_qualification",
+      "test_framework_recovery_7_signatures_and_chronology_are_bound",
+      "test_framework_recovery_7_source_compatibility_rejects_drift",
+      "test_framework_recovery_7_source_retention_is_exact",
+      "test_framework_recovery_7_successor_requires_activation",
+      "test_framework_recovery_7_test_source_ast_and_discovery_are_strict",
+      "test_framework_recovery_7_transition_creates_epoch_8",
+      "test_framework_recovery_7_wrapper_accepts_epochs_2_through_8"
+    ],
+    "resource": {
+      "count": 26,
+      "file": {
+        "bytes": 51592,
+        "git_mode": "100644",
+        "git_object_id": "51f857c10f390017c5d7d4ef707fc54931f350b1",
+        "git_object_type": "blob",
+        "lines": 1215,
+        "path": "tools/release/test_current_audit_resource_profile.py",
+        "sha256": "88198d7f3dc75b47f1bc61c1513f635b0c172846131ea4a1b5683275673850a1"
+      },
+      "ids_sha256": "4389db8a8b6f432e84863c5a47418785d9f01a9aceefc79ee20f8665841216c3"
+    },
+    "warning_policy": "-W error"
+  },
+  "transition_identity": {
+    "active_epoch_before_activation": 2,
+    "epoch_7_reused": false,
+    "epoch_7_state": "ABORTED_BEFORE_QUALIFICATION",
+    "epoch_8_candidate_created": true,
+    "fr_0006_mechanism_reused": false,
+    "ordinary_successor_transition": false,
+    "prior_framework_accepts_transition": false,
+    "transition_kind": "NEW_SIGNED_TRUST_ROOT_REBASELINE"
+  }
+}

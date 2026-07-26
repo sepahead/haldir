@@ -20,6 +20,7 @@ FR2_COMPAT_DIR=
 FR3_COMPAT_DIR=
 FR4_COMPAT_DIR=
 FR5_COMPAT_DIR=
+FR6_COMPAT_DIR=
 cleanup_fr2_compat() {
   builtin trap - EXIT HUP INT TERM
   if [[ -n "$FR2_COMPAT_DIR" ]]; then
@@ -49,6 +50,19 @@ cleanup_fr2_compat() {
       "$FR5_COMPAT_DIR/test_verify_current_audit_fr_0005.py" \
       "$FR5_COMPAT_DIR/verify-current-audit.py"
     /bin/rmdir -- "$FR5_COMPAT_DIR"
+  fi
+  if [[ -n "$FR6_COMPAT_DIR" ]]; then
+    if [[ -d "$FR6_COMPAT_DIR/tools/release" ]]; then
+      /bin/rm -f -- \
+        "$FR6_COMPAT_DIR/tools/release/current-audit-gate.sh" \
+        "$FR6_COMPAT_DIR/tools/release/test_verify_current_audit_fr_0006.py" \
+        "$FR6_COMPAT_DIR/tools/release/verify-current-audit.py"
+      /bin/rmdir -- "$FR6_COMPAT_DIR/tools/release"
+    fi
+    if [[ -d "$FR6_COMPAT_DIR/tools" ]]; then
+      /bin/rmdir -- "$FR6_COMPAT_DIR/tools"
+    fi
+    /bin/rmdir -- "$FR6_COMPAT_DIR"
   fi
 }
 builtin trap cleanup_fr2_compat EXIT
@@ -158,5 +172,50 @@ readonly FR5_COMPAT_DIR
   == 98a71c9c83f9ff305a431b5a1ed473113b65b7a6 ]]
 "$PYTHON3" -B -I -W error \
   "$FR5_COMPAT_DIR/test_verify_current_audit_fr_0005.py"
-"$PYTHON3" -B -I -W error tools/release/test_verify_current_audit_fr_0006.py
+FR6_COMPAT_DIR="$(/usr/bin/mktemp -d /tmp/haldir-fr6-gate.XXXXXX)"
+readonly FR6_COMPAT_DIR
+/bin/mkdir -- "$FR6_COMPAT_DIR/tools"
+/bin/mkdir -- "$FR6_COMPAT_DIR/tools/release"
+/bin/ln -s \
+  "$PWD/tools/release/test_verify_current_audit_fr_0006.py" \
+  "$FR6_COMPAT_DIR/tools/release/test_verify_current_audit_fr_0006.py"
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git hash-object --no-filters -- \
+  "$FR6_COMPAT_DIR/tools/release/test_verify_current_audit_fr_0006.py")" \
+  == b9689ba7461cc16130efa9c128d41690635d2d3b ]]
+/usr/bin/env \
+  -i \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git cat-file blob 4c8dedc5ab1fa84299fc1bcc613c3900324d1d2e \
+  > "$FR6_COMPAT_DIR/tools/release/verify-current-audit.py"
+/usr/bin/env \
+  -i \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git cat-file blob 6260a482a62c10cea8961ad0be136ac0b3023ba7 \
+  > "$FR6_COMPAT_DIR/tools/release/current-audit-gate.sh"
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git hash-object --no-filters -- \
+  "$FR6_COMPAT_DIR/tools/release/verify-current-audit.py")" \
+  == 4c8dedc5ab1fa84299fc1bcc613c3900324d1d2e ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git hash-object --no-filters -- \
+  "$FR6_COMPAT_DIR/tools/release/current-audit-gate.sh")" \
+  == 6260a482a62c10cea8961ad0be136ac0b3023ba7 ]]
+(
+  builtin cd -- "$FR6_COMPAT_DIR"
+  "$PYTHON3" -B -I -W error \
+    "$FR6_COMPAT_DIR/tools/release/test_verify_current_audit_fr_0006.py"
+)
+"$PYTHON3" -B -I -W error tools/release/test_verify_current_audit_fr_0007.py
 "$PYTHON3" -B -I -W error tools/release/verify-current-audit.py
