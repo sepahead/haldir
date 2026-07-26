@@ -21,6 +21,7 @@ FR3_COMPAT_DIR=
 FR4_COMPAT_DIR=
 FR5_COMPAT_DIR=
 FR6_COMPAT_DIR=
+FR7_COMPAT_DIR=
 cleanup_fr2_compat() {
   builtin trap - EXIT HUP INT TERM
   if [[ -n "$FR2_COMPAT_DIR" ]]; then
@@ -63,6 +64,17 @@ cleanup_fr2_compat() {
       /bin/rmdir -- "$FR6_COMPAT_DIR/tools"
     fi
     /bin/rmdir -- "$FR6_COMPAT_DIR"
+  fi
+  if [[ -n "$FR7_COMPAT_DIR" ]]; then
+    case "$FR7_COMPAT_DIR" in
+      /tmp/haldir-fr7-gate.??????) ;;
+      *) builtin exit 1 ;;
+    esac
+    if [[ -d "$FR7_COMPAT_DIR" ]]; then
+      /bin/chmod -R u+w "$FR7_COMPAT_DIR"
+      /bin/rm -rf -- "$FR7_COMPAT_DIR"
+    fi
+    [[ ! -e "$FR7_COMPAT_DIR" ]]
   fi
 }
 builtin trap cleanup_fr2_compat EXIT
@@ -217,5 +229,88 @@ readonly FR6_COMPAT_DIR
   "$PYTHON3" -B -I -W error \
     "$FR6_COMPAT_DIR/tools/release/test_verify_current_audit_fr_0006.py"
 )
-"$PYTHON3" -B -I -W error tools/release/test_verify_current_audit_fr_0007.py
+FR7_COMPAT_DIR="$(/usr/bin/mktemp -d /tmp/haldir-fr7-gate.XXXXXX)"
+readonly FR7_COMPAT_DIR
+/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git \
+  -c core.hooksPath=/dev/null \
+  clone \
+  --no-local \
+  --no-hardlinks \
+  --no-checkout \
+  --quiet \
+  -- "$PWD" "$FR7_COMPAT_DIR/repo"
+/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git \
+  -c core.hooksPath=/dev/null \
+  -C "$FR7_COMPAT_DIR/repo" \
+  checkout --detach --quiet 0ec8c45d50e7e73fbc1994bda27ac7ad127a00a7
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR7_COMPAT_DIR/repo" rev-parse HEAD)" \
+  == 0ec8c45d50e7e73fbc1994bda27ac7ad127a00a7 ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR7_COMPAT_DIR/repo" rev-parse 'HEAD^{tree}')" \
+  == 717284e47c7b457432ba3ef433ca19222ccd82ff ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR7_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR7_COMPAT_DIR/repo/tools/release/verify-current-audit.py")" \
+  == 2502af4b7d9466d86b22fa4f796b751588b7ffe2 ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR7_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR7_COMPAT_DIR/repo/tools/release/test_verify_current_audit_fr_0007.py")" \
+  == 511fda019f190a7da09641c8910c7e1f1b8f33c3 ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR7_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR7_COMPAT_DIR/repo/tools/release/current-audit-gate.sh")" \
+  == e78c6434438fd98c91710f0a91da0e06239ba3cf ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR7_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR7_COMPAT_DIR/repo/release/0.9.0/current-head/closures/framework-recovery/FR-0007-plan.json")" \
+  == 6ee2a3dac503c89455e947b675e0170970bfd879 ]]
+(
+  builtin cd -- "$FR7_COMPAT_DIR/repo"
+  "$PYTHON3" -B -I -W error \
+    tools/release/test_verify_current_audit_fr_0007.py
+)
+"$PYTHON3" -B -I -W error tools/release/test_verify_current_audit_fr_0008.py
 "$PYTHON3" -B -I -W error tools/release/verify-current-audit.py
