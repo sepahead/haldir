@@ -2738,6 +2738,383 @@ FRAMEWORK_RECOVERY_8_NEW_ASSIGNMENTS = {
 }
 FRAMEWORK_RECOVERY_8_MODIFIED_ASSIGNMENTS = {"FRAMEWORK_CORE_FROZEN_PATHS"}
 
+FRAMEWORK_RECOVERY_9_PARENT = '1e937a4bf213a5605250cf4843f1dfd26ae0ae3b'
+FRAMEWORK_RECOVERY_9_PARENT_TREE = 'e343ea41c29543f85db52314f89c7cbdcb813cc2'
+FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID = '57833cced2fdeb03dd8c56970a1df419499c69d5'
+FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256 = '9d56519d658931b60f87518191f6a0c8e86ff278c754ed735d094d788e12f10d'
+FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES = 1650717
+FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_OID = '78e1391241c6f99de24980d9db965b2875b998c0'
+FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_SHA256 = '3ab220fb0fde58ecaa0efd76900886bc2dd1435a11cd9617382b91075562f3b3'
+FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_BYTES = 95569
+FRAMEWORK_RECOVERY_9_PARENT_GATE_OID = '4fa7b36570188ab343db8c18d7d4e3895f53c59c'
+FRAMEWORK_RECOVERY_9_PARENT_GATE_SHA256 = '92756273c4f48d9bbcdb9b52b1f16ff73e2bf39abaf4f8b4e073adafd9eeb362'
+FRAMEWORK_RECOVERY_9_PARENT_GATE_BYTES = 11042
+FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID = '05927d4a6cf144ba09ac1a5ffd111cc508397c42'
+FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256 = '8238fd229ffd1e95da26787d793af73523f6980cd6430ec220bd4fa2632e5a64'
+FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES = 3977
+FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID = '470947ef9ccb985735067e45f3ea9fc0e811bac3'
+FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256 = '9bc95771509ccf300dd6906b5abba95f8d34457280d18203090763b85ab592b8'
+FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES = 56905
+FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_MAX_BYTES = 8192
+FRAMEWORK_RECOVERY_9_ID = 'FR-0009'
+FRAMEWORK_RECOVERY_9_DEFECT_CODE = 'FR_0008_HOSTED_LOG_BINDING_UNSATISFIABLE'
+FRAMEWORK_RECOVERY_9_SUBJECT = 'release: repair hosted log protocol binding'
+FRAMEWORK_RECOVERY_9_QUALIFICATION_SUBJECT = 'release: qualify epoch-10 audit validation'
+FRAMEWORK_RECOVERY_9_ACTIVATION_SUBJECT = 'release: activate epoch-10 audit validation'
+FRAMEWORK_RECOVERY_9_PLAN_PATH = 'release/0.9.0/current-head/closures/framework-recovery/FR-0009-plan.json'
+FRAMEWORK_RECOVERY_9_QUALIFICATION_PATH = 'release/0.9.0/current-head/closures/framework-recovery/FR-0009-qualification.json'
+FRAMEWORK_RECOVERY_9_ACTIVATION_PATH = 'release/0.9.0/current-head/closures/framework-recovery/FR-0009-activation.json'
+FRAMEWORK_RECOVERY_9_TEST_PATH = 'tools/release/test_verify_current_audit_fr_0009.py'
+FRAMEWORK_RECOVERY_9_TEST_OID = '0f2e52816f612df55ed5fe7808688182d9488a80'
+FRAMEWORK_RECOVERY_9_TEST_SHA256 = '87e978dfe67b13ff010197abf71590b8606426a24a748b3df5c0e38644c3d6e4'
+FRAMEWORK_RECOVERY_9_TEST_BYTES = 81531
+FRAMEWORK_RECOVERY_9_TEST_AST_SHA256 = '159838fda14f71e9ffa47a711362583ef6ab0d10746534b056854da7b8bf893d'
+FRAMEWORK_RECOVERY_9_REQUIRED_TEST_COUNT = 60
+FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS_SHA256 = 'eac6538be8695a956b581b62437ea4992952e1ff2ec1a96446ff3a1d5987b72a'
+FRAMEWORK_RECOVERY_9_GATE_SHA256 = '54462abbbfe0908fd16c521c86e4f3a775c658fc594199480b1d6cb0247c9399'
+FRAMEWORK_RECOVERY_9_GATE_BYTES = 14314
+FRAMEWORK_RECOVERY_9_GATE_ZLIB_HEX = '78daed5b6b73e3b615fdae5f813899f1ba1d5ac48b0076c7e9786d79add62b7964a7eb9d34d5e0b9522c8b0a256dea49f2df0b520feb614a94ecba765dcd78499000887beeb9170720f7db6fcac37e5256ed6ed976bf0225fbadd2b7a07a73331c48d5b1c07607c92de8c5edee00b838018396057a9824fe7ad0b2d2805f86b2d3766d2d07edb80b5c226fecaf7172bd5feadb0108ec3006bd76cf3ad9ee944a6ad8ee0cda5d30eca637ff5102e0fde1c569b352fb3b48ff8e8ecf0f2f4fc187b3fafbea875abd51c9aa9c7fbe3cadd74eeb1f2be3d3acd2d971f3bc5139ab1f1e83e3cfbe50ad5d541a97cdb3eafbc661a35ab9c89a7ea85e368fab8decf8a9def85bf3b251a964a5a3fac78ff5daf466fdfd5f2b47595d7fa8373e4f5b1f9e5d561ab5c3cbca6295f411698546e5fcecf0a8e28f274d6fcca8f76aedb872d53ca99e55a61d1dd56b27d50fcdd4b6c3b3d92b179f2f2e2b1f67af1cd57fa85d66172a5795a36666eea49b8b8bd3c931b3e1b0769c95cf1bf5abcf73572a57d9c8cffc884f4ec6489c9c34ebe79717337ef0be937d104880be2f1bfbb5dc1d763ae0f7dfc12019da0577050ef46e07adb88b57566e79068120298d7c850f76be7b33b935b8ed59109c4fbad9db29259e4171b7733bf62c2e9576be1b9fee80e03d08aa20f8046c92a4cc8be34ebf9cd88e957d5b1ed8fea0f9d5266d77db1cf3b12987a63dd8efdd964e1a28c5c22397faebc097f142992c94e942395a28b385329f2b6b3fa6eeb0d774096aeaf8a627076ff6c06fde6553cb13d90301a85c552fc1e90fe7a0ea1decddf3d157693bf0e38f20e8829defe687bd037efae95d1a6f5d5f0b802c44939bd40d4190f121fd2d362a4f6233c322f8220776bfdfdac9af9f8ba337a6198621f278ae683e6a19cc3d356d313b64d34ed2212fd9e7ebb8f62202781b04f08608aca89fd87e3c4cb40d7a49ecda1dbb643e5e426f1eb64907cde21dac801faf6ebe21fc782dfc641bf8c9261691258bc8032c226b2da2db584437b1882e59441f60115d6b51946fd1b89e59aa579ecb9e0badf290006bba59176a6bdbaf43369a43766d772b91be0feb1508656d32ecd7a29a87e6ca07cd3d607583fb59c0f259a0bd01f7d4694fc737b8e9955bb2e39f17b8848d1cf797ecb707debd1bd7fad3de74fab2ff6a0f009cdcb27da9977159319eb181ba75131b1034c0f0cfbf2e37596462e226582c571bc3e61ffe8d9798f73efe5ecc7801cc7811ccf8e360c637c78c17c38c17c18cdf8bd91fa539d5b2ac6d3219335f6977de6a24765399b3b20e0e775319b4b20ec1bb2399b420e8bca69cae5a6eae07f6a697223aef223472d155f69b959af37d95b24e3a5d10f4b344e3f5e7a7e30dd3d49d46da4e5e1519435e6ebbffb1b999706eb197360ddad3b545ad3e5dcd8c163b170770b402f32b908349cbb7e93fd9e5695f5fbcaffcfa2f48e50e509d58018a28354211e7224e1186daf148191ce2884b061d8a2c32917032ebe7fba22ab6e4c93bebfac7b6215dba04b1fad96abfda09ba716ad0c026fdc99c5870987b23a71c1c1487c1c75eeec2e7eddbc658527e9249b7ddfdf210a62dac848a0412ce0f24fcc88184e718bdb9502e328682727f8b654261040a2e18b65d6d3c55907b325318b1d0111a3962a1843a92c6c0506a892c5388501b21e76682bcc042eda9466f438a2d4421a7d0404a43a454442453d4426e140a292204422ef3469f9b629f4192c29b24a9c26ef449eab9d996e7843beb0abb79550a7e484ada68436b6d702f6e5d1549e0243f8193474ee0642e796dbe2ff064a90b3aada3900ac485318a616e24920223834d1442e2908f04ccd84cf0939712fc64b300290c45a100d9c2e50b9baf45184df3194d1f99d1748ed19bef0b3d15a345aa28b5d01c3be11c0ea924182a2aa135846108b18aa862329a61347d298ca69b31ba30148518bd85cb175e1f14617494cfe86889d137d76bb6968ad4badbe97a842889e6a2e4a13b7ecf81730fb5e18e8e4a445c28c94804b58611c4a175526888b82130126184a9f1c956a5747ca264413437d6682a157492132484d350f96900628d85572e881868909d4916db6cbb3e9135118a4249389211d230d456721141694265218ea40e150e11f60e2866cdf3dd7ad8c205772c2cecf2e7a1f23776d09da585e9e02d7d33f38e569bbccdf7d593c423e5bcbdc5b7cc45a60d963f6db0b96963852fe7be4c38b87bb1bf70bf561f7da93076f48359908d42031d2776bf15c7d7fd7339682d3c5e77e2ee2809653ce9c45a76ee8a2d99984ebb7bddbfbba45b565fc7c371efc12fc3b69d9c8fe6b59da59705de4dbd78e7a522141ce51834c26f024710183b90ba35c524b49a6b420d0d2db30c3ba5a1104479e9cfa466d2407f0c43c90ae482ff123af99627f66bd09349df82d3cae1f15d62286a73b114f88ccdde4dedfee76f83c4da3f76efec6790214e2c619a294219c148496c1dc1584b2810425a1b5e78a3e7d9d95f645a596ab6f13c8a6888a4238a1941a2c8f04821e424714c448a51483957cc398b5e3188ebe63b368f2885d0191942e1a0f0d1e74f4544a0e6c24fdecc420715779ea2f81523ba4ef258c675443021983b23b81690c1d08552408fa60d2384fd0204ebd715d913f0c27db11f9667bf592d7b5dd11f26b65f9e7eae1a2456c79eb3b7e59346907234e8756477ffe77edc9d9596d622898dd434c49ea084522b085311a336842c142c54ce7026f2a5e53dca63bdbedc3cbc3235c93755933c5f4df2ffabc95c35c9ffd7d424df544d422b3093443904b1a45148fd2ca91de1043b689c4191b4a1b4583dfbe4c38babc9a236bf849ccbb7509316136ca59fa891a0de664e8d4a3f71208e0bcdb4325a7188b5462fd4fe22730e7fb09aa48c7b69a3ad41ce58156263b8a6919f47a4e710818208a12361e82b0671dd74c7e71165dc422c20f2c48c9c10c622227868845122a20a714695f00a297cc588ae5393c449a6704459083997cac7b9515c436e98211673411dc59a0afdaa207c909ae4f7aa49e2152361d609ad95e094611a46cc12ea7c5e154e879643a8e4cb58f83c32557b6112a49f80dec3cef44db527a28cb4838428bf5a941a4aea9c81106aafcc39164c1394afc1f97f5e83f391067ff07f661a7727d2ee8a769633eb94fe0d93aba39a'
+FRAMEWORK_RECOVERY_9_SUITE_KEYS = (
+    'legacy',
+    'fr_0002',
+    'fr_0003',
+    'resource',
+    'fr_0004',
+    'fr_0005',
+    'fr_0006',
+    'fr_0007',
+    'fr_0008',
+    'fr_0009',
+)
+FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT = 6
+FRAMEWORK_RECOVERY_9_PARENT_SUITE_KEYS = FRAMEWORK_RECOVERY_9_SUITE_KEYS[:-1]
+FRAMEWORK_RECOVERY_9_RESERVED_RUN_ATTEMPTS = frozenset(
+    {
+        *FRAMEWORK_RECOVERY_8_RESERVED_RUN_ATTEMPTS,
+        (30_214_443_045, 1),
+        (30_214_443_071, 1),
+    }
+)
+FRAMEWORK_RECOVERY_9_CORE_PATHS = (
+    "tools/release/verify-current-audit.py",
+    FRAMEWORK_RECOVERY_9_TEST_PATH,
+    "tools/release/current-audit-gate.sh",
+)
+FRAMEWORK_RECOVERY_9_REPAIR_STATUSES = {
+    FRAMEWORK_RECOVERY_9_PLAN_PATH: "A",
+    FRAMEWORK_RECOVERY_9_TEST_PATH: "A",
+    "tools/release/current-audit-gate.sh": "M",
+    "tools/release/verify-current-audit.py": "M",
+}
+FRAMEWORK_RECOVERY_9_REPRODUCTION_REQUIREMENT = {
+    "id": "FR-0009-E01",
+    "kind": "PARENT_HOSTED_LOG_BINDING_CONTRADICTION_REPRODUCTION",
+    "paths": [
+        "release/0.9.0/current-head/evidence/"
+        "framework-recovery-fr-0009-d-reproduction.json",
+        "release/0.9.0/current-head/evidence/"
+        "framework-recovery-fr-0009-d-reproduction-raw.log.gz",
+        "release/0.9.0/current-head/evidence/"
+        "framework-recovery-fr-0009-d-reproduction-semantic-receipt.json",
+    ],
+    "max_bytes": [65_536, MAX_COMPRESSED_LOG_BYTES, 65_536],
+}
+FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS = (
+    FRAMEWORK_RECOVERY_9_REPRODUCTION_REQUIREMENT,
+    {
+        "id": "FR-0009-E02",
+        "kind": "REPAIR_HOSTED_CI",
+        "paths": [
+            "release/0.9.0/current-head/evidence/framework-recovery-fr-0009-r-ci.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-r-ci-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-r-ci.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0009-E03",
+        "kind": "REPAIR_HOSTED_FORMAL",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-r-formal.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-r-formal-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-r-formal.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0009-E04",
+        "kind": "REPAIR_LOCAL_VALIDATION",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-r-local.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-r-local.log.gz",
+        ],
+        "max_bytes": [65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0009-R01",
+        "kind": "INTERNAL_AUTOMATED_DESIGN_REVIEW",
+        "paths": [
+            "release/0.9.0/current-head/reviews/"
+            "framework-recovery-fr-0009-design.json"
+        ],
+        "max_bytes": [131_072],
+    },
+    {
+        "id": "FR-0009-R02",
+        "kind": "INTERNAL_AUTOMATED_IMPLEMENTATION_REVIEW",
+        "paths": [
+            "release/0.9.0/current-head/reviews/"
+            "framework-recovery-fr-0009-implementation.json"
+        ],
+        "max_bytes": [131_072],
+    },
+)
+FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES = {
+    FRAMEWORK_RECOVERY_9_QUALIFICATION_PATH: "A",
+    **{
+        path: "A"
+        for requirement in FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS
+        for path in requirement["paths"]
+    },
+}
+FRAMEWORK_RECOVERY_9_ACTIVATION_REQUIREMENTS = (
+    {
+        "id": "FR-0009-A01",
+        "kind": "QUALIFICATION_HOSTED_CI",
+        "paths": [
+            "release/0.9.0/current-head/evidence/framework-recovery-fr-0009-q-ci.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-q-ci-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-q-ci.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+    {
+        "id": "FR-0009-A02",
+        "kind": "QUALIFICATION_HOSTED_FORMAL",
+        "paths": [
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-q-formal.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-q-formal-attempt.json",
+            "release/0.9.0/current-head/evidence/"
+            "framework-recovery-fr-0009-q-formal.log.gz",
+        ],
+        "max_bytes": [65_536, 65_536, MAX_COMPRESSED_LOG_BYTES],
+    },
+)
+FRAMEWORK_RECOVERY_9_ACTIVATION_STATUSES = {
+    FRAMEWORK_RECOVERY_9_ACTIVATION_PATH: "A",
+    **{
+        path: "A"
+        for requirement in FRAMEWORK_RECOVERY_9_ACTIVATION_REQUIREMENTS
+        for path in requirement["paths"]
+    },
+}
+FRAMEWORK_RECOVERY_9_PRESERVED_PATHS = tuple(
+    sorted(
+        {
+            *FRAMEWORK_RECOVERY_8_PRESERVED_PATHS,
+            FRAMEWORK_RECOVERY_8_PLAN_PATH,
+            FRAMEWORK_RECOVERY_8_TEST_PATH,
+        }
+    )
+)
+FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS = {
+    'test_framework_recovery_9_activation_scope_is_exact',
+    'test_framework_recovery_9_ci_markers_accept_epoch_10_topology',
+    'test_framework_recovery_9_ci_markers_reject_order_count_and_failure_mutations',
+    'test_framework_recovery_9_code_diff_excludes_plan',
+    'test_framework_recovery_9_decision_is_fail_closed',
+    'test_framework_recovery_9_expected_gate_payload_is_exact',
+    'test_framework_recovery_9_expected_plan_has_exact_contract',
+    'test_framework_recovery_9_forward_replay_has_retirement_and_activation_guards',
+    'test_framework_recovery_9_fr_0008_guard_accepts_only_fr_0009_retirement',
+    'test_framework_recovery_9_framework_history_requires_fr_0008_retirement',
+    'test_framework_recovery_9_gate_and_p0_topology_are_derived_from_pinned_sources',
+    'test_framework_recovery_9_gate_and_p0_topology_reject_source_order_mutations',
+    'test_framework_recovery_9_gate_runs_fr_0008_in_parent_snapshot',
+    'test_framework_recovery_9_history_position_and_stages_are_exact',
+    'test_framework_recovery_9_hosted_compatibility_projection_is_exact',
+    'test_framework_recovery_9_hosted_entry_accepts_exact_subject_workflow_and_attempt',
+    'test_framework_recovery_9_hosted_entry_rejects_path_subject_workflow_and_attempt_mutations',
+    'test_framework_recovery_9_identity_constants_are_exact',
+    'test_framework_recovery_9_local_document_accepts_exact_bound_fixture',
+    'test_framework_recovery_9_local_document_rejects_command_time_and_binding_mutations',
+    'test_framework_recovery_9_local_document_rejects_marker_resource_and_failure_mutations',
+    'test_framework_recovery_9_local_markers_accept_epoch_10_topology',
+    'test_framework_recovery_9_local_markers_reject_order_count_ok_and_failure_mutations',
+    'test_framework_recovery_9_log_binding_rejects_payload_and_integrity_mutations',
+    'test_framework_recovery_9_parent_bytes_are_pinned',
+    'test_framework_recovery_9_parent_has_no_fr_0008_q_or_a',
+    'test_framework_recovery_9_parent_hosted_log_binding_contradiction_is_reproduced',
+    'test_framework_recovery_9_parent_reproduction_accepts_exact_bound_fixture',
+    'test_framework_recovery_9_parent_reproduction_reexecutes_parent_defect',
+    'test_framework_recovery_9_parent_reproduction_rejects_catalog_and_chronology_mutations',
+    'test_framework_recovery_9_parent_reproduction_rejects_command_log_and_receipt_mutations',
+    'test_framework_recovery_9_positive_composition_has_no_critical_mocks',
+    'test_framework_recovery_9_preserves_all_prior_test_suites',
+    'test_framework_recovery_9_protocol_binding_rejects_git_record_mutations',
+    'test_framework_recovery_9_qualification_scope_is_exact',
+    'test_framework_recovery_9_real_builder_and_validator_compose',
+    'test_framework_recovery_9_repair_scope_is_exact',
+    'test_framework_recovery_9_reproduction_raw_is_verbose_identity_bound_and_canonical_gzip',
+    'test_framework_recovery_9_reproduction_raw_rejects_noncanonical_and_wrong_identity_mutations',
+    'test_framework_recovery_9_retirement_absorbs_no_fr_0008_q_or_a',
+    'test_framework_recovery_9_retires_fr_0008_without_qualification',
+    'test_framework_recovery_9_review_eligibility_accepts_two_go_reviews',
+    'test_framework_recovery_9_review_eligibility_rejects_no_go_open_or_blocking',
+    'test_framework_recovery_9_review_keys_are_separate',
+    'test_framework_recovery_9_review_validator_accepts_additional_findings',
+    'test_framework_recovery_9_review_validator_accepts_truthful_go',
+    'test_framework_recovery_9_review_validator_accepts_truthful_no_go',
+    'test_framework_recovery_9_review_validator_rejects_malformed_and_duplicate_findings',
+    'test_framework_recovery_9_review_validator_rejects_model_fallback_and_wrong_model',
+    'test_framework_recovery_9_run_attempt_uniqueness_accepts_distinct_attempt',
+    'test_framework_recovery_9_run_attempt_uniqueness_rejects_reserved_and_duplicate',
+    'test_framework_recovery_9_signatures_and_chronology_are_bound',
+    'test_framework_recovery_9_source_compatibility_rejects_drift',
+    'test_framework_recovery_9_source_retention_is_exact',
+    'test_framework_recovery_9_successor_requires_activation',
+    'test_framework_recovery_9_test_source_ast_and_discovery_are_strict',
+    'test_framework_recovery_9_transition_retires_epoch_9_and_creates_epoch_10',
+    'test_framework_recovery_9_warning_policy_is_exact_per_suite',
+    'test_framework_recovery_9_warning_policy_rejects_fr_0002_exception_misstatement',
+    'test_framework_recovery_9_wrapper_accepts_epochs_2_through_10',
+}
+FRAMEWORK_RECOVERY_9_NEW_DEFINITIONS = {
+    '_framework_recovery_9_assurance_boundary',
+    '_framework_recovery_9_authority',
+    '_framework_recovery_9_code_diff',
+    '_framework_recovery_9_count_pinned_unittest_methods',
+    '_framework_recovery_9_decision',
+    '_framework_recovery_9_decode_reproduction_raw',
+    '_framework_recovery_9_expected_activation',
+    '_framework_recovery_9_expected_gate_payload',
+    '_framework_recovery_9_expected_local_marker_counts',
+    '_framework_recovery_9_expected_parent_reproduction',
+    '_framework_recovery_9_expected_plan',
+    '_framework_recovery_9_expected_qualification',
+    '_framework_recovery_9_expected_review',
+    '_framework_recovery_9_gate_and_p0_contract',
+    '_framework_recovery_9_hosted_attempt_policy',
+    '_framework_recovery_9_hosted_entry',
+    '_framework_recovery_9_local_commands',
+    '_framework_recovery_9_normalize_reproduction_raw',
+    '_framework_recovery_9_parent_contract_defects',
+    '_framework_recovery_9_positive_attempt',
+    '_framework_recovery_9_prior_review_capture_binding',
+    '_framework_recovery_9_rederive_parent_contract_defects',
+    '_framework_recovery_9_require_reviews_go',
+    '_framework_recovery_9_review_contracts',
+    '_framework_recovery_9_review_limitations',
+    '_framework_recovery_9_review_subject',
+    '_framework_recovery_9_review_subject_manifest',
+    '_framework_recovery_9_run_attempt_identity',
+    '_framework_recovery_9_source_retention_manifest',
+    '_framework_recovery_9_test_contract',
+    '_framework_recovery_9_transition_identity',
+    '_framework_recovery_9_unwrap_source_layer',
+    '_framework_recovery_9_validate_local_document',
+    '_framework_recovery_9_validate_parent_reproduction',
+    '_framework_recovery_9_validate_parent_reproduction_chronology',
+    '_framework_recovery_9_validate_review',
+    '_framework_recovery_9_validate_review_capture',
+    '_framework_recovery_9_validate_source_compatibility',
+    '_framework_recovery_9_validate_test_source',
+    '_framework_recovery_9_verify_ci_markers',
+    '_framework_recovery_9_verify_gate_and_p0_contract',
+    '_framework_recovery_9_verify_gate_payload',
+    '_framework_recovery_9_verify_hosted_entry',
+    '_framework_recovery_9_verify_local_markers',
+    '_framework_recovery_9_verify_review_key_separation',
+    '_framework_recovery_9_verify_run_attempt_uniqueness',
+    '_framework_recovery_9_verify_stage_modes',
+    '_framework_recovery_9_verify_successor_guard',
+    '_verify_framework_recovery_9_activation',
+    '_verify_framework_recovery_9_history',
+    '_verify_framework_recovery_9_qualification',
+    '_verify_framework_recovery_9_repair',
+}
+FRAMEWORK_RECOVERY_9_MODIFIED_DEFINITIONS = {
+    '_framework_recovery_2_source_retention_manifest',
+    '_framework_recovery_3_source_retention_manifest',
+    '_framework_recovery_3_verify_hosted_entry',
+    '_framework_recovery_4_source_retention_manifest',
+    '_framework_recovery_5_source_retention_manifest',
+    '_framework_recovery_8_verify_successor_guard',
+    '_verify_forward_protocol_history',
+    '_verify_framework_history',
+    '_verify_framework_recovery_8_history',
+    '_verify_post_activation_gate_retention',
+}
+FRAMEWORK_RECOVERY_9_NEW_ASSIGNMENTS = {
+    'FRAMEWORK_RECOVERY_9_ACTIVATION_PATH',
+    'FRAMEWORK_RECOVERY_9_ACTIVATION_REQUIREMENTS',
+    'FRAMEWORK_RECOVERY_9_ACTIVATION_STATUSES',
+    'FRAMEWORK_RECOVERY_9_ACTIVATION_SUBJECT',
+    'FRAMEWORK_RECOVERY_9_CORE_PATHS',
+    'FRAMEWORK_RECOVERY_9_DEFECT_CODE',
+    'FRAMEWORK_RECOVERY_9_GATE_BYTES',
+    'FRAMEWORK_RECOVERY_9_GATE_SHA256',
+    'FRAMEWORK_RECOVERY_9_GATE_ZLIB_HEX',
+    'FRAMEWORK_RECOVERY_9_ID',
+    'FRAMEWORK_RECOVERY_9_MODIFIED_ASSIGNMENTS',
+    'FRAMEWORK_RECOVERY_9_MODIFIED_DEFINITIONS',
+    'FRAMEWORK_RECOVERY_9_NEW_ASSIGNMENTS',
+    'FRAMEWORK_RECOVERY_9_NEW_DEFINITIONS',
+    'FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT',
+    'FRAMEWORK_RECOVERY_9_PARENT',
+    'FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES',
+    'FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID',
+    'FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256',
+    'FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_BYTES',
+    'FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_OID',
+    'FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_SHA256',
+    'FRAMEWORK_RECOVERY_9_PARENT_GATE_BYTES',
+    'FRAMEWORK_RECOVERY_9_PARENT_GATE_OID',
+    'FRAMEWORK_RECOVERY_9_PARENT_GATE_SHA256',
+    'FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES',
+    'FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID',
+    'FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256',
+    'FRAMEWORK_RECOVERY_9_PARENT_SUITE_KEYS',
+    'FRAMEWORK_RECOVERY_9_PARENT_TREE',
+    'FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES',
+    'FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID',
+    'FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256',
+    'FRAMEWORK_RECOVERY_9_PLAN_PATH',
+    'FRAMEWORK_RECOVERY_9_PRESERVED_PATHS',
+    'FRAMEWORK_RECOVERY_9_QUALIFICATION_PATH',
+    'FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS',
+    'FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES',
+    'FRAMEWORK_RECOVERY_9_QUALIFICATION_SUBJECT',
+    'FRAMEWORK_RECOVERY_9_REPAIR_STATUSES',
+    'FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_MAX_BYTES',
+    'FRAMEWORK_RECOVERY_9_REPRODUCTION_REQUIREMENT',
+    'FRAMEWORK_RECOVERY_9_REQUIRED_TEST_COUNT',
+    'FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS',
+    'FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS_SHA256',
+    'FRAMEWORK_RECOVERY_9_RESERVED_RUN_ATTEMPTS',
+    'FRAMEWORK_RECOVERY_9_SUBJECT',
+    'FRAMEWORK_RECOVERY_9_SUITE_KEYS',
+    'FRAMEWORK_RECOVERY_9_TEST_AST_SHA256',
+    'FRAMEWORK_RECOVERY_9_TEST_BYTES',
+    'FRAMEWORK_RECOVERY_9_TEST_OID',
+    'FRAMEWORK_RECOVERY_9_TEST_PATH',
+    'FRAMEWORK_RECOVERY_9_TEST_SHA256',
+}
+FRAMEWORK_RECOVERY_9_MODIFIED_ASSIGNMENTS = {
+    'FRAMEWORK_CORE_FROZEN_PATHS',
+}
+
 BOOTSTRAP_REQUIREMENTS_SHA256 = (
     "61e9f56bce2edafb6ec94db0bd3c6ad991e65065f0bc44b807a84900abfa9f40"
 )
@@ -2844,6 +3221,7 @@ FRAMEWORK_CORE_FROZEN_PATHS = tuple(
             "tools/release/test_verify_current_audit_fr_0006.py",
             "tools/release/test_verify_current_audit_fr_0007.py",
             "tools/release/test_verify_current_audit_fr_0008.py",
+            "tools/release/test_verify_current_audit_fr_0009.py",
             "tools/release/current-audit-resource-profile.py",
             "tools/release/test_current_audit_resource_profile.py",
             "tools/release/current_audit_test_fixtures.py",
@@ -7724,6 +8102,7 @@ def _framework_recovery_2_source_retention_manifest(
     path = "tools/release/verify-current-audit.py"
     parent_payload = _git_file(repo, FRAMEWORK_RECOVERY_2_PARENT, path)
     target_payload = _git_file(repo, repair_commit, path)
+    target_payload = _framework_recovery_9_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_8_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_7_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_6_unwrap_source_layer(repo, target_payload)
@@ -9372,6 +9751,7 @@ def _framework_recovery_4_source_retention_manifest(
     path = "tools/release/verify-current-audit.py"
     parent_payload = _git_file(repo, FRAMEWORK_RECOVERY_4_PARENT, path)
     target_payload = _git_file(repo, repair_commit, path)
+    target_payload = _framework_recovery_9_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_8_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_7_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_6_unwrap_source_layer(repo, target_payload)
@@ -10207,6 +10587,7 @@ def _framework_recovery_3_source_retention_manifest(
     path = "tools/release/verify-current-audit.py"
     parent_payload = _git_file(repo, FRAMEWORK_RECOVERY_3_PARENT, path)
     target_payload = _git_file(repo, repair_commit, path)
+    target_payload = _framework_recovery_9_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_8_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_7_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_6_unwrap_source_layer(repo, target_payload)
@@ -15137,6 +15518,14 @@ def _framework_recovery_3_verify_hosted_entry(
     )
     compatibility_entry = copy.deepcopy(base_expected)
     compatibility_entry.pop("capture_schema")
+    compatibility_entry["files"] = [
+        {
+            key: copy.deepcopy(value)
+            for key, value in record.items()
+            if key not in {"git_mode", "git_object_type", "git_object_id"}
+        }
+        for record in base_expected["files"]
+    ]
     compatibility_entry["capture_operations"] = compatibility_operations
     anomalies = _verify_hosted_evidence_v2(
         repo,
@@ -21029,6 +21418,7 @@ def _framework_recovery_5_source_retention_manifest(
         )
     parent_payload = _git(repo, "cat-file", "blob", parent_entry["oid"])
     target_payload = _git_file(repo, repair_commit, path)
+    target_payload = _framework_recovery_9_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_8_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_7_unwrap_source_layer(repo, target_payload)
     target_payload = _framework_recovery_6_unwrap_source_layer(repo, target_payload)
@@ -32622,13 +33012,27 @@ def _framework_recovery_8_verify_successor_guard(
     activation_commit: str | None,
     recovery_transition: dict[str, Any] | None,
 ) -> None:
-    """Reject every ordinary successor before FR-0008 activation."""
+    """Accept only the exact FR-0009 repair as the FR-0008 terminal."""
 
-    if (
-        repair_commit is not None
-        and position > chain.index(repair_commit)
-        and (activation_commit is None or position < chain.index(activation_commit))
-        and recovery_transition is None
+    if repair_commit is None or position <= chain.index(repair_commit):
+        return
+    if activation_commit is None:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_8_SUCCESSOR_BEFORE_ACTIVATION"
+        )
+    terminal_position = chain.index(activation_commit)
+    if position > terminal_position:
+        return
+    expected_transition = {
+        "stage": "RETIREMENT",
+        "recovery_id": FRAMEWORK_RECOVERY_9_ID,
+        "retirement_commit": activation_commit,
+    }
+    if position != terminal_position or any(
+        recovery_transition.get(key) != item
+        if isinstance(recovery_transition, dict)
+        else True
+        for key, item in expected_transition.items()
     ):
         raise CurrentAuditError(
             "CURRENT_AUDIT_FRAMEWORK_RECOVERY_8_SUCCESSOR_BEFORE_ACTIVATION"
@@ -32684,6 +33088,47 @@ def _verify_framework_recovery_8_history(
     suffix = chain[parent_index + 2 :]
     if not suffix:
         return result
+    if repair_commit == FRAMEWORK_RECOVERY_9_PARENT:
+        retirement_metadata = _commit_metadata(repo, suffix[0])
+        if (
+            retirement_metadata["parent"] == repair_commit
+            and retirement_metadata["subject"] == FRAMEWORK_RECOVERY_9_SUBJECT
+        ):
+            _verify_framework_recovery_9_repair(
+                repo,
+                suffix[0],
+                framework_commit=framework_commit,
+            )
+            for candidate in suffix:
+                candidate_metadata = _commit_metadata(repo, candidate)
+                if (
+                    candidate_metadata["subject"]
+                    in {
+                        FRAMEWORK_RECOVERY_8_QUALIFICATION_SUBJECT,
+                        FRAMEWORK_RECOVERY_8_ACTIVATION_SUBJECT,
+                    }
+                    or _git_path_exists(
+                        repo,
+                        candidate,
+                        FRAMEWORK_RECOVERY_8_QUALIFICATION_PATH,
+                    )
+                    or _git_path_exists(
+                        repo,
+                        candidate,
+                        FRAMEWORK_RECOVERY_8_ACTIVATION_PATH,
+                    )
+                ):
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_8_"
+                        "RETIREMENT_ABSORPTION"
+                    )
+            result.update(
+                {
+                    "state": "ABORTED_BEFORE_QUALIFICATION",
+                    "retirement_commit": suffix[0],
+                }
+            )
+            return result
     qualification_commit = suffix[0]
     qualification = _verify_framework_recovery_8_qualification(
         repo, repair_commit, qualification_commit, plan=plan
@@ -32714,6 +33159,4177 @@ def _verify_framework_recovery_8_history(
         }
     )
     return result
+
+
+def _framework_recovery_9_assurance_boundary() -> dict[str, Any]:
+    """Return the exact FR-0009 assurance boundary."""
+
+    return {
+        "historical_protocol_execution_revalidated_under_epoch_10": True,
+        "fr_0008_qualification_reclassified_as_valid": False,
+        "prior_ledger_and_claim_judgments_changed": False,
+        "human_review_performed": False,
+        "external_independence": False,
+        "release_authority_from_review": False,
+        "review_signatures_scope": "LOCAL_RECORD_INTEGRITY_ONLY",
+    }
+
+def _framework_recovery_9_authority() -> dict[str, Any]:
+    """Return the fail-closed FR-0009 authority boundary."""
+
+    return {
+        "runtime_authority_changed": False,
+        "release_authority_changed": False,
+        "deployment_authorized": False,
+        "publication_authorized": False,
+        "tag_authorized": False,
+        "github_release_authorized": False,
+        "doi_authorized": False,
+        "zenodo_authorized": False,
+        "archive_authorized": False,
+        "overall_release_status": "NO_GO",
+    }
+
+def _framework_recovery_9_code_diff(
+    repo: Path, repair_commit: str
+) -> dict[str, Any]:
+    """Bind the exact deterministic FR-0009 core patch without its signed plan."""
+
+    if _git(
+        repo,
+        "check-attr",
+        "-z",
+        "-a",
+        "--",
+        *FRAMEWORK_RECOVERY_9_CORE_PATHS,
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_DIFF_ATTRIBUTES"
+        )
+    common = (
+        "-c",
+        "diff.algorithm=myers",
+        "-c",
+        "core.attributesFile=/dev/null",
+        "-c",
+        "diff.relative=false",
+        "-c",
+        "diff.suppressBlankEmpty=false",
+        "-c",
+        "diff.compactionHeuristic=false",
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--text",
+        "--no-renames",
+        "--no-color",
+        "-O/dev/null",
+        "--no-indent-heuristic",
+        "--unified=3",
+        "--inter-hunk-context=0",
+    )
+    selected = ("--", *FRAMEWORK_RECOVERY_9_CORE_PATHS)
+    patch = _git(
+        repo,
+        *common,
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--binary",
+        "--full-index",
+        f"{FRAMEWORK_RECOVERY_9_PARENT}..{repair_commit}",
+        *selected,
+    )
+    name_status = _git(
+        repo,
+        *common,
+        "--name-status",
+        "-z",
+        f"{FRAMEWORK_RECOVERY_9_PARENT}..{repair_commit}",
+        *selected,
+    )
+    numstat = _git(
+        repo,
+        *common,
+        "--numstat",
+        "-z",
+        f"{FRAMEWORK_RECOVERY_9_PARENT}..{repair_commit}",
+        *selected,
+    )
+    return {
+        "base": FRAMEWORK_RECOVERY_9_PARENT,
+        "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN",
+        "paths": list(FRAMEWORK_RECOVERY_9_CORE_PATHS),
+        "patch_command_template": [
+            GIT_EXECUTABLE,
+            *common,
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+            "--binary",
+            "--full-index",
+            f"{FRAMEWORK_RECOVERY_9_PARENT}..<REPAIR_COMMIT>",
+            *selected,
+        ],
+        "patch_sha256": _sha256(patch),
+        "patch_bytes": len(patch),
+        "patch_lines": len(patch.splitlines()),
+        "name_status_sha256": _sha256(name_status),
+        "numstat_sha256": _sha256(numstat),
+    }
+
+def _framework_recovery_9_count_pinned_unittest_methods(
+    payload: bytes, path: str, *, expected_count: int
+) -> int:
+    """Count static test methods in one parent-pinned P0 unittest module."""
+
+    try:
+        tree = ast.parse(payload, filename=path)
+    except (SyntaxError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TEST_TOPOLOGY"
+        ) from error
+    test_ids: list[str] = []
+    class_names: set[str] = set()
+    for node in tree.body:
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name in {"__getattr__", "load_tests"}
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TEST_TOPOLOGY"
+            )
+        if not isinstance(node, ast.ClassDef):
+            continue
+        bases = {
+            base.id
+            if isinstance(base, ast.Name)
+            else base.attr
+            if isinstance(base, ast.Attribute)
+            else ""
+            for base in node.bases
+        }
+        if not bases.intersection({"TestCase", "IsolatedAsyncioTestCase"}):
+            continue
+        if (
+            node.name in class_names
+            or node.decorator_list
+            or node.keywords
+            or len(node.bases) != 1
+            or not bases.issubset({"TestCase", "IsolatedAsyncioTestCase"})
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TEST_TOPOLOGY"
+            )
+        class_names.add(node.name)
+        for child in node.body:
+            if not (
+                isinstance(child, ast.FunctionDef)
+                and child.name.startswith("test_")
+            ):
+                if isinstance(child, ast.AsyncFunctionDef) and child.name.startswith(
+                    "test_"
+                ):
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TEST_TOPOLOGY"
+                    )
+                continue
+            if (
+                child.decorator_list
+                or len(child.args.args) != 1
+                or child.args.args[0].arg != "self"
+                or child.args.posonlyargs
+                or child.args.defaults
+                or child.args.vararg is not None
+                or child.args.kwonlyargs
+                or child.args.kw_defaults
+                or child.args.kwarg is not None
+            ):
+                raise CurrentAuditError(
+                    "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TEST_TOPOLOGY"
+                )
+            test_ids.append(node.name + "." + child.name)
+    if (
+        type(expected_count) is not int
+        or expected_count < 1
+        or not test_ids
+        or len(test_ids) != len(set(test_ids))
+        or len(test_ids) != expected_count
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TEST_TOPOLOGY"
+        )
+    return len(test_ids)
+
+def _framework_recovery_9_decision(state: str) -> dict[str, Any]:
+    """Return one exact fail-closed FR-0009 state decision."""
+
+    if state not in {
+        "PENDING_QUALIFICATION",
+        "QUALIFIED_PENDING_ACTIVATION",
+        "ACTIVE",
+    }:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_DECISION_STATE")
+    return {
+        "state": state,
+        "framework_epoch": 10,
+        "active_framework_epoch": 10 if state == "ACTIVE" else 2,
+        "framework_activation_authorized": state == "ACTIVE",
+        "successor_transitions_allowed": state == "ACTIVE",
+        **_framework_recovery_9_authority(),
+    }
+
+def _framework_recovery_9_decode_reproduction_raw(compressed: bytes) -> bytes:
+    """Decode one bounded deterministic-header single-member gzip stream."""
+
+    if (
+        type(compressed) is not bytes
+        or not compressed
+        or len(compressed) > FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_MAX_BYTES
+        or not compressed.startswith(b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\x03")
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_GZIP_HEADER"
+        )
+    try:
+        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        payload = decoder.decompress(
+            compressed, FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_MAX_BYTES + 1
+        )
+    except zlib.error as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_GZIP_INVALID"
+        ) from error
+    if len(payload) > FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_MAX_BYTES:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_BOUND"
+        )
+    if not decoder.eof or decoder.unconsumed_tail or decoder.unused_data:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_GZIP_SINGLE_MEMBER"
+        )
+    return payload
+
+def _framework_recovery_9_expected_activation(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    containing_commit: str,
+    *,
+    qualification: dict[str, Any],
+    evidence_catalog: list[dict[str, Any]],
+    hosted_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the exact unsigned FR-0009 activation record."""
+
+    all_hosted = {**qualification["hosted_evidence"], **hosted_evidence}
+    return {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_9_ID,
+        "release_target": "0.9.0",
+        "author": {"name": "Sepehr Mahmoudian", "email": "sepmhn@gmail.com"},
+        "persistent_identifier": None,
+        "state_before": "QUALIFIED_PENDING_ACTIVATION",
+        "state_after": "ACTIVE",
+        "repair_commit": repair_commit,
+        "qualification_commit": qualification_commit,
+        "qualified_qualification": _signed_commit_binding(
+            repo, qualification_commit, repair_commit
+        ),
+        "plan_record": _commit_regular_file_record(
+            repo, repair_commit, FRAMEWORK_RECOVERY_9_PLAN_PATH
+        ),
+        "qualification_record": _commit_regular_file_record(
+            repo, qualification_commit, FRAMEWORK_RECOVERY_9_QUALIFICATION_PATH
+        ),
+        "qualification_evidence_records": qualification["evidence_catalog"],
+        "activation_evidence_catalog": copy.deepcopy(evidence_catalog),
+        "qualification_hosted_evidence": qualification["hosted_evidence"],
+        "activation_hosted_evidence": copy.deepcopy(hosted_evidence),
+        "all_hosted_run_attempts": [
+            {
+                "lane": lane,
+                "run_id": identity[0],
+                "attempt": identity[1],
+            }
+            for lane, identity in (
+                (
+                    "repair_ci",
+                    _framework_recovery_9_run_attempt_identity(
+                        repo,
+                        qualification_commit,
+                        all_hosted["repair_ci"],
+                        label="repair_ci",
+                    ),
+                ),
+                (
+                    "repair_formal",
+                    _framework_recovery_9_run_attempt_identity(
+                        repo,
+                        qualification_commit,
+                        all_hosted["repair_formal"],
+                        label="repair_formal",
+                    ),
+                ),
+                (
+                    "qualification_ci",
+                    _framework_recovery_9_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        all_hosted["qualification_ci"],
+                        label="qualification_ci",
+                    ),
+                ),
+                (
+                    "qualification_formal",
+                    _framework_recovery_9_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        all_hosted["qualification_formal"],
+                        label="qualification_formal",
+                    ),
+                ),
+            )
+        ],
+        "review_records": qualification["review_records"],
+        "transition_identity": _framework_recovery_9_transition_identity(),
+        "registered_snapshot_materialization": copy.deepcopy(
+            qualification["registered_snapshot_materialization"]
+        ),
+        "hosted_attempt_policy": copy.deepcopy(
+            qualification["hosted_attempt_policy"]
+        ),
+        "boundary_policy": copy.deepcopy(qualification["boundary_policy"]),
+        "assurance_boundary": _framework_recovery_9_assurance_boundary(),
+        "decision": _framework_recovery_9_decision("ACTIVE"),
+        "limitations": qualification["limitations"],
+        "effective_on": "SIGNED_COMMIT_FIRST_CONTAINING_THIS_EXACT_ACTIVATION_RECORD",
+    }
+
+def _framework_recovery_9_expected_gate_payload() -> bytes:
+    """Return the byte-pinned candidate-epoch-10 audit entry point."""
+
+    try:
+        compressed = bytes.fromhex(FRAMEWORK_RECOVERY_9_GATE_ZLIB_HEX)
+        payload = zlib.decompress(compressed)
+    except (ValueError, zlib.error) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_PIN"
+        ) from error
+    if (
+        len(payload) != FRAMEWORK_RECOVERY_9_GATE_BYTES
+        or _sha256(payload) != FRAMEWORK_RECOVERY_9_GATE_SHA256
+        or not payload.startswith(
+            b"#!/usr/bin/env bash\n"
+            b"# Immutable entry point for the current-head qualification framework.\n"
+        )
+        or not payload.endswith(
+            b'"$PYTHON3" -B -I -W error tools/release/verify-current-audit.py\n'
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_PIN"
+        )
+    return payload
+
+def _framework_recovery_9_expected_local_marker_counts(
+    test_contract: dict[str, Any],
+) -> dict[str, Any]:
+    """Derive epoch-10 marker cardinality from the closed gate topology."""
+
+    if not isinstance(test_contract, dict):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_TEST_CONTRACT"
+        )
+    counts = [
+        test_contract.get(key, {}).get("count")
+        if isinstance(test_contract.get(key), dict)
+        else None
+        for key in FRAMEWORK_RECOVERY_9_SUITE_KEYS
+    ]
+    extra_counts = test_contract.get("p0_extra_unittest_counts")
+    if (
+        any(type(count) is not int or count < 1 for count in counts)
+        or len(set(counts)) != len(counts)
+        or len(counts) != 10
+        or not isinstance(extra_counts, list)
+        or len(extra_counts) != FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT
+        or any(type(count) is not int or count < 1 for count in extra_counts)
+        or FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT != 6
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_TEST_CONTRACT"
+        )
+    direct = [1] * len(counts)
+    p0 = [1 + extra_counts.count(count) for count in counts]
+    return {
+        "direct_suite_run_multiplicity": direct,
+        "direct_bare_ok": len(counts),
+        "p0_suite_run_multiplicity": p0,
+        "p0_bare_ok": (
+            len(counts) + FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT
+        ),
+        "p0_extra_unittest_command_count": (
+            FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT
+        ),
+    }
+
+def _framework_recovery_9_expected_parent_reproduction(
+    repo: Path,
+    repair_commit: str,
+    *,
+    execution: dict[str, Any],
+    raw_log: dict[str, Any],
+    semantic_receipt: dict[str, Any],
+    defect: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return the exact unsigned FR-0008 hosted-log contradiction reproduction record."""
+
+    return {
+        "schema_version": "1.0.0",
+        "evidence_id": "FR-0009-E01",
+        "kind": "PARENT_HOSTED_LOG_BINDING_CONTRADICTION_REPRODUCTION",
+        "subject_commit": FRAMEWORK_RECOVERY_9_PARENT,
+        "subject_tree": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "repair_commit": repair_commit,
+        "defect": copy.deepcopy(
+            _framework_recovery_9_parent_contract_defects(repo)
+            if defect is None
+            else defect
+        ),
+        "execution": copy.deepcopy(execution),
+        "raw_log": copy.deepcopy(raw_log),
+        "semantic_receipt": copy.deepcopy(semantic_receipt),
+        "overall_result": "EXPECTED_DEFECT",
+    }
+
+def _framework_recovery_9_expected_plan(
+    repo: Path, repair_commit: str, framework_commit: str
+) -> dict[str, Any]:
+    """Build the fixed hosted-log protocol-binding recovery plan."""
+
+    parent_plan, parent_payload = _read_commit_json(
+        repo,
+        FRAMEWORK_RECOVERY_9_PARENT,
+        FRAMEWORK_RECOVERY_8_PLAN_PATH,
+        "framework_recovery_9.parent_plan",
+    )
+    if (
+        not isinstance(parent_plan, dict)
+        or parent_payload != _canonical_json_bytes(parent_plan, pretty=True)
+        or len(parent_payload) != FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES
+        or _sha256(parent_payload)
+        != FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_PLAN")
+    materialization = parent_plan.get("registered_snapshot_materialization")
+    hosted_attempt_policy = _framework_recovery_9_hosted_attempt_policy()
+    boundary_policy = _framework_recovery_3_boundary_policy()
+    if (
+        not isinstance(materialization, dict)
+        or not _strict_equal(
+            parent_plan.get("hosted_attempt_policy"), hosted_attempt_policy
+        )
+        or not _strict_equal(parent_plan.get("boundary_policy"), boundary_policy)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_POLICY"
+        )
+    changed_core_files = []
+    for path in FRAMEWORK_RECOVERY_9_CORE_PATHS:
+        status = FRAMEWORK_RECOVERY_9_REPAIR_STATUSES[path]
+        changed_core_files.append(
+            {
+                "status": status,
+                "old": (
+                    None
+                    if status == "A"
+                    else _commit_regular_file_record(
+                        repo, FRAMEWORK_RECOVERY_9_PARENT, path
+                    )
+                ),
+                "new": _commit_regular_file_record(repo, repair_commit, path),
+            }
+        )
+    defect = _framework_recovery_9_parent_contract_defects(repo)
+    test_contract = _framework_recovery_9_test_contract(repo, repair_commit)
+    marker_counts = _framework_recovery_9_expected_local_marker_counts(
+        test_contract
+    )
+    gate_contract = _framework_recovery_9_gate_and_p0_contract(
+        repo, repair_commit
+    )
+    return {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_9_ID,
+        "release_target": "0.9.0",
+        "author": {"name": "Sepehr Mahmoudian", "email": "sepmhn@gmail.com"},
+        "persistent_identifier": None,
+        "framework_epoch": {
+            "active": 2,
+            "retired_candidate": 9,
+            "next_candidate": 10,
+        },
+        "parent_commit": FRAMEWORK_RECOVERY_9_PARENT,
+        "parent_tree": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "prior_framework_commit": framework_commit,
+        "repair_subject": FRAMEWORK_RECOVERY_9_SUBJECT,
+        "transition_identity": _framework_recovery_9_transition_identity(),
+        "retired_recovery": {
+            "recovery_id": FRAMEWORK_RECOVERY_8_ID,
+            "repair": _signed_commit_binding(
+                repo, FRAMEWORK_RECOVERY_9_PARENT, FRAMEWORK_RECOVERY_8_PARENT
+            ),
+            "plan_record": _commit_regular_file_record(
+                repo, FRAMEWORK_RECOVERY_9_PARENT, FRAMEWORK_RECOVERY_8_PLAN_PATH
+            ),
+            "state_before": "PENDING_QUALIFICATION",
+            "state_after": "ABORTED_BEFORE_QUALIFICATION",
+            "reason": "HOSTED_LOG_PROTOCOL_BINDING_UNSATISFIABLE",
+            "defect_code": FRAMEWORK_RECOVERY_9_DEFECT_CODE,
+            "qualification_commit": None,
+            "activation_commit": None,
+            "epoch_reusable": False,
+        },
+        "defect": defect,
+        "correction": {
+            "contract_id": "HALDIR_FR_0009_HOSTED_LOG_PROTOCOL_BINDING_V1",
+            "generic_hosted_validator_unchanged": True,
+            "outer_git_identity_binding_preserved": True,
+            "compatibility_projection_applies_after_outer_equality": True,
+            "compatibility_projection_applies_before_generic_validation": True,
+            "compatibility_projection_fields": [
+                "path",
+                "sha256",
+                "bytes",
+                "lines",
+            ],
+            "stripped_git_identity_fields": [
+                "git_mode",
+                "git_object_type",
+                "git_object_id",
+            ],
+            "projection_applies_to_every_file_record": True,
+            "observed_hosted_entry_mutated": False,
+            "unmocked_composition_regression_required": True,
+            "parent_semantics_rederived_during_qualification": True,
+            "reproduction_transcript_is_verbose_test_identity_bound": True,
+            "reproduction_normalization": "ELAPSED_SECONDS_ONLY",
+            "marker_count_derivation": (
+                "GATE_UNITTEST_SUITES_PLUS_PINNED_P0_EXTRA_UNITTEST_COMMANDS"
+            ),
+            "suite_keys": list(FRAMEWORK_RECOVERY_9_SUITE_KEYS),
+            "suite_order": gate_contract["suite_order"],
+            "suite_test_paths": gate_contract["suite_test_paths"],
+            "suite_counts": gate_contract["suite_counts"],
+            "warning_policy_by_suite": gate_contract[
+                "warning_policy_by_suite"
+            ],
+            "p0_extra_unittest_command_count": (
+                FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT
+            ),
+            "p0_extra_unittest_paths": gate_contract["p0"][
+                "extra_unittest_paths"
+            ],
+            "p0_extra_unittest_counts": gate_contract["p0"][
+                "extra_unittest_counts"
+            ],
+            "current_audit_precedes_extra_unittests": gate_contract["p0"][
+                "current_audit_precedes_extra_unittests"
+            ],
+            "expected_local_marker_counts": marker_counts,
+            "p0_gate_changed": False,
+            "fr_0008_qualification_reused": False,
+            "fr_0008_review_records_reused": False,
+            "fr_0008_evidence_records_reused": False,
+            "new_evidence_required": True,
+            "new_review_records_required": True,
+        },
+        "review_contract": {
+            "capture_tool": {
+                "name": "review_fr_0009_models.py",
+                "sha256": (
+                    "5f6bee21255da227ad04e369f0e4b3f25e143867cf245d53678ddd60e0c61b71"
+                ),
+                "bytes": 66_229,
+                "capture_protocol": (
+                    "HALDIR_FR_0009_AUTOMATED_REVIEW_CAPTURE_V1"
+                ),
+            },
+            "request_contract": {
+                "protocol": "HALDIR_FR_0009_REVIEW_REQUEST_BODY_V1",
+                "provider_endpoint": "https://api.anthropic.com/v1/messages",
+                "provider_version": "2023-06-01",
+                "max_tokens": 128_000,
+                "thinking": {"type": "adaptive"},
+                "output_config": {"effort": "max"},
+                "system": (
+                    "You are an internal automated reviewer of one exact "
+                    "Haldir FR-0009 repair subject. Give substantive architecture "
+                    "and implementation critique. Do not claim human review, "
+                    "external independence, release authority, or facts outside "
+                    "the supplied canonical manifest and exact review material. "
+                    "Return only one JSON object that follows the requested "
+                    "response contract."
+                ),
+                "user_instruction": (
+                    "Review the canonical subject manifest and exact review "
+                    "material below. Return one JSON object with exactly review_id, "
+                    "verdict, required_findings, and additional_findings. Copy "
+                    "review_id from the manifest. Verdict must be "
+                    "GO_FOR_FRAMEWORK_QUALIFICATION or NO_GO. List every required "
+                    "finding in manifest order with exactly id, severity, status, "
+                    "summary, affected_functions, resolving_test_ids, "
+                    "resolving_evidence_ids, and disposition. Use severity "
+                    "BLOCKING. Always copy the contract affected_functions list "
+                    "exactly. Use status RESOLVED only when the supplied subject "
+                    "resolves the finding and then copy both contract resolving "
+                    "lists exactly. Otherwise use OPEN with both resolving lists "
+                    "empty and verdict NO_GO. GO_FOR_FRAMEWORK_QUALIFICATION is "
+                    "valid only when no finding is OPEN; use NO_GO only when at "
+                    "least one finding is OPEN. Every summary and disposition must "
+                    "be nonempty and at most 4096 UTF-8 bytes. Return at most 32 "
+                    "additional findings in ascending fixed-width B001-and-later ID "
+                    "order. Each additional finding must contain exactly id, "
+                    "severity, status, summary, affected_functions, affected_paths, "
+                    "resolving_test_ids, resolving_evidence_ids, and disposition. "
+                    "Use severity BLOCKING. Use a duplicate-free list of at most 32 "
+                    "underscore-prefixed function identifiers for affected_functions "
+                    "and 1 to 32 duplicate-free canonical repository-relative paths "
+                    "for affected_paths. Use duplicate-free resolving lists with "
+                    "only allowed test and evidence or review IDs from the supplied "
+                    "plan. For an OPEN additional finding, use both resolving lists "
+                    "empty. For a RESOLVED additional finding, cite at least one "
+                    "allowed resolver. Use an empty list when there are no additional "
+                    "findings. Do not wrap the JSON in Markdown."
+                ),
+                "subject_begin": (
+                    "-----BEGIN HALDIR FR-0009 SUBJECT MANIFEST-----"
+                ),
+                "subject_end": "-----END HALDIR FR-0009 SUBJECT MANIFEST-----",
+                "subject_encoding": "ASCII_CANONICAL_JSON_INLINE_V1",
+                "review_material_order": [
+                    "SIGNED_PLAN",
+                    "CORE_PATCH",
+                    "P0_GATE",
+                ],
+                "plan_begin": "-----BEGIN SIGNED HALDIR FR-0009 PLAN-----",
+                "plan_end": "-----END SIGNED HALDIR FR-0009 PLAN-----",
+                "patch_begin": (
+                    "-----BEGIN EXACT HALDIR FR-0009 CORE PATCH-----"
+                ),
+                "patch_end": "-----END EXACT HALDIR FR-0009 CORE PATCH-----",
+                "p0_begin": "-----BEGIN PINNED HALDIR P0 EXIT GATE-----",
+                "p0_end": "-----END PINNED HALDIR P0 EXIT GATE-----",
+                "request_max_bytes": 1_048_576,
+                "raw_response_max_bytes": 1_048_576,
+            },
+            "required_review_ids": ["FR-0009-R01", "FR-0009-R02"],
+            "raw_response_retention": "PRIVATE_UNTRACKED",
+        },
+        "retired_private_review_capture_binding": (
+            _framework_recovery_9_prior_review_capture_binding()
+        ),
+        "registered_snapshot_materialization": copy.deepcopy(materialization),
+        "hosted_attempt_policy": copy.deepcopy(hosted_attempt_policy),
+        "boundary_policy": copy.deepcopy(boundary_policy),
+        "changed_core_files": changed_core_files,
+        "code_diff": _framework_recovery_9_code_diff(repo, repair_commit),
+        "source_retention": _framework_recovery_9_source_retention_manifest(
+            repo, repair_commit
+        ),
+        "test_contract": test_contract,
+        "preserved_state_records": [
+            _commit_regular_file_record(repo, FRAMEWORK_RECOVERY_9_PARENT, path)
+            for path in FRAMEWORK_RECOVERY_9_PRESERVED_PATHS
+        ],
+        "qualification_path": FRAMEWORK_RECOVERY_9_QUALIFICATION_PATH,
+        "qualification_requirements": copy.deepcopy(
+            list(FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS)
+        ),
+        "activation_path": FRAMEWORK_RECOVERY_9_ACTIVATION_PATH,
+        "activation_requirements": copy.deepcopy(
+            list(FRAMEWORK_RECOVERY_9_ACTIVATION_REQUIREMENTS)
+        ),
+        "state": {
+            "status": "PENDING_QUALIFICATION",
+            "candidate_epoch": 10,
+            "active_epoch": 2,
+            "successor_transitions_allowed": False,
+            "effective_on": (
+                "SIGNED_COMMIT_FIRST_CONTAINING_EXACT_"
+                "FRAMEWORK_RECOVERY_9_ACTIVATION"
+            ),
+        },
+        "authority": _framework_recovery_9_authority(),
+        "assurance_boundary": _framework_recovery_9_assurance_boundary(),
+    }
+
+def _framework_recovery_9_expected_qualification(
+    repo: Path,
+    repair_commit: str,
+    containing_commit: str,
+    *,
+    plan: dict[str, Any],
+    evidence_catalog: list[dict[str, Any]],
+    hosted_evidence: dict[str, Any],
+    review_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return the exact unsigned FR-0009 qualification record."""
+
+    reproduction_record = next(
+        (
+            copy.deepcopy(item)
+            for item in evidence_catalog
+            if item.get("id") == "FR-0009-E01"
+        ),
+        None,
+    )
+    if reproduction_record is None:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_RECORD"
+        )
+    return {
+        "schema_version": "1.0.0",
+        "recovery_id": FRAMEWORK_RECOVERY_9_ID,
+        "release_target": "0.9.0",
+        "author": {"name": "Sepehr Mahmoudian", "email": "sepmhn@gmail.com"},
+        "persistent_identifier": None,
+        "state_before": "PENDING_QUALIFICATION",
+        "state_after": "QUALIFIED_PENDING_ACTIVATION",
+        "qualified_repair": _signed_commit_binding(
+            repo, repair_commit, FRAMEWORK_RECOVERY_9_PARENT
+        ),
+        "plan_record": _commit_regular_file_record(
+            repo, repair_commit, FRAMEWORK_RECOVERY_9_PLAN_PATH
+        ),
+        "amended_core_records": [
+            _commit_regular_file_record(repo, repair_commit, path)
+            for path in FRAMEWORK_RECOVERY_9_CORE_PATHS
+        ],
+        "preserved_state_records": [
+            _commit_regular_file_record(repo, FRAMEWORK_RECOVERY_9_PARENT, path)
+            for path in FRAMEWORK_RECOVERY_9_PRESERVED_PATHS
+        ],
+        "transition_identity": _framework_recovery_9_transition_identity(),
+        "retired_recovery": copy.deepcopy(plan["retired_recovery"]),
+        "source_retention": copy.deepcopy(plan["source_retention"]),
+        "test_contract": copy.deepcopy(plan["test_contract"]),
+        "registered_snapshot_materialization": copy.deepcopy(
+            plan["registered_snapshot_materialization"]
+        ),
+        "hosted_attempt_policy": copy.deepcopy(plan["hosted_attempt_policy"]),
+        "boundary_policy": copy.deepcopy(plan["boundary_policy"]),
+        "parent_defect": {
+            "defect": copy.deepcopy(plan["defect"]),
+            "correction": copy.deepcopy(plan["correction"]),
+            "reproduction_evidence": reproduction_record,
+            "fr_0008_qualification_commit": None,
+            "fr_0008_activation_commit": None,
+            "historical_repair_bytes_changed": False,
+        },
+        "evidence_catalog": copy.deepcopy(evidence_catalog),
+        "hosted_evidence": copy.deepcopy(hosted_evidence),
+        "hosted_run_attempts": [
+            {
+                "lane": lane,
+                "run_id": identity[0],
+                "attempt": identity[1],
+            }
+            for lane, identity in (
+                (
+                    "repair_ci",
+                    _framework_recovery_9_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        hosted_evidence["repair_ci"],
+                        label="repair_ci",
+                    ),
+                ),
+                (
+                    "repair_formal",
+                    _framework_recovery_9_run_attempt_identity(
+                        repo,
+                        containing_commit,
+                        hosted_evidence["repair_formal"],
+                        label="repair_formal",
+                    ),
+                ),
+            )
+        ],
+        "review_records": copy.deepcopy(review_records),
+        "assurance_boundary": _framework_recovery_9_assurance_boundary(),
+        "decision": _framework_recovery_9_decision(
+            "QUALIFIED_PENDING_ACTIVATION"
+        ),
+        "limitations": _framework_recovery_9_review_limitations(),
+    }
+
+def _framework_recovery_9_expected_review(
+    repo: Path,
+    *,
+    review_id: str,
+    kind: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+    capture: dict[str, Any],
+    verdict: str,
+    required_findings: list[dict[str, Any]],
+    additional_findings: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build one data-dependent unsigned FR-0009 automated review."""
+
+    contract = _framework_recovery_9_review_contracts().get(review_id)
+    model = "claude-fable-5" if review_id == "FR-0009-R01" else "claude-opus-5"
+    if contract is None:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_ID"
+        )
+    return {
+        "schema_version": "2.0.0",
+        "review_id": review_id,
+        "kind": kind,
+        "subject": _framework_recovery_9_review_subject(
+            repo,
+            review_id=review_id,
+            repair_commit=repair_commit,
+            plan=plan,
+        ),
+        "reviewer": {
+            "provider": "Anthropic",
+            "model_requested": model,
+            "model_resolved": model,
+            "fallback_used": False,
+            "classification": "INTERNAL_AUTOMATED",
+            "human_review_performed": False,
+            "named_human_review_performed": False,
+            "external_independence": False,
+            "release_authority": False,
+            "capture_key_role": "LOCAL_RECORD_INTEGRITY_ONLY",
+        },
+        "capture": copy.deepcopy(capture),
+        "verdict": verdict,
+        "required_findings": copy.deepcopy(required_findings),
+        "additional_findings": copy.deepcopy(additional_findings),
+        "limitations": _framework_recovery_9_review_limitations(),
+        "integrity_scope": "LOCAL_RECORD_INTEGRITY_ONLY",
+    }
+
+def _framework_recovery_9_gate_and_p0_contract(
+    repo: Path, repair_commit: str
+) -> dict[str, Any]:
+    """Derive suite policy and P0 ordering from exact authenticated sources."""
+
+    gate = _git_file(repo, repair_commit, "tools/release/current-audit-gate.sh")
+    p0_entry = _git_tree_entry(repo, repair_commit, "tools/p0r-exit-gate.sh")
+    parent_p0_entry = _git_tree_entry(
+        repo, FRAMEWORK_RECOVERY_9_PARENT, "tools/p0r-exit-gate.sh"
+    )
+    p0 = _git_file(repo, repair_commit, "tools/p0r-exit-gate.sh")
+    if (
+        p0_entry != parent_p0_entry
+        or p0_entry
+        != {
+            "mode": "100755",
+            "type": "blob",
+            "oid": FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID,
+        }
+        or len(p0) != FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES
+        or _sha256(p0) != FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_SOURCE"
+        )
+
+    normalized_gate = re.sub(rb"\\\n[ \t]*", b"", gate)
+    invocations: list[tuple[str, str]] = []
+    for match in re.finditer(
+        rb'"\$PYTHON3" -B -I -W (?P<policy>[^ ]+) (?P<argv>[^\n]+)',
+        normalized_gate,
+    ):
+        argv = match.group("argv")
+        test_name = re.search(
+            rb"(test_verify_current_audit(?:_fr_000[2-9])?"
+            rb"|test_current_audit_resource_profile)\.py",
+            argv,
+        )
+        if test_name is not None:
+            invocations.append(
+                (
+                    test_name.group(1).decode("ascii"),
+                    "-W " + match.group("policy").decode("ascii"),
+                )
+            )
+    expected_tests = [
+        "test_verify_current_audit",
+        "test_verify_current_audit_fr_0002",
+        "test_verify_current_audit_fr_0003",
+        "test_current_audit_resource_profile",
+        "test_verify_current_audit_fr_0004",
+        "test_verify_current_audit_fr_0005",
+        "test_verify_current_audit_fr_0006",
+        "test_verify_current_audit_fr_0007",
+        "test_verify_current_audit_fr_0008",
+        "test_verify_current_audit_fr_0009",
+    ]
+    if [name for name, _policy in invocations] != expected_tests:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_TOPOLOGY"
+        )
+    warning_policy_by_suite = {
+        key: policy.split()
+        for key, (_name, policy) in zip(
+            FRAMEWORK_RECOVERY_9_SUITE_KEYS, invocations, strict=True
+        )
+    }
+    expected_policies = {
+        key: (
+            ["-W", "error::ResourceWarning"]
+            if key == "fr_0002"
+            else ["-W", "error"]
+        )
+        for key in FRAMEWORK_RECOVERY_9_SUITE_KEYS
+    }
+    if warning_policy_by_suite != expected_policies:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_WARNING_POLICY"
+        )
+
+    suite_paths = [
+        "tools/release/test_verify_current_audit.py",
+        "tools/release/test_verify_current_audit_fr_0002.py",
+        "tools/release/test_verify_current_audit_fr_0003.py",
+        "tools/release/test_current_audit_resource_profile.py",
+        "tools/release/test_verify_current_audit_fr_0004.py",
+        "tools/release/test_verify_current_audit_fr_0005.py",
+        "tools/release/test_verify_current_audit_fr_0006.py",
+        "tools/release/test_verify_current_audit_fr_0007.py",
+        "tools/release/test_verify_current_audit_fr_0008.py",
+        FRAMEWORK_RECOVERY_9_TEST_PATH,
+    ]
+    suite_counts = []
+    for path in suite_paths:
+        payload = _git_file(repo, repair_commit, path)
+        try:
+            tree = ast.parse(payload.decode("utf-8"))
+        except (UnicodeDecodeError, SyntaxError, ValueError) as error:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_TEST_TOPOLOGY"
+            ) from error
+        observed_count = sum(
+            1
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name.startswith("test_")
+        )
+        discovered_count = len(_discover_unittest_test_ids(payload, path))
+        if observed_count != discovered_count:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_TEST_TOPOLOGY"
+            )
+        suite_counts.append(observed_count)
+
+    audit_runner = re.search(
+        rb'^run "current-head audit gate" [^\n]+$', p0, flags=re.MULTILINE
+    )
+    extra_runners = list(
+        re.finditer(
+            rb'^run "[^"]+"[ \t]+python3 -m unittest (?P<paths>[^\n]+)$',
+            p0,
+            flags=re.MULTILINE,
+        )
+    )
+    all_unittest_runners = list(
+        re.finditer(rb"python3 -m unittest [^\n]+", p0)
+    )
+    if (
+        audit_runner is None
+        or len(extra_runners) != FRAMEWORK_RECOVERY_9_P0_EXTRA_UNITTEST_COMMAND_COUNT
+        or len(all_unittest_runners) != len(extra_runners)
+        or audit_runner.start() >= extra_runners[0].start()
+        or any(
+            left.end() >= right.start()
+            for left, right in zip(extra_runners, extra_runners[1:])
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TOPOLOGY"
+        )
+
+    extra_counts: list[int] = []
+    extra_paths: list[list[str]] = []
+    for runner in extra_runners:
+        paths = [
+            token
+            for token in runner.group("paths").decode("ascii").split()
+            if token.endswith(".py")
+        ]
+        if not paths:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TOPOLOGY"
+            )
+        command_count = 0
+        for path in paths:
+            payload = _git_file(repo, repair_commit, path)
+            try:
+                tree = ast.parse(payload.decode("utf-8"))
+            except (UnicodeDecodeError, SyntaxError, ValueError) as error:
+                raise CurrentAuditError(
+                    "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_P0_TEST_TOPOLOGY"
+                ) from error
+            observed_count = sum(
+                1
+                for node in ast.walk(tree)
+                if isinstance(node, ast.FunctionDef)
+                and node.name.startswith("test_")
+            )
+            _framework_recovery_9_count_pinned_unittest_methods(
+                payload, path, expected_count=observed_count
+            )
+            command_count += observed_count
+        extra_paths.append(paths)
+        extra_counts.append(command_count)
+    return {
+        "suite_order": list(FRAMEWORK_RECOVERY_9_SUITE_KEYS),
+        "suite_test_paths": suite_paths,
+        "suite_counts": suite_counts,
+        "warning_policy_by_suite": warning_policy_by_suite,
+        "fr_0008_parent_snapshot": {
+            "commit": FRAMEWORK_RECOVERY_9_PARENT,
+            "tree": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+            "suite_count": 55,
+            "isolated_clone": True,
+        },
+        "p0": {
+            "gate_path": "tools/p0r-exit-gate.sh",
+            "gate_record": _commit_regular_file_record(
+                repo, repair_commit, "tools/p0r-exit-gate.sh"
+            ),
+            "current_audit_precedes_extra_unittests": True,
+            "extra_unittest_command_count": len(extra_runners),
+            "extra_unittest_paths": extra_paths,
+            "extra_unittest_counts": extra_counts,
+        },
+        "sources": {
+            "gate_sha256": _sha256(gate),
+            "gate_bytes": len(gate),
+            "p0_gate_sha256": _sha256(p0),
+            "p0_gate_bytes": len(p0),
+        },
+    }
+
+def _framework_recovery_9_hosted_attempt_policy() -> dict[str, Any]:
+    """Return the unchanged hosted-attempt policy."""
+
+    return _framework_recovery_8_hosted_attempt_policy()
+
+def _framework_recovery_9_hosted_entry(
+    repo: Path,
+    containing_commit: str,
+    *,
+    paths: tuple[str, str, str],
+    subject_commit: str,
+    workflow: str,
+    capture_operations: dict[str, Any],
+    anomaly_manifest: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build one epoch-10 hosted-evidence entry."""
+
+    return _framework_recovery_3_hosted_entry(
+        repo,
+        containing_commit,
+        paths=paths,
+        subject_commit=subject_commit,
+        workflow=workflow,
+        capture_operations=capture_operations,
+        anomaly_manifest=anomaly_manifest,
+    )
+
+def _framework_recovery_9_local_commands() -> tuple[tuple[str, ...], ...]:
+    """Return the unchanged three-command local-validation order."""
+
+    return _framework_recovery_8_local_commands()
+
+def _framework_recovery_9_normalize_reproduction_raw(payload: bytes) -> bytes:
+    """Require the verbose exact identity and normalize only elapsed time."""
+
+    method = b"test_framework_recovery_9_parent_hosted_log_binding_contradiction_is_reproduced"
+    identity = (
+        method
+        + b" (__main__.FrameworkRecovery9Tests."
+        + method
+        + b") ... ok\n\n"
+    )
+    pattern = (
+        re.escape(identity)
+        + rb"-{70}\nRan 1 test in "
+        + rb"(?P<elapsed>(?:0|[1-9][0-9]*)\.[0-9]{3})s\n\nOK\n"
+    )
+    if (
+        type(payload) is not bytes
+        or len(payload) > FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_MAX_BYTES
+        or b"\r" in payload
+        or b"\0" in payload
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_GRAMMAR"
+        )
+    match = re.fullmatch(pattern, payload)
+    if match is None:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_RAW_IDENTITY"
+        )
+    whole, fractional = match.group("elapsed").split(b".", 1)
+    if int(whole) * 1_000 + int(fractional) >= 300_000:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_DURATION_BOUND"
+        )
+    return (
+        identity
+        + b"-" * 70
+        + b"\nRan 1 test in <ELAPSED>s\n\nOK\n"
+    )
+
+def _framework_recovery_9_parent_contract_defects(repo: Path) -> dict[str, Any]:
+    """Reproduce the exact FR-0008 hosted-log binding contradiction."""
+
+    metadata = _commit_metadata(repo, FRAMEWORK_RECOVERY_9_PARENT)
+    if metadata.get("tree") != FRAMEWORK_RECOVERY_9_PARENT_TREE:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_TREE")
+    pins = (
+        (
+            "tools/release/verify-current-audit.py",
+            "100644",
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES,
+        ),
+        (
+            FRAMEWORK_RECOVERY_8_TEST_PATH,
+            "100644",
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_BYTES,
+        ),
+        (
+            "tools/release/current-audit-gate.sh",
+            "100755",
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_BYTES,
+        ),
+        (
+            "tools/p0r-exit-gate.sh",
+            "100755",
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES,
+        ),
+        (
+            FRAMEWORK_RECOVERY_8_PLAN_PATH,
+            "100644",
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES,
+        ),
+    )
+    payloads: dict[str, bytes] = {}
+    for path, mode, oid, digest, size in pins:
+        entry = _git_tree_entry(repo, FRAMEWORK_RECOVERY_9_PARENT, path)
+        payload = _git_file(repo, FRAMEWORK_RECOVERY_9_PARENT, path)
+        if (
+            entry != {"mode": mode, "type": "blob", "oid": oid}
+            or len(payload) != size
+            or _sha256(payload) != digest
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_PIN:" + path
+            )
+        payloads[path] = payload
+    if _git_path_exists(
+        repo,
+        FRAMEWORK_RECOVERY_9_PARENT,
+        FRAMEWORK_RECOVERY_8_QUALIFICATION_PATH,
+    ) or _git_path_exists(
+        repo,
+        FRAMEWORK_RECOVERY_9_PARENT,
+        FRAMEWORK_RECOVERY_8_ACTIVATION_PATH,
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_TERMINAL_STATE"
+        )
+    parent_payload = payloads["tools/release/verify-current-audit.py"]
+    parent_module = _load_exact_module(
+        parent_payload,
+        (
+            f"{FRAMEWORK_RECOVERY_9_PARENT}:"
+            "tools/release/verify-current-audit.py"
+        ),
+        "framework_recovery_9.parent_verifier",
+    )
+    source_index = _framework_recovery_2_source_index(
+        parent_payload,
+        label="framework_recovery_9.parent_verifier",
+    )
+    required_definitions = {
+        "_commit_regular_file_record",
+        "_framework_recovery_2_hosted_entry",
+        "_framework_recovery_3_verify_hosted_entry",
+        "_gzip_as_file_record",
+        "_strict_equal",
+        "_verify_hosted_evidence_v2",
+    }
+    if not required_definitions <= set(source_index["definitions"]):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_SOURCE"
+        )
+    wrapper_record = source_index["definitions"][
+        "_framework_recovery_3_verify_hosted_entry"
+    ]
+    generic_record = source_index["definitions"]["_verify_hosted_evidence_v2"]
+    builder_record = source_index["definitions"][
+        "_framework_recovery_2_hosted_entry"
+    ]
+    strict_record = source_index["definitions"]["_strict_equal"]
+    parent_source = parent_payload.decode("utf-8")
+    wrapper_node = next(
+        node
+        for node in ast.parse(parent_source).body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_framework_recovery_3_verify_hosted_entry"
+    )
+    generic_node = next(
+        node
+        for node in ast.parse(parent_source).body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_verify_hosted_evidence_v2"
+    )
+    builder_node = next(
+        node
+        for node in ast.parse(parent_source).body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_framework_recovery_2_hosted_entry"
+    )
+    wrapper_source = ast.get_source_segment(parent_source, wrapper_node)
+    generic_source = ast.get_source_segment(parent_source, generic_node)
+    builder_source = ast.get_source_segment(parent_source, builder_node)
+    if (
+        not isinstance(wrapper_source, str)
+        or not isinstance(generic_source, str)
+        or not isinstance(builder_source, str)
+        or "if not _strict_equal(comparable, base_expected)" not in wrapper_source
+        or 'compatibility_entry["files"]' in wrapper_source
+        or (
+            "ifnot_strict_equal("
+            "_gzip_as_file_record(log_integrity),files[2])"
+        )
+        not in re.sub(r"\s+", "", generic_source)
+        or "_commit_regular_file_record(repo, containing_commit, path)"
+        not in builder_source
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_SOURCE"
+        )
+    payload_record = {
+        "path": "evidence/run.log.gz",
+        "sha256": "1" * 64,
+        "bytes": 3,
+    }
+    git_record = {
+        **payload_record,
+        "git_mode": "100644",
+        "git_object_type": "blob",
+        "git_object_id": "2" * 40,
+    }
+    if (
+        parent_module._strict_equal(payload_record, git_record)
+        or not parent_module._strict_equal(git_record, copy.deepcopy(git_record))
+        or set(parent_module._gzip_as_file_record(
+            {
+                "path": payload_record["path"],
+                "compressed_sha256": payload_record["sha256"],
+                "compressed_bytes": payload_record["bytes"],
+            }
+        ))
+        != {"path", "sha256", "bytes"}
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_CONTRADICTION"
+        )
+    return {
+        "defect_code": FRAMEWORK_RECOVERY_9_DEFECT_CODE,
+        "parent_commit": FRAMEWORK_RECOVERY_9_PARENT,
+        "parent_tree": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "state_before": "PENDING_QUALIFICATION",
+        "qualification_commit": None,
+        "activation_commit": None,
+        "builder_emits_full_git_records": True,
+        "wrapper_requires_full_git_record_equality": True,
+        "generic_requires_three_field_gzip_equality": True,
+        "strict_equality_requires_identical_key_sets": True,
+        "satisfiable": False,
+        "source_records": {
+            "builder": copy.deepcopy(builder_record),
+            "wrapper": copy.deepcopy(wrapper_record),
+            "generic": copy.deepcopy(generic_record),
+            "strict_equal": copy.deepcopy(strict_record),
+        },
+        "contradictory_key_sets": {
+            "payload": sorted(payload_record),
+            "git_bound": sorted(git_record),
+        },
+        "repair_locus": "_framework_recovery_3_verify_hosted_entry",
+        "generic_validator_changed": False,
+    }
+
+def _framework_recovery_9_positive_attempt(
+    repo: Path,
+    containing_commit: str,
+    file_record: dict[str, Any],
+    *,
+    label: str,
+) -> int:
+    """Read one exact positive FR-0009 attempt record."""
+
+    payload = _read_commit_file_bound(
+        repo, containing_commit, file_record, f"{label}.attempt", 65_536
+    )
+    try:
+        document = _load_json_bytes(payload, f"{label}.attempt")
+    except CurrentAuditError as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ATTEMPT_INVALID:" + label
+        ) from error
+    attempt = document.get("attempt") if isinstance(document, dict) else None
+    if type(attempt) is not int or attempt < 1:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ATTEMPT_INVALID:" + label
+        )
+    return attempt
+
+def _framework_recovery_9_prior_review_capture_binding() -> dict[str, Any]:
+    """Bind FR-0008 capture digests as retired history only."""
+
+    return {
+        "retired_recovery": "FR-0008",
+        "repair_commit": FRAMEWORK_RECOVERY_9_PARENT,
+        "repair_tree": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "plan": {
+            "path": FRAMEWORK_RECOVERY_8_PLAN_PATH,
+            "git_object_id": FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID,
+            "sha256": FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256,
+            "bytes": FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES,
+        },
+        "repair_hosted_attempts": [
+            {"run_id": 30_214_443_045, "attempt": 1, "workflow": "ci"},
+            {"run_id": 30_214_443_071, "attempt": 1, "workflow": "formal"},
+        ],
+        "capture_tool": {
+            "sha256": (
+                "d74d950de0d019446b4e43327a6530c1542a2b0ce161e5693a3f862f910ec8ed"
+            ),
+            "bytes": 12_587,
+        },
+        "review_packet": {
+            "sha256": (
+                "5875189a7b9a965fb937cb00715a98aa60f1658c5295c39df64d778cf6422c0c"
+            ),
+            "bytes": 780_595,
+        },
+        "responses": [
+            {
+                "review_id": "FR-0008-R01",
+                "model_requested": "claude-fable-5",
+                "model_resolved": "claude-fable-5",
+                "fallback_used": False,
+                "attempt": 1,
+                "stop_reason": "end_turn",
+                "raw_response_sha256": (
+                    "11a9293db5d58bec7279fed2c67987d96f44ddb2af0fc2affd514991f4b2026c"
+                ),
+                "raw_response_bytes": 76_192,
+                "request_payload_sha256": (
+                    "55e792819841a22e8c62b1fd82a752ede9002db8d057daec71b5be65c91ace37"
+                ),
+                "request_payload_bytes": 375_280,
+                "subject_manifest_sha256": (
+                    "21a363c714be863ed1c594b6236aba2d338996661b0b979f51c87d52240b1d43"
+                ),
+            },
+            {
+                "review_id": "FR-0008-R02",
+                "model_requested": "claude-opus-5",
+                "model_resolved": "claude-opus-5",
+                "fallback_used": False,
+                "attempt": 2,
+                "stop_reason": "end_turn",
+                "raw_response_sha256": (
+                    "0d9f717485fd055e5d52d0f70615eb1a650c1ff4be3063a0757b72367ddd2939"
+                ),
+                "raw_response_bytes": 219_092,
+                "request_payload_sha256": (
+                    "a6d5a099693cf500748b452efb254ed2ebab2af7144d3f46e3784ef3ee8297c7"
+                ),
+                "request_payload_bytes": 376_559,
+                "subject_manifest_sha256": (
+                    "e429584a7ba3f3c115820f76d6ea75570d675cbd0c51273c7eeed73303714431"
+                ),
+            },
+        ],
+        "qualification_result": "REJECTED_FAIL_CLOSED",
+        "qualification_failure": "CURRENT_AUDIT_HOSTED_LOG_BINDING",
+        "review_records_reused": False,
+        "evidence_records_reused": False,
+        "authorizes_fr_0009": False,
+        "historical_binding_only": True,
+        "raw_response_retention": "PRIVATE_UNTRACKED",
+        "assurance": "LOCAL_CAPTURE_SIGNER_ATTESTED_HASH_BINDING_ONLY",
+    }
+
+def _framework_recovery_9_rederive_parent_contract_defects(
+    repo: Path, expected: dict[str, Any]
+) -> dict[str, Any]:
+    """Rederive and compare every E01 semantic claim from pinned parent bytes."""
+
+    observed = _framework_recovery_9_parent_contract_defects(repo)
+    if not _strict_equal(observed, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_SEMANTIC_MISMATCH"
+        )
+    return observed
+
+def _framework_recovery_9_require_reviews_go(
+    reviews: list[dict[str, Any]],
+) -> None:
+    """Require two distinct exact-model GO decisions with no unresolved item."""
+
+    by_id = {
+        item.get("review_id"): item
+        for item in reviews
+        if isinstance(item, dict) and isinstance(item.get("review_id"), str)
+    }
+    if (
+        len(reviews) != 2
+        or set(by_id) != {"FR-0009-R01", "FR-0009-R02"}
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_SET"
+        )
+    if any(
+        item.get("verdict") != "GO_FOR_FRAMEWORK_QUALIFICATION"
+        or item.get("open_blocker_ids")
+        for item in reviews
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_VETO"
+        )
+    capture_hashes = {
+        item.get("capture_binding", {}).get("raw_response_sha256")
+        if isinstance(item.get("capture_binding"), dict)
+        else None
+        for item in reviews
+    }
+    if None in capture_hashes or len(capture_hashes) != 2:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_SET"
+        )
+
+def _framework_recovery_9_review_contracts() -> dict[str, dict[str, dict[str, Any]]]:
+    """Return ordered required findings without predeclaring their outcomes."""
+
+    return {
+        "FR-0009-R01": {
+            "F001": {
+                "affected_functions": [
+                    "_framework_recovery_3_verify_hosted_entry",
+                    "_verify_hosted_evidence_v2",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_hosted_compatibility_projection_is_exact",
+                    "test_framework_recovery_9_positive_composition_has_no_critical_mocks",
+                    "test_framework_recovery_9_real_builder_and_validator_compose",
+                ],
+                "resolving_evidence_ids": ["FR-0009-E01", "FR-0009-E04"],
+            },
+            "F002": {
+                "affected_functions": [
+                    "_framework_recovery_9_transition_identity",
+                    "_verify_framework_recovery_8_history",
+                    "_verify_framework_recovery_9_history",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_retires_fr_0008_without_qualification",
+                    "test_framework_recovery_9_framework_history_requires_fr_0008_retirement",
+                    "test_framework_recovery_9_transition_retires_epoch_9_and_creates_epoch_10",
+                ],
+                "resolving_evidence_ids": ["FR-0009-E04"],
+            },
+            "F003": {
+                "affected_functions": [
+                    "_framework_recovery_9_gate_and_p0_contract",
+                    "_framework_recovery_9_test_contract",
+                    "_verify_post_activation_gate_retention",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_gate_runs_fr_0008_in_parent_snapshot",
+                    "test_framework_recovery_9_gate_and_p0_topology_are_derived_from_pinned_sources",
+                    "test_framework_recovery_9_wrapper_accepts_epochs_2_through_10",
+                ],
+                "resolving_evidence_ids": ["FR-0009-E04"],
+            },
+            "F004": {
+                "affected_functions": [
+                    "_framework_recovery_9_validate_review",
+                    "_framework_recovery_9_require_reviews_go",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_review_validator_accepts_truthful_no_go",
+                    "test_framework_recovery_9_review_eligibility_rejects_no_go_open_or_blocking",
+                ],
+                "resolving_evidence_ids": ["FR-0009-R01", "FR-0009-R02"],
+            },
+            "F005": {
+                "affected_functions": [
+                    "_framework_recovery_9_expected_plan",
+                    "_framework_recovery_9_review_subject_manifest",
+                    "_framework_recovery_9_validate_review_capture",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_expected_plan_has_exact_contract",
+                    "test_framework_recovery_9_review_validator_accepts_truthful_go",
+                    "test_framework_recovery_9_review_validator_rejects_model_fallback_and_wrong_model",
+                ],
+                "resolving_evidence_ids": ["FR-0009-R01", "FR-0009-R02"],
+            },
+        },
+        "FR-0009-R02": {
+            "F101": {
+                "affected_functions": [
+                    "_framework_recovery_3_verify_hosted_entry",
+                    "_framework_recovery_9_verify_hosted_entry",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_protocol_binding_rejects_git_record_mutations",
+                    "test_framework_recovery_9_log_binding_rejects_payload_and_integrity_mutations",
+                    "test_framework_recovery_9_hosted_entry_rejects_path_subject_workflow_and_attempt_mutations",
+                ],
+                "resolving_evidence_ids": ["FR-0009-E02", "FR-0009-E03"],
+            },
+            "F102": {
+                "affected_functions": [
+                    "_framework_recovery_9_validate_source_compatibility",
+                    "_framework_recovery_9_source_retention_manifest",
+                    "_framework_recovery_9_unwrap_source_layer",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_source_retention_is_exact",
+                    "test_framework_recovery_9_source_compatibility_rejects_drift",
+                    "test_framework_recovery_9_test_source_ast_and_discovery_are_strict",
+                ],
+                "resolving_evidence_ids": ["FR-0009-E04"],
+            },
+            "F103": {
+                "affected_functions": [
+                    "_framework_recovery_9_validate_parent_reproduction",
+                    "_framework_recovery_9_rederive_parent_contract_defects",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_parent_hosted_log_binding_contradiction_is_reproduced",
+                    "test_framework_recovery_9_parent_reproduction_reexecutes_parent_defect",
+                    "test_framework_recovery_9_reproduction_raw_is_verbose_identity_bound_and_canonical_gzip",
+                ],
+                "resolving_evidence_ids": ["FR-0009-E01"],
+            },
+            "F104": {
+                "affected_functions": [
+                    "_framework_recovery_9_verify_successor_guard",
+                    "_verify_forward_protocol_history",
+                ],
+                "resolving_test_ids": [
+                    "test_framework_recovery_9_successor_requires_activation",
+                    "test_framework_recovery_9_forward_replay_has_retirement_and_activation_guards",
+                ],
+                "resolving_evidence_ids": ["FR-0009-E04"],
+            },
+        },
+    }
+
+def _framework_recovery_9_review_limitations() -> list[str]:
+    """Return the exact FR-0009 automated-review limitations."""
+
+    return [
+        "FR_0002_QUALIFICATION_REMAINS_INVALID",
+        "FR_0003_WAS_NEVER_QUALIFIED",
+        "FR_0004_WAS_NEVER_QUALIFIED",
+        "FR_0005_WAS_ABORTED_BEFORE_QUALIFICATION",
+        "FR_0006_WAS_ABORTED_BEFORE_QUALIFICATION",
+        "FR_0007_WAS_ABORTED_BEFORE_QUALIFICATION",
+        "FR_0008_WAS_ABORTED_BEFORE_QUALIFICATION",
+        "EPOCH_7_IS_PERMANENTLY_NONREUSABLE",
+        "EPOCH_8_IS_PERMANENTLY_NONREUSABLE",
+        "EPOCH_9_IS_PERMANENTLY_NONREUSABLE",
+        "HISTORICAL_FR_0008_REPAIR_REMAINS_IMMUTABLE",
+        "ACTIVE_FRAMEWORK_EPOCH_REMAINS_2_UNTIL_FR_0009_ACTIVATION",
+        "RETAINED_RUN_OUTPUT_IS_NOT_REMOTE_PLATFORM_ATTESTATION",
+        "INTERNAL_AUTOMATED_REVIEW_IS_NOT_HUMAN_OR_EXTERNAL_REVIEW",
+        "REVIEW_MODEL_PROVENANCE_IS_NOT_INDEPENDENTLY_ATTESTED",
+        "PRIVATE_PROVIDER_RESPONSE_IS_RETAINED_BY_DIGEST_ONLY",
+        "LOCAL_PLATFORM_AND_TOOL_VERSIONS_ARE_SELF_REPORTED",
+        "LOCAL_EXECUTION_CHECKOUT_AND_TRANSCRIPT_PROVENANCE_ARE_SIGNER_ATTESTED_ONLY",
+        "LOCAL_RECORD_INTEGRITY_SIGNATURE_IS_NOT_REVIEW_APPROVAL",
+        "NO_TAG_RELEASE_DOI_ZENODO_DEPLOYMENT_OR_PUBLICATION_IS_AUTHORIZED",
+    ]
+
+def _framework_recovery_9_review_subject(
+    repo: Path,
+    *,
+    review_id: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind a review to the exact repair tree, plan, and reviewed contracts."""
+
+    if review_id not in _framework_recovery_9_review_contracts():
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_ID")
+    metadata = _commit_metadata(repo, repair_commit)
+    repair_tree = metadata.get("tree")
+    if not isinstance(repair_tree, str) or HEX40.fullmatch(repair_tree) is None:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_SUBJECT"
+        )
+    return {
+        "parent_commit": FRAMEWORK_RECOVERY_9_PARENT,
+        "parent_tree": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "repair_commit": repair_commit,
+        "repair_tree": repair_tree,
+        "plan_record": _commit_regular_file_record(
+            repo, repair_commit, FRAMEWORK_RECOVERY_9_PLAN_PATH
+        ),
+        "code_diff": copy.deepcopy(plan["code_diff"]),
+        "source_retention": copy.deepcopy(plan["source_retention"]),
+        "transition_identity": copy.deepcopy(plan["transition_identity"]),
+        "defect": copy.deepcopy(plan["defect"]),
+        "correction": copy.deepcopy(plan["correction"]),
+    }
+
+def _framework_recovery_9_review_subject_manifest(
+    repo: Path,
+    *,
+    review_id: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+    model: str,
+) -> dict[str, Any]:
+    """Return the canonical public manifest bound to one private model request."""
+
+    return {
+        "schema_version": "1.0.0",
+        "review_id": review_id,
+        "model": model,
+        "subject": _framework_recovery_9_review_subject(
+            repo,
+            review_id=review_id,
+            repair_commit=repair_commit,
+            plan=plan,
+        ),
+        "required_finding_contract": copy.deepcopy(
+            _framework_recovery_9_review_contracts()[review_id]
+        ),
+    }
+
+def _framework_recovery_9_run_attempt_identity(
+    repo: Path,
+    containing_commit: str,
+    entry: dict[str, Any],
+    *,
+    label: str,
+) -> tuple[int, int]:
+    """Return one retained FR-0009 run-attempt identity."""
+
+    return _framework_recovery_2_run_attempt_identity(
+        repo, containing_commit, entry, label=f"fr_0009_{label}"
+    )
+
+def _framework_recovery_9_source_retention_manifest(
+    repo: Path, repair_commit: str
+) -> dict[str, Any]:
+    """Prove that FR-0009 changes only its declared verifier surface."""
+
+    path = "tools/release/verify-current-audit.py"
+    parent_payload = _git_file(repo, FRAMEWORK_RECOVERY_9_PARENT, path)
+    target_payload = _git_file(repo, repair_commit, path)
+    if (
+        len(parent_payload) != FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES
+        or _sha256(parent_payload) != FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES"
+        )
+    _framework_recovery_9_validate_source_compatibility(parent_payload, target_payload)
+    parent = _framework_recovery_2_source_index(
+        parent_payload, label=f"{FRAMEWORK_RECOVERY_9_PARENT}:{path}"
+    )
+    target = _framework_recovery_2_source_index(
+        target_payload, label=f"{repair_commit}:{path}"
+    )
+    unchanged_definitions = {
+        name: parent["definitions"][name]
+        for name in set(parent["definitions"]) & set(target["definitions"])
+        if name not in FRAMEWORK_RECOVERY_9_MODIFIED_DEFINITIONS
+    }
+    unchanged_assignments = {
+        name: parent["assignments"][name]
+        for name in set(parent["assignments"]) & set(target["assignments"])
+        if name not in FRAMEWORK_RECOVERY_9_MODIFIED_ASSIGNMENTS
+    }
+    return {
+        "parent_file": {
+            "path": path,
+            "sha256": _sha256(parent_payload),
+            "bytes": len(parent_payload),
+            "lines": len(parent_payload.splitlines()),
+        },
+        "repair_file": _commit_regular_file_record(repo, repair_commit, path),
+        "new_definitions": sorted(FRAMEWORK_RECOVERY_9_NEW_DEFINITIONS),
+        "modified_definitions": sorted(FRAMEWORK_RECOVERY_9_MODIFIED_DEFINITIONS),
+        "new_assignments": sorted(FRAMEWORK_RECOVERY_9_NEW_ASSIGNMENTS),
+        "modified_assignments": sorted(FRAMEWORK_RECOVERY_9_MODIFIED_ASSIGNMENTS),
+        "unchanged_definition_count": len(unchanged_definitions),
+        "unchanged_definition_index_sha256": _sha256(
+            _canonical_json_bytes(dict(sorted(unchanged_definitions.items())))
+        ),
+        "unchanged_assignment_count": len(unchanged_assignments),
+        "unchanged_assignment_index_sha256": _sha256(
+            _canonical_json_bytes(dict(sorted(unchanged_assignments.items())))
+        ),
+        "imports_preserved": True,
+        "other_top_level_nodes_preserved": True,
+    }
+
+def _framework_recovery_9_test_contract(
+    repo: Path, repair_commit: str
+) -> dict[str, Any]:
+    """Derive all suite, policy, and P0 topology from authenticated bytes."""
+
+    parent_entries = (
+        (
+            "tools/release/verify-current-audit.py",
+            "100644",
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES,
+        ),
+        (
+            FRAMEWORK_RECOVERY_8_TEST_PATH,
+            "100644",
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_BYTES,
+        ),
+        (
+            "tools/release/current-audit-gate.sh",
+            "100755",
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_BYTES,
+        ),
+        (
+            "tools/p0r-exit-gate.sh",
+            "100755",
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES,
+        ),
+        (
+            FRAMEWORK_RECOVERY_8_PLAN_PATH,
+            "100644",
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256,
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES,
+        ),
+    )
+    for path, mode, oid, digest, size in parent_entries:
+        payload = _git_file(repo, FRAMEWORK_RECOVERY_9_PARENT, path)
+        if (
+            _git_tree_entry(repo, FRAMEWORK_RECOVERY_9_PARENT, path)
+            != {"mode": mode, "type": "blob", "oid": oid}
+            or len(payload) != size
+            or _sha256(payload) != digest
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_COMPATIBILITY_PIN"
+            )
+
+    prior_paths = (
+        "tools/release/test_verify_current_audit.py",
+        FRAMEWORK_RECOVERY_2_TEST_PATH,
+        FRAMEWORK_RECOVERY_3_TEST_PATH,
+        FRAMEWORK_RECOVERY_3_RESOURCE_TEST_PATH,
+        FRAMEWORK_RECOVERY_4_TEST_PATH,
+        FRAMEWORK_RECOVERY_5_TEST_PATH,
+        FRAMEWORK_RECOVERY_6_TEST_PATH,
+        FRAMEWORK_RECOVERY_7_TEST_PATH,
+        FRAMEWORK_RECOVERY_8_TEST_PATH,
+    )
+    for path in (*prior_paths, "tools/p0r-exit-gate.sh"):
+        if _git_tree_entry(repo, repair_commit, path) != _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_9_PARENT, path
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PRIOR_TEST_DRIFT"
+            )
+
+    payload = _git_file(repo, repair_commit, FRAMEWORK_RECOVERY_9_TEST_PATH)
+    if (
+        _git_tree_entry(repo, repair_commit, FRAMEWORK_RECOVERY_9_TEST_PATH)
+        != {
+            "mode": "100644",
+            "type": "blob",
+            "oid": FRAMEWORK_RECOVERY_9_TEST_OID,
+        }
+        or len(payload) != FRAMEWORK_RECOVERY_9_TEST_BYTES
+        or _sha256(payload) != FRAMEWORK_RECOVERY_9_TEST_SHA256
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_BYTES")
+    tree = _framework_recovery_9_validate_test_source(
+        payload, FRAMEWORK_RECOVERY_9_TEST_PATH
+    )
+    if (
+        _sha256(ast.dump(tree, include_attributes=False).encode("utf-8"))
+        != FRAMEWORK_RECOVERY_9_TEST_AST_SHA256
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_AST")
+    ids = _discover_unittest_test_ids(
+        payload, FRAMEWORK_RECOVERY_9_TEST_PATH, strict_runtime=True
+    )
+    ids_sha256 = _sha256(("\n".join(sorted(ids)) + "\n").encode("utf-8"))
+    if (
+        len(ids) != FRAMEWORK_RECOVERY_9_REQUIRED_TEST_COUNT
+        or len(ids) != len(set(ids))
+        or set(ids) != FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS
+        or ids_sha256 != FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_DISCOVERY"
+        )
+
+    gate = _git_file(repo, repair_commit, "tools/release/current-audit-gate.sh")
+    _framework_recovery_9_verify_gate_payload(gate)
+    topology = _framework_recovery_9_gate_and_p0_contract(repo, repair_commit)
+
+    def suite_record(path: str) -> dict[str, Any]:
+        suite_payload = _git_file(repo, repair_commit, path)
+        suite_ids = _discover_unittest_test_ids(suite_payload, path)
+        return {
+            "count": len(suite_ids),
+            "ids_sha256": _sha256(
+                ("\n".join(sorted(suite_ids)) + "\n").encode("utf-8")
+            ),
+            "file": _commit_regular_file_record(repo, repair_commit, path),
+        }
+
+    records = [suite_record(path) for path in prior_paths]
+    fr_0009 = suite_record(FRAMEWORK_RECOVERY_9_TEST_PATH)
+    if (
+        fr_0009["count"] != FRAMEWORK_RECOVERY_9_REQUIRED_TEST_COUNT
+        or fr_0009["count"] in {record["count"] for record in records}
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_COUNT")
+
+    suite_records = {
+        key: {
+            **record,
+            "warning_policy": topology["warning_policy_by_suite"][key],
+        }
+        for key, record in zip(
+            FRAMEWORK_RECOVERY_9_PARENT_SUITE_KEYS, records, strict=True
+        )
+    }
+    contract = {
+        **suite_records,
+        "fr_0009": {
+            **fr_0009,
+            "ast_sha256": FRAMEWORK_RECOVERY_9_TEST_AST_SHA256,
+            "warning_policy": topology["warning_policy_by_suite"]["fr_0009"],
+        },
+        "required_regression_test_ids": sorted(
+            FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS
+        ),
+        "prior_test_bytes_preserved": True,
+        "p0_gate_bytes_preserved": True,
+        "p0_extra_unittest_counts": topology["p0"]["extra_unittest_counts"],
+        "p0_topology": {
+            "current_audit_precedes_extra_unittests": (
+                topology["p0"]["current_audit_precedes_extra_unittests"]
+            ),
+            "extra_unittest_paths": topology["p0"]["extra_unittest_paths"],
+            "p0_gate_record": topology["p0"]["gate_record"],
+        },
+        "warning_policy_by_suite": topology["warning_policy_by_suite"],
+        "gate_record": _commit_regular_file_record(
+            repo, repair_commit, "tools/release/current-audit-gate.sh"
+        ),
+    }
+    _framework_recovery_9_expected_local_marker_counts(contract)
+    return contract
+
+def _framework_recovery_9_transition_identity() -> dict[str, Any]:
+    """Describe append-only FR-0008 retirement and the epoch-10 candidate."""
+
+    return {
+        "transition_kind": "NEW_SIGNED_TRUST_ROOT_REBASELINE",
+        "prior_framework_accepts_transition": False,
+        "ordinary_successor_transition": False,
+        "fr_0008_mechanism_reused": False,
+        "epoch_9_reused": False,
+        "epoch_9_state": "ABORTED_BEFORE_QUALIFICATION",
+        "epoch_10_candidate_created": True,
+        "active_epoch_before_activation": 2,
+    }
+
+def _framework_recovery_9_unwrap_source_layer(
+    repo: Path, target_payload: bytes
+) -> bytes:
+    """Authenticate and remove one FR-0009 layer for older projections."""
+
+    if (
+        b"\nFRAMEWORK_RECOVERY_9_" not in target_payload
+        and b"\ndef _framework_recovery_9_" not in target_payload
+        and b"\ndef _verify_framework_recovery_9_" not in target_payload
+    ):
+        return target_payload
+    if (
+        b'\nFRAMEWORK_RECOVERY_9_PARENT = "' not in target_payload
+        and b"\nFRAMEWORK_RECOVERY_9_PARENT = '" not in target_payload
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+        )
+    entry = _git_tree_entry(
+        repo, FRAMEWORK_RECOVERY_9_PARENT, "tools/release/verify-current-audit.py"
+    )
+    if entry != {
+        "mode": "100644",
+        "type": "blob",
+        "oid": FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID,
+    }:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+        )
+    frozen = _git(repo, "cat-file", "blob", entry["oid"])
+    if (
+        len(frozen) != FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES
+        or _sha256(frozen) != FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+        )
+    _framework_recovery_9_validate_source_compatibility(frozen, target_payload)
+    return frozen
+
+def _framework_recovery_9_validate_local_document(
+    repo: Path,
+    qualification_commit: str,
+    repair_commit: str,
+    value: dict[str, Any],
+    *,
+    evidence_record: dict[str, Any],
+    test_contract: dict[str, Any],
+) -> None:
+    """Validate the exact FR-0009 local command and log record."""
+
+    fields = {
+        "schema_version",
+        "evidence_id",
+        "kind",
+        "subject_commit",
+        "subject_tree",
+        "platform",
+        "tool_versions",
+        "commands",
+        "raw_log",
+        "started_at_utc",
+        "completed_at_utc",
+        "overall_result",
+    }
+    if (
+        not isinstance(value, dict)
+        or set(value) != fields
+        or value.get("schema_version") != "1.0.0"
+        or value.get("evidence_id") != "FR-0009-E04"
+        or value.get("kind") != "REPAIR_LOCAL_VALIDATION"
+        or value.get("subject_commit") != repair_commit
+        or value.get("subject_tree") != _commit_metadata(repo, repair_commit)["tree"]
+        or value.get("overall_result") != "PASS"
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_INVALID")
+    platform = value.get("platform")
+    versions = value.get("tool_versions")
+    if (
+        not isinstance(platform, dict)
+        or set(platform) != {"architecture", "operating_system"}
+        or any(
+            not isinstance(item, str) or not item.strip() for item in platform.values()
+        )
+        or not isinstance(versions, dict)
+        or set(versions) != {"cargo", "docker", "git", "python", "rustc"}
+        or any(
+            not isinstance(item, str) or not item.strip() for item in versions.values()
+        )
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_PLATFORM")
+    commands = value.get("commands")
+    expected_argv = _framework_recovery_9_local_commands()
+    command_ids = ("CURRENT_AUDIT_GATE", "P0R_EXIT_GATE", "RESOURCE_PROFILE")
+    if not isinstance(commands, list) or len(commands) != len(expected_argv):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_COMMANDS")
+    prior_completed: datetime | None = None
+    for index, (record, argv) in enumerate(zip(commands, expected_argv, strict=True)):
+        if (
+            not isinstance(record, dict)
+            or set(record)
+            != {
+                "argv",
+                "completed_at_utc",
+                "exit_status",
+                "id",
+                "result",
+                "started_at_utc",
+            }
+            or record.get("argv") != list(argv)
+            or type(record.get("exit_status")) is not int
+            or record.get("exit_status") != 0
+            or record.get("result") != "PASS"
+            or record.get("id") != command_ids[index]
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_COMMANDS"
+            )
+        started = _parse_utc(
+            record.get("started_at_utc"), f"framework_recovery_9.local.{index}.started"
+        )
+        completed = _parse_utc(
+            record.get("completed_at_utc"),
+            f"framework_recovery_9.local.{index}.completed",
+        )
+        if started > completed or (
+            prior_completed is not None and started != prior_completed
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_COMMAND_TIMES"
+            )
+        prior_completed = completed
+    started = _parse_utc(value.get("started_at_utc"), "framework_recovery_9.local.started")
+    completed = _parse_utc(
+        value.get("completed_at_utc"), "framework_recovery_9.local.completed"
+    )
+    if (
+        _commit_datetime(repo, repair_commit) > started
+        or completed > _commit_datetime(repo, qualification_commit)
+        or started
+        != _parse_utc(
+            commands[0]["started_at_utc"], "framework_recovery_9.local.first"
+        )
+        or completed != prior_completed
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_CHRONOLOGY"
+        )
+    log_path = FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS[3]["paths"][1]
+    compressed = _git_file(repo, qualification_commit, log_path)
+    log = _decompress_unbound_gzip(compressed, "framework_recovery_9.local.log")
+    _framework_recovery_9_verify_local_markers(log, test_contract=test_contract)
+    raw_log = value.get("raw_log")
+    if (
+        not isinstance(raw_log, dict)
+        or set(raw_log) != {"file", "uncompressed"}
+        or not _strict_equal(raw_log["file"], evidence_record["files"][1])
+        or not _strict_equal(raw_log["uncompressed"], evidence_record["uncompressed"][1])
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_LOG_BINDING"
+        )
+    resource_section = (
+        b"=== RESOURCE_PROFILE ===\n"
+        b"$ python3 -I tools/release/current-audit-resource-profile.py\n"
+    )
+    resource_body = log[log.index(resource_section) + len(resource_section) :]
+    resource_document = _load_json_bytes(
+        resource_body, "framework_recovery_9.local.resource_profile"
+    )
+    if (
+        not isinstance(resource_document, dict)
+        or resource_body != _canonical_json_bytes(resource_document, pretty=True)
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_LOG")
+    _framework_recovery_3_validate_local_resource_profile(
+        repo,
+        repair_commit,
+        resource_document,
+        generated_not_before=_parse_utc(
+            commands[2]["started_at_utc"],
+            "framework_recovery_9.local.resource.started",
+        ),
+        generated_not_after=_parse_utc(
+            commands[2]["completed_at_utc"],
+            "framework_recovery_9.local.resource.completed",
+        ),
+    )
+
+def _framework_recovery_9_validate_parent_reproduction(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    value: dict[str, Any],
+    *,
+    evidence_record: dict[str, Any],
+) -> None:
+    """Validate identity-bound raw output and independently rederive semantics."""
+
+    execution = value.get("execution") if isinstance(value, dict) else None
+    raw_log = value.get("raw_log") if isinstance(value, dict) else None
+    receipt_record = (
+        value.get("semantic_receipt") if isinstance(value, dict) else None
+    )
+    if (
+        not isinstance(execution, dict)
+        or set(execution)
+        != {
+            "argv",
+            "started_at_utc",
+            "completed_at_utc",
+            "exit_status",
+            "result",
+        }
+        or execution.get("argv")
+        != [
+            "python3",
+            "-B",
+            "-I",
+            "-W",
+            "error",
+            FRAMEWORK_RECOVERY_9_TEST_PATH,
+            "-v",
+            (
+                "FrameworkRecovery9Tests."
+                "test_framework_recovery_9_parent_hosted_log_binding_contradiction_is_reproduced"
+            ),
+        ]
+        or type(execution.get("exit_status")) is not int
+        or execution.get("exit_status") != 0
+        or execution.get("result") != "PASS"
+        or not isinstance(raw_log, dict)
+        or set(raw_log) != {"file", "uncompressed"}
+        or not isinstance(receipt_record, dict)
+        or set(receipt_record) != {"file"}
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_EXECUTION"
+        )
+    files = evidence_record.get("files")
+    uncompressed = evidence_record.get("uncompressed")
+    if (
+        not isinstance(files, list)
+        or len(files) != 3
+        or not isinstance(uncompressed, list)
+        or len(uncompressed) != 3
+        or not _strict_equal(raw_log["file"], files[1])
+        or not _strict_equal(raw_log["uncompressed"], uncompressed[1])
+        or not _strict_equal(receipt_record["file"], files[2])
+        or evidence_record.get("subject_commit") != FRAMEWORK_RECOVERY_9_PARENT
+        or evidence_record.get("result") != "EXPECTED_DEFECT"
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_CATALOG_BINDING"
+        )
+    compressed = _git_file(repo, qualification_commit, files[1]["path"])
+    raw = _framework_recovery_9_decode_reproduction_raw(compressed)
+    normalized = _framework_recovery_9_normalize_reproduction_raw(raw)
+    if (
+        raw_log["file"].get("sha256") != _sha256(compressed)
+        or raw_log["file"].get("bytes") != len(compressed)
+        or raw_log["uncompressed"].get("sha256") != _sha256(raw)
+        or raw_log["uncompressed"].get("bytes") != len(raw)
+        or raw_log["uncompressed"].get("lines") != len(raw.splitlines())
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_CATALOG_BINDING"
+        )
+    defect = value.get("defect") if isinstance(value, dict) else None
+    if not isinstance(defect, dict):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_SEMANTICS"
+        )
+    rederived = _framework_recovery_9_rederive_parent_contract_defects(
+        repo, defect
+    )
+    receipt_payload = _git_file(repo, qualification_commit, files[2]["path"])
+    receipt = _load_json_bytes(
+        receipt_payload, "framework_recovery_9.reproduction.receipt"
+    )
+    expected_receipt = {
+        "schema_version": "1.0.0",
+        "contract_id": "HALDIR_FR_0009_HOSTED_LOG_PROTOCOL_BINDING_V1",
+        "subject_commit": FRAMEWORK_RECOVERY_9_PARENT,
+        "subject_tree": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "command": execution["argv"],
+        "exit_status": 0,
+        "raw_log_sha256": _sha256(raw),
+        "raw_log_bytes": len(raw),
+        "raw_log_lines": len(raw.splitlines()),
+        "normalized_log_sha256": _sha256(normalized),
+        "normalized_log_bytes": len(normalized),
+        "normalized_log_lines": len(normalized.splitlines()),
+        "normalization": "ELAPSED_SECONDS_ONLY",
+        "parent_defect_sha256": _sha256(
+            _canonical_json_bytes(rederived)
+        ),
+        "prior_capture_binding_sha256": _sha256(
+            _canonical_json_bytes(
+                _framework_recovery_9_prior_review_capture_binding()
+            )
+        ),
+        "semantic_derivation": "QUALIFICATION_REEXECUTION_FROM_PINNED_PARENT_BYTES",
+        "result": "DEFECT_REPRODUCED",
+    }
+    if (
+        receipt_payload != _canonical_json_bytes(receipt, pretty=True)
+        or not _strict_equal(receipt, expected_receipt)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_RECEIPT"
+        )
+    _framework_recovery_9_validate_parent_reproduction_chronology(
+        repo, repair_commit, qualification_commit, execution
+    )
+    expected = _framework_recovery_9_expected_parent_reproduction(
+        repo,
+        repair_commit,
+        execution=execution,
+        raw_log=raw_log,
+        semantic_receipt=receipt_record,
+        defect=rederived,
+    )
+    if not _strict_equal(value, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_INVALID"
+        )
+
+def _framework_recovery_9_validate_parent_reproduction_chronology(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    execution: dict[str, Any],
+) -> None:
+    """Require the FR-0009 reproduction to start after its test exists."""
+
+    started = _parse_utc(
+        execution.get("started_at_utc"),
+        "framework_recovery_9.reproduction.started",
+    )
+    completed = _parse_utc(
+        execution.get("completed_at_utc"),
+        "framework_recovery_9.reproduction.completed",
+    )
+    if not (
+        _commit_datetime(repo, repair_commit)
+        <= started
+        <= completed
+        <= _commit_datetime(repo, qualification_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REPRODUCTION_CHRONOLOGY"
+        )
+
+def _framework_recovery_9_validate_review(
+    repo: Path,
+    value: dict[str, Any],
+    *,
+    review_id: str,
+    kind: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate one truthful review record without converting it into a GO."""
+
+    expected_fields = {
+        "schema_version",
+        "review_id",
+        "kind",
+        "subject",
+        "reviewer",
+        "capture",
+        "verdict",
+        "required_findings",
+        "additional_findings",
+        "limitations",
+        "integrity_scope",
+        "detached_signature",
+    }
+    contract = _framework_recovery_9_review_contracts().get(review_id)
+    required = (
+        value.get("required_findings") if isinstance(value, dict) else None
+    )
+    additional = (
+        value.get("additional_findings") if isinstance(value, dict) else None
+    )
+    if (
+        not isinstance(value, dict)
+        or set(value) != expected_fields
+        or contract is None
+        or not isinstance(required, list)
+        or len(required) != len(contract)
+        or not isinstance(additional, list)
+        or len(additional) > 32
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_FIELDS")
+    model = "claude-fable-5" if review_id == "FR-0009-R01" else "claude-opus-5"
+    reviewer = value.get("reviewer")
+    if (
+        reviewer
+        != {
+            "provider": "Anthropic",
+            "model_requested": model,
+            "model_resolved": model,
+            "fallback_used": False,
+            "classification": "INTERNAL_AUTOMATED",
+            "human_review_performed": False,
+            "named_human_review_performed": False,
+            "external_independence": False,
+            "release_authority": False,
+            "capture_key_role": "LOCAL_RECORD_INTEGRITY_ONLY",
+        }
+        or value.get("verdict")
+        not in {"GO_FOR_FRAMEWORK_QUALIFICATION", "NO_GO"}
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEWER"
+        )
+    capture = _framework_recovery_9_validate_review_capture(
+        repo,
+        value.get("capture"),
+        review_id=review_id,
+        repair_commit=repair_commit,
+        plan=plan,
+        model=model,
+    )
+    allowed_evidence_ids = {
+        requirement["id"] for requirement in FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS
+    }
+    required_test_ids = set(plan["test_contract"]["required_regression_test_ids"])
+    observed_required_ids: list[str] = []
+    normalized_required: list[dict[str, Any]] = []
+    for index, raw_finding in enumerate(required):
+        finding = _require_fields(
+            raw_finding,
+            {
+                "id",
+                "severity",
+                "status",
+                "summary",
+                "affected_functions",
+                "resolving_test_ids",
+                "resolving_evidence_ids",
+                "disposition",
+            },
+            f"framework_recovery_9.review.{review_id}.required.{index}",
+        )
+        finding_id = finding.get("id")
+        mapping = contract.get(finding_id) if isinstance(finding_id, str) else None
+        resolving_tests = finding.get("resolving_test_ids")
+        resolving_evidence = finding.get("resolving_evidence_ids")
+        status = finding.get("status")
+        if (
+            not isinstance(finding_id, str)
+            or re.fullmatch(r"F\d{3}", finding_id) is None
+            or finding_id in observed_required_ids
+            or mapping is None
+            or finding.get("severity") != "BLOCKING"
+            or status not in {"OPEN", "RESOLVED"}
+            or any(
+                not isinstance(finding.get(field), str)
+                or not finding[field].strip()
+                or len(finding[field].encode("utf-8")) > 4096
+                for field in ("summary", "disposition")
+            )
+            or finding.get("affected_functions") != mapping["affected_functions"]
+            or not isinstance(resolving_tests, list)
+            or not isinstance(resolving_evidence, list)
+            or (
+                status == "OPEN"
+                and (resolving_tests != [] or resolving_evidence != [])
+            )
+            or (
+                status == "RESOLVED"
+                and (
+                    resolving_tests != mapping["resolving_test_ids"]
+                    or resolving_evidence != mapping["resolving_evidence_ids"]
+                )
+            )
+            or not set(resolving_tests).issubset(required_test_ids)
+            or not set(resolving_evidence).issubset(allowed_evidence_ids)
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_REQUIRED_FINDINGS"
+            )
+        observed_required_ids.append(finding_id)
+        normalized_required.append(copy.deepcopy(finding))
+    additional_ids: set[str] = set()
+    normalized_additional: list[dict[str, Any]] = []
+    for index, raw_finding in enumerate(additional):
+        finding = _require_fields(
+            raw_finding,
+            {
+                "id",
+                "severity",
+                "status",
+                "summary",
+                "affected_functions",
+                "affected_paths",
+                "resolving_test_ids",
+                "resolving_evidence_ids",
+                "disposition",
+            },
+            f"framework_recovery_9.review.{review_id}.additional.{index}",
+        )
+        finding_id = finding.get("id")
+        affected = finding.get("affected_functions")
+        affected_paths = finding.get("affected_paths")
+        resolving_tests = finding.get("resolving_test_ids")
+        resolving_evidence = finding.get("resolving_evidence_ids")
+        status = finding.get("status")
+        if isinstance(affected_paths, list):
+            try:
+                canonical_paths = [
+                    _require_canonical_repo_path(
+                        item,
+                        f"framework_recovery_9.review.{review_id}."
+                        f"additional.{index}.affected_path",
+                    )
+                    for item in affected_paths
+                ]
+            except CurrentAuditError as error:
+                raise CurrentAuditError(
+                    "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_"
+                    "REVIEW_ADDITIONAL_FINDINGS"
+                ) from error
+        else:
+            canonical_paths = []
+        if (
+            not isinstance(finding_id, str)
+            or re.fullmatch(r"B\d{3}", finding_id) is None
+            or finding_id == "B000"
+            or finding_id in additional_ids
+            or finding.get("severity") != "BLOCKING"
+            or status not in {"OPEN", "RESOLVED"}
+            or any(
+                not isinstance(finding.get(field), str)
+                or not finding[field].strip()
+                or len(finding[field].encode("utf-8")) > 4096
+                for field in ("summary", "disposition")
+            )
+            or not isinstance(affected, list)
+            or len(affected) > 32
+            or len(set(affected)) != len(affected)
+            or any(
+                not isinstance(item, str)
+                or re.fullmatch(r"_[A-Za-z0-9_]+", item) is None
+                for item in affected
+            )
+            or not isinstance(affected_paths, list)
+            or not 1 <= len(affected_paths) <= 32
+            or len(set(affected_paths)) != len(affected_paths)
+            or canonical_paths != affected_paths
+            or not isinstance(resolving_tests, list)
+            or len(set(resolving_tests)) != len(resolving_tests)
+            or not set(resolving_tests).issubset(required_test_ids)
+            or not isinstance(resolving_evidence, list)
+            or len(set(resolving_evidence)) != len(resolving_evidence)
+            or not set(resolving_evidence).issubset(allowed_evidence_ids)
+            or (
+                status == "OPEN"
+                and (resolving_tests != [] or resolving_evidence != [])
+            )
+            or (
+                status == "RESOLVED"
+                and not (resolving_tests or resolving_evidence)
+            )
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_ADDITIONAL_FINDINGS"
+            )
+        additional_ids.add(finding_id)
+        normalized_additional.append(copy.deepcopy(finding))
+    observed_additional_ids = [item["id"] for item in normalized_additional]
+    if (
+        observed_required_ids != list(contract)
+        or observed_additional_ids != sorted(observed_additional_ids)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_REQUIRED_FINDINGS"
+        )
+    expected_subject = _framework_recovery_9_review_subject(
+        repo,
+        review_id=review_id,
+        repair_commit=repair_commit,
+        plan=plan,
+    )
+    if (
+        value.get("schema_version") != "2.0.0"
+        or value.get("review_id") != review_id
+        or value.get("kind") != kind
+        or not _strict_equal(value.get("subject"), expected_subject)
+        or value.get("limitations") != _framework_recovery_9_review_limitations()
+        or value.get("integrity_scope") != "LOCAL_RECORD_INTEGRITY_ONLY"
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_SUBJECT"
+        )
+    expected_unsigned = _framework_recovery_9_expected_review(
+        repo,
+        review_id=review_id,
+        kind=kind,
+        repair_commit=repair_commit,
+        plan=plan,
+        capture=capture,
+        verdict=value["verdict"],
+        required_findings=normalized_required,
+        additional_findings=normalized_additional,
+    )
+    unsigned = {
+        key: copy.deepcopy(item)
+        for key, item in value.items()
+        if key != "detached_signature"
+    }
+    if not _strict_equal(unsigned, expected_unsigned):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_INVALID"
+        )
+    principal = (
+        "fr-0009-design@automated.invalid"
+        if review_id == "FR-0009-R01"
+        else "fr-0009-implementation@automated.invalid"
+    )
+    attestation = _verify_ssh_detached_attestation(
+        repo,
+        value["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0009-local-integrity-v1",
+        label=f"framework_recovery_9.review.{review_id}",
+        expected_principal=principal,
+    )
+    required_finding_ids = [item["id"] for item in normalized_required]
+    additional_blocker_ids = [item["id"] for item in normalized_additional]
+    open_blocker_ids = [
+        item["id"]
+        for item in (*normalized_required, *normalized_additional)
+        if item["status"] == "OPEN"
+    ]
+    if (
+        value["verdict"] == "NO_GO" and not open_blocker_ids
+    ) or (
+        value["verdict"] == "GO_FOR_FRAMEWORK_QUALIFICATION"
+        and open_blocker_ids
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_OUTCOME_COHERENCE"
+        )
+    return {
+        "review_id": review_id,
+        "verdict": value["verdict"],
+        "open_blocker_ids": open_blocker_ids,
+        "required_finding_ids": required_finding_ids,
+        "additional_blocker_ids": additional_blocker_ids,
+        "capture_binding": copy.deepcopy(capture),
+        "captured_at_utc": capture["captured_at_utc"],
+        "public_key": attestation["public_key"],
+        "key_fingerprint": attestation["key_fingerprint"],
+    }
+
+def _framework_recovery_9_validate_review_capture(
+    repo: Path,
+    capture: Any,
+    *,
+    review_id: str,
+    repair_commit: str,
+    plan: dict[str, Any],
+    model: str,
+) -> dict[str, Any]:
+    """Bind one private response digest to the exact reviewed request bytes."""
+
+    fields = {
+        "protocol",
+        "subject_manifest_sha256",
+        "capture_tool_sha256",
+        "capture_tool_bytes",
+        "request_contract_sha256",
+        "request_payload_sha256",
+        "request_payload_bytes",
+        "raw_response_sha256",
+        "raw_response_bytes",
+        "attempt",
+        "stop_reason",
+        "captured_at_utc",
+        "raw_response_retention",
+        "raw_response_committed",
+    }
+    review_contract = plan.get("review_contract")
+    capture_tool = (
+        review_contract.get("capture_tool")
+        if isinstance(review_contract, dict)
+        else None
+    )
+    request_contract = (
+        review_contract.get("request_contract")
+        if isinstance(review_contract, dict)
+        else None
+    )
+    expected_request_contract = {
+    'max_tokens': 128000,
+    'output_config': {
+    'effort': 'max',
+},
+    'p0_begin': '-----BEGIN PINNED HALDIR P0 EXIT GATE-----',
+    'p0_end': '-----END PINNED HALDIR P0 EXIT GATE-----',
+    'patch_begin': '-----BEGIN EXACT HALDIR FR-0009 CORE PATCH-----',
+    'patch_end': '-----END EXACT HALDIR FR-0009 CORE PATCH-----',
+    'plan_begin': '-----BEGIN SIGNED HALDIR FR-0009 PLAN-----',
+    'plan_end': '-----END SIGNED HALDIR FR-0009 PLAN-----',
+    'protocol': 'HALDIR_FR_0009_REVIEW_REQUEST_BODY_V1',
+    'provider_endpoint': 'https://api.anthropic.com/v1/messages',
+    'provider_version': '2023-06-01',
+    'raw_response_max_bytes': 1048576,
+    'request_max_bytes': 1048576,
+    'review_material_order': [
+    'SIGNED_PLAN',
+    'CORE_PATCH',
+    'P0_GATE',
+],
+    'subject_begin': '-----BEGIN HALDIR FR-0009 SUBJECT MANIFEST-----',
+    'subject_encoding': 'ASCII_CANONICAL_JSON_INLINE_V1',
+    'subject_end': '-----END HALDIR FR-0009 SUBJECT MANIFEST-----',
+    'system': 'You are an internal automated reviewer of one exact Haldir FR-0009 repair subject. Give substantive architecture and implementation critique. Do not claim human review, external independence, release authority, or facts outside the supplied canonical manifest and exact review material. Return only one JSON object that follows the requested response contract.',
+    'thinking': {
+    'type': 'adaptive',
+},
+    'user_instruction': 'Review the canonical subject manifest and exact review material below. Return one JSON object with exactly review_id, verdict, required_findings, and additional_findings. Copy review_id from the manifest. Verdict must be GO_FOR_FRAMEWORK_QUALIFICATION or NO_GO. List every required finding in manifest order with exactly id, severity, status, summary, affected_functions, resolving_test_ids, resolving_evidence_ids, and disposition. Use severity BLOCKING. Always copy the contract affected_functions list exactly. Use status RESOLVED only when the supplied subject resolves the finding and then copy both contract resolving lists exactly. Otherwise use OPEN with both resolving lists empty and verdict NO_GO. GO_FOR_FRAMEWORK_QUALIFICATION is valid only when no finding is OPEN; use NO_GO only when at least one finding is OPEN. Every summary and disposition must be nonempty and at most 4096 UTF-8 bytes. Return at most 32 additional findings in ascending fixed-width B001-and-later ID order. Each additional finding must contain exactly id, severity, status, summary, affected_functions, affected_paths, resolving_test_ids, resolving_evidence_ids, and disposition. Use severity BLOCKING. Use a duplicate-free list of at most 32 underscore-prefixed function identifiers for affected_functions and 1 to 32 duplicate-free canonical repository-relative paths for affected_paths. Use duplicate-free resolving lists with only allowed test and evidence or review IDs from the supplied plan. For an OPEN additional finding, use both resolving lists empty. For a RESOLVED additional finding, cite at least one allowed resolver. Use an empty list when there are no additional findings. Do not wrap the JSON in Markdown.',
+}
+    manifest = _framework_recovery_9_review_subject_manifest(
+        repo,
+        review_id=review_id,
+        repair_commit=repair_commit,
+        plan=plan,
+        model=model,
+    )
+    manifest_payload = _canonical_json_bytes(manifest)
+    try:
+        manifest_text = manifest_payload.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_REQUEST"
+        ) from error
+    if not _strict_equal(request_contract, expected_request_contract):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_REQUEST_CONTRACT"
+        )
+    plan_payload = _git_file(
+        repo, repair_commit, FRAMEWORK_RECOVERY_9_PLAN_PATH
+    )
+    common = (
+        "-c",
+        "diff.algorithm=myers",
+        "-c",
+        "core.attributesFile=/dev/null",
+        "-c",
+        "diff.relative=false",
+        "-c",
+        "diff.suppressBlankEmpty=false",
+        "-c",
+        "diff.compactionHeuristic=false",
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--text",
+        "--no-renames",
+        "--no-color",
+        "-O/dev/null",
+        "--no-indent-heuristic",
+        "--unified=3",
+        "--inter-hunk-context=0",
+    )
+    selected = ("--", *FRAMEWORK_RECOVERY_9_CORE_PATHS)
+    core_patch_payload = _git(
+        repo,
+        *common,
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "--binary",
+        "--full-index",
+        f"{FRAMEWORK_RECOVERY_9_PARENT}..{repair_commit}",
+        *selected,
+    )
+    p0_payload = _git_file(repo, repair_commit, "tools/p0r-exit-gate.sh")
+    code_diff = plan.get("code_diff")
+    test_contract = plan.get("test_contract")
+    p0_topology = (
+        test_contract.get("p0_topology")
+        if isinstance(test_contract, dict)
+        else None
+    )
+    signed_p0_record = (
+        p0_topology.get("p0_gate_record")
+        if isinstance(p0_topology, dict)
+        else None
+    )
+    p0_record = _commit_regular_file_record(
+        repo, repair_commit, "tools/p0r-exit-gate.sh"
+    )
+    if (
+        plan_payload != _canonical_json_bytes(plan, pretty=True)
+        or not isinstance(code_diff, dict)
+        or not _strict_equal(
+            code_diff,
+            _framework_recovery_9_code_diff(repo, repair_commit),
+        )
+        or not _strict_equal(p0_record, signed_p0_record)
+        or p0_record.get("git_mode") != "100755"
+        or p0_record.get("git_object_type") != "blob"
+        or p0_record.get("git_object_id")
+        != FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID
+        or len(p0_payload) != FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES
+        or _sha256(p0_payload) != FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_MATERIAL"
+        )
+    if not all(
+        1 <= len(payload) <= request_contract["request_max_bytes"]
+        for payload in (plan_payload, core_patch_payload, p0_payload)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_MATERIAL"
+        )
+    try:
+        plan_text = plan_payload.decode("utf-8")
+        core_patch_text = core_patch_payload.decode("utf-8")
+        p0_text = p0_payload.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_MATERIAL"
+        ) from error
+    if not all(
+        text.endswith("\n")
+        for text in (plan_text, core_patch_text, p0_text)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_MATERIAL"
+        )
+    markers = {
+        request_contract[key]
+        for key in (
+            "plan_begin",
+            "plan_end",
+            "patch_begin",
+            "patch_end",
+            "p0_begin",
+            "p0_end",
+        )
+    }
+    if any(
+        marker in text.splitlines()
+        for text in (plan_text, core_patch_text, p0_text)
+        for marker in markers
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_MATERIAL"
+        )
+    user_content = (
+        request_contract["user_instruction"]
+        + "\n\n"
+        + request_contract["subject_begin"]
+        + "\n"
+        + manifest_text
+        + request_contract["subject_end"]
+        + "\n"
+        + request_contract["plan_begin"]
+        + "\n"
+        + plan_text
+        + request_contract["plan_end"]
+        + "\n"
+        + request_contract["patch_begin"]
+        + "\n"
+        + core_patch_text
+        + request_contract["patch_end"]
+        + "\n"
+        + request_contract["p0_begin"]
+        + "\n"
+        + p0_text
+        + request_contract["p0_end"]
+        + "\n"
+    )
+    request_payload = _canonical_json_bytes(
+        {
+            "model": model,
+            "max_tokens": request_contract["max_tokens"],
+            "thinking": copy.deepcopy(request_contract["thinking"]),
+            "output_config": copy.deepcopy(request_contract["output_config"]),
+            "system": request_contract["system"],
+            "messages": [{"role": "user", "content": user_content}],
+        }
+    )
+    if (
+        not isinstance(capture, dict)
+        or set(capture) != fields
+        or capture.get("protocol") != 'HALDIR_FR_0009_AUTOMATED_REVIEW_CAPTURE_V1'
+        or not isinstance(capture_tool, dict)
+        or set(capture_tool)
+        != {"name", "sha256", "bytes", "capture_protocol"}
+        or capture_tool.get("name") != 'review_fr_0009_models.py'
+        or capture_tool.get("sha256") != '5f6bee21255da227ad04e369f0e4b3f25e143867cf245d53678ddd60e0c61b71'
+        or capture_tool.get("bytes") != 66229
+        or capture_tool.get("capture_protocol") != 'HALDIR_FR_0009_AUTOMATED_REVIEW_CAPTURE_V1'
+        or capture.get("capture_tool_sha256") != capture_tool["sha256"]
+        or capture.get("capture_tool_bytes") != capture_tool["bytes"]
+        or capture.get("subject_manifest_sha256") != _sha256(manifest_payload)
+        or capture.get("request_contract_sha256")
+        != _sha256(_canonical_json_bytes(request_contract))
+        or capture.get("request_payload_sha256") != _sha256(request_payload)
+        or capture.get("request_payload_bytes") != len(request_payload)
+        or not 1
+        <= len(request_payload)
+        <= request_contract["request_max_bytes"]
+        or HEX64.fullmatch(str(capture.get("raw_response_sha256"))) is None
+        or capture.get("raw_response_sha256") == "0" * 64
+        or type(capture.get("raw_response_bytes")) is not int
+        or not 1
+        <= capture["raw_response_bytes"]
+        <= request_contract["raw_response_max_bytes"]
+        or type(capture.get("attempt")) is not int
+        or capture["attempt"] < 1
+        or capture.get("stop_reason") != "end_turn"
+        or capture.get("raw_response_retention") != "PRIVATE_UNTRACKED"
+        or capture.get("raw_response_committed") is not False
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_CAPTURE"
+        )
+    _parse_utc(
+        capture.get("captured_at_utc"),
+        f"framework_recovery_9.review.{review_id}.captured",
+    )
+    return copy.deepcopy(capture)
+
+def _framework_recovery_9_validate_source_compatibility(
+    parent_payload: bytes, target_payload: bytes
+) -> None:
+    """Accept only the declared FR-0009 verifier-source delta."""
+
+    parent = _framework_recovery_2_source_index(
+        parent_payload, label="framework_recovery_9.compatibility.parent"
+    )
+    target = _framework_recovery_2_source_index(
+        target_payload, label="framework_recovery_9.compatibility.target"
+    )
+    expected_parent_pins = {
+        "FRAMEWORK_RECOVERY_9_PARENT": FRAMEWORK_RECOVERY_9_PARENT,
+        "FRAMEWORK_RECOVERY_9_PARENT_TREE": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID": (
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256": (
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES": (
+            FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_BYTES
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_OID": (
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_OID
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_SHA256": (
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_SHA256
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_BYTES": (
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_BYTES
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_GATE_OID": (
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_OID
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_GATE_SHA256": (
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_SHA256
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_GATE_BYTES": (
+            FRAMEWORK_RECOVERY_9_PARENT_GATE_BYTES
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID": (
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256": (
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES": (
+            FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_BYTES
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID": (
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256": (
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256
+        ),
+        "FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES": (
+            FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_BYTES
+        ),
+    }
+    try:
+        target_tree = ast.parse(target_payload.decode("utf-8"))
+        observed_parent_pins = {
+            node.targets[0].id: ast.literal_eval(node.value)
+            for node in target_tree.body
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id in expected_parent_pins
+        }
+    except (UnicodeDecodeError, SyntaxError, TypeError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+        ) from error
+    if observed_parent_pins != expected_parent_pins:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+        )
+    parent_definitions = parent["definitions"]
+    target_definitions = target["definitions"]
+    parent_assignments = parent["assignments"]
+    target_assignments = target["assignments"]
+    if (
+        set(target_definitions) - set(parent_definitions)
+        != FRAMEWORK_RECOVERY_9_NEW_DEFINITIONS
+        or {
+            name
+            for name in set(parent_definitions) & set(target_definitions)
+            if parent_definitions[name] != target_definitions[name]
+        }
+        != FRAMEWORK_RECOVERY_9_MODIFIED_DEFINITIONS
+        or set(parent_definitions) - set(target_definitions)
+        or set(target_assignments) - set(parent_assignments)
+        != FRAMEWORK_RECOVERY_9_NEW_ASSIGNMENTS
+        or {
+            name
+            for name in set(parent_assignments) & set(target_assignments)
+            if parent_assignments[name] != target_assignments[name]
+        }
+        != FRAMEWORK_RECOVERY_9_MODIFIED_ASSIGNMENTS
+        or set(parent_assignments) - set(target_assignments)
+        or parent["imports"] != target["imports"]
+        or parent["other_nodes"] != target["other_nodes"]
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+        )
+
+    def protected_residual(payload: bytes, *, target_side: bool) -> bytes:
+        try:
+            tree = ast.parse(payload.decode("utf-8"))
+        except (UnicodeDecodeError, SyntaxError, ValueError) as error:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+            ) from error
+        starts = [0]
+        starts.extend(match.end() for match in re.finditer(rb"\n", payload))
+        definition_names = set(FRAMEWORK_RECOVERY_9_MODIFIED_DEFINITIONS)
+        assignment_names = set(FRAMEWORK_RECOVERY_9_MODIFIED_ASSIGNMENTS)
+        if target_side:
+            definition_names.update(FRAMEWORK_RECOVERY_9_NEW_DEFINITIONS)
+            assignment_names.update(FRAMEWORK_RECOVERY_9_NEW_ASSIGNMENTS)
+        intervals: list[tuple[int, int]] = []
+        for node in tree.body:
+            remove = (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                and node.name in definition_names
+            )
+            node_assignment_names: set[str] = set()
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                node_assignment_names = {
+                    item.id for item in targets if isinstance(item, ast.Name)
+                }
+                remove = remove or bool(node_assignment_names & assignment_names)
+            if not remove:
+                continue
+            decorator_lines = [
+                item.lineno for item in getattr(node, "decorator_list", [])
+            ]
+            start_line = min([node.lineno, *decorator_lines])
+            start = starts[start_line - 1]
+            end = (
+                starts[node.end_lineno]
+                if node.end_lineno is not None and node.end_lineno < len(starts)
+                else len(payload)
+            )
+            is_new_target_node = target_side and (
+                (
+                    isinstance(
+                        node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                    )
+                    and node.name in FRAMEWORK_RECOVERY_9_NEW_DEFINITIONS
+                )
+                or bool(node_assignment_names & FRAMEWORK_RECOVERY_9_NEW_ASSIGNMENTS)
+            )
+            if is_new_target_node:
+                blank_lines = re.match(rb"(?:[ \t]*\r?\n)*", payload[end:])
+                if blank_lines is None:
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+                    )
+                end += len(blank_lines.group())
+            intervals.append((start, end))
+        merged: list[tuple[int, int]] = []
+        for start, end in sorted(intervals):
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+            else:
+                merged.append((start, end))
+        residual = payload
+        for start, end in reversed(merged):
+            residual = residual[:start] + residual[end:]
+        return residual
+
+    if protected_residual(parent_payload, target_side=False) != protected_residual(
+        target_payload, target_side=True
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SOURCE_COMPATIBILITY"
+        )
+
+def _framework_recovery_9_validate_test_source(
+    payload: bytes, path: str
+) -> ast.Module:
+    """Apply the fail-closed FR-0009 public-test source contract."""
+
+    try:
+        source = payload.decode("utf-8")
+        tree = ast.parse(source, filename=path)
+    except (UnicodeDecodeError, SyntaxError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_SOURCE"
+        ) from error
+    module_docstring = (
+        "Test the FR-0009 hosted-log protocol-binding recovery."
+    )
+    if (
+        ast.get_docstring(tree, clean=False) != module_docstring
+        or not tree.body
+        or not isinstance(tree.body[0], ast.Expr)
+        or not isinstance(tree.body[0].value, ast.Constant)
+        or tree.body[0].value.value != module_docstring
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_SOURCE")
+    expected_imports = ast.parse(
+        "from __future__ import annotations\n"
+        "import ast\n"
+        "import copy\n"
+        "import gzip\n"
+        "import hashlib\n"
+        "import importlib.util\n"
+        "import json\n"
+        "import os\n"
+        "import subprocess\n"
+        "import tempfile\n"
+        "import unittest\n"
+        "from pathlib import Path\n"
+    ).body
+    imports = [
+        node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
+    ]
+    if [ast.dump(node, include_attributes=False) for node in imports] != [
+        ast.dump(node, include_attributes=False) for node in expected_imports
+    ]:
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_IMPORTS")
+    expected_assignments: dict[str, Any] = {
+        "PARENT_COMMIT": FRAMEWORK_RECOVERY_9_PARENT,
+        "PARENT_TREE": FRAMEWORK_RECOVERY_9_PARENT_TREE,
+        "PARENT_VERIFIER_OID": FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_OID,
+        "PARENT_VERIFIER_SHA256": FRAMEWORK_RECOVERY_9_PARENT_VERIFIER_SHA256,
+        "PARENT_TEST_OID": FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_OID,
+        "PARENT_TEST_SHA256": FRAMEWORK_RECOVERY_9_PARENT_FR8_TEST_SHA256,
+        "PARENT_GATE_OID": FRAMEWORK_RECOVERY_9_PARENT_GATE_OID,
+        "PARENT_GATE_SHA256": FRAMEWORK_RECOVERY_9_PARENT_GATE_SHA256,
+        "PARENT_P0_OID": FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_OID,
+        "PARENT_P0_SHA256": FRAMEWORK_RECOVERY_9_PARENT_P0_GATE_SHA256,
+        "PARENT_PLAN_OID": FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_OID,
+        "PARENT_PLAN_SHA256": FRAMEWORK_RECOVERY_9_PARENT_FR8_PLAN_SHA256,
+        "DEFECT_CODE": FRAMEWORK_RECOVERY_9_DEFECT_CODE,
+        "REPAIR_SUBJECT": FRAMEWORK_RECOVERY_9_SUBJECT,
+        "SUITE_KEYS": FRAMEWORK_RECOVERY_9_SUITE_KEYS,
+        "PARENT_SUITE_COUNTS": (163, 78, 94, 26, 30, 44, 56, 37, 55),
+        "P0_EXTRA_UNITTEST_COUNTS": (6, 10, 23, 26, 22, 24),
+        "REQUIRED_TEST_IDS": FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS,
+        "EXPECTED_MODIFIED_DEFINITIONS": (
+            FRAMEWORK_RECOVERY_9_MODIFIED_DEFINITIONS
+        ),
+    }
+    observed_assignments: dict[str, Any] = {}
+    assignment_nodes = [node for node in tree.body if isinstance(node, ast.Assign)]
+    try:
+        for node in assignment_nodes:
+            if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+                raise ValueError
+            name = node.targets[0].id
+            if name in observed_assignments:
+                raise ValueError
+            observed_assignments[name] = ast.literal_eval(node.value)
+    except (TypeError, ValueError) as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_ASSIGNMENTS"
+        ) from error
+    if not _strict_equal(observed_assignments, expected_assignments):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_ASSIGNMENTS"
+        )
+    expected_helpers = {
+        "_repo",
+        "_git",
+        "_load_verify",
+        "_canonical_json",
+        "_canonical_gzip",
+        "_commit",
+        "_parent_source",
+        "_function_source",
+        "_hosted_fixture",
+        "_compatibility_entry",
+        "_call_wrapper",
+        "_repair_plan",
+        "_repair_commit",
+        "_verbose_reproduction_raw",
+        "_marker_log",
+        "_review_outcomes",
+    }
+    helper_nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef)]
+    if (
+        {node.name for node in helper_nodes} != expected_helpers
+        or len(helper_nodes) != len(expected_helpers)
+        or any(node.decorator_list for node in helper_nodes)
+        or any(isinstance(node, ast.AsyncFunctionDef) for node in tree.body)
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_HELPERS")
+    classes = [node for node in tree.body if isinstance(node, ast.ClassDef)]
+    if (
+        len(classes) != 1
+        or classes[0].name != "FrameworkRecovery9Tests"
+        or classes[0].decorator_list
+        or classes[0].keywords
+        or len(classes[0].bases) != 1
+        or ast.dump(classes[0].bases[0], include_attributes=False)
+        != ast.dump(
+            ast.parse("unittest.TestCase").body[0].value,
+            include_attributes=False,
+        )
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_CLASS")
+    test_class = classes[0]
+    test_nodes = [
+        node
+        for node in test_class.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    if (
+        len(test_nodes) != FRAMEWORK_RECOVERY_9_REQUIRED_TEST_COUNT
+        or {node.name for node in test_nodes}
+        != FRAMEWORK_RECOVERY_9_REQUIRED_TEST_IDS
+        or any(
+            not isinstance(node, ast.FunctionDef)
+            or node.decorator_list
+            or not node.name.startswith("test_")
+            or len(node.args.args) != 1
+            or node.args.args[0].arg != "self"
+            for node in test_nodes
+        )
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_METHODS")
+    main_guards = [node for node in tree.body if isinstance(node, ast.If)]
+    expected_main = ast.parse(
+        'if __name__ == "__main__":\n    unittest.main()\n'
+    ).body[0]
+    if (
+        len(main_guards) != 1
+        or ast.dump(main_guards[0], include_attributes=False)
+        != ast.dump(expected_main, include_attributes=False)
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_MAIN")
+    allowed_top = {
+        id(tree.body[0]),
+        *(id(node) for node in imports),
+        *(id(node) for node in assignment_nodes),
+        *(id(node) for node in helper_nodes),
+        id(test_class),
+        id(main_guards[0]),
+    }
+    if len(allowed_top) != len(tree.body) or any(
+        id(node) not in allowed_top for node in tree.body
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_TOP_LEVEL")
+    forbidden_calls = {
+        "compile",
+        "delattr",
+        "eval",
+        "exec",
+        "globals",
+        "locals",
+        "patch",
+        "setattr",
+        "skip",
+        "skipIf",
+        "skipUnless",
+        "expectedFailure",
+        "vars",
+        "skipTest",
+    }
+    if any(
+        isinstance(node, ast.Call)
+        and (
+            isinstance(node.func, ast.Name)
+            and node.func.id in forbidden_calls
+            or isinstance(node.func, ast.Attribute)
+            and node.func.attr in forbidden_calls
+        )
+        for node in ast.walk(tree)
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_DYNAMIC")
+    required_calls = {
+        "_framework_recovery_2_hosted_entry",
+        "_framework_recovery_2_verify_capture_operations",
+        "_framework_recovery_3_hosted_entry",
+        "_framework_recovery_3_verify_hosted_entry",
+        "_framework_recovery_9_review_subject_manifest",
+        "_framework_recovery_9_validate_review_capture",
+        "_verify_hosted_evidence_v2",
+    }
+    observed_calls = {
+        node.func.attr
+        if isinstance(node.func, ast.Attribute)
+        else node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, (ast.Attribute, ast.Name))
+    }
+    if not required_calls <= observed_calls:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_COMPOSITION"
+        )
+    composition_ids = {
+        "test_framework_recovery_9_hosted_compatibility_projection_is_exact",
+        "test_framework_recovery_9_log_binding_rejects_payload_and_integrity_mutations",
+        "test_framework_recovery_9_positive_composition_has_no_critical_mocks",
+        "test_framework_recovery_9_protocol_binding_rejects_git_record_mutations",
+        "test_framework_recovery_9_real_builder_and_validator_compose",
+    }
+    composition_nodes = {
+        node.name: node
+        for node in test_nodes
+        if isinstance(node, ast.FunctionDef) and node.name in composition_ids
+    }
+    if set(composition_nodes) != composition_ids:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_COMPOSITION"
+        )
+    for node in composition_nodes.values():
+        calls = {
+            child.func.attr
+            if isinstance(child.func, ast.Attribute)
+            else child.func.id
+            for child in ast.walk(node)
+            if isinstance(child, ast.Call)
+            and isinstance(child.func, (ast.Attribute, ast.Name))
+        }
+        if (
+            not {"_hosted_fixture", "_call_wrapper"} <= calls
+            or any(
+                isinstance(child, ast.Name)
+                and child.id in {"mock", "patch"}
+                or isinstance(child, ast.Attribute)
+                and child.attr in {"mock", "patch"}
+                for child in ast.walk(node)
+            )
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_TEST_COMPOSITION"
+            )
+    return tree
+
+def _framework_recovery_9_verify_ci_markers(
+    repo: Path,
+    containing_commit: str,
+    entry: dict[str, Any],
+    *,
+    test_contract: dict[str, Any],
+    label: str,
+) -> None:
+    """Require one ordered hosted marker for every epoch-10 suite."""
+
+    expected = _framework_recovery_9_expected_local_marker_counts(test_contract)
+    counts = [test_contract[key]["count"] for key in FRAMEWORK_RECOVERY_9_SUITE_KEYS]
+    if expected["direct_bare_ok"] != len(counts):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_CI_TEST_COUNT:" + label
+        )
+    files = entry.get("files")
+    if not isinstance(files, list) or len(files) != 3:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_CI_FILES:" + label
+        )
+    log = _decompress_unbound_gzip(
+        _git_file(repo, containing_commit, files[2]["path"]),
+        f"framework_recovery_9.{label}.log",
+    )
+    marker_log = _hosted_step_log_lines(
+        log, "supply-chain", "Verify current-head 0.9 audit cut"
+    )
+    timestamp_prefix = rb"^.*\t\d{4}-\d{2}-\d{2}T[^\n ]+Z "
+    marker_pattern = re.compile(
+        timestamp_prefix
+        + rb"(?:(?:Ran (?P<count>\d+) tests in \d+(?:\.\d+)?s)|"
+        + rb"(?P<ok>OK)|(?P<verifier>verify-current-audit: OK))$",
+        flags=re.MULTILINE,
+    )
+    observed_markers: list[tuple[str, bytes | None]] = []
+    for match in marker_pattern.finditer(marker_log):
+        count = match.group("count")
+        if count is not None:
+            observed_markers.append(("RUN", count))
+        elif match.group("ok") is not None:
+            observed_markers.append(("OK", None))
+        else:
+            observed_markers.append(("VERIFIER_OK", None))
+    expected_markers = [
+        marker
+        for count in counts
+        for marker in (("RUN", str(count).encode("ascii")), ("OK", None))
+    ] + [("VERIFIER_OK", None)]
+    if observed_markers != expected_markers or any(
+        token in marker_log
+        for token in (
+            b"FAILED",
+            b"ERROR",
+            b"Traceback",
+            b"ResourceWarning",
+            b"skipped=",
+            b"expected failure",
+            b"unexpected success",
+        )
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_CI_LOG_MARKERS:" + label
+        )
+
+def _framework_recovery_9_verify_gate_and_p0_contract(
+    observed: Any, expected: dict[str, Any]
+) -> None:
+    """Compare a signed gate projection with an independently derived one."""
+
+    if not isinstance(observed, dict) or not isinstance(expected, dict):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_TOPOLOGY"
+        )
+    if observed.get("warning_policy_by_suite") != expected.get(
+        "warning_policy_by_suite"
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_WARNING_POLICY"
+        )
+    if not _strict_equal(observed, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_TOPOLOGY"
+        )
+
+def _framework_recovery_9_verify_gate_payload(payload: bytes) -> None:
+    """Reject every gate topology other than the exact epoch-10 wrapper."""
+
+    if payload != _framework_recovery_9_expected_gate_payload():
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_GATE_WIRING")
+
+def _framework_recovery_9_verify_hosted_entry(
+    repo: Path,
+    containing_commit: str,
+    observed: Any,
+    *,
+    paths: tuple[str, str, str],
+    subject_commit: str,
+    workflow: str,
+    lane: str,
+) -> tuple[dict[str, Any], datetime]:
+    """Verify one epoch-10 hosted-evidence entry."""
+
+    files = observed.get("files") if isinstance(observed, dict) else None
+    if (
+        not isinstance(files, list)
+        or len(files) != 3
+        or not isinstance(files[1], dict)
+        or files[1].get("path") != paths[1]
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_HOSTED_FILES:" + lane
+        )
+    expected_attempt = _framework_recovery_9_positive_attempt(
+        repo,
+        containing_commit,
+        files[1],
+        label=f"framework_recovery_9.{lane}",
+    )
+    return _framework_recovery_3_verify_hosted_entry(
+        repo,
+        containing_commit,
+        observed,
+        paths=paths,
+        subject_commit=subject_commit,
+        workflow=workflow,
+        lane=f"fr_0009_{lane}",
+        expected_attempt=expected_attempt,
+        require_ordinary_attempt=True,
+    )
+
+def _framework_recovery_9_verify_local_markers(
+    payload: bytes,
+    *,
+    test_contract: dict[str, Any],
+) -> None:
+    """Require exact epoch-10 direct-gate and P0 markers."""
+
+    expected = _framework_recovery_9_expected_local_marker_counts(test_contract)
+    sections = (
+        b"=== CURRENT_AUDIT_GATE ===\n$ tools/release/current-audit-gate.sh\n",
+        b"=== P0R_EXIT_GATE ===\n$ tools/p0r-exit-gate.sh\n",
+        b"=== RESOURCE_PROFILE ===\n"
+        b"$ python3 -I tools/release/current-audit-resource-profile.py\n",
+    )
+    positions = [payload.find(section) for section in sections]
+    if any(
+        position < 0 or payload.count(section) != 1
+        for position, section in zip(positions, sections, strict=True)
+    ) or positions != sorted(positions):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_LOG")
+    direct = payload[positions[0] : positions[1]]
+    p0 = payload[positions[1] : positions[2]]
+    counts = [test_contract[key]["count"] for key in FRAMEWORK_RECOVERY_9_SUITE_KEYS]
+    extra_counts = test_contract["p0_extra_unittest_counts"]
+
+    def ordered_run_counts(chunk: bytes) -> list[int]:
+        return [
+            int(item)
+            for item in re.findall(
+                rb"^Ran (\d+) tests? in \d+(?:\.\d+)?s$",
+                chunk,
+                flags=re.MULTILINE,
+            )
+        ]
+
+    if (
+        ordered_run_counts(direct) != counts
+        or len(re.findall(rb"^OK$", direct, flags=re.MULTILINE))
+        != expected["direct_bare_ok"]
+        or direct.count(b"verify-current-audit: OK") != 1
+        or ordered_run_counts(p0) != [*counts, *extra_counts]
+        or len(re.findall(rb"^OK$", p0, flags=re.MULTILINE))
+        != expected["p0_bare_ok"]
+        or p0.count(b"verify-current-audit: OK") != 1
+        or p0.count(b"P0-R exit gate: 30 passed, 0 failed") != 1
+        or any(
+            token in payload
+            for token in (
+                b"\nFAILED",
+                b"\nERROR",
+                b"Traceback",
+                b"ResourceWarning",
+                b"skipped=",
+                b"unexpected success",
+                b"##[error]",
+            )
+        )
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_LOCAL_LOG")
+
+def _framework_recovery_9_verify_review_key_separation(
+    source_signer: dict[str, str], review_keys: list[dict[str, str]]
+) -> None:
+    """Require two review-integrity keys distinct from the release key."""
+
+    fingerprints = {item.get("key_fingerprint") for item in review_keys}
+    public_keys = {item.get("public_key") for item in review_keys}
+    if (
+        len(review_keys) != 2
+        or None in fingerprints
+        or None in public_keys
+        or len(fingerprints) != 2
+        or len(public_keys) != 2
+        or source_signer.get("key_fingerprint") in fingerprints
+        or source_signer.get("public_key") in public_keys
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_REVIEW_KEY_SEPARATION"
+        )
+
+def _framework_recovery_9_verify_run_attempt_uniqueness(
+    repo: Path,
+    entries: list[tuple[str, str, dict[str, Any]]],
+) -> None:
+    """Reject every reserved, retired, or cross-phase run reuse."""
+
+    observed: set[tuple[int, int]] = set(
+        FRAMEWORK_RECOVERY_9_RESERVED_RUN_ATTEMPTS
+    )
+    for label, containing_commit, entry in entries:
+        identity = _framework_recovery_9_run_attempt_identity(
+            repo, containing_commit, entry, label=label
+        )
+        if identity in observed:
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_RUN_ATTEMPT_REUSED"
+            )
+        observed.add(identity)
+
+def _framework_recovery_9_verify_stage_modes(
+    repo: Path,
+    commit: str,
+    expected: dict[str, str],
+    *,
+    label: str,
+) -> None:
+    """Require exact regular-file modes for one FR-0009 stage."""
+
+    for path, expected_mode in expected.items():
+        entry = _git_tree_entry(repo, commit, path)
+        if (
+            entry is None
+            or entry.get("mode") != expected_mode
+            or entry.get("type") != "blob"
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_MODE:" + label + ":" + path
+            )
+
+def _framework_recovery_9_verify_successor_guard(
+    chain: list[str],
+    position: int,
+    *,
+    repair_commit: str | None,
+    activation_commit: str | None,
+    recovery_transition: dict[str, Any] | None,
+) -> None:
+    """Reject every ordinary successor before FR-0009 activation."""
+
+    if (
+        repair_commit is not None
+        and position > chain.index(repair_commit)
+        and (activation_commit is None or position < chain.index(activation_commit))
+        and recovery_transition is None
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_SUCCESSOR_BEFORE_ACTIVATION"
+        )
+
+def _verify_framework_recovery_9_activation(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    activation_commit: str,
+    *,
+    qualification: dict[str, Any],
+) -> dict[str, Any]:
+    """Verify the data-only FR-0009 activation envelope."""
+
+    metadata = _verify_data_only_commit(
+        repo,
+        commit=activation_commit,
+        parent=qualification_commit,
+        expected_statuses=dict(
+            sorted(FRAMEWORK_RECOVERY_9_ACTIVATION_STATUSES.items())
+        ),
+        label="FRAMEWORK_RECOVERY_9_ACTIVATION",
+    )
+    if metadata["subject"] != FRAMEWORK_RECOVERY_9_ACTIVATION_SUBJECT:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ACTIVATION_IDENTITY"
+        )
+    _framework_recovery_9_verify_stage_modes(
+        repo,
+        activation_commit,
+        {path: "100644" for path in FRAMEWORK_RECOVERY_9_ACTIVATION_STATUSES},
+        label="activation",
+    )
+    for path in (
+        *FRAMEWORK_RECOVERY_9_PRESERVED_PATHS,
+        *FRAMEWORK_RECOVERY_9_CORE_PATHS,
+        FRAMEWORK_RECOVERY_9_PLAN_PATH,
+        *FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES,
+    ):
+        if _git_tree_entry(repo, activation_commit, path) != _git_tree_entry(
+            repo, qualification_commit, path
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ACTIVATION_DRIFT"
+            )
+    value, payload = _read_commit_json(
+        repo,
+        activation_commit,
+        FRAMEWORK_RECOVERY_9_ACTIVATION_PATH,
+        "framework_recovery_9.activation",
+    )
+    if not isinstance(value, dict) or payload != _canonical_json_bytes(
+        value, pretty=True
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ACTIVATION_CANONICAL"
+        )
+    evidence_catalog: list[dict[str, Any]] = []
+    for requirement in FRAMEWORK_RECOVERY_9_ACTIVATION_REQUIREMENTS:
+        record, _retained = _framework_recovery_2_catalog_record(
+            repo,
+            activation_commit,
+            requirement,
+            subject_commit=qualification_commit,
+            result="PASS",
+        )
+        evidence_catalog.append(record)
+    hosted_evidence = value.get("activation_hosted_evidence")
+    if not isinstance(hosted_evidence, dict) or set(hosted_evidence) != {
+        "qualification_ci",
+        "qualification_formal",
+    }:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ACTIVATION_HOSTED_FIELDS"
+        )
+    hosted_specs = (
+        (
+            "qualification_ci",
+            "ci",
+            tuple(FRAMEWORK_RECOVERY_9_ACTIVATION_REQUIREMENTS[0]["paths"]),
+        ),
+        (
+            "qualification_formal",
+            "formal",
+            tuple(FRAMEWORK_RECOVERY_9_ACTIVATION_REQUIREMENTS[1]["paths"]),
+        ),
+    )
+    hosted_capture_completed: list[datetime] = []
+    verified_hosted: dict[str, Any] = {}
+    for lane, workflow, paths in hosted_specs:
+        entry, captured = _framework_recovery_9_verify_hosted_entry(
+            repo,
+            activation_commit,
+            hosted_evidence[lane],
+            paths=paths,
+            subject_commit=qualification_commit,
+            workflow=workflow,
+            lane=lane,
+        )
+        verified_hosted[lane] = entry
+        hosted_capture_completed.append(captured)
+    _framework_recovery_9_verify_ci_markers(
+        repo,
+        activation_commit,
+        hosted_evidence["qualification_ci"],
+        test_contract=qualification["test_contract"],
+        label="qualification_ci",
+    )
+    _framework_recovery_9_verify_run_attempt_uniqueness(
+        repo,
+        [
+            (
+                "repair_ci",
+                qualification_commit,
+                qualification["hosted_evidence"]["repair_ci"],
+            ),
+            (
+                "repair_formal",
+                qualification_commit,
+                qualification["hosted_evidence"]["repair_formal"],
+            ),
+            (
+                "qualification_ci",
+                activation_commit,
+                hosted_evidence["qualification_ci"],
+            ),
+            (
+                "qualification_formal",
+                activation_commit,
+                hosted_evidence["qualification_formal"],
+            ),
+        ],
+    )
+    expected = _framework_recovery_9_expected_activation(
+        repo,
+        repair_commit,
+        qualification_commit,
+        activation_commit,
+        qualification=qualification,
+        evidence_catalog=evidence_catalog,
+        hosted_evidence=verified_hosted,
+    )
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    unsigned = {
+        key: copy.deepcopy(item)
+        for key, item in value.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: item for key, item in unsigned.items() if key != "created_at_utc"
+    }
+    if set(value) != expected_fields or not _strict_equal(comparable, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ACTIVATION_INVALID"
+        )
+    created = _parse_utc(
+        value.get("created_at_utc"), "framework_recovery_9.activation.created"
+    )
+    if not (
+        _commit_datetime(repo, qualification_commit)
+        <= min(hosted_capture_completed)
+        <= max(hosted_capture_completed)
+        <= created
+        <= _commit_datetime(repo, activation_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ACTIVATION_CHRONOLOGY"
+        )
+    signer = _source_release_signer(repo)
+    _verify_ssh_detached_attestation(
+        repo,
+        value["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0009-activation-v1",
+        label="framework_recovery_9.activation",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return value
+
+def _verify_framework_recovery_9_history(
+    repo: Path,
+    chain: list[str],
+    *,
+    framework_commit: str,
+) -> dict[str, Any]:
+    """Verify contiguous FR-0009 repair, qualification, and activation."""
+
+    try:
+        parent_index = chain.index(FRAMEWORK_RECOVERY_9_PARENT)
+    except ValueError as error:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_MISSING"
+        ) from error
+    if (
+        parent_index != 28
+        or parent_index + 1 >= len(chain)
+        or chain[parent_index - 1] != FRAMEWORK_RECOVERY_8_PARENT
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_POSITION")
+    repair_commit = chain[parent_index + 1]
+    plan = _verify_framework_recovery_9_repair(
+        repo, repair_commit, framework_commit=framework_commit
+    )
+    result: dict[str, Any] = {
+        "state": "PENDING_QUALIFICATION",
+        "repair_commit": repair_commit,
+        "qualification_commit": None,
+        "activation_commit": None,
+        "retirement_commit": None,
+        "plan": plan,
+        "qualification": None,
+        "protocol_parent": FRAMEWORK_RECOVERY_9_PARENT,
+        "required_verified_prefix": 3,
+        "repair_statuses": dict(sorted(FRAMEWORK_RECOVERY_9_REPAIR_STATUSES.items())),
+        "qualification_statuses": dict(
+            sorted(FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES.items())
+        ),
+        "activation_statuses": dict(
+            sorted(FRAMEWORK_RECOVERY_9_ACTIVATION_STATUSES.items())
+        ),
+        "preserved_paths": list(FRAMEWORK_RECOVERY_9_PRESERVED_PATHS),
+        "candidate_framework_epoch": 10,
+        "active_framework_epoch": 2,
+        "successor_transitions_allowed": False,
+    }
+    suffix = chain[parent_index + 2 :]
+    if not suffix:
+        return result
+    qualification_commit = suffix[0]
+    qualification = _verify_framework_recovery_9_qualification(
+        repo, repair_commit, qualification_commit, plan=plan
+    )
+    result.update(
+        {
+            "state": "QUALIFIED_PENDING_ACTIVATION",
+            "qualification_commit": qualification_commit,
+            "qualification": qualification,
+        }
+    )
+    if len(suffix) == 1:
+        return result
+    activation_commit = suffix[1]
+    _verify_framework_recovery_9_activation(
+        repo,
+        repair_commit,
+        qualification_commit,
+        activation_commit,
+        qualification=qualification,
+    )
+    result.update(
+        {
+            "state": "ACTIVE",
+            "activation_commit": activation_commit,
+            "active_framework_epoch": 10,
+            "successor_transitions_allowed": True,
+        }
+    )
+    return result
+
+def _verify_framework_recovery_9_qualification(
+    repo: Path,
+    repair_commit: str,
+    qualification_commit: str,
+    *,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    """Verify the data-only FR-0009 qualification envelope."""
+
+    metadata = _verify_data_only_commit(
+        repo,
+        commit=qualification_commit,
+        parent=repair_commit,
+        expected_statuses=dict(
+            sorted(FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES.items())
+        ),
+        label="FRAMEWORK_RECOVERY_9_QUALIFICATION",
+    )
+    if metadata["subject"] != FRAMEWORK_RECOVERY_9_QUALIFICATION_SUBJECT:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_QUALIFICATION_IDENTITY"
+        )
+    _framework_recovery_9_verify_stage_modes(
+        repo,
+        qualification_commit,
+        {path: "100644" for path in FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES},
+        label="qualification",
+    )
+    for path in (
+        *FRAMEWORK_RECOVERY_9_PRESERVED_PATHS,
+        *FRAMEWORK_RECOVERY_9_CORE_PATHS,
+        FRAMEWORK_RECOVERY_9_PLAN_PATH,
+    ):
+        if _git_tree_entry(repo, qualification_commit, path) != _git_tree_entry(
+            repo, repair_commit, path
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_QUALIFICATION_DRIFT"
+            )
+    value, payload = _read_commit_json(
+        repo,
+        qualification_commit,
+        FRAMEWORK_RECOVERY_9_QUALIFICATION_PATH,
+        "framework_recovery_9.qualification",
+    )
+    if not isinstance(value, dict) or payload != _canonical_json_bytes(
+        value, pretty=True
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_QUALIFICATION_CANONICAL"
+        )
+    evidence_catalog: list[dict[str, Any]] = []
+    documents: dict[str, dict[str, Any]] = {}
+    for requirement in FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS:
+        is_parent_proof = requirement["id"] == "FR-0009-E01"
+        record, retained = _framework_recovery_2_catalog_record(
+            repo,
+            qualification_commit,
+            requirement,
+            subject_commit=(
+                FRAMEWORK_RECOVERY_9_PARENT if is_parent_proof else repair_commit
+            ),
+            result=("EXPECTED_DEFECT" if is_parent_proof else "PASS"),
+        )
+        evidence_catalog.append(record)
+        if requirement["id"] in {
+            "FR-0009-E01",
+            "FR-0009-E04",
+            "FR-0009-R01",
+            "FR-0009-R02",
+        }:
+            document = _load_json_bytes(
+                retained[0], f"framework_recovery_9.{requirement['id']}"
+            )
+            if not isinstance(document, dict):
+                raise CurrentAuditError(
+                    "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_EVIDENCE_DOCUMENT"
+                )
+            documents[requirement["id"]] = document
+    reproduction = documents["FR-0009-E01"]
+    _framework_recovery_9_validate_parent_reproduction(
+        repo,
+        repair_commit,
+        qualification_commit,
+        reproduction,
+        evidence_record=evidence_catalog[0],
+    )
+    hosted_evidence = value.get("hosted_evidence")
+    if not isinstance(hosted_evidence, dict) or set(hosted_evidence) != {
+        "repair_ci",
+        "repair_formal",
+    }:
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_HOSTED_FIELDS"
+        )
+    hosted_specs = (
+        (
+            "repair_ci",
+            "ci",
+            tuple(FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS[1]["paths"]),
+        ),
+        (
+            "repair_formal",
+            "formal",
+            tuple(FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS[2]["paths"]),
+        ),
+    )
+    hosted_capture_completed: list[datetime] = []
+    verified_hosted: dict[str, Any] = {}
+    for lane, workflow, paths in hosted_specs:
+        entry, captured = _framework_recovery_9_verify_hosted_entry(
+            repo,
+            qualification_commit,
+            hosted_evidence[lane],
+            paths=paths,
+            subject_commit=repair_commit,
+            workflow=workflow,
+            lane=lane,
+        )
+        verified_hosted[lane] = entry
+        hosted_capture_completed.append(captured)
+    _framework_recovery_9_verify_ci_markers(
+        repo,
+        qualification_commit,
+        hosted_evidence["repair_ci"],
+        test_contract=plan["test_contract"],
+        label="repair_ci",
+    )
+    _framework_recovery_9_verify_run_attempt_uniqueness(
+        repo,
+        [
+            ("repair_ci", qualification_commit, hosted_evidence["repair_ci"]),
+            (
+                "repair_formal",
+                qualification_commit,
+                hosted_evidence["repair_formal"],
+            ),
+        ],
+    )
+    _framework_recovery_9_validate_local_document(
+        repo,
+        qualification_commit,
+        repair_commit,
+        documents["FR-0009-E04"],
+        evidence_record=evidence_catalog[3],
+        test_contract=plan["test_contract"],
+    )
+    review_keys: list[dict[str, str]] = []
+    review_outcomes: list[dict[str, Any]] = []
+    review_records: list[dict[str, Any]] = []
+    for requirement in FRAMEWORK_RECOVERY_9_QUALIFICATION_REQUIREMENTS[-2:]:
+        outcome = _framework_recovery_9_validate_review(
+            repo,
+            documents[requirement["id"]],
+            review_id=requirement["id"],
+            kind=requirement["kind"],
+            repair_commit=repair_commit,
+            plan=plan,
+        )
+        review_outcomes.append(outcome)
+        key = {
+            "public_key": outcome["public_key"],
+            "key_fingerprint": outcome["key_fingerprint"],
+        }
+        review_keys.append(key)
+        record = next(
+            item for item in evidence_catalog if item["id"] == requirement["id"]
+        )
+        review_records.append(
+            {
+                "review_id": requirement["id"],
+                "file": record["files"][0],
+                "integrity_scope": "LOCAL_RECORD_INTEGRITY_ONLY",
+                "verdict": outcome["verdict"],
+                "open_blocker_ids": outcome["open_blocker_ids"],
+                "required_finding_ids": outcome["required_finding_ids"],
+                "additional_blocker_ids": outcome["additional_blocker_ids"],
+                "capture_binding": outcome["capture_binding"],
+                "local_integrity_key": key,
+            }
+        )
+    signer = _source_release_signer(repo)
+    _framework_recovery_9_verify_review_key_separation(signer, review_keys)
+    _framework_recovery_9_require_reviews_go(review_outcomes)
+    expected = _framework_recovery_9_expected_qualification(
+        repo,
+        repair_commit,
+        qualification_commit,
+        plan=plan,
+        evidence_catalog=evidence_catalog,
+        hosted_evidence=verified_hosted,
+        review_records=review_records,
+    )
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    unsigned = {
+        key: copy.deepcopy(item)
+        for key, item in value.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: item for key, item in unsigned.items() if key != "created_at_utc"
+    }
+    if set(value) != expected_fields or not _strict_equal(comparable, expected):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_QUALIFICATION_INVALID"
+        )
+    created = _parse_utc(
+        value.get("created_at_utc"), "framework_recovery_9.qualification.created"
+    )
+    reproduction_completed = _parse_utc(
+        reproduction.get("execution", {}).get("completed_at_utc"),
+        "framework_recovery_9.reproduction.completed_for_qualification",
+    )
+    local_completed = _parse_utc(
+        documents["FR-0009-E04"].get("completed_at_utc"),
+        "framework_recovery_9.local.completed_for_qualification",
+    )
+    review_captured = [
+        _parse_utc(
+            outcome["captured_at_utc"],
+            f"framework_recovery_9.review.{outcome['review_id']}.captured",
+        )
+        for outcome in review_outcomes
+    ]
+    if not (
+        _commit_datetime(repo, repair_commit)
+        <= min(
+            reproduction_completed,
+            local_completed,
+            *hosted_capture_completed,
+            *review_captured,
+        )
+        <= max(
+            reproduction_completed,
+            local_completed,
+            *hosted_capture_completed,
+            *review_captured,
+        )
+        <= created
+        <= _commit_datetime(repo, qualification_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_QUALIFICATION_CHRONOLOGY"
+        )
+    _verify_ssh_detached_attestation(
+        repo,
+        value["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0009-qualification-v1",
+        label="framework_recovery_9.qualification",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return value
+
+def _verify_framework_recovery_9_repair(
+    repo: Path, repair_commit: str, *, framework_commit: str
+) -> dict[str, Any]:
+    """Verify the exact FR-0009 repair commit and signed plan."""
+
+    parent_metadata = _commit_metadata(repo, FRAMEWORK_RECOVERY_9_PARENT)
+    metadata = _commit_metadata(repo, repair_commit)
+    if (
+        parent_metadata["tree"] != FRAMEWORK_RECOVERY_9_PARENT_TREE
+        or metadata["parent"] != FRAMEWORK_RECOVERY_9_PARENT
+        or metadata["subject"] != FRAMEWORK_RECOVERY_9_SUBJECT
+        or metadata["author_name"] != "Sepehr Mahmoudian"
+        or metadata["author_email"] != "sepmhn@gmail.com"
+        or metadata["committer_name"] != "Sepehr Mahmoudian"
+        or metadata["committer_email"] != "sepmhn@gmail.com"
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_COMMIT_IDENTITY")
+    _verify_named_commit_signature(repo, repair_commit, "FRAMEWORK_RECOVERY_9")
+    if not _strict_equal(
+        _changed_path_statuses(repo, FRAMEWORK_RECOVERY_9_PARENT, repair_commit),
+        dict(sorted(FRAMEWORK_RECOVERY_9_REPAIR_STATUSES.items())),
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_DIFF")
+    _framework_recovery_9_verify_stage_modes(
+        repo,
+        repair_commit,
+        {
+            FRAMEWORK_RECOVERY_9_PLAN_PATH: "100644",
+            FRAMEWORK_RECOVERY_9_TEST_PATH: "100644",
+            "tools/release/current-audit-gate.sh": "100755",
+            "tools/release/verify-current-audit.py": "100644",
+        },
+        label="repair",
+    )
+    for path in FRAMEWORK_RECOVERY_9_PRESERVED_PATHS:
+        if _git_tree_entry(repo, repair_commit, path) != _git_tree_entry(
+            repo, FRAMEWORK_RECOVERY_9_PARENT, path
+        ):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_STATE_DRIFT")
+    if _git_path_exists(
+        repo, FRAMEWORK_RECOVERY_9_PARENT, FRAMEWORK_RECOVERY_8_QUALIFICATION_PATH
+    ) or _git_path_exists(
+        repo, FRAMEWORK_RECOVERY_9_PARENT, FRAMEWORK_RECOVERY_8_ACTIVATION_PATH
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PARENT_STAGE_PRESENT"
+        )
+    plan, payload = _read_commit_json(
+        repo,
+        repair_commit,
+        FRAMEWORK_RECOVERY_9_PLAN_PATH,
+        "framework_recovery_9.plan",
+    )
+    if not isinstance(plan, dict) or payload != _canonical_json_bytes(
+        plan, pretty=True
+    ):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PLAN_CANONICAL")
+    expected = _framework_recovery_9_expected_plan(
+        repo, repair_commit, framework_commit
+    )
+    expected_fields = {*expected, "created_at_utc", "detached_signature"}
+    unsigned = {
+        key: copy.deepcopy(value)
+        for key, value in plan.items()
+        if key != "detached_signature"
+    }
+    comparable = {
+        key: value for key, value in unsigned.items() if key != "created_at_utc"
+    }
+    if set(plan) != expected_fields or not _strict_equal(comparable, expected):
+        raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PLAN_INVALID")
+    created = _parse_utc(
+        plan.get("created_at_utc"), "framework_recovery_9.plan.created"
+    )
+    if not (
+        _commit_datetime(repo, FRAMEWORK_RECOVERY_9_PARENT)
+        <= created
+        <= _commit_datetime(repo, repair_commit)
+    ):
+        raise CurrentAuditError(
+            "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PLAN_CHRONOLOGY"
+        )
+    signer = _source_release_signer(repo)
+    _verify_ssh_detached_attestation(
+        repo,
+        plan["detached_signature"],
+        _canonical_json_bytes(unsigned),
+        namespace="haldir-framework-recovery-fr-0009-plan-v1",
+        label="framework_recovery_9.plan",
+        expected_principal=signer["principal"],
+        expected_public_key=signer["public_key"],
+        expected_fingerprint=signer["key_fingerprint"],
+    )
+    return plan
 
 
 def _verify_framework_recovery_2_history(
@@ -33303,6 +37919,26 @@ def _verify_framework_history(
             raise CurrentAuditError(
                 "CURRENT_AUDIT_FRAMEWORK_RECOVERY_8_RETIREMENT_INVALID"
             )
+    recovery_9: dict[str, Any] | None = None
+    recovery_9_parent_index = (
+        chain.index(FRAMEWORK_RECOVERY_9_PARENT)
+        if FRAMEWORK_RECOVERY_9_PARENT in chain
+        else None
+    )
+    if recovery_9_parent_index is not None and recovery_9_parent_index + 1 < len(chain):
+        recovery_9 = _verify_framework_recovery_9_history(
+            repo, chain, framework_commit=framework_commit
+        )
+        if (
+            recovery_8 is None
+            or recovery_8["state"] != "ABORTED_BEFORE_QUALIFICATION"
+            or recovery_8["qualification_commit"] is not None
+            or recovery_8["activation_commit"] is not None
+            or recovery_8["retirement_commit"] != recovery_9["repair_commit"]
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_RETIREMENT_INVALID"
+            )
     recovery["subsequent_recoveries"] = [
         recovery_2,
         *([] if recovery_3 is None else [recovery_3]),
@@ -33311,6 +37947,7 @@ def _verify_framework_history(
         *([] if recovery_6 is None else [recovery_6]),
         *([] if recovery_7 is None else [recovery_7]),
         *([] if recovery_8 is None else [recovery_8]),
+        *([] if recovery_9 is None else [recovery_9]),
     ]
     recovery_2_commit = recovery_2["repair_commit"]
     recovery_3_commit = None if recovery_3 is None else recovery_3["repair_commit"]
@@ -33319,9 +37956,12 @@ def _verify_framework_history(
     recovery_6_commit = None if recovery_6 is None else recovery_6["repair_commit"]
     recovery_7_commit = None if recovery_7 is None else recovery_7["repair_commit"]
     recovery_8_commit = None if recovery_8 is None else recovery_8["repair_commit"]
+    recovery_9_commit = None if recovery_9 is None else recovery_9["repair_commit"]
     frozen_paths = FRAMEWORK_CORE_FROZEN_PATHS
     for path in frozen_paths:
-        if recovery_8_commit is not None and path in FRAMEWORK_RECOVERY_8_CORE_PATHS:
+        if recovery_9_commit is not None and path in FRAMEWORK_RECOVERY_9_CORE_PATHS:
+            anchor = recovery_9_commit
+        elif recovery_8_commit is not None and path in FRAMEWORK_RECOVERY_8_CORE_PATHS:
             anchor = recovery_8_commit
         elif recovery_7_commit is not None and path in FRAMEWORK_RECOVERY_7_CORE_PATHS:
             anchor = recovery_7_commit
@@ -33618,12 +38258,50 @@ def _verify_framework_history(
                     raise CurrentAuditError(
                         "CURRENT_AUDIT_FRAMEWORK_RECOVERY_8_ACTIVATION_DRIFT"
                     )
+    if recovery_9 is not None and recovery_9_commit is not None:
+        if _git_tree_entry(
+            repo, head, FRAMEWORK_RECOVERY_9_PLAN_PATH
+        ) != _git_tree_entry(repo, recovery_9_commit, FRAMEWORK_RECOVERY_9_PLAN_PATH):
+            raise CurrentAuditError("CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PLAN_DRIFT")
+        recovery_9_plan_worktree = _read_repo_relative_bounded(
+            repo,
+            FRAMEWORK_RECOVERY_9_PLAN_PATH,
+            MAX_JSON_BYTES,
+            "framework_recovery_9.plan.worktree",
+        )
+        if recovery_9_plan_worktree != _git_file(
+            repo, recovery_9_commit, FRAMEWORK_RECOVERY_9_PLAN_PATH
+        ):
+            raise CurrentAuditError(
+                "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_PLAN_WORKTREE_DRIFT"
+            )
+        qualification_9_commit = recovery_9["qualification_commit"]
+        if qualification_9_commit is not None:
+            for path in FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES:
+                if _git_tree_entry(repo, head, path) != _git_tree_entry(
+                    repo, qualification_9_commit, path
+                ):
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_QUALIFICATION_DRIFT"
+                    )
+        activation_9_commit = recovery_9["activation_commit"]
+        if activation_9_commit is not None:
+            for path in FRAMEWORK_RECOVERY_9_ACTIVATION_STATUSES:
+                if _git_tree_entry(repo, head, path) != _git_tree_entry(
+                    repo, activation_9_commit, path
+                ):
+                    raise CurrentAuditError(
+                        "CURRENT_AUDIT_FRAMEWORK_RECOVERY_9_ACTIVATION_DRIFT"
+                    )
     _verify_post_activation_gate_retention(
         repo,
         head,
         framework_epoch=(
-            9
-            if recovery_8 is not None
+            10
+            if recovery_9 is not None
+            else (
+                9
+                if recovery_8 is not None
             else (
                 8
                 if recovery_7 is not None
@@ -33641,6 +38319,7 @@ def _verify_framework_history(
                     )
                 )
             )
+        )
         ),
         compare_worktree=True,
     )
@@ -36419,7 +41098,7 @@ def _verify_post_activation_gate_retention(
 
     if framework_epoch is not None and (
         type(framework_epoch) is not int
-        or framework_epoch not in {2, 3, 4, 5, 6, 7, 8, 9}
+        or framework_epoch not in {2, 3, 4, 5, 6, 7, 8, 9, 10}
     ):
         raise CurrentAuditError("CURRENT_AUDIT_POST_ACTIVATION_EPOCH_INVALID")
     gate_records = {
@@ -36491,6 +41170,8 @@ def _verify_post_activation_gate_retention(
             framework_epoch = 8
         elif wrapper == _framework_recovery_8_expected_gate_payload():
             framework_epoch = 9
+        elif wrapper == _framework_recovery_9_expected_gate_payload():
+            framework_epoch = 10
         else:
             raise CurrentAuditError("CURRENT_AUDIT_POST_ACTIVATION_WRAPPER_DRIFT")
     expected_wrapper = {
@@ -36502,6 +41183,7 @@ def _verify_post_activation_gate_retention(
         7: _framework_recovery_6_expected_gate_payload(),
         8: _framework_recovery_7_expected_gate_payload(),
         9: _framework_recovery_8_expected_gate_payload(),
+        10: _framework_recovery_9_expected_gate_payload(),
     }[framework_epoch]
     wrapper_entry = _git_tree_entry(repo, head, wrapper_path)
     if (
@@ -42095,6 +46777,9 @@ def _verify_forward_protocol_history(
         FRAMEWORK_RECOVERY_8_PLAN_PATH,
         *FRAMEWORK_RECOVERY_8_QUALIFICATION_STATUSES,
         *FRAMEWORK_RECOVERY_8_ACTIVATION_STATUSES,
+        FRAMEWORK_RECOVERY_9_PLAN_PATH,
+        *FRAMEWORK_RECOVERY_9_QUALIFICATION_STATUSES,
+        *FRAMEWORK_RECOVERY_9_ACTIVATION_STATUSES,
     }
     verified_prefix = 1
     inflight: dict[str, Any] | None = None
@@ -42132,6 +46817,9 @@ def _verify_forward_protocol_history(
     recovery_7_terminal_commit: str | None = None
     recovery_8_repair_commit: str | None = None
     recovery_8_activation_commit: str | None = None
+    recovery_8_terminal_commit: str | None = None
+    recovery_9_repair_commit: str | None = None
+    recovery_9_activation_commit: str | None = None
     if recovery is not None:
         recovery_descriptors = [
             {
@@ -42187,6 +46875,13 @@ def _verify_forward_protocol_history(
             elif descriptor.get("protocol_parent") == FRAMEWORK_RECOVERY_8_PARENT:
                 recovery_8_repair_commit = descriptor["repair_commit"]
                 recovery_8_activation_commit = descriptor.get("activation_commit")
+                recovery_8_terminal_commit = (
+                    recovery_8_activation_commit
+                    or descriptor.get("retirement_commit")
+                )
+            elif descriptor.get("protocol_parent") == FRAMEWORK_RECOVERY_9_PARENT:
+                recovery_9_repair_commit = descriptor["repair_commit"]
+                recovery_9_activation_commit = descriptor.get("activation_commit")
             common = {
                 "required_verified_prefix": descriptor["required_verified_prefix"],
                 "preserved_paths": descriptor["preserved_paths"],
@@ -42199,12 +46894,21 @@ def _verify_forward_protocol_history(
                 **(
                     {
                         "stage": "RETIREMENT",
-                        "recovery_id": FRAMEWORK_RECOVERY_8_ID,
+                        "recovery_id": FRAMEWORK_RECOVERY_9_ID,
                         "retirement_commit": descriptor["repair_commit"],
                     }
                     if descriptor["protocol_parent"]
-                    == FRAMEWORK_RECOVERY_8_PARENT
-                    else {"stage": "REPAIR"}
+                    == FRAMEWORK_RECOVERY_9_PARENT
+                    else (
+                        {
+                            "stage": "RETIREMENT",
+                            "recovery_id": FRAMEWORK_RECOVERY_8_ID,
+                            "retirement_commit": descriptor["repair_commit"],
+                        }
+                        if descriptor["protocol_parent"]
+                        == FRAMEWORK_RECOVERY_8_PARENT
+                        else {"stage": "REPAIR"}
+                    )
                 ),
             }
             if descriptor["qualification_commit"] is not None:
@@ -42257,35 +46961,41 @@ def _verify_forward_protocol_history(
     for position, commit in enumerate(chain[3:], start=3):
         _verify_protocol_commit_identity(repo, commit, previous)
         framework_epoch = (
-            9
-            if recovery_8_repair_commit is not None
-            and chain.index(recovery_8_repair_commit) <= position
+            10
+            if recovery_9_repair_commit is not None
+            and chain.index(recovery_9_repair_commit) <= position
             else (
-                8
-                if recovery_7_repair_commit is not None
-                and chain.index(recovery_7_repair_commit) <= position
+                9
+                if recovery_8_repair_commit is not None
+                and chain.index(recovery_8_repair_commit) <= position
                 else (
-                    7
-                    if recovery_6_repair_commit is not None
-                    and chain.index(recovery_6_repair_commit) <= position
+                    8
+                    if recovery_7_repair_commit is not None
+                    and chain.index(recovery_7_repair_commit) <= position
                     else (
-                        6
-                        if recovery_5_repair_commit is not None
-                        and chain.index(recovery_5_repair_commit) <= position
+                        7
+                        if recovery_6_repair_commit is not None
+                        and chain.index(recovery_6_repair_commit) <= position
                         else (
-                            5
-                            if recovery_4_repair_commit is not None
-                            and chain.index(recovery_4_repair_commit) <= position
+                            6
+                            if recovery_5_repair_commit is not None
+                            and chain.index(recovery_5_repair_commit) <= position
                             else (
-                                4
-                                if recovery_3_repair_commit is not None
-                                and chain.index(recovery_3_repair_commit) <= position
+                                5
+                                if recovery_4_repair_commit is not None
+                                and chain.index(recovery_4_repair_commit) <= position
                                 else (
-                                    3
-                                    if recovery_2_repair_commit is not None
-                                    and chain.index(recovery_2_repair_commit)
+                                    4
+                                    if recovery_3_repair_commit is not None
+                                    and chain.index(recovery_3_repair_commit)
                                     <= position
-                                    else 2
+                                    else (
+                                        3
+                                        if recovery_2_repair_commit is not None
+                                        and chain.index(recovery_2_repair_commit)
+                                        <= position
+                                        else 2
+                                    )
                                 )
                             )
                         )
@@ -42347,7 +47057,14 @@ def _verify_forward_protocol_history(
             chain,
             position,
             repair_commit=recovery_8_repair_commit,
-            activation_commit=recovery_8_activation_commit,
+            activation_commit=recovery_8_terminal_commit,
+            recovery_transition=recovery_transition,
+        )
+        _framework_recovery_9_verify_successor_guard(
+            chain,
+            position,
+            repair_commit=recovery_9_repair_commit,
+            activation_commit=recovery_9_activation_commit,
             recovery_transition=recovery_transition,
         )
         if recovery_transition is not None:

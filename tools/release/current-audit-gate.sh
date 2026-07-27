@@ -22,6 +22,7 @@ FR4_COMPAT_DIR=
 FR5_COMPAT_DIR=
 FR6_COMPAT_DIR=
 FR7_COMPAT_DIR=
+FR8_COMPAT_DIR=
 cleanup_fr2_compat() {
   builtin trap - EXIT HUP INT TERM
   if [[ -n "$FR2_COMPAT_DIR" ]]; then
@@ -75,6 +76,17 @@ cleanup_fr2_compat() {
       /bin/rm -rf -- "$FR7_COMPAT_DIR"
     fi
     [[ ! -e "$FR7_COMPAT_DIR" ]]
+  fi
+  if [[ -n "$FR8_COMPAT_DIR" ]]; then
+    case "$FR8_COMPAT_DIR" in
+      /tmp/haldir-fr8-gate.??????) ;;
+      *) builtin exit 1 ;;
+    esac
+    if [[ -d "$FR8_COMPAT_DIR" ]]; then
+      /bin/chmod -R u+w "$FR8_COMPAT_DIR"
+      /bin/rm -rf -- "$FR8_COMPAT_DIR"
+    fi
+    [[ ! -e "$FR8_COMPAT_DIR" ]]
   fi
 }
 builtin trap cleanup_fr2_compat EXIT
@@ -312,5 +324,97 @@ readonly FR7_COMPAT_DIR
   "$PYTHON3" -B -I -W error \
     tools/release/test_verify_current_audit_fr_0007.py
 )
-"$PYTHON3" -B -I -W error tools/release/test_verify_current_audit_fr_0008.py
+FR8_COMPAT_DIR="$(/usr/bin/mktemp -d /tmp/haldir-fr8-gate.XXXXXX)"
+readonly FR8_COMPAT_DIR
+/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git \
+  -c core.hooksPath=/dev/null \
+  clone \
+  --no-local \
+  --no-hardlinks \
+  --no-checkout \
+  --quiet \
+  -- "$PWD" "$FR8_COMPAT_DIR/repo"
+/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git \
+  -c core.hooksPath=/dev/null \
+  -C "$FR8_COMPAT_DIR/repo" \
+  checkout --detach --quiet 1e937a4bf213a5605250cf4843f1dfd26ae0ae3b
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR8_COMPAT_DIR/repo" rev-parse HEAD)" \
+  == 1e937a4bf213a5605250cf4843f1dfd26ae0ae3b ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR8_COMPAT_DIR/repo" rev-parse 'HEAD^{tree}')" \
+  == e343ea41c29543f85db52314f89c7cbdcb813cc2 ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR8_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR8_COMPAT_DIR/repo/tools/release/verify-current-audit.py")" \
+  == 57833cced2fdeb03dd8c56970a1df419499c69d5 ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR8_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR8_COMPAT_DIR/repo/tools/release/test_verify_current_audit_fr_0008.py")" \
+  == 78e1391241c6f99de24980d9db965b2875b998c0 ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR8_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR8_COMPAT_DIR/repo/tools/release/current-audit-gate.sh")" \
+  == 4fa7b36570188ab343db8c18d7d4e3895f53c59c ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR8_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR8_COMPAT_DIR/repo/release/0.9.0/current-head/closures/framework-recovery/FR-0008-plan.json")" \
+  == 470947ef9ccb985735067e45f3ea9fc0e811bac3 ]]
+[[ "$(/usr/bin/env \
+  -i \
+  GIT_CONFIG_GLOBAL=/dev/null \
+  GIT_CONFIG_NOSYSTEM=1 \
+  GIT_NO_REPLACE_OBJECTS=1 \
+  PATH=/usr/bin:/bin \
+  /usr/bin/git -C "$FR8_COMPAT_DIR/repo" hash-object --no-filters -- \
+  "$FR8_COMPAT_DIR/repo/tools/p0r-exit-gate.sh")" \
+  == 05927d4a6cf144ba09ac1a5ffd111cc508397c42 ]]
+(
+  builtin cd -- "$FR8_COMPAT_DIR/repo"
+  "$PYTHON3" -B -I -W error \
+    tools/release/test_verify_current_audit_fr_0008.py
+)
+"$PYTHON3" -B -I -W error tools/release/test_verify_current_audit_fr_0009.py
 "$PYTHON3" -B -I -W error tools/release/verify-current-audit.py
