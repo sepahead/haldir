@@ -78,10 +78,10 @@ EXPECTED_RUNNERS = {
 }
 OIDC_JOB_SHA256 = {
     "attest-ci-audit-result": (
-        "eb4b5eb2498a7f2fd2d19027859e28a2d8d999175b28898eecc42745243740db"
+        "beedef52c53345454596c5b7ddd517de787255282a319cd9fc0a129098ae46da"
     ),
     "attest-formal-audit-result": (
-        "5389337471b94797f12447654216f89a05d7f6a9501021aa0dbbc0cf226bd6bd"
+        "a1fac5e057ddd19535f5b6608f124ef256af11633a86fb5028d88b64d694bac0"
     ),
 }
 RUNS_ON_LINE = re.compile(r"^    runs-on:\s*(\S+)\s*$", re.MULTILINE)
