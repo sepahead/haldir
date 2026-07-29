@@ -44,23 +44,23 @@ jobs:
             -config formal/HaldirAuthority.cfg \
             formal/HaldirAuthority.tla | tee tlc.log
           grep -q "Model checking completed. No error has been found." tlc.log
-      - name: Emit canonical epoch-13 formal result
+      - name: Emit canonical epoch-14 formal result
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 tools/release/framework_recovery_fr_0012_result.py \
+          python3 tools/release/framework_recovery_fr_0013_result.py \
             --workflow formal \
-            --output "epoch-13-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "epoch-14-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-13-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "epoch-14-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-13 formal result
+      - name: Upload canonical epoch-14 formal result
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-13-formal-result-attempt-${{ github.run_attempt }}.json
+          path: epoch-14-formal-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -100,7 +100,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-formal-result/epoch-13-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-formal-result/epoch-14-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-formal-result -mindepth 1 -maxdepth 1 \
@@ -112,4 +112,4 @@ jobs:
       - name: Attest exact formal result
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
         with:
-          subject-path: attested-formal-result/epoch-13-formal-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-formal-result/epoch-14-formal-result-attempt-${{ github.run_attempt }}.json

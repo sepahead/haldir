@@ -173,7 +173,7 @@ jobs:
           /usr/bin/chmod go-w "$GH_BIN"
           [[ "$("$GH_BIN" --version | /usr/bin/head -n 1)" == \
             "gh version ${GH_CLI_VERSION} (2026-06-17)" ]]
-          printf 'HALDIR_FR0012_GH=%s\n' "$GH_BIN" >> "$GITHUB_ENV"
+          printf 'HALDIR_FR0013_GH=%s\n' "$GH_BIN" >> "$GITHUB_ENV"
       - name: Preload isolated task-runner image
         run: /usr/bin/docker pull python@sha256:4a3a38c8710794e278c3651352dd6195d5798eb6ec5ad41db6258e753c9e4ceb
       - name: Verify current-head 0.9 audit cut
@@ -212,23 +212,23 @@ jobs:
         run: python3 tools/verify-claims.py
       - name: cargo-deny
         uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
-      - name: Emit canonical epoch-13 audit result
+      - name: Emit canonical epoch-14 audit result
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 tools/release/framework_recovery_fr_0012_result.py \
+          python3 tools/release/framework_recovery_fr_0013_result.py \
             --workflow ci \
-            --output "epoch-13-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "epoch-14-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-13-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "epoch-14-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-13 audit result
+      - name: Upload canonical epoch-14 audit result
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-13-ci-result-attempt-${{ github.run_attempt }}.json
+          path: epoch-14-ci-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -268,7 +268,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-audit-result/epoch-13-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-audit-result/epoch-14-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-audit-result -mindepth 1 -maxdepth 1 \
@@ -280,7 +280,7 @@ jobs:
       - name: Attest exact audit result
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
         with:
-          subject-path: attested-audit-result/epoch-13-ci-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-audit-result/epoch-14-ci-result-attempt-${{ github.run_attempt }}.json
 
   interop:
     # An independent (second-implementation) check of the COSE_Sign1 /
