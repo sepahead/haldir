@@ -5,6 +5,7 @@ All third-party GitHub Actions must use a full commit SHA. The TLA+ executable
 asset must come from the exact release and match the digest recorded in
 ``tools/pins.toml``. No third-party dependencies are required.
 """
+
 from __future__ import annotations
 
 from collections import Counter
@@ -27,32 +28,36 @@ DOCKER = re.compile(
     r"@sha256:(?P<digest>[0-9a-f]{64})"
 )
 LOCAL = re.compile(r"\./[A-Za-z0-9_./-]+")
-USES_LINE = re.compile(
-    r"^\s*(?:-\s*)?uses:\s*(?P<value>\S+?)\s*(?:#.*)?$"
-)
+USES_LINE = re.compile(r"^\s*(?:-\s*)?uses:\s*(?P<value>\S+?)\s*(?:#.*)?$")
 ANY_USES_LINE = re.compile(
     r"^\s*(?:-\s*)?(?:uses|\"uses\"|'uses')\s*:",
     re.MULTILINE,
 )
-INLINE_USES_LINE = re.compile(
-    r"^\s*-\s*\{.*(?:^|[\s,{])(?:uses|\"uses\"|'uses')\s*:"
-)
+INLINE_USES_LINE = re.compile(r"^\s*-\s*\{.*(?:^|[\s,{])(?:uses|\"uses\"|'uses')\s*:")
 SIMPLE_MAPPING_LINE = re.compile(
     r"^(?P<indent> *)(?P<sequence>- )?"
     r"(?P<key>[A-Za-z0-9_.-]+):(?P<value>.*)$"
 )
-SIMPLE_SEQUENCE_LINE = re.compile(
-    r"^ +- [A-Za-z0-9_.-]+(?: +#.*)?$"
-)
-BLOCK_SCALAR_VALUE = re.compile(
-    r"^[>|](?:[+-](?:[1-9])?|[1-9](?:[+-])?)?\s*(?:#.*)?$"
-)
+SIMPLE_SEQUENCE_LINE = re.compile(r"^ +- [A-Za-z0-9_.-]+(?: +#.*)?$")
+BLOCK_SCALAR_VALUE = re.compile(r"^[>|](?:[+-](?:[1-9])?|[1-9](?:[+-])?)?\s*(?:#.*)?$")
 GITHUB_EXPRESSION = re.compile(r"\$\{\{[^{}\r\n]*\}\}")
 REQUIRED_ACTION_PINS = {
     (
         "actions/attest",
-        "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6",
+        "508db95dd578ae2727ebd6217d5ba78e4fbda05d",
     ): 2,
+    (
+        "actions/setup-python",
+        "5fda3b95a4ea91299a34e894583c3862153e4b97",
+    ): 1,
+    (
+        "actions/setup-java",
+        "03ad4de0992f5dab5e18fcb136590ce7c4a0ac95",
+    ): 1,
+    (
+        "EmbarkStudios/cargo-deny-action",
+        "3c6349835b2b7b196a839186cb8b78e02f7b5f25",
+    ): 1,
     (
         "actions/download-artifact",
         "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
@@ -62,26 +67,35 @@ REQUIRED_ACTION_PINS = {
         "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
     ): 3,
 }
+REQUIRED_ACTION_COMMENTS = {
+    ("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0"): 1,
+    ("actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0"): 1,
+    ("actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1"): 2,
+    (
+        "EmbarkStudios/cargo-deny-action@"
+        "3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1"
+    ): 1,
+}
 MAX_WORKFLOW_BYTES = 1024 * 1024
-GH_CLI_VERSION = "2.95.0"
+GH_CLI_VERSION = "2.96.0"
 GH_CLI_ARCHIVE_SHA256 = (
-    "25d1e4729e8808c9ed3d613e96ebd3f3e44446f2d368c89d878a71a36ddb3d8c"
+    "83d5c2ccad5498f58bf6368acb1ab32588cf43ab3a4b1c301bf36328b1c8bd60"
 )
-GH_CLI_ARCHIVE_BYTES = 14_642_738
+GH_CLI_ARCHIVE_BYTES = 14_652_560
 GH_CLI_BINARY_SHA256 = (
-    "62c11fbaa08835168c3d1acf8a645ac6268a13a5682c73581388c9df0c622617"
+    "56b8bbbb27b066ecb33dbef9a256dc9d1314adaeff0908a752feba6c34053b40"
 )
-GH_CLI_BINARY_BYTES = 40_702_114
+GH_CLI_BINARY_BYTES = 40_722_594
 EXPECTED_RUNNERS = {
     "ci.yml": Counter({"ubuntu-24.04": 6, "macos-15": 1}),
     "formal.yml": Counter({"ubuntu-24.04": 2}),
 }
 OIDC_JOB_SHA256 = {
     "attest-ci-audit-result": (
-        "c0c51871ce98e33042e2c22d5d0189b835d7fb1ddc9150062374913505a9187a"
+        "7ebd1c43ac42bb1e8c3e2919aa3c3e0122cb9fca33a6e99d82b051155f7319aa"
     ),
     "attest-formal-audit-result": (
-        "90da9d7f4c95b882180e1834a083afb9cee6d8d7547e28836b4375dce82bca0b"
+        "3a88e23f66c9025dffcc407f947ef93727e845e8ffee184f4eda88e2aa24a5e7"
     ),
 }
 RUNS_ON_LINE = re.compile(r"^    runs-on:\s*(\S+)\s*$", re.MULTILINE)
@@ -144,20 +158,13 @@ def validate_workflow_syntax(text: str, *, label: str) -> list[str]:
             if (
                 "{" in masked
                 or "}" in masked
-                or (
-                    ("[" in masked or "]" in masked)
-                    and ":" in masked
-                )
+                or (("[" in masked or "]" in masked) and ":" in masked)
             ):
-                problems.append(
-                    f"{label}:{line_number} uses a forbidden flow mapping"
-                )
+                problems.append(f"{label}:{line_number} uses a forbidden flow mapping")
             continue
         if SIMPLE_SEQUENCE_LINE.fullmatch(line) is not None:
             continue
-        problems.append(
-            f"{label}:{line_number} is outside the uses-safe YAML subset"
-        )
+        problems.append(f"{label}:{line_number} is outside the uses-safe YAML subset")
     return problems
 
 
@@ -243,9 +250,7 @@ def verify_oidc_job(
     expected_digest = OIDC_JOB_SHA256.get(job)
     observed_digest = hashlib.sha256(block.encode("utf-8")).hexdigest()
     if expected_digest is None or observed_digest != expected_digest:
-        problems.append(
-            f"{label}:{job} exact reviewed job block digest mismatch"
-        )
+        problems.append(f"{label}:{job} exact reviewed job block digest mismatch")
     required_fragments = (
         "github.repository == 'sepahead/haldir'",
         "github.event_name == 'push'",
@@ -253,16 +258,13 @@ def verify_oidc_job(
         "      artifact-metadata: write",
         "      attestations: write",
         "      id-token: write",
-        "actions/download-artifact@"
-        "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
-        "actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6",
+        "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+        "actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d",
         "          digest-mismatch: error",
     )
     for fragment in required_fragments:
         if block.count(fragment) != 1:
-            problems.append(
-                f"{label}:{job} requires exactly one {fragment!r}"
-            )
+            problems.append(f"{label}:{job} requires exactly one {fragment!r}")
     forbidden = (
         "actions/checkout@",
         "uses: ./",
@@ -290,9 +292,7 @@ def verify_oidc_job(
         + "".join(f"      - {dependency}\n" for dependency in expected_needs)
     )
     if block.count(rendered_needs) != 1:
-        problems.append(
-            f"{label}:{job} needs must be exactly {expected_needs!r}"
-        )
+        problems.append(f"{label}:{job} needs must be exactly {expected_needs!r}")
     return problems
 
 
@@ -305,9 +305,7 @@ def _read_workflow(path: Path) -> str:
     try:
         return payload.decode("utf-8")
     except UnicodeDecodeError as error:
-        raise ValueError(
-            f"{path.relative_to(ROOT)} is not valid UTF-8"
-        ) from error
+        raise ValueError(f"{path.relative_to(ROOT)} is not valid UTF-8") from error
 
 
 def fail(messages: list[str]) -> None:
@@ -333,9 +331,7 @@ def main() -> None:
             problems.append(str(error))
             continue
         workflow_texts[path.name] = text
-        uses, parse_problems = collect_uses(
-            text, label=str(path.relative_to(ROOT))
-        )
+        uses, parse_problems = collect_uses(text, label=str(path.relative_to(ROOT)))
         problems.extend(parse_problems)
         for use in uses:
             if use.kind == "action":
@@ -386,6 +382,7 @@ def main() -> None:
         "--no-same-owner": 1,
         "--no-same-permissions": 1,
         '-- "gh_${GH_CLI_VERSION}_linux_amd64/bin/gh"': 1,
+        "gh version ${GH_CLI_VERSION} (2026-07-02)": 1,
     }
     for exact, expected_count in required_gh_fragments.items():
         if ci_text.count(exact) != expected_count:
@@ -406,6 +403,14 @@ def main() -> None:
         if observed_count != expected_count:
             problems.append(
                 f"required action pin {identity[0]}@{identity[1]} occurs "
+                f"{observed_count} times; expected {expected_count}"
+            )
+    all_workflows = "\n".join(workflow_texts.values())
+    for fragment, expected_count in REQUIRED_ACTION_COMMENTS.items():
+        observed_count = all_workflows.count(fragment)
+        if observed_count != expected_count:
+            problems.append(
+                f"required action annotation {fragment!r} occurs "
                 f"{observed_count} times; expected {expected_count}"
             )
 
@@ -429,7 +434,9 @@ def main() -> None:
     if "releases/latest" in formal_text:
         problems.append("formal workflow uses a moving releases/latest URL")
     if "sha256sum --check --strict" not in formal_text:
-        problems.append("formal workflow does not verify the TLA+ asset before execution")
+        problems.append(
+            "formal workflow does not verify the TLA+ asset before execution"
+        )
 
     if problems:
         fail(problems)

@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up JRE
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
           java-version: "21"
@@ -44,23 +44,23 @@ jobs:
             -config formal/HaldirAuthority.cfg \
             formal/HaldirAuthority.tla | tee tlc.log
           grep -q "Model checking completed. No error has been found." tlc.log
-      - name: Emit canonical epoch-14 formal result
+      - name: Emit canonical epoch-15 formal result
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 tools/release/framework_recovery_fr_0013_result.py \
+          python3 tools/release/framework_recovery_fr_0014_result.py \
             --workflow formal \
-            --output "epoch-14-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "epoch-15-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-14-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "epoch-15-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-14 formal result
+      - name: Upload canonical epoch-15 formal result
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-14-formal-result-attempt-${{ github.run_attempt }}.json
+          path: epoch-15-formal-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -100,7 +100,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-formal-result/epoch-14-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-formal-result/epoch-15-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-formal-result -mindepth 1 -maxdepth 1 \
@@ -110,6 +110,6 @@ jobs:
             "$RESULT_PATH" \
             | /usr/bin/sha256sum --check --strict
       - name: Attest exact formal result
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
-          subject-path: attested-formal-result/epoch-14-formal-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-formal-result/epoch-15-formal-result-attempt-${{ github.run_attempt }}.json
