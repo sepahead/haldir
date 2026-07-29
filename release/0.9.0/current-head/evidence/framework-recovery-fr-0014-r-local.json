@@ -1,0 +1,111 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 15,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "state": "PENDING_QUALIFICATION",
+    "tag_authorized": false
+  },
+  "capture_tool": {
+    "bytes": 34800,
+    "git_mode": "100755",
+    "git_object_id": "dbf6562b7d1a02a7d61e79a49be25a6a34372a70",
+    "git_object_type": "blob",
+    "path": "tools/release/framework_recovery_fr_0014_capture.py",
+    "sha256": "ce21ad28b85f069d0192ad6076ff69523c9ef16eaf8d80372d2c4b7dc7b06c56"
+  },
+  "checks": [
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/release/test_verify_framework_recovery_fr_0014.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 13441,
+      "stderr_sha256": "c6c105b2055503d573bdd542cec2f6a06150cac718b523c7e5b8ccf92a908dca",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/verify-ci-pins.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 101,
+      "stdout_sha256": "61614f3e7c302295ee40681ed3db37f49229c5ce8ff5ef91bdfef902fd68a35d"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/release/verify-framework-recovery-fr-0014.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 87,
+      "stdout_sha256": "08515ca88bac05d92023d6a33b265bd19342c5b12d73aba579362fcc8479073c"
+    },
+    {
+      "argv": [
+        "/bin/bash",
+        "-n",
+        "tools/release/current-audit-gate.sh"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/usr/bin/git",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "diff",
+        "--check",
+        "62c1e0e0bfe7d81ca6f6ac3cff31c835bbff1089..c2ac5b6512d070ecc7f5a560405a05388b7fe86c"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "completed_at_utc": "2026-07-29T23:06:56.047320Z",
+  "protocol": "HALDIR_FR_0014_LOCAL_VALIDATION_V1",
+  "python": {
+    "implementation": "cpython",
+    "version": "3.14.6"
+  },
+  "result": "PASS",
+  "schema_version": "1.0.0",
+  "subject_commit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+  "subject_tree": "c6a211d1670ac5d423000c78d7dc0b8988e78842"
+}

@@ -1,0 +1,422 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 15,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "state": "QUALIFIED_PENDING_ACTIVATION",
+    "tag_authorized": false
+  },
+  "automated_paid_model_reviews": {
+    "authority_conferred": false,
+    "normative": false,
+    "required": false
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0014-qualification-v1",
+    "principal": "sepmhn@gmail.com",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAAyaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDE0LXF1\nYWxpZmljYXRpb24tdjEAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAi4\nJLGDq5gl74FuJiMYQvk/mhVAx9BTqQvz1fFBbplWwOQyXEfjqofuwmAumz7taHfRvEJSxu\nzFYtN9NDY4NYAw==\n-----END SSH SIGNATURE-----\n"
+  },
+  "evidence_catalog": [
+    {
+      "bytes": 64530,
+      "git_mode": "100644",
+      "git_object_id": "43b5d59027fe7c0b63feb0df66efa6a6711e1470",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-capture.json",
+      "sha256": "d1bab48ff3f0c92709715f39b7035158a8ebf2c7353f0a9642ab99ca7588d5c1"
+    },
+    {
+      "bytes": 2467,
+      "git_mode": "100644",
+      "git_object_id": "780a7b602d40c9eb36accc7bfedf2c18783da0e2",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-result.json",
+      "sha256": "a4a57d526d16707503d8b829b9f7abdd62176d8255c20bce2f04c8945515db12"
+    },
+    {
+      "bytes": 10347,
+      "git_mode": "100644",
+      "git_object_id": "e3a579e430c6452647b8589e1dda1345e5927b21",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-attestation.json",
+      "sha256": "4f115b23c70efcea52f3852db04bf5c4eb053b6b1ffb97ae0a80662a77617867"
+    },
+    {
+      "bytes": 32698,
+      "git_mode": "100644",
+      "git_object_id": "33058af6e2d262e13ee6cff6c95d9375fc805e96",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-capture.json",
+      "sha256": "4691f057a20dbbe80a00fbd62dcb58acec0c503cc04a4380c5d39f6f6ed076d9"
+    },
+    {
+      "bytes": 2446,
+      "git_mode": "100644",
+      "git_object_id": "752610ddb3502ee79530472c50a356de0153aa43",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-result.json",
+      "sha256": "557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c"
+    },
+    {
+      "bytes": 10380,
+      "git_mode": "100644",
+      "git_object_id": "17ac9e6c299c900262aeb71717966b7f039cc1f0",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-attestation.json",
+      "sha256": "a37445792ea2a11074778f84b8d266c7b65f9473139c8d187858a99327d881c6"
+    },
+    {
+      "bytes": 3586,
+      "git_mode": "100644",
+      "git_object_id": "5022a1ede48e0ad6b1a9c69367ff056aad008daa",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-local.json",
+      "sha256": "979d82232ccbc3059a20e9c5a3094a6f8e46082ae40685e87f9881e3937d4377"
+    }
+  ],
+  "hosted_evidence": {
+    "repair_ci": {
+      "artifact_id": 8742291481,
+      "attempt": 1,
+      "attestation": {
+        "bundle_bytes": 10347,
+        "bundle_sha256": "4f115b23c70efcea52f3852db04bf5c4eb053b6b1ffb97ae0a80662a77617867",
+        "certificate_policy": {
+          "buildConfigDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "buildConfigURI": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main",
+          "buildSignerDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "buildSignerURI": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main",
+          "buildTrigger": "push",
+          "githubWorkflowName": "ci",
+          "githubWorkflowRef": "refs/heads/main",
+          "githubWorkflowRepository": "sepahead/haldir",
+          "githubWorkflowSHA": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "githubWorkflowTrigger": "push",
+          "issuer": "https://token.actions.githubusercontent.com",
+          "runInvocationURI": "https://github.com/sepahead/haldir/actions/runs/30497765859/attempts/1",
+          "runnerEnvironment": "github-hosted",
+          "sourceRepositoryDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "sourceRepositoryIdentifier": "1292802592",
+          "sourceRepositoryOwnerIdentifier": "10104569",
+          "sourceRepositoryOwnerURI": "https://github.com/sepahead",
+          "sourceRepositoryRef": "refs/heads/main",
+          "sourceRepositoryURI": "https://github.com/sepahead/haldir",
+          "sourceRepositoryVisibilityAtSigning": "public",
+          "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+        },
+        "provider_provenance_independently_attested": true,
+        "release_authority_conferred": false,
+        "statement": {
+          "_type": "https://in-toto.io/Statement/v1",
+          "predicate": {
+            "buildDefinition": {
+              "buildType": "https://actions.github.io/buildtypes/workflow/v1",
+              "externalParameters": {
+                "workflow": {
+                  "path": ".github/workflows/ci.yml",
+                  "ref": "refs/heads/main",
+                  "repository": "https://github.com/sepahead/haldir"
+                }
+              },
+              "internalParameters": {
+                "github": {
+                  "event_name": "push",
+                  "repository_id": "1292802592",
+                  "repository_owner_id": "10104569",
+                  "runner_environment": "github-hosted"
+                }
+              },
+              "resolvedDependencies": [
+                {
+                  "digest": {
+                    "gitCommit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c"
+                  },
+                  "uri": "git+https://github.com/sepahead/haldir@refs/heads/main"
+                }
+              ]
+            },
+            "runDetails": {
+              "builder": {
+                "id": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+              },
+              "metadata": {
+                "invocationId": "https://github.com/sepahead/haldir/actions/runs/30497765859/attempts/1"
+              }
+            }
+          },
+          "predicateType": "https://slsa.dev/provenance/v1",
+          "subject": [
+            {
+              "digest": {
+                "sha256": "a4a57d526d16707503d8b829b9f7abdd62176d8255c20bce2f04c8945515db12"
+              },
+              "name": "epoch-15-ci-result-attempt-1.json"
+            }
+          ]
+        },
+        "transparency_log": {
+          "timestamp": "2026-07-29T22:56:16Z",
+          "type": "Tlog",
+          "uri": "https://rekor.sigstore.dev"
+        },
+        "verified_timestamp_count": 1
+      },
+      "offline_verification": {
+        "custom_trusted_root_sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1",
+        "network_mode": "OFFLINE_INVALID_PROXY_AND_TOKEN",
+        "result": "PASS",
+        "tool": "gh",
+        "version": "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0"
+      },
+      "result_sha256": "a4a57d526d16707503d8b829b9f7abdd62176d8255c20bce2f04c8945515db12",
+      "run_id": 30497765859,
+      "workflow": "ci"
+    },
+    "repair_formal": {
+      "artifact_id": 8742274597,
+      "attempt": 1,
+      "attestation": {
+        "bundle_bytes": 10380,
+        "bundle_sha256": "a37445792ea2a11074778f84b8d266c7b65f9473139c8d187858a99327d881c6",
+        "certificate_policy": {
+          "buildConfigDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "buildConfigURI": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main",
+          "buildSignerDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "buildSignerURI": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main",
+          "buildTrigger": "push",
+          "githubWorkflowName": "formal",
+          "githubWorkflowRef": "refs/heads/main",
+          "githubWorkflowRepository": "sepahead/haldir",
+          "githubWorkflowSHA": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "githubWorkflowTrigger": "push",
+          "issuer": "https://token.actions.githubusercontent.com",
+          "runInvocationURI": "https://github.com/sepahead/haldir/actions/runs/30497765952/attempts/1",
+          "runnerEnvironment": "github-hosted",
+          "sourceRepositoryDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "sourceRepositoryIdentifier": "1292802592",
+          "sourceRepositoryOwnerIdentifier": "10104569",
+          "sourceRepositoryOwnerURI": "https://github.com/sepahead",
+          "sourceRepositoryRef": "refs/heads/main",
+          "sourceRepositoryURI": "https://github.com/sepahead/haldir",
+          "sourceRepositoryVisibilityAtSigning": "public",
+          "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+        },
+        "provider_provenance_independently_attested": true,
+        "release_authority_conferred": false,
+        "statement": {
+          "_type": "https://in-toto.io/Statement/v1",
+          "predicate": {
+            "buildDefinition": {
+              "buildType": "https://actions.github.io/buildtypes/workflow/v1",
+              "externalParameters": {
+                "workflow": {
+                  "path": ".github/workflows/formal.yml",
+                  "ref": "refs/heads/main",
+                  "repository": "https://github.com/sepahead/haldir"
+                }
+              },
+              "internalParameters": {
+                "github": {
+                  "event_name": "push",
+                  "repository_id": "1292802592",
+                  "repository_owner_id": "10104569",
+                  "runner_environment": "github-hosted"
+                }
+              },
+              "resolvedDependencies": [
+                {
+                  "digest": {
+                    "gitCommit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c"
+                  },
+                  "uri": "git+https://github.com/sepahead/haldir@refs/heads/main"
+                }
+              ]
+            },
+            "runDetails": {
+              "builder": {
+                "id": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+              },
+              "metadata": {
+                "invocationId": "https://github.com/sepahead/haldir/actions/runs/30497765952/attempts/1"
+              }
+            }
+          },
+          "predicateType": "https://slsa.dev/provenance/v1",
+          "subject": [
+            {
+              "digest": {
+                "sha256": "557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c"
+              },
+              "name": "epoch-15-formal-result-attempt-1.json"
+            }
+          ]
+        },
+        "transparency_log": {
+          "timestamp": "2026-07-29T22:55:20Z",
+          "type": "Tlog",
+          "uri": "https://rekor.sigstore.dev"
+        },
+        "verified_timestamp_count": 1
+      },
+      "offline_verification": {
+        "custom_trusted_root_sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1",
+        "network_mode": "OFFLINE_INVALID_PROXY_AND_TOKEN",
+        "result": "PASS",
+        "tool": "gh",
+        "version": "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0"
+      },
+      "result_sha256": "557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c",
+      "run_id": 30497765952,
+      "workflow": "formal"
+    }
+  },
+  "legacy_recovery_states": {
+    "FR-0010": "ABORTED_BEFORE_QUALIFICATION",
+    "FR-0011": "ABORTED_BEFORE_QUALIFICATION",
+    "FR-0012": "ABORTED_BEFORE_QUALIFICATION",
+    "FR-0013": "SUPERSEDED_AFTER_QUALIFICATION_BEFORE_ACTIVATION"
+  },
+  "limitations": [
+    "GitHub OIDC proves the isolated attestation workflow identity; the producer result remains a statement from repository code.",
+    "The epoch-15 artifact syntax is an evidence transport only and confers no release authority.",
+    "Branch-protection API evidence is a TLS-observed snapshot of mutable external state, not durable cryptographic proof.",
+    "The branch-control mutation attempts and subsequent API shapes are signed source-authority observations of mutable GitHub state; failed mutation responses are not activation evidence and no durable external-state proof is claimed.",
+    "Activation necessarily binds qualification-main hosted proof; the activation commit cannot contain hosted proof of itself.",
+    "Offline successor verification proves signature, ancestry, and protected-path scope, but cannot prove mutable hosted settings.",
+    "Bounded subprocess cleanup terminates descendants that remain in the child process group. A hostile descendant that successfully creates a new session or double-forks outside that group can escape this local process-tree boundary. No host-resource containment or availability guarantee is claimed.",
+    "The owner/admin can mutate external settings; owner-account or GitHub control-plane compromise is outside this local guarantee.",
+    "This bridge grants no release, deployment, publication, tag, archive, DOI, or GitHub Release authority."
+  ],
+  "local_evidence": {
+    "authority": {
+      "archive_authorized": false,
+      "deployment_authorized": false,
+      "doi_authorized": false,
+      "framework_epoch": 15,
+      "github_release_authorized": false,
+      "overall_release_status": "NO_GO",
+      "publication_authorized": false,
+      "release_authorized": false,
+      "state": "PENDING_QUALIFICATION",
+      "tag_authorized": false
+    },
+    "capture_tool": {
+      "bytes": 34800,
+      "git_mode": "100755",
+      "git_object_id": "dbf6562b7d1a02a7d61e79a49be25a6a34372a70",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0014_capture.py",
+      "sha256": "ce21ad28b85f069d0192ad6076ff69523c9ef16eaf8d80372d2c4b7dc7b06c56"
+    },
+    "checks": [
+      {
+        "argv": [
+          "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+          "-I",
+          "-B",
+          "-W",
+          "error",
+          "tools/release/test_verify_framework_recovery_fr_0014.py"
+        ],
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_bytes": 13441,
+        "stderr_sha256": "c6c105b2055503d573bdd542cec2f6a06150cac718b523c7e5b8ccf92a908dca",
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "argv": [
+          "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+          "-I",
+          "-B",
+          "-W",
+          "error",
+          "tools/verify-ci-pins.py"
+        ],
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 101,
+        "stdout_sha256": "61614f3e7c302295ee40681ed3db37f49229c5ce8ff5ef91bdfef902fd68a35d"
+      },
+      {
+        "argv": [
+          "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+          "-I",
+          "-B",
+          "-W",
+          "error",
+          "tools/release/verify-framework-recovery-fr-0014.py"
+        ],
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 87,
+        "stdout_sha256": "08515ca88bac05d92023d6a33b265bd19342c5b12d73aba579362fcc8479073c"
+      },
+      {
+        "argv": [
+          "/bin/bash",
+          "-n",
+          "tools/release/current-audit-gate.sh"
+        ],
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "argv": [
+          "/usr/bin/git",
+          "-c",
+          "core.hooksPath=/dev/null",
+          "diff",
+          "--check",
+          "62c1e0e0bfe7d81ca6f6ac3cff31c835bbff1089..c2ac5b6512d070ecc7f5a560405a05388b7fe86c"
+        ],
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "completed_at_utc": "2026-07-29T23:06:56.047320Z",
+    "protocol": "HALDIR_FR_0014_LOCAL_VALIDATION_V1",
+    "python": {
+      "implementation": "cpython",
+      "version": "3.14.6"
+    },
+    "result": "PASS",
+    "schema_version": "1.0.0",
+    "subject_commit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+    "subject_tree": "c6a211d1670ac5d423000c78d7dc0b8988e78842"
+  },
+  "plan_record": {
+    "bytes": 44282,
+    "git_mode": "100644",
+    "git_object_id": "f6c68a0e2a7778fb2c2cc6364c6835940e3ea476",
+    "git_object_type": "blob",
+    "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0014-plan.json",
+    "sha256": "d21a12f096c7bddc5a62f2ccb92bec3ddc3b50736426a93f121720448c511d05"
+  },
+  "recovery_id": "FR-0014",
+  "repair_commit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+  "schema_version": "1.0.0",
+  "stage": "QUALIFICATION",
+  "state_after": "QUALIFIED_PENDING_ACTIVATION",
+  "state_before": "PENDING_QUALIFICATION"
+}

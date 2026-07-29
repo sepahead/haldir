@@ -1,0 +1,625 @@
+{
+  "artifact": {
+    "archive_download_url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742274597/zip",
+    "created_at": "2026-07-29T22:55:09Z",
+    "digest": "sha256:557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c",
+    "expired": false,
+    "expires_at": "2026-10-27T22:54:49Z",
+    "id": 8742274597,
+    "name": "epoch-15-formal-result-attempt-1.json",
+    "node_id": "MDg6QXJ0aWZhY3Q4NzQyMjc0NTk3",
+    "size_in_bytes": 2446,
+    "updated_at": "2026-07-29T22:55:09Z",
+    "url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742274597",
+    "workflow_run": {
+      "head_branch": "main",
+      "head_repository_id": 1292802592,
+      "head_sha": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+      "id": 30497765952,
+      "repository_id": 1292802592
+    }
+  },
+  "artifact_by_id": {
+    "archive_download_url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742274597/zip",
+    "created_at": "2026-07-29T22:55:09Z",
+    "digest": "sha256:557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c",
+    "expired": false,
+    "expires_at": "2026-10-27T22:54:49Z",
+    "id": 8742274597,
+    "name": "epoch-15-formal-result-attempt-1.json",
+    "node_id": "MDg6QXJ0aWZhY3Q4NzQyMjc0NTk3",
+    "size_in_bytes": 2446,
+    "updated_at": "2026-07-29T22:55:09Z",
+    "url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742274597",
+    "workflow_run": {
+      "head_branch": "main",
+      "head_repository_id": 1292802592,
+      "head_sha": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+      "id": 30497765952,
+      "repository_id": 1292802592
+    }
+  },
+  "artifact_download": {
+    "bytes": 2446,
+    "content_mode": "DIRECT_UNARCHIVED_FILE",
+    "sha256": "557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c"
+  },
+  "artifact_listing": {
+    "artifacts": [
+      {
+        "archive_download_url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742274597/zip",
+        "created_at": "2026-07-29T22:55:09Z",
+        "digest": "sha256:557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c",
+        "expired": false,
+        "expires_at": "2026-10-27T22:54:49Z",
+        "id": 8742274597,
+        "name": "epoch-15-formal-result-attempt-1.json",
+        "node_id": "MDg6QXJ0aWZhY3Q4NzQyMjc0NTk3",
+        "size_in_bytes": 2446,
+        "updated_at": "2026-07-29T22:55:09Z",
+        "url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742274597",
+        "workflow_run": {
+          "head_branch": "main",
+          "head_repository_id": 1292802592,
+          "head_sha": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+          "id": 30497765952,
+          "repository_id": 1292802592
+        }
+      }
+    ],
+    "total_count": 1
+  },
+  "attempt_metadata": {
+    "attempt": 1,
+    "conclusion": "success",
+    "createdAt": "2026-07-29T22:54:49Z",
+    "databaseId": 30497765952,
+    "event": "push",
+    "headBranch": "main",
+    "headSha": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+    "jobs": [
+      {
+        "completedAt": "2026-07-29T22:55:14Z",
+        "conclusion": "success",
+        "databaseId": 90730449114,
+        "name": "tlc-model-check",
+        "startedAt": "2026-07-29T22:54:58Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T22:55:02Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T22:55:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:04Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T22:55:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:04Z",
+            "conclusion": "success",
+            "name": "Set up JRE",
+            "number": 3,
+            "startedAt": "2026-07-29T22:55:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:05Z",
+            "conclusion": "success",
+            "name": "Fetch pinned TLA+ tools",
+            "number": 4,
+            "startedAt": "2026-07-29T22:55:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:08Z",
+            "conclusion": "success",
+            "name": "Model-check HaldirAuthority",
+            "number": 5,
+            "startedAt": "2026-07-29T22:55:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:08Z",
+            "conclusion": "success",
+            "name": "Emit canonical epoch-15 formal result",
+            "number": 6,
+            "startedAt": "2026-07-29T22:55:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:09Z",
+            "conclusion": "success",
+            "name": "Upload canonical epoch-15 formal result",
+            "number": 7,
+            "startedAt": "2026-07-29T22:55:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:10Z",
+            "conclusion": "success",
+            "name": "Upload TLC log",
+            "number": 8,
+            "startedAt": "2026-07-29T22:55:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:10Z",
+            "conclusion": "success",
+            "name": "Post Set up JRE",
+            "number": 15,
+            "startedAt": "2026-07-29T22:55:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:10Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 16,
+            "startedAt": "2026-07-29T22:55:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:11Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-07-29T22:55:10Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30497765952/job/90730449114"
+      },
+      {
+        "completedAt": "2026-07-29T22:55:21Z",
+        "conclusion": "success",
+        "databaseId": 90730520047,
+        "name": "attest-formal-audit-result",
+        "startedAt": "2026-07-29T22:55:17Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T22:55:18Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T22:55:17Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:19Z",
+            "conclusion": "success",
+            "name": "Download immutable formal result",
+            "number": 2,
+            "startedAt": "2026-07-29T22:55:18Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:19Z",
+            "conclusion": "success",
+            "name": "Verify producer and artifact digests",
+            "number": 3,
+            "startedAt": "2026-07-29T22:55:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:20Z",
+            "conclusion": "success",
+            "name": "Attest exact formal result",
+            "number": 4,
+            "startedAt": "2026-07-29T22:55:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:20Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 5,
+            "startedAt": "2026-07-29T22:55:20Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30497765952/job/90730520047"
+      }
+    ],
+    "number": 123,
+    "startedAt": "2026-07-29T22:54:49Z",
+    "status": "completed",
+    "updatedAt": "2026-07-29T22:55:22Z",
+    "url": "https://github.com/sepahead/haldir/actions/runs/30497765952/attempts/1",
+    "workflowDatabaseId": 311703244,
+    "workflowName": "formal"
+  },
+  "attestation_record": {
+    "bytes": 10380,
+    "git_mode": "100644",
+    "git_object_id": "17ac9e6c299c900262aeb71717966b7f039cc1f0",
+    "git_object_type": "blob",
+    "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-attestation.json",
+    "sha256": "a37445792ea2a11074778f84b8d266c7b65f9473139c8d187858a99327d881c6"
+  },
+  "attestation_verification": [
+    {
+      "attestation": {
+        "bundle": {
+          "dsseEnvelope": {
+            "payload": "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjEiLCJzdWJqZWN0IjpbeyJuYW1lIjoiZXBvY2gtMTUtZm9ybWFsLXJlc3VsdC1hdHRlbXB0LTEuanNvbiIsImRpZ2VzdCI6eyJzaGEyNTYiOiI1NTdmYzQ1NmE2ZDEyNDA1NzU4NjNjOWVkMjYzMThkN2YyZWFhYjM0OWI2MzhjYmEwOTEyN2I1OTgyMzgzOTBjIn19XSwicHJlZGljYXRlVHlwZSI6Imh0dHBzOi8vc2xzYS5kZXYvcHJvdmVuYW5jZS92MSIsInByZWRpY2F0ZSI6eyJidWlsZERlZmluaXRpb24iOnsiYnVpbGRUeXBlIjoiaHR0cHM6Ly9hY3Rpb25zLmdpdGh1Yi5pby9idWlsZHR5cGVzL3dvcmtmbG93L3YxIiwiZXh0ZXJuYWxQYXJhbWV0ZXJzIjp7IndvcmtmbG93Ijp7InJlZiI6InJlZnMvaGVhZHMvbWFpbiIsInJlcG9zaXRvcnkiOiJodHRwczovL2dpdGh1Yi5jb20vc2VwYWhlYWQvaGFsZGlyIiwicGF0aCI6Ii5naXRodWIvd29ya2Zsb3dzL2Zvcm1hbC55bWwifX0sImludGVybmFsUGFyYW1ldGVycyI6eyJnaXRodWIiOnsiZXZlbnRfbmFtZSI6InB1c2giLCJyZXBvc2l0b3J5X2lkIjoiMTI5MjgwMjU5MiIsInJlcG9zaXRvcnlfb3duZXJfaWQiOiIxMDEwNDU2OSIsInJ1bm5lcl9lbnZpcm9ubWVudCI6ImdpdGh1Yi1ob3N0ZWQifX0sInJlc29sdmVkRGVwZW5kZW5jaWVzIjpbeyJ1cmkiOiJnaXQraHR0cHM6Ly9naXRodWIuY29tL3NlcGFoZWFkL2hhbGRpckByZWZzL2hlYWRzL21haW4iLCJkaWdlc3QiOnsiZ2l0Q29tbWl0IjoiYzJhYzViNjUxMmQwNzBlY2M3ZjVhNTYwNDA1YTA1Mzg4YjdmZTg2YyJ9fV19LCJydW5EZXRhaWxzIjp7ImJ1aWxkZXIiOnsiaWQiOiJodHRwczovL2dpdGh1Yi5jb20vc2VwYWhlYWQvaGFsZGlyLy5naXRodWIvd29ya2Zsb3dzL2Zvcm1hbC55bWxAcmVmcy9oZWFkcy9tYWluIn0sIm1ldGFkYXRhIjp7Imludm9jYXRpb25JZCI6Imh0dHBzOi8vZ2l0aHViLmNvbS9zZXBhaGVhZC9oYWxkaXIvYWN0aW9ucy9ydW5zLzMwNDk3NzY1OTUyL2F0dGVtcHRzLzEifX19fQ==",
+            "payloadType": "application/vnd.in-toto+json",
+            "signatures": [
+              {
+                "sig": "MEUCIF5GrFlbFGtV6AnfGTF5L0d7Kxn3UvuKJdobjk6aq37AAiEAoXBCAwAIkWCFQNVFm9NRPmGeynW7yylTTKf7WDyRNo8="
+              }
+            ]
+          },
+          "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+          "verificationMaterial": {
+            "certificate": {
+              "rawBytes": "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"
+            },
+            "timestampVerificationData": {},
+            "tlogEntries": [
+              {
+                "canonicalizedBody": "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiZHNzZSIsInNwZWMiOnsiZW52ZWxvcGVIYXNoIjp7ImFsZ29yaXRobSI6InNoYTI1NiIsInZhbHVlIjoiYjQ5Zjc2YmRjMmNmOTA3MmNmMTc0MTdjMTYxMzI3NjQ2NDljZmZkYjE4YzI1MWFkMDQ2ODAwN2VhMjE5ZTJhMyJ9LCJwYXlsb2FkSGFzaCI6eyJhbGdvcml0aG0iOiJzaGEyNTYiLCJ2YWx1ZSI6ImYxYjI1ZjRlYzQyYWJkNjVmMGVlMTZjYTcyZDhmYzNiMDk2YjU5ZDVjMzNiNGNlYjFkOWFiOGEwY2ViZDhjZjAifSwic2lnbmF0dXJlcyI6W3sic2lnbmF0dXJlIjoiTUVVQ0lGNUdyRmxiRkd0VjZBbmZHVEY1TDBkN0t4bjNVdnVLSmRvYmprNmFxMzdBQWlFQW9YQkNBd0FJa1dDRlFOVkZtOU5SUG1HZXluVzd5eWxUVEtmN1dEeVJObzg9IiwidmVyaWZpZXIiOiJMUzB0TFMxQ1JVZEpUaUJEUlZKVVNVWkpRMEZVUlMwdExTMHRDazFKU1VkNmVrTkRRbXhUWjBGM1NVSkJaMGxWVUhOWlVrTjBjV05ITWpWUFJ6Rk1WSE4xZWxodVVtZFZlRTlSZDBObldVbExiMXBKZW1vd1JVRjNUWGNLVG5wRlZrMUNUVWRCTVZWRlEyaE5UV015Ykc1ak0xSjJZMjFWZFZwSFZqSk5ValIzU0VGWlJGWlJVVVJGZUZaNllWZGtlbVJIT1hsYVV6RndZbTVTYkFwamJURnNXa2RzYUdSSFZYZElhR05PVFdwWmQwNTZTVFZOYWtreFRsUkZOVmRvWTA1TmFsbDNUbnBKTlUxcVRYZE9WRVUxVjJwQlFVMUdhM2RGZDFsSUNrdHZXa2w2YWpCRFFWRlpTVXR2V2tsNmFqQkVRVkZqUkZGblFVVjFNbk5GWTFGUmVqa3dkMlphY25keFNrOUJkWEJKUW5oVU5raFlURzEyYlN0Uk16a0tSSEpQVG10NFUwUkZMMlZRT1VKaE4xQnVSSEJXVldOT1NEZHZSMGQyU2xwd1NWWkJaMnRYVW5WbE5YbFBUMmxLYWt0UFEwSllUWGRuWjFaMlRVRTBSd3BCTVZWa1JIZEZRaTkzVVVWQmQwbElaMFJCVkVKblRsWklVMVZGUkVSQlMwSm5aM0pDWjBWR1FsRmpSRUY2UVdSQ1owNVdTRkUwUlVablVWVjNNM0J4Q2trcmF6VjZWRGRpWTBWMU5ETXJRVmhIVm5wUE5XVm5kMGgzV1VSV1VqQnFRa0puZDBadlFWVXpPVkJ3ZWpGWmEwVmFZalZ4VG1wd1MwWlhhWGhwTkZrS1drUTRkMWhSV1VSV1VqQlNRVkZJTDBKR1RYZFZXVnBRWVVoU01HTklUVFpNZVRsdVlWaFNiMlJYU1hWWk1qbDBURE5PYkdOSFJtOWFWMFpyVERKb2FBcGlSMUp3WTJrNGRWb3liREJoU0ZacFRETmtkbU50ZEcxaVJ6a3pZM2s1YldJelNuUlpWM2QxWlZjeGMxRklTbXhhYmsxMllVZFdhRnBJVFhaaVYwWndDbUpxUVRWQ1oyOXlRbWRGUlVGWlR5OU5RVVZDUWtOMGIyUklVbmRqZW05MlRETlNkbUV5Vm5WTWJVWnFaRWRzZG1KdVRYVmFNbXd3WVVoV2FXUllUbXdLWTIxT2RtSnVVbXhpYmxGMVdUSTVkRTFDU1VkRGFYTkhRVkZSUW1jM09IZEJVVWxGUWtoQ01XTXlaM2RPWjFsTFMzZFpRa0pCUjBSMmVrRkNRWGRSYndwWmVrcG9XWHBXYVU1cVZYaE5iVkYzVG5wQ2JGa3lUVE5hYWxab1RsUlpkMDVFUVRGWlZFRXhUWHBuTkZscVpHMWFWR2N5V1hwQlZVSm5iM0pDWjBWRkNrRlpUeTlOUVVWRlFrRmFiV0l6U25SWlYzZDNTRkZaUzB0M1dVSkNRVWRFZG5wQlFrSlJVVkJqTWxaM1dWZG9iRmxYVVhaaFIwWnpXa2RzZVUxQ01FY0tRMmx6UjBGUlVVSm5OemgzUVZGWlJVUXpTbXhhYmsxMllVZFdhRnBJVFhaaVYwWndZbXBCTjBKbmIzSkNaMFZGUVZsUEwwMUJSVWxDUXpCTlN6Sm9NQXBrU0VKNlQyazRkbVJIT1hKYVZ6UjFXVmRPTUdGWE9YVmplVFZ1WVZoU2IyUlhTakZqTWxaNVdUSTVkV1JIVm5Wa1F6VnFZakl3ZDFoM1dVdExkMWxDQ2tKQlIwUjJla0ZDUTFGU1VrUkZPVzlrU0ZKM1kzcHZka3d5WkhCa1IyZ3hXV2sxYW1JeU1IWmpNbFozV1Zkb2JGbFhVWFpoUjBaeldrZHNlVXg1Tlc0S1lWaFNiMlJYU1haa01qbDVZVEphYzJJelpIcE1NbHAyWTIweGFHSkROVFZpVjNoQlkyMVdiV041T1c5YVYwWnJZM2s1ZEZsWGJIVk5SR2RIUTJselJ3cEJVVkZDWnpjNGQwRlJiMFZMWjNkdldYcEthRmw2Vm1sT2FsVjRUVzFSZDA1NlFteFpNazB6V21wV2FFNVVXWGRPUkVFeFdWUkJNVTE2WnpSWmFtUnRDbHBVWnpKWmVrRmtRbWR2Y2tKblJVVkJXVTh2VFVGRlRFSkJPRTFFVjJSd1pFZG9NVmxwTVc5aU0wNHdXbGRSZDAxbldVdExkMWxDUWtGSFJIWjZRVUlLUkVGUmEwUkRTbTlrU0ZKM1kzcHZka3d5WkhCa1IyZ3hXV2sxYW1JeU1IWmpNbFozV1Zkb2JGbFhVWFpoUjBaeldrZHNlVTFFWjBkRGFYTkhRVkZSUWdwbk56aDNRVkV3UlV0bmQyOVpla3BvV1hwV2FVNXFWWGhOYlZGM1RucENiRmt5VFROYWFsWm9UbFJaZDA1RVFURlpWRUV4VFhwbk5GbHFaRzFhVkdjeUNsbDZRV1pDWjI5eVFtZEZSVUZaVHk5TlFVVlBRa0pGVFVRelNteGFiazEyWVVkV2FGcElUWFppVjBad1ltcEJZVUpuYjNKQ1owVkZRVmxQTDAxQlJWQUtRa0YzVFVOcVJYbFBWRWswVFVSSk1VOVVTWGRMZDFsTFMzZFpRa0pCUjBSMmVrRkNSVUZSWkVSQ2RHOWtTRkozWTNwdmRrd3laSEJrUjJneFdXazFhZ3BpTWpCMll6SldkMWxYYUd4WlYxRjNSMEZaUzB0M1dVSkNRVWRFZG5wQlFrVlJVVXRFUVdkNFRVUkZkMDVFVlRKUFZFSm1RbWR2Y2tKblJVVkJXVTh2Q2sxQlJWTkNSa1ZOVkRKb01HUklRbnBQYVRoMldqSnNNR0ZJVm1sTWJVNTJZbE01ZWxwWVFtaGhSMVpvV2tNNWIxbFhlR3RoV0VsMlRHMWtjR1JIYURFS1dXazVNMkl6U25KYWJYaDJaRE5OZGxwdE9YbGlWMFp6VEc1c2RHSkZRbmxhVjFwNlRESm9iRmxYVW5wTU1qRm9ZVmMwZDA5QldVdExkMWxDUWtGSFJBcDJla0ZDUlhkUmNVUkRhR3BOYlVacVRsZEpNazVVUlhsYVJFRXpUVWRXYWxsNlpHMU9WMFV4VG1wQk1FMUVWbWhOUkZWNlQwUm9hVTR5V214UFJGcHFDazFDVVVkRGFYTkhRVkZSUW1jM09IZEJVbEZGUW1kM1JXTklWbnBoUkVKWFFtZHZja0puUlVWQldVOHZUVUZGVmtKRlowMVNiV2d3WkVoQ2VrOXBPSFlLV2pKc01HRklWbWxNYlU1MllsTTVlbHBZUW1oaFIxWm9Xa001YjFsWGVHdGhXRWwyV1ZkT01HRlhPWFZqZVRsNVpGYzFla3g2VFhkT1JHc3pUbnBaTVFwUFZGVjVUREpHTUdSSFZuUmpTRko2VEhwRmQwWm5XVXRMZDFsQ1FrRkhSSFo2UVVKR1oxRkpSRUZhZDJSWFNuTmhWMDEzVDBGWlMwdDNXVUpDUVVkRUNuWjZRVUpIUVZGeFJFTm9lVnBZUW5aUGJrNXNZMGRHYjFwWFJtdE1NbWhvWWtkU2NHTnFjSGxhVjFrMlkyMVdiV041T1c5YVYwWnJZM2s1ZEZsWGJIVUtUVWxIU2tKbmIzSkNaMFZGUVdSYU5VRm5VVU5DU0hORlpWRkNNMEZJVlVFelZEQjNZWE5pU0VWVVNtcEhValJqYlZkak0wRnhTa3RZY21wbFVFc3pMd3BvTkhCNVowTTRjRGR2TkVGQlFVZG1jMEppY1d4UlFVRkNRVTFCVW1wQ1JVRnBRVXh2Ylc1VldrWkZlak4xUTJ0QlFsYzRSVVJqTTA1dVdTdFVkVzFHQ21OSWVWTlFUbTl1UjNjNWNGbFJTV2RLTTFWM05YcDZTekZPYlZNMlVrZDZlRWxyZGxrMFNIaERkRFZzUTJKcVRtMVdXVWcxV0U5SU1XWmpkME5uV1VrS1MyOWFTWHBxTUVWQmQwMUVZVkZCZDFwblNYaEJUWEpXWnpnM1IweGlZa2xuYkU5dWNqRlRSbGMzVWtGdlVIWkNabTB4WWsxTFVuWjBRbWRNYzJKMFRBb3hOQ3RIZVRjeFJqYzRiSFJ2WTBWd2FFSlFURXQzU1hoQlRUVlJiMlJ0TWsxeVNXeEJaRXM0ZUVwdGRtYzFZamx0TVdNMWJFVlRTWEY1VGpOQmJrSlFDbEZwV0VOU1JsZHBiV1V6YWxrd2JUVkpaR3h6U21sUFVXaFJQVDBLTFMwdExTMUZUa1FnUTBWU1ZFbEdTVU5CVkVVdExTMHRMUW89In1dfX0=",
+                "inclusionPromise": {
+                  "signedEntryTimestamp": "MEUCIQCCv8okplpCrTv0SMOM73Dc/HR1UIVgb/ybDhYjtLEAzAIgCXNHO2R98BAJFRjHZRSyIxeuuEB6sGZgUrJHj2jJ1HM="
+                },
+                "inclusionProof": {
+                  "checkpoint": {
+                    "envelope": "rekor.sigstore.dev - 1193050959916656506\n2162522389\n61AP3Jdglxm6adnod6zPQ6AWvzGLOZWbky2Cs+QUkPg=\n\n— rekor.sigstore.dev wNI9ajBFAiBPTDJUna67caaRFLUMssjvrtjCq8onAPP+r+2upEubGAIhAK6He+XvCaCBldOul4UuPKtAj/n8j/WgHtn1nr2INyMw\n"
+                  },
+                  "hashes": [
+                    "BmXN6P/OIUFBRz5Exe4VQIJlrYHbJRhbMlOXeEYIsCc=",
+                    "+Jz4FjUW9BJsE9FIm6pkWlAAT2CfSnVNhosLm2xVQsc=",
+                    "QUANuDfSPnninXnJGMwVoC8wL8yRcxOxH8eY3rl3l78=",
+                    "uxHLXbT0hIpo21CTeeKiCrOuA8LD33j0cU6MYclv4bQ=",
+                    "K1AZIuJEMv4ZwB4HXuFcRnMiLti3Njywtl5Lkt8cLfQ=",
+                    "l5kjsqT8Dc7rT4HyRJePMUIqL7GgDZ5PG5tcj/u4aFg=",
+                    "IwQhOsmK0cY/q+r645Gt9ttqcs0SH3Qo6Axjj9Nz4Gc=",
+                    "KXPyJMrGauMwQgwRx1NEdTezDkfB6tDjiKgXFgbL41A=",
+                    "bjPYCfLL3ICUqWRgFBMYx9rkbdrJ/RiX4tTKlU4VMfg=",
+                    "G2cidSntxJqkqs4ayRKrbnAunIKsTPrNycs9evI0e/0=",
+                    "IbUP1JiUQUBeOIemWgoGeIWF1OkGLbDPHvVIXJp0olo=",
+                    "Rvg/EGFeHaukkazUCrm/CGYCk/QGJfX/MD5UwtppEz4=",
+                    "9mFMp9UIXC7PdGhyWFHOEcugh8ANSizr3XfpFJ0sJLE=",
+                    "VIsBkyayDqbZb+Hr7KQxmu1/cZ0lBfDN0lwjmUlvtv0=",
+                    "OVsvZCKnWA+498QUIaQCtitUT6huDbC7SmhH1l8MxXI=",
+                    "xH/DCseLHr9eKoYT8qsORZK7zVdEGYWHuVtsVrD95wY="
+                  ],
+                  "logIndex": "2162522376",
+                  "rootHash": "61AP3Jdglxm6adnod6zPQ6AWvzGLOZWbky2Cs+QUkPg=",
+                  "treeSize": "2162522389"
+                },
+                "integratedTime": "1785365720",
+                "kindVersion": {
+                  "kind": "dsse",
+                  "version": "0.0.1"
+                },
+                "logId": {
+                  "keyId": "wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0="
+                },
+                "logIndex": "2284426638"
+              }
+            ]
+          }
+        },
+        "bundle_url": "",
+        "initiator": ""
+      },
+      "verificationResult": {
+        "mediaType": "application/vnd.dev.sigstore.verificationresult+json;version=0.1",
+        "signature": {
+          "certificate": {
+            "buildConfigDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+            "buildConfigURI": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main",
+            "buildSignerDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+            "buildSignerURI": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main",
+            "buildTrigger": "push",
+            "certificateIssuer": "CN=sigstore-intermediate,O=sigstore.dev",
+            "githubWorkflowName": "formal",
+            "githubWorkflowRef": "refs/heads/main",
+            "githubWorkflowRepository": "sepahead/haldir",
+            "githubWorkflowSHA": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+            "githubWorkflowTrigger": "push",
+            "issuer": "https://token.actions.githubusercontent.com",
+            "runInvocationURI": "https://github.com/sepahead/haldir/actions/runs/30497765952/attempts/1",
+            "runnerEnvironment": "github-hosted",
+            "sourceRepositoryDigest": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+            "sourceRepositoryIdentifier": "1292802592",
+            "sourceRepositoryOwnerIdentifier": "10104569",
+            "sourceRepositoryOwnerURI": "https://github.com/sepahead",
+            "sourceRepositoryRef": "refs/heads/main",
+            "sourceRepositoryURI": "https://github.com/sepahead/haldir",
+            "sourceRepositoryVisibilityAtSigning": "public",
+            "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+          }
+        },
+        "statement": {
+          "_type": "https://in-toto.io/Statement/v1",
+          "predicate": {
+            "buildDefinition": {
+              "buildType": "https://actions.github.io/buildtypes/workflow/v1",
+              "externalParameters": {
+                "workflow": {
+                  "path": ".github/workflows/formal.yml",
+                  "ref": "refs/heads/main",
+                  "repository": "https://github.com/sepahead/haldir"
+                }
+              },
+              "internalParameters": {
+                "github": {
+                  "event_name": "push",
+                  "repository_id": "1292802592",
+                  "repository_owner_id": "10104569",
+                  "runner_environment": "github-hosted"
+                }
+              },
+              "resolvedDependencies": [
+                {
+                  "digest": {
+                    "gitCommit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c"
+                  },
+                  "uri": "git+https://github.com/sepahead/haldir@refs/heads/main"
+                }
+              ]
+            },
+            "runDetails": {
+              "builder": {
+                "id": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+              },
+              "metadata": {
+                "invocationId": "https://github.com/sepahead/haldir/actions/runs/30497765952/attempts/1"
+              }
+            }
+          },
+          "predicateType": "https://slsa.dev/provenance/v1",
+          "subject": [
+            {
+              "digest": {
+                "sha256": "557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c"
+              },
+              "name": "epoch-15-formal-result-attempt-1.json"
+            }
+          ]
+        },
+        "verifiedIdentity": {
+          "issuer": {
+            "issuer": "",
+            "regexp": ".*"
+          },
+          "runnerEnvironment": "github-hosted",
+          "subjectAlternativeName": {
+            "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+          }
+        },
+        "verifiedTimestamps": [
+          {
+            "timestamp": "2026-07-29T22:55:20Z",
+            "type": "Tlog",
+            "uri": "https://rekor.sigstore.dev"
+          }
+        ]
+      }
+    }
+  ],
+  "capture_tool": {
+    "bytes": 34800,
+    "git_mode": "100755",
+    "git_object_id": "dbf6562b7d1a02a7d61e79a49be25a6a34372a70",
+    "git_object_type": "blob",
+    "path": "tools/release/framework_recovery_fr_0014_capture.py",
+    "sha256": "ce21ad28b85f069d0192ad6076ff69523c9ef16eaf8d80372d2c4b7dc7b06c56"
+  },
+  "capture_verification": {
+    "custom_trusted_root_sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1",
+    "network_mode": "OFFLINE_INVALID_PROXY_AND_TOKEN",
+    "result": "PASS",
+    "tool": "gh",
+    "version": "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0"
+  },
+  "captured_at_utc": "2026-07-29T23:06:30.705522Z",
+  "commands": {
+    "artifact_download": "gh api --method GET repos/sepahead/haldir/actions/artifacts/8742274597/zip",
+    "artifact_get": "gh api --method GET repos/sepahead/haldir/actions/artifacts/8742274597",
+    "artifact_list": "gh api --method GET repos/sepahead/haldir/actions/runs/30497765952/artifacts?name=epoch-15-formal-result-attempt-1.json&per_page=100",
+    "attempt": "gh run view 30497765952 --repo sepahead/haldir --attempt 1 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName",
+    "attestation_download": "gh attestation download epoch-15-formal-result-attempt-1.json --repo sepahead/haldir --limit 1 --predicate-type https://slsa.dev/provenance/v1",
+    "ordinary": "gh run view 30497765952 --repo sepahead/haldir --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,number,status,updatedAt,url,workflowDatabaseId,workflowName"
+  },
+  "expected_ref": "refs/heads/main",
+  "ordinary": {
+    "attempt": 1,
+    "conclusion": "success",
+    "createdAt": "2026-07-29T22:54:49Z",
+    "databaseId": 30497765952,
+    "event": "push",
+    "headBranch": "main",
+    "headSha": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+    "jobs": [
+      {
+        "completedAt": "2026-07-29T22:55:14Z",
+        "conclusion": "success",
+        "databaseId": 90730449114,
+        "name": "tlc-model-check",
+        "startedAt": "2026-07-29T22:54:58Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T22:55:02Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T22:55:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:04Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T22:55:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:04Z",
+            "conclusion": "success",
+            "name": "Set up JRE",
+            "number": 3,
+            "startedAt": "2026-07-29T22:55:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:05Z",
+            "conclusion": "success",
+            "name": "Fetch pinned TLA+ tools",
+            "number": 4,
+            "startedAt": "2026-07-29T22:55:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:08Z",
+            "conclusion": "success",
+            "name": "Model-check HaldirAuthority",
+            "number": 5,
+            "startedAt": "2026-07-29T22:55:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:08Z",
+            "conclusion": "success",
+            "name": "Emit canonical epoch-15 formal result",
+            "number": 6,
+            "startedAt": "2026-07-29T22:55:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:09Z",
+            "conclusion": "success",
+            "name": "Upload canonical epoch-15 formal result",
+            "number": 7,
+            "startedAt": "2026-07-29T22:55:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:10Z",
+            "conclusion": "success",
+            "name": "Upload TLC log",
+            "number": 8,
+            "startedAt": "2026-07-29T22:55:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:10Z",
+            "conclusion": "success",
+            "name": "Post Set up JRE",
+            "number": 15,
+            "startedAt": "2026-07-29T22:55:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:10Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 16,
+            "startedAt": "2026-07-29T22:55:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:11Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-07-29T22:55:10Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30497765952/job/90730449114"
+      },
+      {
+        "completedAt": "2026-07-29T22:55:21Z",
+        "conclusion": "success",
+        "databaseId": 90730520047,
+        "name": "attest-formal-audit-result",
+        "startedAt": "2026-07-29T22:55:17Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T22:55:18Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T22:55:17Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:19Z",
+            "conclusion": "success",
+            "name": "Download immutable formal result",
+            "number": 2,
+            "startedAt": "2026-07-29T22:55:18Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:19Z",
+            "conclusion": "success",
+            "name": "Verify producer and artifact digests",
+            "number": 3,
+            "startedAt": "2026-07-29T22:55:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:20Z",
+            "conclusion": "success",
+            "name": "Attest exact formal result",
+            "number": 4,
+            "startedAt": "2026-07-29T22:55:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T22:55:20Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 5,
+            "startedAt": "2026-07-29T22:55:20Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30497765952/job/90730520047"
+      }
+    ],
+    "number": 123,
+    "status": "completed",
+    "updatedAt": "2026-07-29T22:55:22Z",
+    "url": "https://github.com/sepahead/haldir/actions/runs/30497765952",
+    "workflowDatabaseId": 311703244,
+    "workflowName": "formal"
+  },
+  "protocol": "HALDIR_FR_0014_HOSTED_RESULT_CAPTURE_V1",
+  "result": "PASS",
+  "result_record": {
+    "bytes": 2446,
+    "git_mode": "100644",
+    "git_object_id": "752610ddb3502ee79530472c50a356de0153aa43",
+    "git_object_type": "blob",
+    "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-result.json",
+    "sha256": "557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c"
+  },
+  "schema_version": "1.0.0",
+  "subject_commit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+  "subject_tree": "c6a211d1670ac5d423000c78d7dc0b8988e78842",
+  "trusted_root_record": {
+    "bytes": 5748,
+    "git_mode": "100644",
+    "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+    "git_object_type": "blob",
+    "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+    "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+  },
+  "workflow": "formal"
+}
