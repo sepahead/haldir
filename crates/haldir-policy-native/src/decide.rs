@@ -7,7 +7,7 @@
 //! computed before the effective-validity minimum (B10). The slew reference is
 //! the last **published** command (H7).
 
-use crate::input::PolicyInput;
+use crate::input::{PolicyInput, ValidatedPolicyInput};
 use crate::output::{PolicyDecision, PolicyOutcome};
 use crate::policy::NativePolicySnapshot;
 use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
@@ -20,6 +20,35 @@ const MAX_REASONS: usize = 32;
 /// Evaluate the native mission policy for one intent.
 #[must_use]
 pub fn decide(input: &PolicyInput<'_>) -> PolicyDecision {
+    // The evaluator is public independently of Gate construction. Invalid
+    // executable policy data must therefore fail closed here as well as during
+    // integrated startup.
+    if input.policy.validate().is_err() {
+        return deny(vec![R::DenyPolicyDiagnostic]);
+    }
+
+    decide_inner(input)
+}
+
+/// Evaluate with a policy whose validation and canonical identity were retained.
+///
+/// This is the integrated Gate path. Construction of
+/// [`crate::ValidatedNativePolicy`] establishes the invariant that lets this
+/// function avoid repeated whole-policy validation.
+#[must_use]
+pub fn decide_validated(input: &ValidatedPolicyInput<'_>) -> PolicyDecision {
+    let input = PolicyInput {
+        now: input.now,
+        lease: input.lease,
+        state: input.state,
+        action: input.action,
+        history: input.history,
+        policy: input.policy.snapshot(),
+    };
+    decide_inner(&input)
+}
+
+fn decide_inner(input: &PolicyInput<'_>) -> PolicyDecision {
     let mut reasons: Vec<R> = Vec::new();
     let p = input.policy;
     let lease = input.lease;
@@ -46,6 +75,9 @@ pub fn decide(input: &PolicyInput<'_>) -> PolicyDecision {
     if !st.primary_source.valid {
         push(&mut reasons, R::DenySourceStale);
     }
+    if st.primary_source.receive_mono > st.captured_mono {
+        push(&mut reasons, R::DenyStateStale);
+    }
     let src_cap =
         u64::from(lease.limits.max_source_age_ms.get()).min(u64::from(p.source_freshness_cap_ms));
     let src_age = age_ms(now, st.primary_source.receive_mono);
@@ -64,7 +96,8 @@ pub fn decide(input: &PolicyInput<'_>) -> PolicyDecision {
         .uncertainty
         .position_mm
         .iter()
-        .any(|&u| u > p.max_position_uncertainty_mm)
+        .any(|&u| u < 0 || u > p.max_position_uncertainty_mm)
+        || st.uncertainty.velocity_mm_s.iter().any(|&u| u < 0)
     {
         push(&mut reasons, R::DenyUncertainty);
     }

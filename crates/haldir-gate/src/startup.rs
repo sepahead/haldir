@@ -36,7 +36,8 @@ use haldir_policy_native::NativePolicySnapshot;
 use haldir_state::{DurableAntiRollbackError, DurableAntiRollbackStore};
 
 use crate::actor::{
-    GateConfig, GateConfigError, GateStartupError, VehicleActor, validate_static_config,
+    GateConfig, GateConfigError, GateSignerValidation, GateStartupError, PolicyBindingValidation,
+    VehicleActor, validate_static_config,
 };
 
 #[path = "publication_coordinator.rs"]
@@ -103,7 +104,7 @@ pub struct GateConfigTemplate {
     pub admission: AdmissionSnapshot,
     /// Native policy snapshot.
     pub policy: NativePolicySnapshot,
-    /// Policy snapshot digest.
+    /// Expected canonical digest of the executable native policy snapshot.
     pub policy_snapshot_digest: DigestV1,
     /// Current NCP session.
     pub session: NcpSessionIdentityV1,
@@ -125,18 +126,25 @@ impl GateConfigTemplate {
     /// Validate every static invariant without opening or changing durable state.
     ///
     /// # Errors
-    /// Returns when signer/cap validation fails, publication authority is not
-    /// the current `PRE_AUTHORITY_ACL_ONLY` profile, the declared runtime profile
-    /// requires a different NCP wire profile, or required live support was not
-    /// compiled.
+    /// Returns when signer/cap/policy validation fails, the configured policy
+    /// digest does not identify its executable parameters, publication authority
+    /// is not the current `PRE_AUTHORITY_ACL_ONLY` profile, the declared runtime
+    /// profile requires a different NCP wire profile, or required live support
+    /// was not compiled.
     pub fn validate(&self) -> Result<(), DurableGateStartupError> {
         validate_static_config(
-            &self.gate_id,
-            &self.trust,
-            &self.revocations,
-            self.local_cap_ms,
-            &self.gate_signer,
-            &self.gate_signer_kid,
+            PolicyBindingValidation {
+                policy: &self.policy,
+                expected_digest: &self.policy_snapshot_digest,
+                local_cap_ms: self.local_cap_ms,
+            },
+            GateSignerValidation {
+                gate_id: &self.gate_id,
+                trust: &self.trust,
+                revocations: &self.revocations,
+                signing_key: &self.gate_signer,
+                signing_kid: &self.gate_signer_kid,
+            },
         )
         .map_err(DurableGateStartupError::Config)?;
         if !matches!(
@@ -1197,6 +1205,30 @@ mod tests {
             })
             .unwrap();
 
+        let policy = NativePolicySnapshot {
+            max_component_mm_s: 1,
+            max_speed_mm_s: 1,
+            max_output_validity_ms: 1,
+            min_useful_validity_ms: 1,
+            publication_safety_margin_ms: 0,
+            source_freshness_cap_ms: 1,
+            state_freshness_cap_ms: 1,
+            ncp_validity_cap_ms: 1,
+            plant_validity_cap_ms: 1,
+            nominal_update_ms: 1,
+            tracking_error_mm: 0,
+            uncertainty_margin_mm: 0,
+            max_position_uncertainty_mm: 1,
+            geofence: GeofenceBoxV1 {
+                min_mm: [-1; 3],
+                max_mm: [1; 3],
+            },
+            duty_window_ms: 1,
+            max_active_ms_in_window: 1,
+            phase_rules: Vec::new(),
+        };
+        let policy_snapshot_digest = policy.canonical_digest().unwrap();
+
         GateConfigTemplate {
             gate_id,
             realm: AsciiId::new("range-a").unwrap(),
@@ -1204,29 +1236,8 @@ mod tests {
             trust,
             revocations: RevocationSnapshot::new(),
             admission: AdmissionSnapshot::new(),
-            policy: NativePolicySnapshot {
-                max_component_mm_s: 1,
-                max_speed_mm_s: 1,
-                max_output_validity_ms: 1,
-                min_useful_validity_ms: 1,
-                publication_safety_margin_ms: 0,
-                source_freshness_cap_ms: 1,
-                state_freshness_cap_ms: 1,
-                ncp_validity_cap_ms: 1,
-                plant_validity_cap_ms: 1,
-                nominal_update_ms: 1,
-                tracking_error_mm: 0,
-                uncertainty_margin_mm: 0,
-                max_position_uncertainty_mm: 1,
-                geofence: GeofenceBoxV1 {
-                    min_mm: [-1; 3],
-                    max_mm: [1; 3],
-                },
-                duty_window_ms: 1,
-                max_active_ms_in_window: 1,
-                phase_rules: Vec::new(),
-            },
-            policy_snapshot_digest: digest(b"policy"),
+            policy,
+            policy_snapshot_digest,
             session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("session-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),

@@ -615,7 +615,8 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
         revocations: RevocationSnapshot::new(),
         admission,
         policy: fixture_policy(),
-        policy_snapshot_digest: fixture_policy_digest(),
+        policy_snapshot_digest: fixture_policy_digest()
+            .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
         session: fixture_session()?,
         runtime_profile: GateRuntimeProfile::DeclaredLiveZenoh,
         ncp_adapter: SelectedNcpCommandAdapter::exact_ncp_v0_8_json(),
@@ -642,11 +643,8 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
     })
 }
 
-fn fixture_policy_digest() -> DigestV1 {
-    DigestV1::compute(
-        DigestDomain::PolicySnapshot,
-        b"development-live-bind-smoke-policy",
-    )
+fn fixture_policy_digest() -> Result<DigestV1, haldir_policy_native::NativePolicyError> {
+    fixture_policy().canonical_digest()
 }
 
 fn local_startup(paths: &FixturePaths, open_mode: StateOpenMode) -> LocalStartupConfig {
@@ -752,7 +750,8 @@ fn build_activation(
         admission_digest,
         controller_bundle_digest: admission.controller_bundle_digest,
         backend_profile_digest: admission.backend_profile_digest,
-        policy_snapshot_digest: fixture_policy_digest(),
+        policy_snapshot_digest: fixture_policy_digest()
+            .map_err(|_| SmokeError::after_durable("fixture-invariant"))?,
         allowed_actions: BoundedSet::from_iter_checked([
             ActionClassV1::Hold,
             ActionClassV1::VelocityLocalNed,

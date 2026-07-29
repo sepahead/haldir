@@ -35,7 +35,10 @@ use haldir_ncp08::{
     ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter, NcpCommandWireProfile,
     SelectedNcpCommandAdapter,
 };
-use haldir_policy_native::{BoundedActionHistory, NativePolicySnapshot, PolicyInput, decide};
+use haldir_policy_native::{
+    BoundedActionHistory, NativePolicyError, NativePolicySnapshot, PolicyInput,
+    ValidatedNativePolicy, decide_validated,
+};
 use haldir_reference_plant::{PlantAction, PlantCommand};
 use haldir_state::{
     AntiRollbackError, AntiRollbackStore, BootedDurableAntiRollbackStore, ChallengeTable,
@@ -86,9 +89,16 @@ impl<E> From<GateError> for LeaseEnvelopeValidationError<E> {
 
 /// A cross-field configuration validation failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum GateConfigError {
     /// The local lease-duration cap is zero, so no lease can become useful.
     LocalCapZero,
+    /// The local lease-duration cap cannot cover policy margin plus minimum validity.
+    LocalCapTooShort,
+    /// The executable native policy snapshot is semantically invalid.
+    InvalidPolicy(NativePolicyError),
+    /// The supplied policy identity is not the canonical executable policy digest.
+    PolicyDigestMismatch,
     /// The configured Gate signing key id is absent from the trust store.
     GateSignerKidUnknown,
     /// The configured Gate signing key id is revoked.
@@ -348,7 +358,7 @@ pub struct GateConfig {
     pub admission: AdmissionSnapshot,
     /// Native policy snapshot.
     pub policy: NativePolicySnapshot,
-    /// Policy snapshot digest.
+    /// Expected canonical digest of the executable native policy snapshot.
     pub policy_snapshot_digest: DigestV1,
     /// Current NCP session.
     pub session: NcpSessionIdentityV1,
@@ -371,17 +381,25 @@ impl GateConfig {
     /// Validate static invariants that span provisioned configuration fields.
     ///
     /// # Errors
-    /// Returns [`GateConfigError`] when the local lease cap is unusable, the
-    /// Gate receipt signer is not bound to its trusted identity and key, or a
-    /// future NCP publication lease is scoped to another session or output epoch.
+    /// Returns [`GateConfigError`] when the local lease cap or native policy is
+    /// unusable, the policy digest does not identify the executable parameters,
+    /// the Gate receipt signer is not bound to its trusted identity and key, or
+    /// a future NCP publication lease is scoped to another session or output
+    /// epoch.
     pub fn validate(&self) -> Result<(), GateConfigError> {
         validate_static_config(
-            &self.gate_id,
-            &self.trust,
-            &self.revocations,
-            self.local_cap_ms,
-            &self.gate_signer,
-            &self.gate_signer_kid,
+            PolicyBindingValidation {
+                policy: &self.policy,
+                expected_digest: &self.policy_snapshot_digest,
+                local_cap_ms: self.local_cap_ms,
+            },
+            GateSignerValidation {
+                gate_id: &self.gate_id,
+                trust: &self.trust,
+                revocations: &self.revocations,
+                signing_key: &self.gate_signer,
+                signing_kid: &self.gate_signer_kid,
+            },
         )?;
 
         if let PlantPublicationAuthorityStateV1::NcpLeaseV1(lease) = &self.publication {
@@ -397,22 +415,48 @@ impl GateConfig {
     }
 }
 
+pub(crate) struct PolicyBindingValidation<'a> {
+    pub(crate) policy: &'a NativePolicySnapshot,
+    pub(crate) expected_digest: &'a DigestV1,
+    pub(crate) local_cap_ms: u32,
+}
+
+pub(crate) struct GateSignerValidation<'a> {
+    pub(crate) gate_id: &'a GateId,
+    pub(crate) trust: &'a TrustStore,
+    pub(crate) revocations: &'a RevocationSnapshot,
+    pub(crate) signing_key: &'a SigningKey,
+    pub(crate) signing_kid: &'a KeyId,
+}
+
 pub(crate) fn validate_static_config(
-    gate_id: &GateId,
-    trust: &TrustStore,
-    revocations: &RevocationSnapshot,
-    local_cap_ms: u32,
-    gate_signer: &SigningKey,
-    gate_signer_kid: &KeyId,
+    policy_binding: PolicyBindingValidation<'_>,
+    signer: GateSignerValidation<'_>,
 ) -> Result<(), GateConfigError> {
-    if local_cap_ms == 0 {
+    if policy_binding.local_cap_ms == 0 {
         return Err(GateConfigError::LocalCapZero);
     }
+    let required_local_cap = policy_binding
+        .policy
+        .publication_safety_margin_ms
+        .checked_add(policy_binding.policy.min_useful_validity_ms)
+        .ok_or(GateConfigError::LocalCapTooShort)?;
+    if policy_binding.local_cap_ms < required_local_cap {
+        return Err(GateConfigError::LocalCapTooShort);
+    }
+    let computed_policy_digest = policy_binding
+        .policy
+        .canonical_digest()
+        .map_err(GateConfigError::InvalidPolicy)?;
+    if &computed_policy_digest != policy_binding.expected_digest {
+        return Err(GateConfigError::PolicyDigestMismatch);
+    }
 
-    let signer_record = trust
-        .resolve(gate_signer_kid)
+    let signer_record = signer
+        .trust
+        .resolve(signer.signing_kid)
         .ok_or(GateConfigError::GateSignerKidUnknown)?;
-    if revocations.is_key_revoked(gate_signer_kid) {
+    if signer.revocations.is_key_revoked(signer.signing_kid) {
         return Err(GateConfigError::GateSignerKidRevoked);
     }
     if signer_record.role != KeyRole::GateApplication {
@@ -421,10 +465,10 @@ pub(crate) fn validate_static_config(
     if signer_record.class != KeyClass::Assurance {
         return Err(GateConfigError::GateSignerNotAssurance);
     }
-    if signer_record.subject.as_deref() != Some(gate_id.as_str()) {
+    if signer_record.subject.as_deref() != Some(signer.gate_id.as_str()) {
         return Err(GateConfigError::GateSignerSubjectMismatch);
     }
-    if signer_record.verifying_key.to_bytes() != gate_signer.verifying_key().to_bytes() {
+    if signer_record.verifying_key.to_bytes() != signer.signing_key.verifying_key().to_bytes() {
         return Err(GateConfigError::GateSignerPublicKeyMismatch);
     }
 
@@ -441,8 +485,7 @@ pub struct VehicleActor {
     trust: TrustStore,
     revocations: RevocationSnapshot,
     admission: AdmissionSnapshot,
-    policy: NativePolicySnapshot,
-    policy_snapshot_digest: DigestV1,
+    policy: ValidatedNativePolicy,
     session: NcpSessionIdentityV1,
     publication: PlantPublicationAuthorityStateV1,
     output_epoch: GateOutputEpoch,
@@ -671,6 +714,12 @@ impl VehicleActor {
         cfg: GateConfig,
         anti_rollback: Box<dyn LeaseTermStore>,
     ) -> Result<Self, GateStartupError> {
+        let policy =
+            ValidatedNativePolicy::new(cfg.policy).map_err(GateConfigError::InvalidPolicy)?;
+        if policy.canonical_digest() != cfg.policy_snapshot_digest {
+            return Err(GateConfigError::PolicyDigestMismatch.into());
+        }
+
         let mut process = GateProcessMachine::new();
         let fault = haldir_state::FaultLatch::new();
         for to in [
@@ -692,8 +741,7 @@ impl VehicleActor {
             trust: cfg.trust,
             revocations: cfg.revocations,
             admission: cfg.admission,
-            policy: cfg.policy,
-            policy_snapshot_digest: cfg.policy_snapshot_digest,
+            policy,
             session: cfg.session,
             publication: cfg.publication,
             output_epoch: cfg.output_epoch,
@@ -765,7 +813,7 @@ impl VehicleActor {
     /// Current policy's rolling non-hold duty window. This does not recover the
     /// prior boot's policy or history.
     pub(crate) const fn duty_history_window_ms(&self) -> u32 {
-        self.policy.duty_window_ms
+        self.policy.snapshot().duty_window_ms
     }
 
     pub(crate) fn sign_publication_stage(&self, event: &PublicationStageEventV1) -> Vec<u8> {
@@ -969,12 +1017,9 @@ impl VehicleActor {
             return Err(PublicationError::StateMismatch);
         }
 
-        let window_start = MonoInstant::from_nanos(
-            called
-                .called_at
-                .as_nanos()
-                .saturating_sub(u64::from(self.policy.duty_window_ms).saturating_mul(1_000_000)),
-        );
+        let window_start = MonoInstant::from_nanos(called.called_at.as_nanos().saturating_sub(
+            u64::from(self.policy.snapshot().duty_window_ms).saturating_mul(1_000_000),
+        ));
         match called.plant_action {
             PlantAction::Hold => self.history.record_hold(called.called_at),
             PlantAction::Velocity(velocity) => self.history.record_velocity(
@@ -1135,6 +1180,18 @@ impl VehicleActor {
         if !state.primary_source.valid {
             return Err(R::DenyStateStale);
         }
+        if state.primary_source.receive_mono > state.captured_mono {
+            return Err(R::DenyStateStale);
+        }
+        if state.uncertainty.position_mm.iter().any(|&value| value < 0)
+            || state
+                .uncertainty
+                .velocity_mm_s
+                .iter()
+                .any(|&value| value < 0)
+        {
+            return Err(R::DenyUncertainty);
+        }
         // Anti-rollback: capture time must strictly advance. Two different truths
         // cannot share one capture instant, and a non-advancing snapshot carries
         // no new causal information — reject it rather than regress.
@@ -1238,7 +1295,7 @@ impl VehicleActor {
             vehicle_id: self.vehicle_id.clone(),
             session: self.session.clone(),
             gate_output_epoch: self.output_epoch,
-            policy_snapshot_digest: self.policy_snapshot_digest,
+            policy_snapshot_digest: self.policy.canonical_digest(),
             controller,
             local_cap_ms: self.local_cap_ms,
         };
@@ -1364,7 +1421,7 @@ impl VehicleActor {
             session: self.session.clone(),
             received_key_digest: DigestV1::compute(DigestDomain::Payload, actual_key.as_bytes()),
             raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, env),
-            policy_snapshot_digest: self.policy_snapshot_digest,
+            policy_snapshot_digest: self.policy.canonical_digest(),
             received_mono_ns: now.as_nanos(),
             payload_digest: None,
             semantic_intent_digest: None,
@@ -1515,7 +1572,7 @@ impl VehicleActor {
         }
 
         // Stage 8-11 — deterministic native policy + effective validity
-        let decision = decide(&PolicyInput {
+        let decision = decide_validated(&PolicyInput {
             now,
             lease: &lease,
             state: &state,
@@ -1545,9 +1602,9 @@ impl VehicleActor {
         if self.publication_state != PublicationState::Idle {
             return self.respond(&draft, R::DenyOverload, now);
         }
-        let Some(latest_call_at) =
-            now.checked_add_ms(u64::from(self.policy.publication_safety_margin_ms))
-        else {
+        let Some(latest_call_at) = now.checked_add_ms(u64::from(
+            self.policy.snapshot().publication_safety_margin_ms,
+        )) else {
             return self.respond(&draft, R::DenyArithmeticOverflow, now);
         };
         let out_seq = match self.output_stream.allocate() {

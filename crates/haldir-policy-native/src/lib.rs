@@ -1,11 +1,14 @@
 //! `haldir-policy-native` — the smallest trustworthy mission policy for `Hold`
 //! and local-NED velocity, using fixed-point checked arithmetic.
 //!
-//! The [`decide()`] function is pure: no I/O, no floats, no unbounded allocation.
-//! An out-of-range value can never wrap into an accepted boundary value, a
-//! monotonic-clock regression denies (never "fresh"), the prospective geofence
-//! over-approximates the reachable set, and the effective validity is the minimum
-//! of the full contributing set minus a publication safety margin.
+//! The raw [`decide()`] function validates its policy and fails closed;
+//! [`decide_validated()`] accepts a retained [`ValidatedNativePolicy`] so an
+//! integrated Gate need not repeat whole-policy work. Both paths are pure: no I/O,
+//! no floats, and no unbounded allocation. An out-of-range value can never wrap
+//! into an accepted boundary value, a monotonic-clock regression denies (never
+//! "fresh"), the prospective geofence over-approximates the reachable set, and the
+//! effective validity is the minimum of the full contributing set minus a
+//! publication safety margin.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -26,10 +29,13 @@ pub mod policy;
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use decide::decide;
-pub use input::{BoundedActionHistory, PolicyInput, PublishedInterval};
+pub use decide::{decide, decide_validated};
+pub use input::{BoundedActionHistory, PolicyInput, PublishedInterval, ValidatedPolicyInput};
 pub use output::{PolicyDecision, PolicyOutcome};
-pub use policy::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
+pub use policy::{
+    GeofenceBoxV1, NATIVE_POLICY_DIGEST_SCHEMA_V1, NativePolicyError, NativePolicySnapshot,
+    PhaseRuleV1, ValidatedNativePolicy,
+};
 
 #[cfg(test)]
 mod tests {
@@ -237,6 +243,13 @@ mod tests {
         let mut st = state(1_000_000_000, 0, [0, 0, 0], [10, 10, 10]);
         st.primary_source.receive_mono = MonoInstant::from_nanos(2_000_000_000);
         assert!(decide_vel(&vel(100, 0, 0, 100), &st).has_reason(R::DenySourceStale));
+
+        // A source sample cannot arrive after the snapshot that incorporates it.
+        // This causal contradiction is state-stale even when both timestamps are
+        // individually in the past relative to the decision clock.
+        let mut st = state(1_000_000_000, 10, [0, 0, 0], [10, 10, 10]);
+        st.captured_mono = MonoInstant::from_nanos(980_000_000);
+        assert!(decide_vel(&vel(100, 0, 0, 100), &st).has_reason(R::DenyStateStale));
     }
 
     #[test]
@@ -262,6 +275,68 @@ mod tests {
     fn uncertainty_over_cap_denies() {
         let st = state(1_000_000_000, 10, [0, 0, 0], [501, 0, 0]);
         assert!(decide_vel(&vel(100, 0, 0, 100), &st).has_reason(R::DenyUncertainty));
+    }
+
+    #[test]
+    fn negative_uncertainty_never_becomes_a_smaller_safety_margin() {
+        let mut position = state(1_000_000_000, 10, [0, 0, 0], [-1, 0, 0]);
+        assert!(decide_vel(&vel(100, 0, 0, 100), &position).has_reason(R::DenyUncertainty));
+
+        position.uncertainty.position_mm = [0; 3];
+        position.uncertainty.velocity_mm_s = [0, -1, 0];
+        assert!(decide_vel(&vel(100, 0, 0, 100), &position).has_reason(R::DenyUncertainty));
+    }
+
+    #[test]
+    fn invalid_public_policy_input_fails_closed() {
+        let st = state(1_000_000_000, 10, [0, 0, 0], [10, 10, 10]);
+        let lease = lease();
+        let mut invalid = policy();
+        invalid.uncertainty_margin_mm = -1;
+        let history = BoundedActionHistory::new(16);
+        let action = vel(100, 0, 0, 100);
+
+        let decision = decide(&PolicyInput {
+            now: MonoInstant::from_nanos(1_000_000_000),
+            lease: &lease,
+            state: &st,
+            action: &action,
+            history: &history,
+            policy: &invalid,
+        });
+
+        assert!(!decision.is_allow());
+        assert!(decision.has_reason(R::DenyPolicyDiagnostic));
+    }
+
+    #[test]
+    fn validated_policy_path_matches_the_fail_closed_public_path() {
+        let state = state(1_000_000_000, 10, [0, 0, 0], [10, 10, 10]);
+        let lease = lease();
+        let policy = policy();
+        let validated = ValidatedNativePolicy::new(policy.clone()).unwrap();
+        let history = BoundedActionHistory::new(16);
+        let action = vel(100, 0, 0, 100);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+
+        let raw = decide(&PolicyInput {
+            now,
+            lease: &lease,
+            state: &state,
+            action: &action,
+            history: &history,
+            policy: &policy,
+        });
+        let retained = decide_validated(&PolicyInput {
+            now,
+            lease: &lease,
+            state: &state,
+            action: &action,
+            history: &history,
+            policy: &validated,
+        });
+
+        assert_eq!(retained, raw);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! Policy input and bounded action history.
 
-use crate::policy::NativePolicySnapshot;
+use crate::policy::{NativePolicySnapshot, ValidatedNativePolicy};
 use haldir_contracts::action::RequestedActionV1;
 use haldir_core::snapshot::{ActiveMissionLeaseSnapshot, TrustedStateSnapshotV1};
 use haldir_core::time::{MonoDuration, MonoInstant};
@@ -173,9 +173,12 @@ impl BoundedActionHistory {
     }
 }
 
-/// The fully-typed policy input assembled by the gate.
+/// The fully-typed policy input assembled by the caller.
+///
+/// `P` is either the default raw [`NativePolicySnapshot`] used by the fail-closed
+/// public evaluator or [`ValidatedNativePolicy`] retained by an integrated Gate.
 #[derive(Debug, Clone)]
-pub struct PolicyInput<'a> {
+pub struct PolicyInput<'a, P: ?Sized = NativePolicySnapshot> {
     /// Current monotonic time.
     pub now: MonoInstant,
     /// The active mission lease snapshot.
@@ -186,6 +189,9 @@ pub struct PolicyInput<'a> {
     pub action: &'a RequestedActionV1,
     /// Bounded action history.
     pub history: &'a BoundedActionHistory,
-    /// Compiled native policy parameters.
-    pub policy: &'a NativePolicySnapshot,
+    /// Raw or previously validated native policy parameters.
+    pub policy: &'a P,
 }
+
+/// Policy input backed by a retained, previously validated policy.
+pub type ValidatedPolicyInput<'a> = PolicyInput<'a, ValidatedNativePolicy>;

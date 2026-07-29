@@ -13,18 +13,28 @@ use crate::error::DecodeError;
 pub struct AsciiId<const N: usize>(String);
 
 impl<const N: usize> AsciiId<N> {
-    /// Construct, validating length and character set.
+    /// Validate an identifier without constructing or allocating an owned value.
     ///
     /// # Errors
     /// Returns [`DecodeError::InvalidIdentifier`] on empty, overlength, or a byte
     /// outside `[A-Za-z0-9._:-]`.
-    pub fn new(s: &str) -> Result<Self, DecodeError> {
+    pub fn validate_str(s: &str) -> Result<(), DecodeError> {
         if s.is_empty() || s.len() > N {
             return Err(DecodeError::InvalidIdentifier);
         }
         if !s.bytes().all(Self::allowed) {
             return Err(DecodeError::InvalidIdentifier);
         }
+        Ok(())
+    }
+
+    /// Construct, validating length and character set.
+    ///
+    /// # Errors
+    /// Returns [`DecodeError::InvalidIdentifier`] on empty, overlength, or a byte
+    /// outside `[A-Za-z0-9._:-]`.
+    pub fn new(s: &str) -> Result<Self, DecodeError> {
+        Self::validate_str(s)?;
         Ok(Self(s.to_owned()))
     }
 

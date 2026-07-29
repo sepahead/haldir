@@ -124,6 +124,10 @@ mod range {
         }
     }
 
+    fn policy_digest() -> DigestV1 {
+        policy().canonical_digest().unwrap()
+    }
+
     /// A reusable, deterministic P0 scenario: an ACTIVE actor plus signing material.
     pub struct RangeScenario {
         /// The vehicle actor under test.
@@ -184,7 +188,8 @@ mod range {
             let mut admission = AdmissionSnapshot::new();
             admission.insert(rec.clone());
 
-            let policy_snapshot_digest = DigestV1::compute(DigestDomain::PolicySnapshot, b"policy");
+            let policy = policy();
+            let policy_snapshot_digest = policy.canonical_digest().unwrap();
             let cfg = GateConfig {
                 gate_id: GateId::new("gate-1").unwrap(),
                 gate_boot_id: GateBootId::new([9; 16]),
@@ -193,7 +198,7 @@ mod range {
                 trust,
                 revocations: RevocationSnapshot::new(),
                 admission,
-                policy: policy(),
+                policy,
                 policy_snapshot_digest,
                 session: sess(1),
                 ncp_adapter: SelectedNcpCommandAdapter::modeled_p0(),
@@ -269,7 +274,7 @@ mod range {
                 admission_digest,
                 controller_bundle_digest: rec.controller_bundle_digest,
                 backend_profile_digest: rec.backend_profile_digest,
-                policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
+                policy_snapshot_digest: policy_digest(),
                 allowed_actions: BoundedSet::from_iter_checked([
                     ActionClassV1::Hold,
                     ActionClassV1::VelocityLocalNed,

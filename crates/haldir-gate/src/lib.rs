@@ -107,7 +107,9 @@ mod e2e {
         JournalLimits, JournalManagerError, JournalOpenOptions, RecoveryCaptureLimits,
     };
     use haldir_evidence::publication::PublicationTraceState;
-    use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
+    use haldir_policy_native::{
+        GeofenceBoxV1, NativePolicyError, NativePolicySnapshot, PhaseRuleV1,
+    };
     use haldir_reference_plant::{PlantAction, PlantConfig, PlantEventKind, ReferencePlant};
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
     #[cfg(feature = "live-zenoh")]
@@ -320,6 +322,10 @@ mod e2e {
         }
     }
 
+    fn policy_digest() -> DigestV1 {
+        policy().canonical_digest().unwrap()
+    }
+
     struct Fixture {
         actor: VehicleActor,
         ctrl_sk: SigningKey,
@@ -368,7 +374,7 @@ mod e2e {
             admission_digest,
             controller_bundle_digest: rec.controller_bundle_digest,
             backend_profile_digest: rec.backend_profile_digest,
-            policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
+            policy_snapshot_digest: policy_digest(),
             allowed_actions: BoundedSet::from_iter_checked([
                 ActionClassV1::Hold,
                 ActionClassV1::VelocityLocalNed,
@@ -527,7 +533,8 @@ mod e2e {
         let mut admission = AdmissionSnapshot::new();
         admission.insert(rec.clone());
 
-        let policy_snapshot_digest = DigestV1::compute(DigestDomain::PolicySnapshot, b"policy");
+        let policy = policy();
+        let policy_snapshot_digest = policy.canonical_digest().unwrap();
         let cfg = GateConfig {
             gate_id: GateId::new("gate-1").unwrap(),
             gate_boot_id: GateBootId::new([9; 16]),
@@ -536,7 +543,7 @@ mod e2e {
             trust,
             revocations: RevocationSnapshot::new(),
             admission,
-            policy: policy(),
+            policy,
             policy_snapshot_digest,
             session: sess(),
             ncp_adapter: haldir_ncp08::SelectedNcpCommandAdapter::modeled_p0(),
@@ -846,6 +853,34 @@ mod e2e {
     }
 
     #[test]
+    fn gate_config_binds_the_validated_executable_policy() {
+        let mut invalid = valid_config(acl_publication());
+        invalid.policy.tracking_error_mm = -1;
+        assert_eq!(
+            invalid.validate(),
+            Err(GateConfigError::InvalidPolicy(
+                NativePolicyError::NegativeSafetyDistance
+            ))
+        );
+
+        let mut mismatched = valid_config(acl_publication());
+        mismatched.policy_snapshot_digest =
+            DigestV1::compute(DigestDomain::PolicySnapshot, b"different-policy");
+        assert_eq!(
+            mismatched.validate(),
+            Err(GateConfigError::PolicyDigestMismatch)
+        );
+
+        let mut too_short = valid_config(acl_publication());
+        too_short.local_cap_ms = too_short
+            .policy
+            .publication_safety_margin_ms
+            .saturating_add(too_short.policy.min_useful_validity_ms)
+            .saturating_sub(1);
+        assert_eq!(too_short.validate(), Err(GateConfigError::LocalCapTooShort));
+    }
+
+    #[test]
     fn gate_config_rejects_publication_for_another_session() {
         let mut other_session = sess();
         other_session.generation = uuid(9);
@@ -906,7 +941,9 @@ mod e2e {
         // Capture the initial snapshot 1 ms before decision time so a later re-set
         // at `now` strictly advances the anti-rollback capture clock (H-B05).
         let mut initial = trusted_state(now);
-        initial.captured_mono = MonoInstant::from_nanos(now.as_nanos() - 1_000_000);
+        let initial_capture = MonoInstant::from_nanos(now.as_nanos() - 1_000_000);
+        initial.captured_mono = initial_capture;
+        initial.primary_source.receive_mono = initial_capture;
         actor.set_trusted_state(initial).unwrap();
 
         Fixture {
@@ -4914,8 +4951,9 @@ mod e2e {
     #[test]
     fn set_trusted_state_rejects_bad_ingress() {
         // H-B05: ingress is validated, not blindly accepted. Wrong vehicle, wrong
-        // session, an invalid source frame, and a non-advancing capture are each
-        // rejected with a stable reason code.
+        // session, an invalid or causally impossible source frame, negative
+        // uncertainty, and a non-advancing capture are each rejected with a
+        // stable reason code.
         let mut f = setup();
 
         let mut wrong_vehicle = trusted_state(f.now);
@@ -4937,6 +4975,28 @@ mod e2e {
         assert_eq!(
             f.actor.set_trusted_state(invalid),
             Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+
+        let mut impossible_order = trusted_state(f.now);
+        impossible_order.primary_source.receive_mono =
+            MonoInstant::from_nanos(impossible_order.captured_mono.as_nanos() + 1);
+        assert_eq!(
+            f.actor.set_trusted_state(impossible_order),
+            Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+
+        let mut negative_position_uncertainty = trusted_state(f.now);
+        negative_position_uncertainty.uncertainty.position_mm[0] = -1;
+        assert_eq!(
+            f.actor.set_trusted_state(negative_position_uncertainty),
+            Err(DecisionReasonCodeV1::DenyUncertainty)
+        );
+
+        let mut negative_velocity_uncertainty = trusted_state(f.now);
+        negative_velocity_uncertainty.uncertainty.velocity_mm_s[1] = -1;
+        assert_eq!(
+            f.actor.set_trusted_state(negative_velocity_uncertainty),
+            Err(DecisionReasonCodeV1::DenyUncertainty)
         );
 
         // Anti-rollback: a capture older than the currently held snapshot (set at
