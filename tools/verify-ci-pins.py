@@ -37,6 +37,17 @@ ANY_USES_LINE = re.compile(
 INLINE_USES_LINE = re.compile(
     r"^\s*-\s*\{.*(?:^|[\s,{])(?:uses|\"uses\"|'uses')\s*:"
 )
+SIMPLE_MAPPING_LINE = re.compile(
+    r"^(?P<indent> *)(?P<sequence>- )?"
+    r"(?P<key>[A-Za-z0-9_.-]+):(?P<value>.*)$"
+)
+SIMPLE_SEQUENCE_LINE = re.compile(
+    r"^ +- [A-Za-z0-9_.-]+(?: +#.*)?$"
+)
+BLOCK_SCALAR_VALUE = re.compile(
+    r"^[>|](?:[+-](?:[1-9])?|[1-9](?:[+-])?)?\s*(?:#.*)?$"
+)
+GITHUB_EXPRESSION = re.compile(r"\$\{\{[^{}\r\n]*\}\}")
 REQUIRED_ACTION_PINS = {
     (
         "actions/attest",
@@ -67,10 +78,10 @@ EXPECTED_RUNNERS = {
 }
 OIDC_JOB_SHA256 = {
     "attest-ci-audit-result": (
-        "f69344b3c3b1873a9710d78678e4c9858020c1cdb7999356321226b27734563f"
+        "eb4b5eb2498a7f2fd2d19027859e28a2d8d999175b28898eecc42745243740db"
     ),
     "attest-formal-audit-result": (
-        "2b4506613f00db866173814610c4bab2fd7ee005b29b4be3de41a6bb0c89d36f"
+        "5389337471b94797f12447654216f89a05d7f6a9501021aa0dbbc0cf226bd6bd"
     ),
 }
 RUNS_ON_LINE = re.compile(r"^    runs-on:\s*(\S+)\s*$", re.MULTILINE)
@@ -85,11 +96,76 @@ class Use(NamedTuple):
     line: int
 
 
+def validate_workflow_syntax(text: str, *, label: str) -> list[str]:
+    """Restrict workflows to a uses-safe, line-oriented YAML subset.
+
+    GitHub accepts YAML spellings such as escaped quoted keys, tags, explicit
+    keys, aliases, and flow mappings. A raw ``uses:`` scanner cannot decode all
+    of those safely without a complete YAML 1.2 implementation. Rejecting those
+    unnecessary constructs makes every executable ``uses`` key lexically
+    visible to ``collect_uses`` while preserving block scalar command bodies.
+    """
+
+    problems: list[str] = []
+    block_header_indent: int | None = None
+    block_content_indent: int | None = None
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        indentation = len(line) - len(line.lstrip(" "))
+        if block_header_indent is not None:
+            if not line.strip():
+                continue
+            if block_content_indent is None:
+                if line.lstrip(" ").startswith("#"):
+                    continue
+                if indentation > block_header_indent:
+                    block_content_indent = indentation
+                    continue
+            elif indentation >= block_content_indent:
+                continue
+            block_header_indent = None
+            block_content_indent = None
+        if not line.strip() or line.lstrip(" ").startswith("#"):
+            continue
+        if "\t" in line:
+            problems.append(
+                f"{label}:{line_number} contains a tab outside a block scalar"
+            )
+            continue
+        mapping = SIMPLE_MAPPING_LINE.fullmatch(line)
+        if mapping is not None:
+            value = mapping.group("value").strip()
+            if BLOCK_SCALAR_VALUE.fullmatch(value) is not None:
+                block_header_indent = len(mapping.group("indent")) + (
+                    2 if mapping.group("sequence") else 0
+                )
+                block_content_indent = None
+                continue
+            masked = GITHUB_EXPRESSION.sub("", value).replace("{0}", "")
+            if (
+                "{" in masked
+                or "}" in masked
+                or (
+                    ("[" in masked or "]" in masked)
+                    and ":" in masked
+                )
+            ):
+                problems.append(
+                    f"{label}:{line_number} uses a forbidden flow mapping"
+                )
+            continue
+        if SIMPLE_SEQUENCE_LINE.fullmatch(line) is not None:
+            continue
+        problems.append(
+            f"{label}:{line_number} is outside the uses-safe YAML subset"
+        )
+    return problems
+
+
 def collect_uses(text: str, *, label: str) -> tuple[list[Use], list[str]]:
     """Parse every declaration and reject syntax that could evade pin checks."""
 
     uses: list[Use] = []
-    problems: list[str] = []
+    problems = validate_workflow_syntax(text, label=label)
     declaration_count = 0
     for line_number, line in enumerate(text.splitlines(), start=1):
         declaration = ANY_USES_LINE.match(line)

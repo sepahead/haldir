@@ -1,0 +1,493 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 12,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "state": "PENDING_QUALIFICATION",
+    "tag_authorized": false
+  },
+  "core_diff": {
+    "base": "a468dc5afacaa5f25fce55c82ef41a02d3977847",
+    "patch_bytes": 302598,
+    "patch_lines": 8393,
+    "patch_sha256": "789f6aad900c184763e8b503f28b664f93ecff32211d49e3e570945598c5d219",
+    "paths": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/formal.yml",
+      "tools/verify-ci-pins.py",
+      "tools/release/current-audit-gate.sh",
+      "tools/release/framework_recovery_fr_0011.py",
+      "tools/release/framework_recovery_fr_0011_capture.py",
+      "tools/release/framework_recovery_fr_0011_result.py",
+      "tools/release/verify-framework-recovery-fr-0011.py",
+      "tools/release/test_verify_framework_recovery_fr_0011.py",
+      "tools/release/sigstore-public-good-trusted-root.jsonl"
+    ],
+    "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+  },
+  "core_records": [
+    {
+      "bytes": 12725,
+      "git_mode": "100644",
+      "git_object_id": "aeeeb392c6ed98f9cb890dc83a0f0c90d8b82a70",
+      "git_object_type": "blob",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "6b8888243c4fb415c94b2ac91d6b292683fe2d0634e258780b4d1c686884064a"
+    },
+    {
+      "bytes": 4691,
+      "git_mode": "100644",
+      "git_object_id": "c8727679624c594fc8de1206ae55ae0715c6e6a0",
+      "git_object_type": "blob",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "d92655477e7fad7d86f4155ea8cc9b6259c238df0783eb57071937ef10267c09"
+    },
+    {
+      "bytes": 15790,
+      "git_mode": "100755",
+      "git_object_id": "8f6490d02d31d5329c07f5a85b23ce60ae67ac61",
+      "git_object_type": "blob",
+      "path": "tools/verify-ci-pins.py",
+      "sha256": "3afbd25f7bcc4cc21d9136dc65db4612681e1f9cfb057baacd2d0d4489fcb5f4"
+    },
+    {
+      "bytes": 2194,
+      "git_mode": "100755",
+      "git_object_id": "0abc953144a98def00fda4f31b3ec8c278afe4f3",
+      "git_object_type": "blob",
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "2b83fc3af745829cf8f64a7d8b525d3d925d7fb85406ee9e8aed26927a36e683"
+    },
+    {
+      "bytes": 68510,
+      "git_mode": "100644",
+      "git_object_id": "fb8026d5950e623751f00847411572d829fe0fdd",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0011.py",
+      "sha256": "881838a6639229077ba443893f1eddbd2218ab0ae542bb8d54b16e9b4c334cf3"
+    },
+    {
+      "bytes": 41745,
+      "git_mode": "100755",
+      "git_object_id": "5d7bf191c43458fdafea05e904e332f5b868a4eb",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0011_capture.py",
+      "sha256": "ae0dc7c22d5c323819f8ce2d90d3a97f8052a326972591d43c327adba7c5bc2c"
+    },
+    {
+      "bytes": 9934,
+      "git_mode": "100755",
+      "git_object_id": "a5632d196b5a2b4a45437c1b1688314aaa50ac94",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0011_result.py",
+      "sha256": "78111513051b6466e994679574756847f1504e416374f4e80b2ce3143dc85a03"
+    },
+    {
+      "bytes": 87359,
+      "git_mode": "100755",
+      "git_object_id": "4a1a59555fdbe5ebe679013724f086eb3cf6ad6a",
+      "git_object_type": "blob",
+      "path": "tools/release/verify-framework-recovery-fr-0011.py",
+      "sha256": "9529f4d6abfd0d3e19895917829bc01b6ab3998b07d2f0a3e090f260cf2b637d"
+    },
+    {
+      "bytes": 73151,
+      "git_mode": "100644",
+      "git_object_id": "b1d449ae53d00bd1a859d7915073737c6693617a",
+      "git_object_type": "blob",
+      "path": "tools/release/test_verify_framework_recovery_fr_0011.py",
+      "sha256": "a67fd505295b5fc5d848e87a849373fd841706cc699e0211ac73b9b1af1b66b0"
+    },
+    {
+      "bytes": 5748,
+      "git_mode": "100644",
+      "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+      "git_object_type": "blob",
+      "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+    }
+  ],
+  "correction": {
+    "c5_capture_tool_binding": "EXACT_REPAIR_COMMIT_FILE_RECORD_REQUIRED",
+    "data_record_modes": "REGULAR_100644_ONLY",
+    "hosted_reruns": {
+      "allowed_attempts": {
+        "maximum": 8,
+        "minimum": 1
+      },
+      "artifact_filename_attempt_qualified": true,
+      "cross_attempt_reuse": "REJECT",
+      "rerun_mode": "ALL_JOBS_FOR_EXACT_ATTEMPT"
+    },
+    "hosted_runner_labels": {
+      "linux": "ubuntu-24.04",
+      "macos": "macos-15",
+      "property": "VERSIONED_LABEL_NOT_IMMUTABLE_IMAGE",
+      "retirement_or_upgrade": "REQUIRES_NEW_SIGNED_FRAMEWORK_RECOVERY_EPOCH"
+    },
+    "normative_hosted_proof": "CANONICAL_RESULT_ARTIFACT_PLUS_SUCCESSFUL_RUN_JOBS_PLUS_GITHUB_OIDC_ATTESTATION",
+    "offline_verifier_tool": {
+      "install": "DIGEST_VERIFIED_ARCHIVE_NO_CURL_TO_SHELL",
+      "linux_amd64_archive": "https://github.com/cli/cli/releases/download/v2.95.0/gh_2.95.0_linux_amd64.tar.gz",
+      "linux_amd64_archive_bytes": 14642738,
+      "linux_amd64_archive_sha256": "25d1e4729e8808c9ed3d613e96ebd3f3e44446f2d368c89d878a71a36ddb3d8c",
+      "linux_amd64_binary_bytes": 40702114,
+      "linux_amd64_binary_sha256": "62c11fbaa08835168c3d1acf8a645ac6268a13a5682c73581388c9df0c622617",
+      "name": "gh",
+      "upstream_provenance": {
+        "archive_asset": {
+          "bytes": 14642738,
+          "id": 450525940,
+          "sha256": "25d1e4729e8808c9ed3d613e96ebd3f3e44446f2d368c89d878a71a36ddb3d8c"
+        },
+        "checksum_asset": {
+          "bytes": 1950,
+          "contains_archive_sha256": true,
+          "id": 450525906,
+          "sha256": "d919a580356eaafd06321b9b6039ba513b81e370f3134747807ef0b1a101f9f6"
+        },
+        "github_release_attestation": "BINDS_RELEASE_AND_CHECKSUM_ASSETS",
+        "public_good_slsa_attestation": {
+          "run_attempt": 1,
+          "run_id": 27714369385,
+          "signer_and_source_commit": "70bb306bd25eb407f90eabefd98824aed62cf519",
+          "verified_timestamp": "2026-06-17T19:53:16Z",
+          "workflow": "deployment.yml@trunk"
+        },
+        "release_commit": "70bb306bd25eb407f90eabefd98824aed62cf519",
+        "release_id": 341013769
+      },
+      "version": "2.95.0"
+    },
+    "oidc_job_isolation": "NO_CHECKOUT_NO_REPOSITORY_CODE_CANONICAL_MAIN_PUSH_ONLY",
+    "review_capture": "STRICT_JSON_SCHEMA_REQUEST_PLUS_RAW_PROVIDER_ENVELOPE_PLUS_LITERAL_CANONICAL_COMMITTED_RESPONSE_JSON",
+    "review_wire_contract": {
+      "canonical_json": "SORTED_KEYS_COMPACT_RAW_UTF8_NO_SURROUNDING_BYTES",
+      "normalization_allowed": false,
+      "provider_envelope_committed_verbatim": true,
+      "provider_stop_reason": "end_turn",
+      "refusal_allowed": false,
+      "top_level_fields": [
+        "additional_findings",
+        "model",
+        "protocol",
+        "required_findings",
+        "review_id",
+        "verdict"
+      ]
+    },
+    "trusted_root_bootstrap": {
+      "bytes": 5748,
+      "evidence_selected_root_allowed": false,
+      "fulcio_uri": "https://fulcio.sigstore.dev",
+      "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "rekor_uris": [
+        "https://log2025-1.rekor.sigstore.dev",
+        "https://rekor.sigstore.dev"
+      ],
+      "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1",
+      "source": "gh-2.95.0 TUF-authenticated Sigstore Public Good trusted-root record fetched 2026-07-29"
+    },
+    "whole_job_logs": "C5_DEFECT_REPRODUCTION_ONLY_EXACT_OUTPUT_LINE_CARDINALITY",
+    "workflow_yaml_pin_scanner": "USES_SAFE_SIMPLE_KEY_SUBSET_NO_COMPLEX_OR_FLOW_MAPPING_KEYS",
+    "worktree_modes": "GIT_EXECUTABLE_PARITY_AND_NO_GROUP_OR_WORLD_WRITE"
+  },
+  "defects": [
+    {
+      "c5_formal_run_attempt": 1,
+      "c5_formal_run_id": 30301664692,
+      "id": "FR0011-D01",
+      "observed_exact_output_lines": 1,
+      "observed_substring_matches": 2,
+      "summary": "FR-0010 counts a formal success phrase as a substring, so the echoed grep command and exact TLC output produce two matches and reject the sole immutable c5 formal run."
+    },
+    {
+      "id": "FR0011-D02",
+      "parser_field_count": 6,
+      "request_field_count": 4,
+      "summary": "FR-0010 asks each automated reviewer for exactly four top-level response fields while its parser requires six."
+    },
+    {
+      "id": "FR0011-D03",
+      "normalization_allowed": false,
+      "summary": "FR-0010 requires canonical literal review-response bytes without authenticating that wire-format requirement in the provider request."
+    },
+    {
+      "id": "FR0011-D04",
+      "summary": "FR-0010 qualification and activation scopes constrain paths but do not explicitly require regular mode 100644 for every newly committed data record."
+    },
+    {
+      "id": "FR0011-D05",
+      "summary": "The inherited raw CI pin scanner recognizes only literal uses keys and can miss YAML-equivalent escaped, tagged, explicit, aliased, or flow-mapping spellings."
+    }
+  ],
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0011-plan-v1",
+    "principal": "sepmhn@gmail.com",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAApaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDExLXBs\nYW4tdjEAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAPwL6E0qRvWvGSv\nNFhxInDwRryoS617qIGaGSxOx/wUGzQn6Y9vaSoAkcFyzJq3/SzVsUElrygSNjDvROmLRA\nDQ==\n-----END SSH SIGNATURE-----\n"
+  },
+  "legacy_boundary": {
+    "commit": "a468dc5afacaa5f25fce55c82ef41a02d3977847",
+    "fr_0010_plan_namespace": "haldir-framework-recovery-fr-0010-plan-v1",
+    "fr_0010_state": "ABORTED_BEFORE_QUALIFICATION",
+    "fr_0010_successor_verifier_executed": false,
+    "fr_0010_successor_verifier_state": "RETIRED_AT_FR_0011_REPAIR",
+    "parent": "c5e986d7cb2a36c5a98b6bc494d9615e1f4d7fe7",
+    "records": {
+      "release/0.9.0/allowed-signers": {
+        "bytes": 98,
+        "git_mode": "100644",
+        "git_object_id": "7e563049b65dc6761e76b7d0c96c1cc10bd5c0dc",
+        "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+      },
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-plan.json": {
+        "bytes": 19723,
+        "git_mode": "100644",
+        "git_object_id": "d4a0ecf0355136f31834873e013036ac431edf51",
+        "sha256": "2f36994a208b3a2cae7f6108b23b709eff3220fd92b8026b8affbd356d41912e"
+      },
+      "tools/release/framework_recovery_fr_0010.py": {
+        "bytes": 61824,
+        "git_mode": "100644",
+        "git_object_id": "82495e72db29b471c481ed33239d0d6f8085f5e7",
+        "sha256": "600deceb01c5d671da997f5a90f87ebc0e9a50eceb30d8cc9c28f7e313959ea4"
+      },
+      "tools/release/framework_recovery_fr_0010_capture.py": {
+        "bytes": 38159,
+        "git_mode": "100755",
+        "git_object_id": "65a22e745631b2d0defc1f3f0339b1641bb9fdf6",
+        "sha256": "5fa5959de8e57fd6623abda08cb7592667f81f5adda6723126f17bafb1489182"
+      },
+      "tools/release/framework_recovery_fr_0010_result.py": {
+        "bytes": 9913,
+        "git_mode": "100755",
+        "git_object_id": "a6e89d44b05206559ad82521147ecbdfdab13814",
+        "sha256": "95eb5a36e4fd8fc7bcccdc0a9156670b53758cf8cbdf2d76caf90c75f088da39"
+      },
+      "tools/release/sigstore-public-good-trusted-root.jsonl": {
+        "bytes": 5748,
+        "git_mode": "100644",
+        "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+        "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+      },
+      "tools/release/test_verify_framework_recovery_fr_0010.py": {
+        "bytes": 41201,
+        "git_mode": "100644",
+        "git_object_id": "af8a48b47377de4493fb0d7a5065c2bb6584121b",
+        "sha256": "e65865cefd76a12202a5aef441c89af82c2dc334d2e2344199d8ffa28c73a070"
+      },
+      "tools/release/verify-framework-recovery-fr-0010.py": {
+        "bytes": 77896,
+        "git_mode": "100755",
+        "git_object_id": "c69f6550daae6c44b4cf0ff0e4ab9ea744099198",
+        "sha256": "065296dc01b8003b93931b03d3a9e773d64a7dd993c046b28bcfa33257b8239c"
+      }
+    },
+    "state": "HISTORICAL_SIGNED_FR_0010_REPAIR_BOUNDARY",
+    "subject": "release: establish epoch-11 audit trust root",
+    "tree": "b2e1c258dfa89ec3a0de13880110167c4c98d248"
+  },
+  "limitations": [
+    "GitHub OIDC proves the isolated attestation workflow identity; the producer result remains a statement from repository code.",
+    "Automated model responses are retained exactly but their provider provenance is not independently signed or attested.",
+    "Committed branch-protection API evidence is a TLS-observed snapshot of mutable external state, not durable cryptographic proof; live protection must be rechecked operationally.",
+    "Offline successor verification proves signature, ancestry, and protected-path scope, but cannot prove that mutable GitHub required checks were enforced for each successor.",
+    "The main update ruleset excludes non-owner writers, apps, and deploy keys, but the owner/admin can mutate external settings; owner-account or GitHub control-plane compromise is outside this repository-local guarantee.",
+    "Versioned GitHub-hosted runner labels reduce image drift but do not identify immutable VM images; label retirement is an availability risk, and an upgrade requires a new signed framework-recovery epoch.",
+    "Upstream GitHub CLI provenance identifiers are signed-plan rationale rather than retained independent evidence; runtime enforcement uses the exact archive and binary digests.",
+    "This bridge grants no release, deployment, publication, tag, archive, DOI, or GitHub Release authority."
+  ],
+  "post_activation_contract": {
+    "bespoke_per_task_f_i_c_d_required": false,
+    "candidate_hosted_evidence_captured_once_at_final_qualification": true,
+    "main_update_ruleset": {
+      "enforcement": "active",
+      "layers_with_classic_branch_protection": true,
+      "name": "haldir-main-writer-allowlist",
+      "rule": {
+        "type": "update",
+        "update_allows_fetch_and_merge": false
+      },
+      "scope": "refs/heads/main",
+      "sole_bypass_actor": {
+        "actor_id": 10104569,
+        "actor_type": "User",
+        "bypass_mode": "always"
+      }
+    },
+    "model": "SIGNED_LINEAR_SCOPED_MILESTONES",
+    "post_main_attestation_jobs": [
+      "attest-ci-audit-result",
+      "attest-formal-audit-result"
+    ],
+    "required_pre_accept_checks": [
+      {
+        "app_id": 15368,
+        "context": "build-test"
+      },
+      {
+        "app_id": 15368,
+        "context": "clean-build"
+      },
+      {
+        "app_id": 15368,
+        "context": "feature-matrix"
+      },
+      {
+        "app_id": 15368,
+        "context": "interop"
+      },
+      {
+        "app_id": 15368,
+        "context": "macos-compile"
+      },
+      {
+        "app_id": 15368,
+        "context": "supply-chain"
+      },
+      {
+        "app_id": 15368,
+        "context": "tlc-model-check"
+      }
+    ],
+    "requirements_json_remains_audit_backlog": true,
+    "threat_model": "TRUSTED_SOURCE_AUTHORITY_AND_OWNER_ACCOUNT",
+    "trust_root_paths_immutable": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/formal.yml",
+      "release/0.9.0/allowed-signers",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-plan.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-plan.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-local.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-response.json",
+      "tools/release/current-audit-gate.sh",
+      "tools/release/framework_recovery_fr_0010.py",
+      "tools/release/framework_recovery_fr_0010_capture.py",
+      "tools/release/framework_recovery_fr_0010_result.py",
+      "tools/release/framework_recovery_fr_0011.py",
+      "tools/release/framework_recovery_fr_0011_capture.py",
+      "tools/release/framework_recovery_fr_0011_result.py",
+      "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "tools/release/test_verify_current_audit_fr_0009.py",
+      "tools/release/test_verify_framework_recovery_fr_0010.py",
+      "tools/release/test_verify_framework_recovery_fr_0011.py",
+      "tools/release/verify-current-audit.py",
+      "tools/release/verify-framework-recovery-fr-0010.py",
+      "tools/release/verify-framework-recovery-fr-0011.py",
+      "tools/verify-ci-pins.py"
+    ],
+    "writer_adversarial_immutability_claimed": false
+  },
+  "protocol_parent": {
+    "commit": "a468dc5afacaa5f25fce55c82ef41a02d3977847",
+    "tree": "b2e1c258dfa89ec3a0de13880110167c4c98d248"
+  },
+  "recovery_id": "FR-0011",
+  "release_target": "0.9.0",
+  "repair_identity": {
+    "commit": "SIGNED_COMMIT_CONTAINING_THIS_PLAN",
+    "required_parent": "a468dc5afacaa5f25fce55c82ef41a02d3977847",
+    "subject": "release: supersede incomplete epoch-11 recovery"
+  },
+  "repair_scope": {
+    ".github/workflows/ci.yml": "M",
+    ".github/workflows/formal.yml": "M",
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0011-plan.json": "A",
+    "tools/release/current-audit-gate.sh": "M",
+    "tools/release/framework_recovery_fr_0011.py": "A",
+    "tools/release/framework_recovery_fr_0011_capture.py": "A",
+    "tools/release/framework_recovery_fr_0011_result.py": "A",
+    "tools/release/test_verify_framework_recovery_fr_0011.py": "A",
+    "tools/release/verify-framework-recovery-fr-0011.py": "A",
+    "tools/verify-ci-pins.py": "M"
+  },
+  "review_contract": {
+    "literal_response_max_bytes": 1048576,
+    "literal_responses_committed_verbatim": true,
+    "provider_envelope_max_bytes": 2097152,
+    "provider_envelopes_committed_verbatim": true,
+    "provider_provenance_independently_attested": false,
+    "review_authority_conferred": false
+  },
+  "schema_version": "1.0.0",
+  "stage_contract": {
+    "activation": {
+      "data_only": true,
+      "namespace": "haldir-framework-recovery-fr-0011-activation-v1",
+      "state_after": "ACTIVE",
+      "statuses": {
+        "release/0.9.0/current-head/closures/framework-recovery/FR-0011-activation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-branch-protection.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-result.json": "A"
+      },
+      "subject": "release: activate epoch-12 audit trust root"
+    },
+    "ordinary_successor_before_activation": "REJECT",
+    "qualification": {
+      "data_only": true,
+      "namespace": "haldir-framework-recovery-fr-0011-qualification-v1",
+      "state_after": "QUALIFIED_PENDING_ACTIVATION",
+      "statuses": {
+        "release/0.9.0/current-head/closures/framework-recovery/FR-0011-qualification.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci-logs.zip": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal-logs.zip": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-local.json": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-capture.json": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-provider-response.json": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-response.json": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-capture.json": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-provider-response.json": "A",
+        "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-response.json": "A"
+      },
+      "subject": "release: qualify epoch-12 audit trust root"
+    },
+    "repair": {
+      "state_after": "PENDING_QUALIFICATION",
+      "subject": "release: supersede incomplete epoch-11 recovery"
+    }
+  }
+}
