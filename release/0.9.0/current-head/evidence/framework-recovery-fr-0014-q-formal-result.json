@@ -1,0 +1,74 @@
+{
+  "authority": {
+    "deployment_authority": false,
+    "provenance_only": true,
+    "publication_authority": false,
+    "release_authority": false,
+    "tag_authority": false
+  },
+  "execution": {
+    "command": "java -XX:+UseParallelGC -cp tla2tools.jar tlc2.TLC -workers auto -config formal/HaldirAuthority.cfg formal/HaldirAuthority.tla",
+    "job": "tlc-model-check",
+    "result": "PASS",
+    "run_attempt": 1,
+    "run_id": 30498863998,
+    "run_number": 125,
+    "workflow": "formal",
+    "workflow_ref": "sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+  },
+  "materials": [
+    {
+      "bytes": 4691,
+      "git_mode": "100644",
+      "git_object_id": "8b8bb2b71c6e986e190c806807a8da043f34813e",
+      "git_object_type": "blob",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "77fb045993c8fe97eb57cd1f0036653433c82e320682a353d1804b7b47ce2923"
+    },
+    {
+      "bytes": 254,
+      "git_mode": "100644",
+      "git_object_id": "55901379ad37931ed8d381dc3194dd7c4f62c1f9",
+      "git_object_type": "blob",
+      "path": "formal/HaldirAuthority.cfg",
+      "sha256": "20651c85285170ac0bbd35b6f6b9c31597fd63b28e7678b72388033dbad3c58f"
+    },
+    {
+      "bytes": 6157,
+      "git_mode": "100644",
+      "git_object_id": "fea47ed6d60451d95aad3d2305aa3378213cf8d5",
+      "git_object_type": "blob",
+      "path": "formal/HaldirAuthority.tla",
+      "sha256": "0ab0bc5826c356cab6e01555a32fbc489286988b575c62605e740b69c6e5e61e"
+    },
+    {
+      "bytes": 2253,
+      "git_mode": "100644",
+      "git_object_id": "54febc1fdbc02222e43855e0b8979c1870eb69d5",
+      "git_object_type": "blob",
+      "path": "tools/pins.toml",
+      "sha256": "0cd9c3279c61266c1e926fd1fcce8cd6cab38baf119d1be9e19c7ccc12d7fcb6"
+    },
+    {
+      "bytes": 9934,
+      "git_mode": "100755",
+      "git_object_id": "c6b3cb6e87867f000e48b610a2a56d3a088383eb",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0014_result.py",
+      "sha256": "f9282aa0ecd5f9c7bcd546fecf04b6b3e2534ee5c8050db03b382ccde0a66bac"
+    }
+  ],
+  "protocol": "HALDIR_EPOCH_15_HOSTED_RESULT_V1",
+  "repository": {
+    "database_id": 1292802592,
+    "name": "sepahead/haldir",
+    "owner_database_id": 10104569
+  },
+  "schema_version": "1.0.0",
+  "subject": {
+    "commit": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+    "event": "push",
+    "ref": "refs/heads/main",
+    "tree": "eb4d7011556cea987b77afaa29cdc52f3b4c88c8"
+  }
+}

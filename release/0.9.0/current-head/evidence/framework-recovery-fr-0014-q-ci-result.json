@@ -1,0 +1,74 @@
+{
+  "authority": {
+    "deployment_authority": false,
+    "provenance_only": true,
+    "publication_authority": false,
+    "release_authority": false,
+    "tag_authority": false
+  },
+  "execution": {
+    "command": "/usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh",
+    "job": "supply-chain",
+    "result": "PASS",
+    "run_attempt": 2,
+    "run_id": 30498863959,
+    "run_number": 147,
+    "workflow": "ci",
+    "workflow_ref": "sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+  },
+  "materials": [
+    {
+      "bytes": 12724,
+      "git_mode": "100644",
+      "git_object_id": "0e391a60eb33b6a9a06f62d3a6672f271f92c6c0",
+      "git_object_type": "blob",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "4f39bb51f3e3972b9268290fdf0cce2304167569eb51dcc7361ed8de4aafbfb3"
+    },
+    {
+      "bytes": 2240,
+      "git_mode": "100755",
+      "git_object_id": "571a483470ad069d070a6c7db7a1c232125cf673",
+      "git_object_type": "blob",
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "f7d6a2ac2bcd40fe5816071836e6f8e2629197fc055d8d3bb773f25c852c5fa0"
+    },
+    {
+      "bytes": 33411,
+      "git_mode": "100644",
+      "git_object_id": "bfc4252775e977435328db5a68ebc73ca7b113af",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0014.py",
+      "sha256": "ba48f97b611aace5e038764e91ec5569bb977130cc40489bf7558aad83a8eae7"
+    },
+    {
+      "bytes": 9934,
+      "git_mode": "100755",
+      "git_object_id": "c6b3cb6e87867f000e48b610a2a56d3a088383eb",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0014_result.py",
+      "sha256": "f9282aa0ecd5f9c7bcd546fecf04b6b3e2534ee5c8050db03b382ccde0a66bac"
+    },
+    {
+      "bytes": 119655,
+      "git_mode": "100755",
+      "git_object_id": "6de5106e10505050b88924bb8f5252892076511a",
+      "git_object_type": "blob",
+      "path": "tools/release/verify-framework-recovery-fr-0014.py",
+      "sha256": "be94190428c56c966d6d8df107febfc0fa022b2c4de1c7abc38536b63871a880"
+    }
+  ],
+  "protocol": "HALDIR_EPOCH_15_HOSTED_RESULT_V1",
+  "repository": {
+    "database_id": 1292802592,
+    "name": "sepahead/haldir",
+    "owner_database_id": 10104569
+  },
+  "schema_version": "1.0.0",
+  "subject": {
+    "commit": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+    "event": "push",
+    "ref": "refs/heads/main",
+    "tree": "eb4d7011556cea987b77afaa29cdc52f3b4c88c8"
+  }
+}

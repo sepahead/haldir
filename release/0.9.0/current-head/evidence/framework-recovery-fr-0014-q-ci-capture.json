@@ -1,0 +1,1551 @@
+{
+  "artifact": {
+    "archive_download_url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742759696/zip",
+    "created_at": "2026-07-29T23:18:51Z",
+    "digest": "sha256:44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd",
+    "expired": false,
+    "expires_at": "2026-10-27T23:17:24Z",
+    "id": 8742759696,
+    "name": "epoch-15-ci-result-attempt-2.json",
+    "node_id": "MDg6QXJ0aWZhY3Q4NzQyNzU5Njk2",
+    "size_in_bytes": 2467,
+    "updated_at": "2026-07-29T23:18:51Z",
+    "url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742759696",
+    "workflow_run": {
+      "head_branch": "main",
+      "head_repository_id": 1292802592,
+      "head_sha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+      "id": 30498863959,
+      "repository_id": 1292802592
+    }
+  },
+  "artifact_by_id": {
+    "archive_download_url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742759696/zip",
+    "created_at": "2026-07-29T23:18:51Z",
+    "digest": "sha256:44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd",
+    "expired": false,
+    "expires_at": "2026-10-27T23:17:24Z",
+    "id": 8742759696,
+    "name": "epoch-15-ci-result-attempt-2.json",
+    "node_id": "MDg6QXJ0aWZhY3Q4NzQyNzU5Njk2",
+    "size_in_bytes": 2467,
+    "updated_at": "2026-07-29T23:18:51Z",
+    "url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742759696",
+    "workflow_run": {
+      "head_branch": "main",
+      "head_repository_id": 1292802592,
+      "head_sha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+      "id": 30498863959,
+      "repository_id": 1292802592
+    }
+  },
+  "artifact_download": {
+    "bytes": 2467,
+    "content_mode": "DIRECT_UNARCHIVED_FILE",
+    "sha256": "44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd"
+  },
+  "artifact_listing": {
+    "artifacts": [
+      {
+        "archive_download_url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742759696/zip",
+        "created_at": "2026-07-29T23:18:51Z",
+        "digest": "sha256:44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd",
+        "expired": false,
+        "expires_at": "2026-10-27T23:17:24Z",
+        "id": 8742759696,
+        "name": "epoch-15-ci-result-attempt-2.json",
+        "node_id": "MDg6QXJ0aWZhY3Q4NzQyNzU5Njk2",
+        "size_in_bytes": 2467,
+        "updated_at": "2026-07-29T23:18:51Z",
+        "url": "https://api.github.com/repos/sepahead/haldir/actions/artifacts/8742759696",
+        "workflow_run": {
+          "head_branch": "main",
+          "head_repository_id": 1292802592,
+          "head_sha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "id": 30498863959,
+          "repository_id": 1292802592
+        }
+      }
+    ],
+    "total_count": 1
+  },
+  "attempt_metadata": {
+    "attempt": 2,
+    "conclusion": "success",
+    "createdAt": "2026-07-29T23:17:24Z",
+    "databaseId": 30498863959,
+    "event": "push",
+    "headBranch": "main",
+    "headSha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+    "jobs": [
+      {
+        "completedAt": "2026-07-29T23:17:54Z",
+        "conclusion": "success",
+        "databaseId": 90734368198,
+        "name": "feature-matrix",
+        "startedAt": "2026-07-29T23:17:26Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:27Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:28Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:37Z",
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:48Z",
+            "conclusion": "success",
+            "name": "Build no-default-features",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:37Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Clippy default features only",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "startedAt": "2026-07-29T23:17:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-07-29T23:17:52Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368198"
+      },
+      {
+        "completedAt": "2026-07-29T23:18:06Z",
+        "conclusion": "success",
+        "databaseId": 90734368221,
+        "name": "macos-compile",
+        "startedAt": "2026-07-29T23:17:27Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:27Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:30Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:37Z",
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:30Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:03Z",
+            "conclusion": "success",
+            "name": "Build + test on macOS",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:37Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:03Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "startedAt": "2026-07-29T23:18:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:04Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "startedAt": "2026-07-29T23:18:03Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368221"
+      },
+      {
+        "completedAt": "2026-07-29T23:18:55Z",
+        "conclusion": "success",
+        "databaseId": 90734368233,
+        "name": "supply-chain",
+        "startedAt": "2026-07-29T23:17:33Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:35Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:47Z",
+            "conclusion": "success",
+            "name": "Build EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:35Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:48Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:47Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Install pinned Python",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Harden pinned Python permissions",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Install pinned GitHub CLI for offline attestation verification",
+            "number": 6,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:04Z",
+            "conclusion": "success",
+            "name": "Preload isolated task-runner image",
+            "number": 7,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:11Z",
+            "conclusion": "success",
+            "name": "Verify current-head 0.9 audit cut",
+            "number": 8,
+            "startedAt": "2026-07-29T23:18:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:22Z",
+            "conclusion": "success",
+            "name": "Verify source pins",
+            "number": 9,
+            "startedAt": "2026-07-29T23:18:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:22Z",
+            "conclusion": "success",
+            "name": "Verify immutable CI and formal-tool pins",
+            "number": 10,
+            "startedAt": "2026-07-29T23:18:22Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:23Z",
+            "conclusion": "success",
+            "name": "Verify immutable 0.9 audit cut",
+            "number": 11,
+            "startedAt": "2026-07-29T23:18:22Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:23Z",
+            "conclusion": "success",
+            "name": "Verify normative 0.9 authority model",
+            "number": 12,
+            "startedAt": "2026-07-29T23:18:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:26Z",
+            "conclusion": "success",
+            "name": "Verify normative 0.9 protection model and evidence generator",
+            "number": 13,
+            "startedAt": "2026-07-29T23:18:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:26Z",
+            "conclusion": "success",
+            "name": "Verify evidence layout",
+            "number": 14,
+            "startedAt": "2026-07-29T23:18:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:28Z",
+            "conclusion": "success",
+            "name": "Verify secure Zenoh profiles and retained live evidence",
+            "number": 15,
+            "startedAt": "2026-07-29T23:18:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:28Z",
+            "conclusion": "success",
+            "name": "Forbidden-claim drift check",
+            "number": 16,
+            "startedAt": "2026-07-29T23:18:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:50Z",
+            "conclusion": "success",
+            "name": "cargo-deny",
+            "number": 17,
+            "startedAt": "2026-07-29T23:18:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:50Z",
+            "conclusion": "success",
+            "name": "Emit canonical epoch-15 audit result",
+            "number": 18,
+            "startedAt": "2026-07-29T23:18:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:51Z",
+            "conclusion": "success",
+            "name": "Upload canonical epoch-15 audit result",
+            "number": 19,
+            "startedAt": "2026-07-29T23:18:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:51Z",
+            "conclusion": "success",
+            "name": "Post Install pinned Python",
+            "number": 37,
+            "startedAt": "2026-07-29T23:18:51Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:52Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 38,
+            "startedAt": "2026-07-29T23:18:51Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:52Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 39,
+            "startedAt": "2026-07-29T23:18:52Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368233"
+      },
+      {
+        "completedAt": "2026-07-29T23:18:19Z",
+        "conclusion": "success",
+        "databaseId": 90734368248,
+        "name": "build-test",
+        "startedAt": "2026-07-29T23:17:26Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:28Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:30Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:39Z",
+            "conclusion": "success",
+            "name": "Install + verify pinned toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:30Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:57Z",
+            "conclusion": "success",
+            "name": "Cache cargo",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:58Z",
+            "conclusion": "success",
+            "name": "Format check",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:57Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:01Z",
+            "conclusion": "success",
+            "name": "Clippy (deny warnings)",
+            "number": 6,
+            "startedAt": "2026-07-29T23:17:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:11Z",
+            "conclusion": "success",
+            "name": "Tests",
+            "number": 7,
+            "startedAt": "2026-07-29T23:18:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:12Z",
+            "conclusion": "success",
+            "name": "Doc tests",
+            "number": 8,
+            "startedAt": "2026-07-29T23:18:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "Docs build (deny warnings)",
+            "number": 9,
+            "startedAt": "2026-07-29T23:18:12Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "git diff --check",
+            "number": 10,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "No generated-file drift",
+            "number": 11,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "Post Cache cargo",
+            "number": 21,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:17Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 22,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:17Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 23,
+            "startedAt": "2026-07-29T23:18:17Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368248"
+      },
+      {
+        "completedAt": "2026-07-29T23:17:50Z",
+        "conclusion": "success",
+        "databaseId": 90734368261,
+        "name": "clean-build",
+        "startedAt": "2026-07-29T23:17:26Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:27Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:28Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:36Z",
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:48Z",
+            "conclusion": "success",
+            "name": "Cold build",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:36Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "startedAt": "2026-07-29T23:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368261"
+      },
+      {
+        "completedAt": "2026-07-29T23:17:55Z",
+        "conclusion": "success",
+        "databaseId": 90734368267,
+        "name": "interop",
+        "startedAt": "2026-07-29T23:17:32Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:34Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:33Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:35Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:43Z",
+            "conclusion": "success",
+            "name": "Install pinned toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:35Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Regenerate interop vectors (drift check)",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:43Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:54Z",
+            "conclusion": "success",
+            "name": "Independently verify COSE/CBOR vectors",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:54Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "startedAt": "2026-07-29T23:17:54Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:54Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-07-29T23:17:54Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368267"
+      },
+      {
+        "completedAt": "2026-07-29T23:19:06Z",
+        "conclusion": "success",
+        "databaseId": 90734616966,
+        "name": "attest-ci-audit-result",
+        "startedAt": "2026-07-29T23:18:58Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:19:00Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:18:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:02Z",
+            "conclusion": "success",
+            "name": "Download immutable audit result",
+            "number": 2,
+            "startedAt": "2026-07-29T23:19:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:02Z",
+            "conclusion": "success",
+            "name": "Verify producer and artifact digests",
+            "number": 3,
+            "startedAt": "2026-07-29T23:19:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:04Z",
+            "conclusion": "success",
+            "name": "Attest exact audit result",
+            "number": 4,
+            "startedAt": "2026-07-29T23:19:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:04Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 5,
+            "startedAt": "2026-07-29T23:19:04Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734616966"
+      }
+    ],
+    "number": 147,
+    "startedAt": "2026-07-29T23:17:23Z",
+    "status": "completed",
+    "updatedAt": "2026-07-29T23:19:07Z",
+    "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/attempts/2",
+    "workflowDatabaseId": 311605710,
+    "workflowName": "ci"
+  },
+  "attestation_record": {
+    "bytes": 10308,
+    "git_mode": "100644",
+    "git_object_id": "e371941bc0dcdfef940315ced3d1359cb8f14bdf",
+    "git_object_type": "blob",
+    "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-ci-attestation.json",
+    "sha256": "5ea9e91777f232fe4bec06a7fc6d566586d0d5c868e8518c88fbb2c7eeda1989"
+  },
+  "attestation_verification": [
+    {
+      "attestation": {
+        "bundle": {
+          "dsseEnvelope": {
+            "payload": "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjEiLCJzdWJqZWN0IjpbeyJuYW1lIjoiZXBvY2gtMTUtY2ktcmVzdWx0LWF0dGVtcHQtMi5qc29uIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjQ0MjMzZjNhYTA2OTU4OTA2ZWU4ZWQ2YThmZTkyZjI0MDk4MWZmNDgyODg4Y2ZiNzE3ZTczY2FiYmUxZjA3Y2QifX1dLCJwcmVkaWNhdGVUeXBlIjoiaHR0cHM6Ly9zbHNhLmRldi9wcm92ZW5hbmNlL3YxIiwicHJlZGljYXRlIjp7ImJ1aWxkRGVmaW5pdGlvbiI6eyJidWlsZFR5cGUiOiJodHRwczovL2FjdGlvbnMuZ2l0aHViLmlvL2J1aWxkdHlwZXMvd29ya2Zsb3cvdjEiLCJleHRlcm5hbFBhcmFtZXRlcnMiOnsid29ya2Zsb3ciOnsicmVmIjoicmVmcy9oZWFkcy9tYWluIiwicmVwb3NpdG9yeSI6Imh0dHBzOi8vZ2l0aHViLmNvbS9zZXBhaGVhZC9oYWxkaXIiLCJwYXRoIjoiLmdpdGh1Yi93b3JrZmxvd3MvY2kueW1sIn19LCJpbnRlcm5hbFBhcmFtZXRlcnMiOnsiZ2l0aHViIjp7ImV2ZW50X25hbWUiOiJwdXNoIiwicmVwb3NpdG9yeV9pZCI6IjEyOTI4MDI1OTIiLCJyZXBvc2l0b3J5X293bmVyX2lkIjoiMTAxMDQ1NjkiLCJydW5uZXJfZW52aXJvbm1lbnQiOiJnaXRodWItaG9zdGVkIn19LCJyZXNvbHZlZERlcGVuZGVuY2llcyI6W3sidXJpIjoiZ2l0K2h0dHBzOi8vZ2l0aHViLmNvbS9zZXBhaGVhZC9oYWxkaXJAcmVmcy9oZWFkcy9tYWluIiwiZGlnZXN0Ijp7ImdpdENvbW1pdCI6ImE2MjhhYTk4ODBhYjQ2YjgxODFiZTZmMTg3M2MwNTAzZGI0NWIxMWYifX1dfSwicnVuRGV0YWlscyI6eyJidWlsZGVyIjp7ImlkIjoiaHR0cHM6Ly9naXRodWIuY29tL3NlcGFoZWFkL2hhbGRpci8uZ2l0aHViL3dvcmtmbG93cy9jaS55bWxAcmVmcy9oZWFkcy9tYWluIn0sIm1ldGFkYXRhIjp7Imludm9jYXRpb25JZCI6Imh0dHBzOi8vZ2l0aHViLmNvbS9zZXBhaGVhZC9oYWxkaXIvYWN0aW9ucy9ydW5zLzMwNDk4ODYzOTU5L2F0dGVtcHRzLzIifX19fQ==",
+            "payloadType": "application/vnd.in-toto+json",
+            "signatures": [
+              {
+                "sig": "MEUCIF2SB6QkG2I53bTUEjOvWmEZSRdvz4LMTxQRPkNX4AAHAiEA6ocrYohs6jdqrjNfyvX4+2qPEGO8Px5p+uXw08BBDOw="
+              }
+            ]
+          },
+          "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+          "verificationMaterial": {
+            "certificate": {
+              "rawBytes": "MIIGwDCCBkagAwIBAgIUA5nnwXDCCada1+eO4nb4vI3jfV0wCgYIKoZIzj0EAwMwNzEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MR4wHAYDVQQDExVzaWdzdG9yZS1pbnRlcm1lZGlhdGUwHhcNMjYwNzI5MjMxOTAzWhcNMjYwNzI5MjMyOTAzWjAAMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAERba8qHd5Hs8WyumCo7dATVdxK6mJA2gCbgIAlAC5V/23+9auIUs5kLcp05EkKrfuti+OA0otWBc0rmcO+RhqU6OCBWUwggVhMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAzAdBgNVHQ4EFgQUvc4T5+SoHM8Oq99M5KZcZ4xhVoUwHwYDVR0jBBgwFoAU39Ppz1YkEZb5qNjpKFWixi4YZD8wWQYDVR0RAQH/BE8wTYZLaHR0cHM6Ly9naXRodWIuY29tL3NlcGFoZWFkL2hhbGRpci8uZ2l0aHViL3dvcmtmbG93cy9jaS55bWxAcmVmcy9oZWFkcy9tYWluMDkGCisGAQQBg78wAQEEK2h0dHBzOi8vdG9rZW4uYWN0aW9ucy5naXRodWJ1c2VyY29udGVudC5jb20wEgYKKwYBBAGDvzABAgQEcHVzaDA2BgorBgEEAYO/MAEDBChhNjI4YWE5ODgwYWI0NmI4MTgxYmU2ZjE4NzNjMDUwM2RiNDViMTFmMBAGCisGAQQBg78wAQQEAmNpMB0GCisGAQQBg78wAQUED3NlcGFoZWFkL2hhbGRpcjAdBgorBgEEAYO/MAEGBA9yZWZzL2hlYWRzL21haW4wOwYKKwYBBAGDvzABCAQtDCtodHRwczovL3Rva2VuLmFjdGlvbnMuZ2l0aHVidXNlcmNvbnRlbnQuY29tMFsGCisGAQQBg78wAQkETQxLaHR0cHM6Ly9naXRodWIuY29tL3NlcGFoZWFkL2hhbGRpci8uZ2l0aHViL3dvcmtmbG93cy9jaS55bWxAcmVmcy9oZWFkcy9tYWluMDgGCisGAQQBg78wAQoEKgwoYTYyOGFhOTg4MGFiNDZiODE4MWJlNmYxODczYzA1MDNkYjQ1YjExZjAdBgorBgEEAYO/MAELBA8MDWdpdGh1Yi1ob3N0ZWQwMgYKKwYBBAGDvzABDAQkDCJodHRwczovL2dpdGh1Yi5jb20vc2VwYWhlYWQvaGFsZGlyMDgGCisGAQQBg78wAQ0EKgwoYTYyOGFhOTg4MGFiNDZiODE4MWJlNmYxODczYzA1MDNkYjQ1YjExZjAfBgorBgEEAYO/MAEOBBEMD3JlZnMvaGVhZHMvbWFpbjAaBgorBgEEAYO/MAEPBAwMCjEyOTI4MDI1OTIwKwYKKwYBBAGDvzABEAQdDBtodHRwczovL2dpdGh1Yi5jb20vc2VwYWhlYWQwGAYKKwYBBAGDvzABEQQKDAgxMDEwNDU2OTBbBgorBgEEAYO/MAESBE0MS2h0dHBzOi8vZ2l0aHViLmNvbS9zZXBhaGVhZC9oYWxkaXIvLmdpdGh1Yi93b3JrZmxvd3MvY2kueW1sQHJlZnMvaGVhZHMvbWFpbjA4BgorBgEEAYO/MAETBCoMKGE2MjhhYTk4ODBhYjQ2YjgxODFiZTZmMTg3M2MwNTAzZGI0NWIxMWYwFAYKKwYBBAGDvzABFAQGDARwdXNoMFYGCisGAQQBg78wARUESAxGaHR0cHM6Ly9naXRodWIuY29tL3NlcGFoZWFkL2hhbGRpci9hY3Rpb25zL3J1bnMvMzA0OTg4NjM5NTkvYXR0ZW1wdHMvMjAWBgorBgEEAYO/MAEWBAgMBnB1YmxpYzA4BgorBgEEAYO/MAEYBCoMKHJlcG86c2VwYWhlYWQvaGFsZGlyOnJlZjpyZWZzL2hlYWRzL21haW4wgYsGCisGAQQB1nkCBAIEfQR7AHkAdwDdPTBqxscRMmMZHhyZZzcCokpeuN48rf+HinKALynujgAAAZ+wLKPrAAAEAwBIMEYCIQD997I5toudKLHIUUzUvEUbVbP7X4tJlvxbmOIINJHKtgIhAPaNVc62No0Ug8tgxhhTBoiQME8m969Ma3Vba3lYcLdBMAoGCCqGSM49BAMDA2gAMGUCMD+9X0PCipAzIFQcXMFvwEwtZPuJfpMeoGa4jNfzpb9k42EF5bhT5C0PfNa0IFjflQIxALY70K5W9/Sxu9NCmxDB8oGeAPolLdo6y7WyqnUObg/4yaSzthfYCCNYKyhkZo4U0A=="
+            },
+            "timestampVerificationData": {},
+            "tlogEntries": [
+              {
+                "canonicalizedBody": "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiZHNzZSIsInNwZWMiOnsiZW52ZWxvcGVIYXNoIjp7ImFsZ29yaXRobSI6InNoYTI1NiIsInZhbHVlIjoiMzFlNmE2ODA1MTc0OGIwZjUxZWM0ZmZhZjZhYTkxMTJjYWIzNmRmNzgzNGIwNTRjOGE3YWVkNDk5N2UxMjk0MyJ9LCJwYXlsb2FkSGFzaCI6eyJhbGdvcml0aG0iOiJzaGEyNTYiLCJ2YWx1ZSI6ImUzNWJiZmE5MThhMGY2NmE3NGI1MGM4ZGVlMDM4OGEwMGViOWQwMWI1MjFlZWNmMzQzMDZjYmZjMmY1MTc3NzcifSwic2lnbmF0dXJlcyI6W3sic2lnbmF0dXJlIjoiTUVVQ0lGMlNCNlFrRzJJNTNiVFVFak92V21FWlNSZHZ6NExNVHhRUlBrTlg0QUFIQWlFQTZvY3JZb2hzNmpkcXJqTmZ5dlg0KzJxUEVHTzhQeDVwK3VYdzA4QkJET3c9IiwidmVyaWZpZXIiOiJMUzB0TFMxQ1JVZEpUaUJEUlZKVVNVWkpRMEZVUlMwdExTMHRDazFKU1VkM1JFTkRRbXRoWjBGM1NVSkJaMGxWUVRWdWJuZFlSRU5EWVdSaE1TdGxUelJ1WWpSMlNUTnFabFl3ZDBObldVbExiMXBKZW1vd1JVRjNUWGNLVG5wRlZrMUNUVWRCTVZWRlEyaE5UV015Ykc1ak0xSjJZMjFWZFZwSFZqSk5ValIzU0VGWlJGWlJVVVJGZUZaNllWZGtlbVJIT1hsYVV6RndZbTVTYkFwamJURnNXa2RzYUdSSFZYZElhR05PVFdwWmQwNTZTVFZOYWsxNFQxUkJlbGRvWTA1TmFsbDNUbnBKTlUxcVRYbFBWRUY2VjJwQlFVMUdhM2RGZDFsSUNrdHZXa2w2YWpCRFFWRlpTVXR2V2tsNmFqQkVRVkZqUkZGblFVVlNZbUU0Y1Voa05VaHpPRmQ1ZFcxRGJ6ZGtRVlJXWkhoTE5tMUtRVEpuUTJKblNVRUtiRUZETlZZdk1qTXJPV0YxU1ZWek5XdE1ZM0F3TlVWclMzSm1kWFJwSzA5Qk1HOTBWMEpqTUhKdFkwOHJVbWh4VlRaUFEwSlhWWGRuWjFab1RVRTBSd3BCTVZWa1JIZEZRaTkzVVVWQmQwbElaMFJCVkVKblRsWklVMVZGUkVSQlMwSm5aM0pDWjBWR1FsRmpSRUY2UVdSQ1owNVdTRkUwUlVablVWVjJZelJVQ2pVclUyOUlUVGhQY1RrNVRUVkxXbU5hTkhob1ZtOVZkMGgzV1VSV1VqQnFRa0puZDBadlFWVXpPVkJ3ZWpGWmEwVmFZalZ4VG1wd1MwWlhhWGhwTkZrS1drUTRkMWRSV1VSV1VqQlNRVkZJTDBKRk9IZFVXVnBNWVVoU01HTklUVFpNZVRsdVlWaFNiMlJYU1hWWk1qbDBURE5PYkdOSFJtOWFWMFpyVERKb2FBcGlSMUp3WTJrNGRWb3liREJoU0ZacFRETmtkbU50ZEcxaVJ6a3pZM2s1YW1GVE5UVmlWM2hCWTIxV2JXTjVPVzlhVjBaclkzazVkRmxYYkhWTlJHdEhDa05wYzBkQlVWRkNaemM0ZDBGUlJVVkxNbWd3WkVoQ2VrOXBPSFprUnpseVdsYzBkVmxYVGpCaFZ6bDFZM2sxYm1GWVVtOWtWMG94WXpKV2VWa3lPWFVLWkVkV2RXUkROV3BpTWpCM1JXZFpTMHQzV1VKQ1FVZEVkbnBCUWtGblVVVmpTRlo2WVVSQk1rSm5iM0pDWjBWRlFWbFBMMDFCUlVSQ1EyaG9UbXBKTkFwWlYwVTFUMFJuZDFsWFNUQk9iVWswVFZSbmVGbHRWVEphYWtVMFRucE9hazFFVlhkTk1sSnBUa1JXYVUxVVJtMU5Ra0ZIUTJselIwRlJVVUpuTnpoM0NrRlJVVVZCYlU1d1RVSXdSME5wYzBkQlVWRkNaemM0ZDBGUlZVVkVNMDVzWTBkR2IxcFhSbXRNTW1ob1lrZFNjR05xUVdSQ1oyOXlRbWRGUlVGWlR5OEtUVUZGUjBKQk9YbGFWMXA2VERKb2JGbFhVbnBNTWpGb1lWYzBkMDkzV1V0TGQxbENRa0ZIUkhaNlFVSkRRVkYwUkVOMGIyUklVbmRqZW05MlRETlNkZ3BoTWxaMVRHMUdhbVJIYkhaaWJrMTFXakpzTUdGSVZtbGtXRTVzWTIxT2RtSnVVbXhpYmxGMVdUSTVkRTFHYzBkRGFYTkhRVkZSUW1jM09IZEJVV3RGQ2xSUmVFeGhTRkl3WTBoTk5reDVPVzVoV0ZKdlpGZEpkVmt5T1hSTU0wNXNZMGRHYjFwWFJtdE1NbWhvWWtkU2NHTnBPSFZhTW13d1lVaFdhVXd6WkhZS1kyMTBiV0pIT1ROamVUbHFZVk0xTldKWGVFRmpiVlp0WTNrNWIxcFhSbXRqZVRsMFdWZHNkVTFFWjBkRGFYTkhRVkZSUW1jM09IZEJVVzlGUzJkM2J3cFpWRmw1VDBkR2FFOVVaelJOUjBacFRrUmFhVTlFUlRSTlYwcHNUbTFaZUU5RVkzcFpla0V4VFVST2ExbHFVVEZaYWtWNFdtcEJaRUpuYjNKQ1owVkZDa0ZaVHk5TlFVVk1Ra0U0VFVSWFpIQmtSMmd4V1dreGIySXpUakJhVjFGM1RXZFpTMHQzV1VKQ1FVZEVkbnBCUWtSQlVXdEVRMHB2WkVoU2QyTjZiM1lLVERKa2NHUkhhREZaYVRWcVlqSXdkbU15Vm5kWlYyaHNXVmRSZG1GSFJuTmFSMng1VFVSblIwTnBjMGRCVVZGQ1p6YzRkMEZSTUVWTFozZHZXVlJaZVFwUFIwWm9UMVJuTkUxSFJtbE9SRnBwVDBSRk5FMVhTbXhPYlZsNFQwUmplbGw2UVRGTlJFNXJXV3BSTVZscVJYaGFha0ZtUW1kdmNrSm5SVVZCV1U4dkNrMUJSVTlDUWtWTlJETktiRnB1VFhaaFIxWm9Xa2hOZG1KWFJuQmlha0ZoUW1kdmNrSm5SVVZCV1U4dlRVRkZVRUpCZDAxRGFrVjVUMVJKTkUxRVNURUtUMVJKZDB0M1dVdExkMWxDUWtGSFJIWjZRVUpGUVZGa1JFSjBiMlJJVW5kamVtOTJUREprY0dSSGFERlphVFZxWWpJd2RtTXlWbmRaVjJoc1dWZFJkd3BIUVZsTFMzZFpRa0pCUjBSMmVrRkNSVkZSUzBSQlozaE5SRVYzVGtSVk1rOVVRbUpDWjI5eVFtZEZSVUZaVHk5TlFVVlRRa1V3VFZNeWFEQmtTRUo2Q2s5cE9IWmFNbXd3WVVoV2FVeHRUblppVXpsNldsaENhR0ZIVm1oYVF6bHZXVmQ0YTJGWVNYWk1iV1J3WkVkb01WbHBPVE5pTTBweVdtMTRkbVF6VFhZS1dUSnJkV1ZYTVhOUlNFcHNXbTVOZG1GSFZtaGFTRTEyWWxkR2NHSnFRVFJDWjI5eVFtZEZSVUZaVHk5TlFVVlVRa052VFV0SFJUSk5hbWhvV1ZSck5BcFBSRUpvV1dwUk1sbHFaM2hQUkVacFdsUmFiVTFVWnpOTk1rMTNUbFJCZWxwSFNUQk9WMGw0VFZkWmQwWkJXVXRMZDFsQ1FrRkhSSFo2UVVKR1FWRkhDa1JCVW5ka1dFNXZUVVpaUjBOcGMwZEJVVkZDWnpjNGQwRlNWVVZUUVhoSFlVaFNNR05JVFRaTWVUbHVZVmhTYjJSWFNYVlpNamwwVEROT2JHTkhSbThLV2xkR2Ewd3lhR2hpUjFKd1kyazVhRmt6VW5CaU1qVjZURE5LTVdKdVRYWk5la0V3VDFSbk5FNXFUVFZPVkd0MldWaFNNRnBYTVhka1NFMTJUV3BCVndwQ1oyOXlRbWRGUlVGWlR5OU5RVVZYUWtGblRVSnVRakZaYlhod1dYcEJORUpuYjNKQ1owVkZRVmxQTDAxQlJWbENRMjlOUzBoS2JHTkhPRFpqTWxaM0NsbFhhR3haVjFGMllVZEdjMXBIYkhsUGJrcHNXbXB3ZVZwWFducE1NbWhzV1ZkU2Vrd3lNV2hoVnpSM1oxbHpSME5wYzBkQlVWRkNNVzVyUTBKQlNVVUtabEZTTjBGSWEwRmtkMFJrVUZSQ2NYaHpZMUpOYlUxYVNHaDVXbHA2WTBOdmEzQmxkVTQwT0hKbUswaHBia3RCVEhsdWRXcG5RVUZCV2l0M1RFdFFjZ3BCUVVGRlFYZENTVTFGV1VOSlVVUTVPVGRKTlhSdmRXUkxURWhKVlZWNlZYWkZWV0pXWWxBM1dEUjBTbXgyZUdKdFQwbEpUa3BJUzNSblNXaEJVR0ZPQ2xaak5qSk9iekJWWnpoMFozaG9hRlJDYjJsUlRVVTRiVGsyT1UxaE0xWmlZVE5zV1dOTVpFSk5RVzlIUTBOeFIxTk5ORGxDUVUxRVFUSm5RVTFIVlVNS1RVUXJPVmd3VUVOcGNFRjZTVVpSWTFoTlJuWjNSWGQwV2xCMVNtWndUV1Z2UjJFMGFrNW1lbkJpT1dzME1rVkdOV0pvVkRWRE1GQm1UbUV3U1VacVpncHNVVWw0UVV4Wk56QkxOVmM1TDFONGRUbE9RMjE0UkVJNGIwZGxRVkJ2YkV4a2J6WjVOMWQ1Y1c1VlQySm5MelI1WVZONmRHaG1XVU5EVGxsTGVXaHJDbHB2TkZVd1FUMDlDaTB0TFMwdFJVNUVJRU5GVWxSSlJrbERRVlJGTFMwdExTMEsifV19fQ==",
+                "inclusionPromise": {
+                  "signedEntryTimestamp": "MEUCICs1/8BxM3fp39TYxOSLiSsnJOwPBsnXaH9x0ETB4dNgAiEAmF7yyQ4F960bEnVj9Ltjf94+pqDX+UoX8vGC2Hhc/ZA="
+                },
+                "inclusionProof": {
+                  "checkpoint": {
+                    "envelope": "rekor.sigstore.dev - 1193050959916656506\n2162775151\nABcXCYw2oS2nHo56YM2JYsa3YHLxC+QFMioeuGSIRFw=\n\n— rekor.sigstore.dev wNI9ajBEAiB/eCCp+VG6brJZ6uWRHsSjMl4Z/CPS20uim+xkVo3k+QIgYRjM4EycbO8juxKzOdRY4nYvqFhgJb+v1azsviELYXg=\n"
+                  },
+                  "hashes": [
+                    "fXq9oT7Xsyz5Z6XkfUc0otRkSgB6njGWW1JeaUSZTRE=",
+                    "e5x0+p9fWCVWNcPv7a8PTKMTzdQx6PaO0hKLFxX8c/o=",
+                    "drndTvTu60uG+dLGJbkVMLd6WAtLP3LVHikEDjxz5KU=",
+                    "qBUgcBmRfHQwlq+ZiYEf49UvsvNcBpqczF2OPQchlUU=",
+                    "BgK8vaONrrx9ujk+YOU20FNlRrC6WtWUti7EBYkR5yo=",
+                    "xjjSidPVB7MywRYNFGmq0kkp9EuXBYoM/iw8muyq064=",
+                    "n6PCc/Gwi9KLaXro3FTdi5mxTvrrFjba+7x7x5ch2Jc=",
+                    "Dr98ZQ+psm45G3T3/zG5uij/jbUr3L1CrycUzRFXPmQ=",
+                    "B7hhYU65V5WfqRFE7RggI+/VfXSFENAd2rkNQ3KwpQ8=",
+                    "eoQXCv1B4/VNB7qxIuVliL0tp6l3N3xqEQ+jv2gSyMI=",
+                    "++3FWe7ynA5gqqHz5aATk5JdXQm1hI8K1FISMeUAEgs=",
+                    "A31m1wDP4kyhUNl+gwgHg159NbS7+L+X5y3ZDt5qV40=",
+                    "9mFMp9UIXC7PdGhyWFHOEcugh8ANSizr3XfpFJ0sJLE=",
+                    "VIsBkyayDqbZb+Hr7KQxmu1/cZ0lBfDN0lwjmUlvtv0=",
+                    "OVsvZCKnWA+498QUIaQCtitUT6huDbC7SmhH1l8MxXI=",
+                    "xH/DCseLHr9eKoYT8qsORZK7zVdEGYWHuVtsVrD95wY="
+                  ],
+                  "logIndex": "2162775111",
+                  "rootHash": "ABcXCYw2oS2nHo56YM2JYsa3YHLxC+QFMioeuGSIRFw=",
+                  "treeSize": "2162775151"
+                },
+                "integratedTime": "1785367143",
+                "kindVersion": {
+                  "kind": "dsse",
+                  "version": "0.0.1"
+                },
+                "logId": {
+                  "keyId": "wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0="
+                },
+                "logIndex": "2284679373"
+              }
+            ]
+          }
+        },
+        "bundle_url": "",
+        "initiator": ""
+      },
+      "verificationResult": {
+        "mediaType": "application/vnd.dev.sigstore.verificationresult+json;version=0.1",
+        "signature": {
+          "certificate": {
+            "buildConfigDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+            "buildConfigURI": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main",
+            "buildSignerDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+            "buildSignerURI": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main",
+            "buildTrigger": "push",
+            "certificateIssuer": "CN=sigstore-intermediate,O=sigstore.dev",
+            "githubWorkflowName": "ci",
+            "githubWorkflowRef": "refs/heads/main",
+            "githubWorkflowRepository": "sepahead/haldir",
+            "githubWorkflowSHA": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+            "githubWorkflowTrigger": "push",
+            "issuer": "https://token.actions.githubusercontent.com",
+            "runInvocationURI": "https://github.com/sepahead/haldir/actions/runs/30498863959/attempts/2",
+            "runnerEnvironment": "github-hosted",
+            "sourceRepositoryDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+            "sourceRepositoryIdentifier": "1292802592",
+            "sourceRepositoryOwnerIdentifier": "10104569",
+            "sourceRepositoryOwnerURI": "https://github.com/sepahead",
+            "sourceRepositoryRef": "refs/heads/main",
+            "sourceRepositoryURI": "https://github.com/sepahead/haldir",
+            "sourceRepositoryVisibilityAtSigning": "public",
+            "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+          }
+        },
+        "statement": {
+          "_type": "https://in-toto.io/Statement/v1",
+          "predicate": {
+            "buildDefinition": {
+              "buildType": "https://actions.github.io/buildtypes/workflow/v1",
+              "externalParameters": {
+                "workflow": {
+                  "path": ".github/workflows/ci.yml",
+                  "ref": "refs/heads/main",
+                  "repository": "https://github.com/sepahead/haldir"
+                }
+              },
+              "internalParameters": {
+                "github": {
+                  "event_name": "push",
+                  "repository_id": "1292802592",
+                  "repository_owner_id": "10104569",
+                  "runner_environment": "github-hosted"
+                }
+              },
+              "resolvedDependencies": [
+                {
+                  "digest": {
+                    "gitCommit": "a628aa9880ab46b8181be6f1873c0503db45b11f"
+                  },
+                  "uri": "git+https://github.com/sepahead/haldir@refs/heads/main"
+                }
+              ]
+            },
+            "runDetails": {
+              "builder": {
+                "id": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+              },
+              "metadata": {
+                "invocationId": "https://github.com/sepahead/haldir/actions/runs/30498863959/attempts/2"
+              }
+            }
+          },
+          "predicateType": "https://slsa.dev/provenance/v1",
+          "subject": [
+            {
+              "digest": {
+                "sha256": "44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd"
+              },
+              "name": "epoch-15-ci-result-attempt-2.json"
+            }
+          ]
+        },
+        "verifiedIdentity": {
+          "issuer": {
+            "issuer": "",
+            "regexp": ".*"
+          },
+          "runnerEnvironment": "github-hosted",
+          "subjectAlternativeName": {
+            "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+          }
+        },
+        "verifiedTimestamps": [
+          {
+            "timestamp": "2026-07-29T23:19:03Z",
+            "type": "Tlog",
+            "uri": "https://rekor.sigstore.dev"
+          }
+        ]
+      }
+    }
+  ],
+  "capture_tool": {
+    "bytes": 34800,
+    "git_mode": "100755",
+    "git_object_id": "dbf6562b7d1a02a7d61e79a49be25a6a34372a70",
+    "git_object_type": "blob",
+    "path": "tools/release/framework_recovery_fr_0014_capture.py",
+    "sha256": "ce21ad28b85f069d0192ad6076ff69523c9ef16eaf8d80372d2c4b7dc7b06c56"
+  },
+  "capture_verification": {
+    "custom_trusted_root_sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1",
+    "network_mode": "OFFLINE_INVALID_PROXY_AND_TOKEN",
+    "result": "PASS",
+    "tool": "gh",
+    "version": "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0"
+  },
+  "captured_at_utc": "2026-07-29T23:20:27.412116Z",
+  "commands": {
+    "artifact_download": "gh api --method GET repos/sepahead/haldir/actions/artifacts/8742759696/zip",
+    "artifact_get": "gh api --method GET repos/sepahead/haldir/actions/artifacts/8742759696",
+    "artifact_list": "gh api --method GET repos/sepahead/haldir/actions/runs/30498863959/artifacts?name=epoch-15-ci-result-attempt-2.json&per_page=100",
+    "attempt": "gh run view 30498863959 --repo sepahead/haldir --attempt 2 --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName",
+    "attestation_download": "gh attestation download epoch-15-ci-result-attempt-2.json --repo sepahead/haldir --limit 1 --predicate-type https://slsa.dev/provenance/v1",
+    "ordinary": "gh run view 30498863959 --repo sepahead/haldir --json attempt,conclusion,createdAt,databaseId,event,headBranch,headSha,jobs,number,status,updatedAt,url,workflowDatabaseId,workflowName"
+  },
+  "expected_ref": "refs/heads/main",
+  "ordinary": {
+    "attempt": 2,
+    "conclusion": "success",
+    "createdAt": "2026-07-29T23:14:05Z",
+    "databaseId": 30498863959,
+    "event": "push",
+    "headBranch": "main",
+    "headSha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+    "jobs": [
+      {
+        "completedAt": "2026-07-29T23:17:54Z",
+        "conclusion": "success",
+        "databaseId": 90734368198,
+        "name": "feature-matrix",
+        "startedAt": "2026-07-29T23:17:26Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:27Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:28Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:37Z",
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:48Z",
+            "conclusion": "success",
+            "name": "Build no-default-features",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:37Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Clippy default features only",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "startedAt": "2026-07-29T23:17:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-07-29T23:17:52Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368198"
+      },
+      {
+        "completedAt": "2026-07-29T23:18:06Z",
+        "conclusion": "success",
+        "databaseId": 90734368221,
+        "name": "macos-compile",
+        "startedAt": "2026-07-29T23:17:27Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:27Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:30Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:37Z",
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:30Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:03Z",
+            "conclusion": "success",
+            "name": "Build + test on macOS",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:37Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:03Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "startedAt": "2026-07-29T23:18:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:04Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "startedAt": "2026-07-29T23:18:03Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368221"
+      },
+      {
+        "completedAt": "2026-07-29T23:18:55Z",
+        "conclusion": "success",
+        "databaseId": 90734368233,
+        "name": "supply-chain",
+        "startedAt": "2026-07-29T23:17:33Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:35Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:47Z",
+            "conclusion": "success",
+            "name": "Build EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:35Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:48Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:47Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Install pinned Python",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Harden pinned Python permissions",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Install pinned GitHub CLI for offline attestation verification",
+            "number": 6,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:04Z",
+            "conclusion": "success",
+            "name": "Preload isolated task-runner image",
+            "number": 7,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:11Z",
+            "conclusion": "success",
+            "name": "Verify current-head 0.9 audit cut",
+            "number": 8,
+            "startedAt": "2026-07-29T23:18:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:22Z",
+            "conclusion": "success",
+            "name": "Verify source pins",
+            "number": 9,
+            "startedAt": "2026-07-29T23:18:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:22Z",
+            "conclusion": "success",
+            "name": "Verify immutable CI and formal-tool pins",
+            "number": 10,
+            "startedAt": "2026-07-29T23:18:22Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:23Z",
+            "conclusion": "success",
+            "name": "Verify immutable 0.9 audit cut",
+            "number": 11,
+            "startedAt": "2026-07-29T23:18:22Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:23Z",
+            "conclusion": "success",
+            "name": "Verify normative 0.9 authority model",
+            "number": 12,
+            "startedAt": "2026-07-29T23:18:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:26Z",
+            "conclusion": "success",
+            "name": "Verify normative 0.9 protection model and evidence generator",
+            "number": 13,
+            "startedAt": "2026-07-29T23:18:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:26Z",
+            "conclusion": "success",
+            "name": "Verify evidence layout",
+            "number": 14,
+            "startedAt": "2026-07-29T23:18:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:28Z",
+            "conclusion": "success",
+            "name": "Verify secure Zenoh profiles and retained live evidence",
+            "number": 15,
+            "startedAt": "2026-07-29T23:18:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:28Z",
+            "conclusion": "success",
+            "name": "Forbidden-claim drift check",
+            "number": 16,
+            "startedAt": "2026-07-29T23:18:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:50Z",
+            "conclusion": "success",
+            "name": "cargo-deny",
+            "number": 17,
+            "startedAt": "2026-07-29T23:18:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:50Z",
+            "conclusion": "success",
+            "name": "Emit canonical epoch-15 audit result",
+            "number": 18,
+            "startedAt": "2026-07-29T23:18:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:51Z",
+            "conclusion": "success",
+            "name": "Upload canonical epoch-15 audit result",
+            "number": 19,
+            "startedAt": "2026-07-29T23:18:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:51Z",
+            "conclusion": "success",
+            "name": "Post Install pinned Python",
+            "number": 37,
+            "startedAt": "2026-07-29T23:18:51Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:52Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 38,
+            "startedAt": "2026-07-29T23:18:51Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:52Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 39,
+            "startedAt": "2026-07-29T23:18:52Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368233"
+      },
+      {
+        "completedAt": "2026-07-29T23:18:19Z",
+        "conclusion": "success",
+        "databaseId": 90734368248,
+        "name": "build-test",
+        "startedAt": "2026-07-29T23:17:26Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:28Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:30Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:39Z",
+            "conclusion": "success",
+            "name": "Install + verify pinned toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:30Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:57Z",
+            "conclusion": "success",
+            "name": "Cache cargo",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:58Z",
+            "conclusion": "success",
+            "name": "Format check",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:57Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:01Z",
+            "conclusion": "success",
+            "name": "Clippy (deny warnings)",
+            "number": 6,
+            "startedAt": "2026-07-29T23:17:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:11Z",
+            "conclusion": "success",
+            "name": "Tests",
+            "number": 7,
+            "startedAt": "2026-07-29T23:18:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:12Z",
+            "conclusion": "success",
+            "name": "Doc tests",
+            "number": 8,
+            "startedAt": "2026-07-29T23:18:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "Docs build (deny warnings)",
+            "number": 9,
+            "startedAt": "2026-07-29T23:18:12Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "git diff --check",
+            "number": 10,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "No generated-file drift",
+            "number": 11,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:16Z",
+            "conclusion": "success",
+            "name": "Post Cache cargo",
+            "number": 21,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:17Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 22,
+            "startedAt": "2026-07-29T23:18:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:18:17Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 23,
+            "startedAt": "2026-07-29T23:18:17Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368248"
+      },
+      {
+        "completedAt": "2026-07-29T23:17:50Z",
+        "conclusion": "success",
+        "databaseId": 90734368261,
+        "name": "clean-build",
+        "startedAt": "2026-07-29T23:17:26Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:27Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:28Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:36Z",
+            "conclusion": "success",
+            "name": "Install toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:48Z",
+            "conclusion": "success",
+            "name": "Cold build",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:36Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 8,
+            "startedAt": "2026-07-29T23:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:49Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "startedAt": "2026-07-29T23:17:49Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368261"
+      },
+      {
+        "completedAt": "2026-07-29T23:17:55Z",
+        "conclusion": "success",
+        "databaseId": 90734368267,
+        "name": "interop",
+        "startedAt": "2026-07-29T23:17:32Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:17:34Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:17:33Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:35Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 2,
+            "startedAt": "2026-07-29T23:17:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:43Z",
+            "conclusion": "success",
+            "name": "Install pinned toolchain",
+            "number": 3,
+            "startedAt": "2026-07-29T23:17:35Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:52Z",
+            "conclusion": "success",
+            "name": "Regenerate interop vectors (drift check)",
+            "number": 4,
+            "startedAt": "2026-07-29T23:17:43Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:54Z",
+            "conclusion": "success",
+            "name": "Independently verify COSE/CBOR vectors",
+            "number": 5,
+            "startedAt": "2026-07-29T23:17:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:54Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "number": 10,
+            "startedAt": "2026-07-29T23:17:54Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:17:54Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-07-29T23:17:54Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734368267"
+      },
+      {
+        "completedAt": "2026-07-29T23:19:06Z",
+        "conclusion": "success",
+        "databaseId": 90734616966,
+        "name": "attest-ci-audit-result",
+        "startedAt": "2026-07-29T23:18:58Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-07-29T23:19:00Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-07-29T23:18:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:02Z",
+            "conclusion": "success",
+            "name": "Download immutable audit result",
+            "number": 2,
+            "startedAt": "2026-07-29T23:19:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:02Z",
+            "conclusion": "success",
+            "name": "Verify producer and artifact digests",
+            "number": 3,
+            "startedAt": "2026-07-29T23:19:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:04Z",
+            "conclusion": "success",
+            "name": "Attest exact audit result",
+            "number": 4,
+            "startedAt": "2026-07-29T23:19:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-07-29T23:19:04Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 5,
+            "startedAt": "2026-07-29T23:19:04Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/sepahead/haldir/actions/runs/30498863959/job/90734616966"
+      }
+    ],
+    "number": 147,
+    "status": "completed",
+    "updatedAt": "2026-07-29T23:19:07Z",
+    "url": "https://github.com/sepahead/haldir/actions/runs/30498863959",
+    "workflowDatabaseId": 311605710,
+    "workflowName": "ci"
+  },
+  "protocol": "HALDIR_FR_0014_HOSTED_RESULT_CAPTURE_V1",
+  "result": "PASS",
+  "result_record": {
+    "bytes": 2467,
+    "git_mode": "100644",
+    "git_object_id": "d5f01b8bd78f1935b0dd02641b4be885f82fb636",
+    "git_object_type": "blob",
+    "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-ci-result.json",
+    "sha256": "44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd"
+  },
+  "schema_version": "1.0.0",
+  "subject_commit": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+  "subject_tree": "eb4d7011556cea987b77afaa29cdc52f3b4c88c8",
+  "trusted_root_record": {
+    "bytes": 5748,
+    "git_mode": "100644",
+    "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+    "git_object_type": "blob",
+    "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+    "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+  },
+  "workflow": "ci"
+}

@@ -1,0 +1,597 @@
+{
+  "activation_hosted_proof": {
+    "bound_subject": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+    "reason": "ACTIVATION_CANNOT_CONTAIN_HOSTED_PROOF_OF_ITSELF",
+    "self_attestation_available_in_activation_commit": false
+  },
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 15,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "state": "ACTIVE",
+    "tag_authorized": false
+  },
+  "branch_protection": {
+    "authority": {
+      "cryptographic_proof": false,
+      "durable_external_state_proof": false,
+      "release_authority": false,
+      "transport_observation": "GITHUB_API_OVER_TLS"
+    },
+    "branch": "main",
+    "capture": {
+      "captured_at_utc": "2026-07-29T23:24:56.843742Z",
+      "commit_after_command": "gh api --method GET repos/sepahead/haldir/git/ref/heads/main",
+      "commit_before_command": "gh api --method GET repos/sepahead/haldir/git/ref/heads/main",
+      "effective_rules_command": "gh api --method GET repos/sepahead/haldir/rules/branches/main",
+      "protection_command": "gh api --method GET repos/sepahead/haldir/branches/main/protection",
+      "repository_command": "gh api --method GET repos/sepahead/haldir",
+      "result": "PASS",
+      "ruleset_get_command": "gh api --method GET repos/sepahead/haldir/rulesets/19992457",
+      "ruleset_history_command": "gh api --method GET repos/sepahead/haldir/rulesets/19992457/history",
+      "ruleset_list_command": "gh api --method GET repos/sepahead/haldir/rulesets",
+      "ruleset_version_command": "gh api --method GET repos/sepahead/haldir/rulesets/19992457/history/44807157",
+      "transport": "GITHUB_API_OVER_TLS"
+    },
+    "effective_rules": [
+      {
+        "ruleset_id": 19992457,
+        "ruleset_source": "sepahead/haldir",
+        "ruleset_source_type": "Repository",
+        "type": "update"
+      }
+    ],
+    "observed_commit": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+    "protection": {
+      "allow_deletions": {
+        "enabled": false
+      },
+      "allow_force_pushes": {
+        "enabled": false
+      },
+      "allow_fork_syncing": {
+        "enabled": false
+      },
+      "block_creations": {
+        "enabled": false
+      },
+      "enforce_admins": {
+        "enabled": true,
+        "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/enforce_admins"
+      },
+      "lock_branch": {
+        "enabled": false
+      },
+      "required_conversation_resolution": {
+        "enabled": false
+      },
+      "required_linear_history": {
+        "enabled": true
+      },
+      "required_signatures": {
+        "enabled": true,
+        "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/required_signatures"
+      },
+      "required_status_checks": {
+        "checks": [
+          {
+            "app_id": 15368,
+            "context": "build-test"
+          },
+          {
+            "app_id": 15368,
+            "context": "clean-build"
+          },
+          {
+            "app_id": 15368,
+            "context": "feature-matrix"
+          },
+          {
+            "app_id": 15368,
+            "context": "interop"
+          },
+          {
+            "app_id": 15368,
+            "context": "macos-compile"
+          },
+          {
+            "app_id": 15368,
+            "context": "supply-chain"
+          },
+          {
+            "app_id": 15368,
+            "context": "tlc-model-check"
+          }
+        ],
+        "contexts": [
+          "build-test",
+          "clean-build",
+          "feature-matrix",
+          "interop",
+          "macos-compile",
+          "supply-chain",
+          "tlc-model-check"
+        ],
+        "contexts_url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/required_status_checks/contexts",
+        "strict": true,
+        "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/required_status_checks"
+      },
+      "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection"
+    },
+    "protocol": "HALDIR_FR_0014_BRANCH_PROTECTION_CAPTURE_V1",
+    "ref_after": {
+      "node_id": "REF_kwDOTQ6aIK9yZWZzL2hlYWRzL21haW4",
+      "object": {
+        "sha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+        "type": "commit",
+        "url": "https://api.github.com/repos/sepahead/haldir/git/commits/a628aa9880ab46b8181be6f1873c0503db45b11f"
+      },
+      "ref": "refs/heads/main",
+      "url": "https://api.github.com/repos/sepahead/haldir/git/refs/heads/main"
+    },
+    "ref_before": {
+      "node_id": "REF_kwDOTQ6aIK9yZWZzL2hlYWRzL21haW4",
+      "object": {
+        "sha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+        "type": "commit",
+        "url": "https://api.github.com/repos/sepahead/haldir/git/commits/a628aa9880ab46b8181be6f1873c0503db45b11f"
+      },
+      "ref": "refs/heads/main",
+      "url": "https://api.github.com/repos/sepahead/haldir/git/refs/heads/main"
+    },
+    "repository": {
+      "default_branch": "main",
+      "fork": false,
+      "full_name": "sepahead/haldir",
+      "has_parent": false,
+      "has_source": false,
+      "id": 1292802592,
+      "name": "haldir",
+      "owner": {
+        "id": 10104569,
+        "login": "sepahead",
+        "type": "User"
+      }
+    },
+    "ruleset_by_id": {
+      "_links": {
+        "html": {
+          "href": "https://github.com/sepahead/haldir/rules/19992457"
+        },
+        "self": {
+          "href": "https://api.github.com/repos/sepahead/haldir/rulesets/19992457"
+        }
+      },
+      "bypass_actors": [
+        {
+          "actor_id": 10104569,
+          "actor_type": "User",
+          "bypass_mode": "always"
+        }
+      ],
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main"
+          ]
+        }
+      },
+      "created_at": "2026-07-29T20:59:51.674+02:00",
+      "current_user_can_bypass": "always",
+      "enforcement": "active",
+      "id": 19992457,
+      "name": "haldir-main-writer-allowlist",
+      "node_id": "RRS_lACqUmVwb3NpdG9yec5NDpogzgExD4k",
+      "rules": [
+        {
+          "type": "update"
+        }
+      ],
+      "source": "sepahead/haldir",
+      "source_type": "Repository",
+      "target": "branch",
+      "updated_at": "2026-07-29T20:59:51.694+02:00"
+    },
+    "ruleset_history": [
+      {
+        "actor": {
+          "id": 10104569,
+          "type": "User"
+        },
+        "updated_at": "2026-07-29T20:59:51.757+02:00",
+        "version_id": 44807157
+      }
+    ],
+    "ruleset_list": [
+      {
+        "_links": {
+          "html": {
+            "href": "https://github.com/sepahead/haldir/rules/19992457"
+          },
+          "self": {
+            "href": "https://api.github.com/repos/sepahead/haldir/rulesets/19992457"
+          }
+        },
+        "created_at": "2026-07-29T20:59:51.674+02:00",
+        "enforcement": "active",
+        "id": 19992457,
+        "name": "haldir-main-writer-allowlist",
+        "node_id": "RRS_lACqUmVwb3NpdG9yec5NDpogzgExD4k",
+        "source": "sepahead/haldir",
+        "source_type": "Repository",
+        "target": "branch",
+        "updated_at": "2026-07-29T20:59:51.694+02:00"
+      }
+    ],
+    "ruleset_version": {
+      "actor": {
+        "id": 10104569,
+        "type": "User"
+      },
+      "state": {
+        "bypass_actors": [
+          {
+            "actor_id": 10104569,
+            "actor_type": "User",
+            "bypass_mode": "always"
+          }
+        ],
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/heads/main"
+            ]
+          }
+        },
+        "current_user_can_bypass": "always",
+        "enforcement": "active",
+        "id": 19992457,
+        "name": "haldir-main-writer-allowlist",
+        "rules": [
+          {
+            "type": "update"
+          }
+        ],
+        "source": "sepahead/haldir",
+        "source_type": "Repository",
+        "target": "branch",
+        "updated_at": null
+      },
+      "updated_at": "2026-07-29T20:59:51.757+02:00",
+      "version_id": 44807157
+    },
+    "schema_version": "1.0.0",
+    "validated_ruleset_policy": {
+      "default_parameter_reconstructed": false,
+      "enforcement": "active",
+      "id": 19992457,
+      "mutable_external_admin_state": true,
+      "name": "haldir-main-writer-allowlist",
+      "observed_get_rule": {
+        "type": "update"
+      },
+      "owner_account_compromise_protected": false,
+      "owner_user_id": 10104569,
+      "protects_against": [
+        "NON_OWNER_REPOSITORY_WRITERS",
+        "GITHUB_APPS",
+        "DEPLOY_KEYS"
+      ],
+      "version_id": 44807157,
+      "write_rule": {
+        "parameters": {
+          "update_allows_fetch_and_merge": false
+        },
+        "type": "update"
+      }
+    }
+  },
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0014-activation-v1",
+    "principal": "sepmhn@gmail.com",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAAvaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDE0LWFj\ndGl2YXRpb24tdjEAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAiPKaN9\nCPVoor4/RV5t8QRGRHfxiYbvOUj40vGeXi4aoLer9ZFFBccBP4jPLg1T0YZnQazmkPBqAp\nRgrTcXb1BA==\n-----END SSH SIGNATURE-----\n"
+  },
+  "evidence_catalog": [
+    {
+      "bytes": 64470,
+      "git_mode": "100644",
+      "git_object_id": "7589bdb02cd407ca1c9bf21fc4700404457de066",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-ci-capture.json",
+      "sha256": "777371797addaa38cfa501c1dc522520c6859a705aa71c3fc1261aafc4cea3cd"
+    },
+    {
+      "bytes": 2467,
+      "git_mode": "100644",
+      "git_object_id": "d5f01b8bd78f1935b0dd02641b4be885f82fb636",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-ci-result.json",
+      "sha256": "44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd"
+    },
+    {
+      "bytes": 10308,
+      "git_mode": "100644",
+      "git_object_id": "e371941bc0dcdfef940315ced3d1359cb8f14bdf",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-ci-attestation.json",
+      "sha256": "5ea9e91777f232fe4bec06a7fc6d566586d0d5c868e8518c88fbb2c7eeda1989"
+    },
+    {
+      "bytes": 32766,
+      "git_mode": "100644",
+      "git_object_id": "f9b9cde9ae5f185f99956c4088a1edb561212d90",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-formal-capture.json",
+      "sha256": "a3ed15621b1b84ad47ecb1bed31a95a8db6c59858d43c2cf2cafb679e3a7d01f"
+    },
+    {
+      "bytes": 2446,
+      "git_mode": "100644",
+      "git_object_id": "4fd01bd030d1d5eb772a9e4d4b2c68fb4622cbf5",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-formal-result.json",
+      "sha256": "185bf0f20dce96327617e99de61c46c0ece2ff6c670922b4dd664434fe84f3de"
+    },
+    {
+      "bytes": 10427,
+      "git_mode": "100644",
+      "git_object_id": "204f7ea971af50aba50e05166bd83f2afcc4c0db",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-q-formal-attestation.json",
+      "sha256": "d2586358c4a12fabe46f29cdbcf31448d9fb3983f1aae3a6987f31dd6e861697"
+    },
+    {
+      "bytes": 7163,
+      "git_mode": "100644",
+      "git_object_id": "552f06b7c6625e8738789dc2093ee5fcf6ebb6db",
+      "git_object_type": "blob",
+      "path": "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-branch-protection.json",
+      "sha256": "1a565febfe61914bf751881c4b65f0781bcb7236133f44f97f5df81f82162cb8"
+    }
+  ],
+  "hosted_evidence": {
+    "qualification_ci": {
+      "artifact_id": 8742759696,
+      "attempt": 2,
+      "attestation": {
+        "bundle_bytes": 10308,
+        "bundle_sha256": "5ea9e91777f232fe4bec06a7fc6d566586d0d5c868e8518c88fbb2c7eeda1989",
+        "certificate_policy": {
+          "buildConfigDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "buildConfigURI": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main",
+          "buildSignerDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "buildSignerURI": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main",
+          "buildTrigger": "push",
+          "githubWorkflowName": "ci",
+          "githubWorkflowRef": "refs/heads/main",
+          "githubWorkflowRepository": "sepahead/haldir",
+          "githubWorkflowSHA": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "githubWorkflowTrigger": "push",
+          "issuer": "https://token.actions.githubusercontent.com",
+          "runInvocationURI": "https://github.com/sepahead/haldir/actions/runs/30498863959/attempts/2",
+          "runnerEnvironment": "github-hosted",
+          "sourceRepositoryDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "sourceRepositoryIdentifier": "1292802592",
+          "sourceRepositoryOwnerIdentifier": "10104569",
+          "sourceRepositoryOwnerURI": "https://github.com/sepahead",
+          "sourceRepositoryRef": "refs/heads/main",
+          "sourceRepositoryURI": "https://github.com/sepahead/haldir",
+          "sourceRepositoryVisibilityAtSigning": "public",
+          "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+        },
+        "provider_provenance_independently_attested": true,
+        "release_authority_conferred": false,
+        "statement": {
+          "_type": "https://in-toto.io/Statement/v1",
+          "predicate": {
+            "buildDefinition": {
+              "buildType": "https://actions.github.io/buildtypes/workflow/v1",
+              "externalParameters": {
+                "workflow": {
+                  "path": ".github/workflows/ci.yml",
+                  "ref": "refs/heads/main",
+                  "repository": "https://github.com/sepahead/haldir"
+                }
+              },
+              "internalParameters": {
+                "github": {
+                  "event_name": "push",
+                  "repository_id": "1292802592",
+                  "repository_owner_id": "10104569",
+                  "runner_environment": "github-hosted"
+                }
+              },
+              "resolvedDependencies": [
+                {
+                  "digest": {
+                    "gitCommit": "a628aa9880ab46b8181be6f1873c0503db45b11f"
+                  },
+                  "uri": "git+https://github.com/sepahead/haldir@refs/heads/main"
+                }
+              ]
+            },
+            "runDetails": {
+              "builder": {
+                "id": "https://github.com/sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+              },
+              "metadata": {
+                "invocationId": "https://github.com/sepahead/haldir/actions/runs/30498863959/attempts/2"
+              }
+            }
+          },
+          "predicateType": "https://slsa.dev/provenance/v1",
+          "subject": [
+            {
+              "digest": {
+                "sha256": "44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd"
+              },
+              "name": "epoch-15-ci-result-attempt-2.json"
+            }
+          ]
+        },
+        "transparency_log": {
+          "timestamp": "2026-07-29T23:19:03Z",
+          "type": "Tlog",
+          "uri": "https://rekor.sigstore.dev"
+        },
+        "verified_timestamp_count": 1
+      },
+      "offline_verification": {
+        "custom_trusted_root_sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1",
+        "network_mode": "OFFLINE_INVALID_PROXY_AND_TOKEN",
+        "result": "PASS",
+        "tool": "gh",
+        "version": "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0"
+      },
+      "result_sha256": "44233f3aa06958906ee8ed6a8fe92f240981ff482888cfb717e73cabbe1f07cd",
+      "run_id": 30498863959,
+      "workflow": "ci"
+    },
+    "qualification_formal": {
+      "artifact_id": 8742669841,
+      "attempt": 1,
+      "attestation": {
+        "bundle_bytes": 10427,
+        "bundle_sha256": "d2586358c4a12fabe46f29cdbcf31448d9fb3983f1aae3a6987f31dd6e861697",
+        "certificate_policy": {
+          "buildConfigDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "buildConfigURI": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main",
+          "buildSignerDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "buildSignerURI": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main",
+          "buildTrigger": "push",
+          "githubWorkflowName": "formal",
+          "githubWorkflowRef": "refs/heads/main",
+          "githubWorkflowRepository": "sepahead/haldir",
+          "githubWorkflowSHA": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "githubWorkflowTrigger": "push",
+          "issuer": "https://token.actions.githubusercontent.com",
+          "runInvocationURI": "https://github.com/sepahead/haldir/actions/runs/30498863998/attempts/1",
+          "runnerEnvironment": "github-hosted",
+          "sourceRepositoryDigest": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+          "sourceRepositoryIdentifier": "1292802592",
+          "sourceRepositoryOwnerIdentifier": "10104569",
+          "sourceRepositoryOwnerURI": "https://github.com/sepahead",
+          "sourceRepositoryRef": "refs/heads/main",
+          "sourceRepositoryURI": "https://github.com/sepahead/haldir",
+          "sourceRepositoryVisibilityAtSigning": "public",
+          "subjectAlternativeName": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+        },
+        "provider_provenance_independently_attested": true,
+        "release_authority_conferred": false,
+        "statement": {
+          "_type": "https://in-toto.io/Statement/v1",
+          "predicate": {
+            "buildDefinition": {
+              "buildType": "https://actions.github.io/buildtypes/workflow/v1",
+              "externalParameters": {
+                "workflow": {
+                  "path": ".github/workflows/formal.yml",
+                  "ref": "refs/heads/main",
+                  "repository": "https://github.com/sepahead/haldir"
+                }
+              },
+              "internalParameters": {
+                "github": {
+                  "event_name": "push",
+                  "repository_id": "1292802592",
+                  "repository_owner_id": "10104569",
+                  "runner_environment": "github-hosted"
+                }
+              },
+              "resolvedDependencies": [
+                {
+                  "digest": {
+                    "gitCommit": "a628aa9880ab46b8181be6f1873c0503db45b11f"
+                  },
+                  "uri": "git+https://github.com/sepahead/haldir@refs/heads/main"
+                }
+              ]
+            },
+            "runDetails": {
+              "builder": {
+                "id": "https://github.com/sepahead/haldir/.github/workflows/formal.yml@refs/heads/main"
+              },
+              "metadata": {
+                "invocationId": "https://github.com/sepahead/haldir/actions/runs/30498863998/attempts/1"
+              }
+            }
+          },
+          "predicateType": "https://slsa.dev/provenance/v1",
+          "subject": [
+            {
+              "digest": {
+                "sha256": "185bf0f20dce96327617e99de61c46c0ece2ff6c670922b4dd664434fe84f3de"
+              },
+              "name": "epoch-15-formal-result-attempt-1.json"
+            }
+          ]
+        },
+        "transparency_log": {
+          "timestamp": "2026-07-29T23:14:36Z",
+          "type": "Tlog",
+          "uri": "https://rekor.sigstore.dev"
+        },
+        "verified_timestamp_count": 1
+      },
+      "offline_verification": {
+        "custom_trusted_root_sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1",
+        "network_mode": "OFFLINE_INVALID_PROXY_AND_TOKEN",
+        "result": "PASS",
+        "tool": "gh",
+        "version": "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0"
+      },
+      "result_sha256": "185bf0f20dce96327617e99de61c46c0ece2ff6c670922b4dd664434fe84f3de",
+      "run_id": 30498863998,
+      "workflow": "formal"
+    }
+  },
+  "legacy_recovery_states": {
+    "FR-0010": "ABORTED_BEFORE_QUALIFICATION",
+    "FR-0011": "ABORTED_BEFORE_QUALIFICATION",
+    "FR-0012": "ABORTED_BEFORE_QUALIFICATION",
+    "FR-0013": "SUPERSEDED_AFTER_QUALIFICATION_BEFORE_ACTIVATION"
+  },
+  "limitations": [
+    "GitHub OIDC proves the isolated attestation workflow identity; the producer result remains a statement from repository code.",
+    "The epoch-15 artifact syntax is an evidence transport only and confers no release authority.",
+    "Branch-protection API evidence is a TLS-observed snapshot of mutable external state, not durable cryptographic proof.",
+    "The branch-control mutation attempts and subsequent API shapes are signed source-authority observations of mutable GitHub state; failed mutation responses are not activation evidence and no durable external-state proof is claimed.",
+    "Activation necessarily binds qualification-main hosted proof; the activation commit cannot contain hosted proof of itself.",
+    "Offline successor verification proves signature, ancestry, and protected-path scope, but cannot prove mutable hosted settings.",
+    "Bounded subprocess cleanup terminates descendants that remain in the child process group. A hostile descendant that successfully creates a new session or double-forks outside that group can escape this local process-tree boundary. No host-resource containment or availability guarantee is claimed.",
+    "The owner/admin can mutate external settings; owner-account or GitHub control-plane compromise is outside this local guarantee.",
+    "This bridge grants no release, deployment, publication, tag, archive, DOI, or GitHub Release authority."
+  ],
+  "plan_record": {
+    "bytes": 44282,
+    "git_mode": "100644",
+    "git_object_id": "f6c68a0e2a7778fb2c2cc6364c6835940e3ea476",
+    "git_object_type": "blob",
+    "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0014-plan.json",
+    "sha256": "d21a12f096c7bddc5a62f2ccb92bec3ddc3b50736426a93f121720448c511d05"
+  },
+  "qualification_commit": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+  "qualification_record": {
+    "bytes": 18286,
+    "git_mode": "100644",
+    "git_object_id": "72a28c3adce16a0acfed08a1d1016dbcc6b53074",
+    "git_object_type": "blob",
+    "path": "release/0.9.0/current-head/closures/framework-recovery/FR-0014-qualification.json",
+    "sha256": "15f4929d4bb7af1485b56765029bdb9cf29539579844a6b8bf2f4fbdec69d907"
+  },
+  "recovery_id": "FR-0014",
+  "repair_commit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+  "schema_version": "1.0.0",
+  "stage": "ACTIVATION",
+  "state_after": "ACTIVE",
+  "state_before": "QUALIFIED_PENDING_ACTIVATION"
+}

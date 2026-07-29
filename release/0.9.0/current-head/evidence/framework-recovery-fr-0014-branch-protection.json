@@ -1,0 +1,253 @@
+{
+  "authority": {
+    "cryptographic_proof": false,
+    "durable_external_state_proof": false,
+    "release_authority": false,
+    "transport_observation": "GITHUB_API_OVER_TLS"
+  },
+  "branch": "main",
+  "capture": {
+    "captured_at_utc": "2026-07-29T23:24:56.843742Z",
+    "commit_after_command": "gh api --method GET repos/sepahead/haldir/git/ref/heads/main",
+    "commit_before_command": "gh api --method GET repos/sepahead/haldir/git/ref/heads/main",
+    "effective_rules_command": "gh api --method GET repos/sepahead/haldir/rules/branches/main",
+    "protection_command": "gh api --method GET repos/sepahead/haldir/branches/main/protection",
+    "repository_command": "gh api --method GET repos/sepahead/haldir",
+    "result": "PASS",
+    "ruleset_get_command": "gh api --method GET repos/sepahead/haldir/rulesets/19992457",
+    "ruleset_history_command": "gh api --method GET repos/sepahead/haldir/rulesets/19992457/history",
+    "ruleset_list_command": "gh api --method GET repos/sepahead/haldir/rulesets",
+    "ruleset_version_command": "gh api --method GET repos/sepahead/haldir/rulesets/19992457/history/44807157",
+    "transport": "GITHUB_API_OVER_TLS"
+  },
+  "effective_rules": [
+    {
+      "ruleset_id": 19992457,
+      "ruleset_source": "sepahead/haldir",
+      "ruleset_source_type": "Repository",
+      "type": "update"
+    }
+  ],
+  "observed_commit": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+  "protection": {
+    "allow_deletions": {
+      "enabled": false
+    },
+    "allow_force_pushes": {
+      "enabled": false
+    },
+    "allow_fork_syncing": {
+      "enabled": false
+    },
+    "block_creations": {
+      "enabled": false
+    },
+    "enforce_admins": {
+      "enabled": true,
+      "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/enforce_admins"
+    },
+    "lock_branch": {
+      "enabled": false
+    },
+    "required_conversation_resolution": {
+      "enabled": false
+    },
+    "required_linear_history": {
+      "enabled": true
+    },
+    "required_signatures": {
+      "enabled": true,
+      "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/required_signatures"
+    },
+    "required_status_checks": {
+      "checks": [
+        {
+          "app_id": 15368,
+          "context": "build-test"
+        },
+        {
+          "app_id": 15368,
+          "context": "clean-build"
+        },
+        {
+          "app_id": 15368,
+          "context": "feature-matrix"
+        },
+        {
+          "app_id": 15368,
+          "context": "interop"
+        },
+        {
+          "app_id": 15368,
+          "context": "macos-compile"
+        },
+        {
+          "app_id": 15368,
+          "context": "supply-chain"
+        },
+        {
+          "app_id": 15368,
+          "context": "tlc-model-check"
+        }
+      ],
+      "contexts": [
+        "build-test",
+        "clean-build",
+        "feature-matrix",
+        "interop",
+        "macos-compile",
+        "supply-chain",
+        "tlc-model-check"
+      ],
+      "contexts_url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/required_status_checks/contexts",
+      "strict": true,
+      "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection/required_status_checks"
+    },
+    "url": "https://api.github.com/repos/sepahead/haldir/branches/main/protection"
+  },
+  "protocol": "HALDIR_FR_0014_BRANCH_PROTECTION_CAPTURE_V1",
+  "ref_after": {
+    "node_id": "REF_kwDOTQ6aIK9yZWZzL2hlYWRzL21haW4",
+    "object": {
+      "sha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+      "type": "commit",
+      "url": "https://api.github.com/repos/sepahead/haldir/git/commits/a628aa9880ab46b8181be6f1873c0503db45b11f"
+    },
+    "ref": "refs/heads/main",
+    "url": "https://api.github.com/repos/sepahead/haldir/git/refs/heads/main"
+  },
+  "ref_before": {
+    "node_id": "REF_kwDOTQ6aIK9yZWZzL2hlYWRzL21haW4",
+    "object": {
+      "sha": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+      "type": "commit",
+      "url": "https://api.github.com/repos/sepahead/haldir/git/commits/a628aa9880ab46b8181be6f1873c0503db45b11f"
+    },
+    "ref": "refs/heads/main",
+    "url": "https://api.github.com/repos/sepahead/haldir/git/refs/heads/main"
+  },
+  "repository": {
+    "default_branch": "main",
+    "fork": false,
+    "full_name": "sepahead/haldir",
+    "has_parent": false,
+    "has_source": false,
+    "id": 1292802592,
+    "name": "haldir",
+    "owner": {
+      "id": 10104569,
+      "login": "sepahead",
+      "type": "User"
+    }
+  },
+  "ruleset_by_id": {
+    "_links": {
+      "html": {
+        "href": "https://github.com/sepahead/haldir/rules/19992457"
+      },
+      "self": {
+        "href": "https://api.github.com/repos/sepahead/haldir/rulesets/19992457"
+      }
+    },
+    "bypass_actors": [
+      {
+        "actor_id": 10104569,
+        "actor_type": "User",
+        "bypass_mode": "always"
+      }
+    ],
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "refs/heads/main"
+        ]
+      }
+    },
+    "created_at": "2026-07-29T20:59:51.674+02:00",
+    "current_user_can_bypass": "always",
+    "enforcement": "active",
+    "id": 19992457,
+    "name": "haldir-main-writer-allowlist",
+    "node_id": "RRS_lACqUmVwb3NpdG9yec5NDpogzgExD4k",
+    "rules": [
+      {
+        "type": "update"
+      }
+    ],
+    "source": "sepahead/haldir",
+    "source_type": "Repository",
+    "target": "branch",
+    "updated_at": "2026-07-29T20:59:51.694+02:00"
+  },
+  "ruleset_history": [
+    {
+      "actor": {
+        "id": 10104569,
+        "type": "User"
+      },
+      "updated_at": "2026-07-29T20:59:51.757+02:00",
+      "version_id": 44807157
+    }
+  ],
+  "ruleset_list": [
+    {
+      "_links": {
+        "html": {
+          "href": "https://github.com/sepahead/haldir/rules/19992457"
+        },
+        "self": {
+          "href": "https://api.github.com/repos/sepahead/haldir/rulesets/19992457"
+        }
+      },
+      "created_at": "2026-07-29T20:59:51.674+02:00",
+      "enforcement": "active",
+      "id": 19992457,
+      "name": "haldir-main-writer-allowlist",
+      "node_id": "RRS_lACqUmVwb3NpdG9yec5NDpogzgExD4k",
+      "source": "sepahead/haldir",
+      "source_type": "Repository",
+      "target": "branch",
+      "updated_at": "2026-07-29T20:59:51.694+02:00"
+    }
+  ],
+  "ruleset_version": {
+    "actor": {
+      "id": 10104569,
+      "type": "User"
+    },
+    "state": {
+      "bypass_actors": [
+        {
+          "actor_id": 10104569,
+          "actor_type": "User",
+          "bypass_mode": "always"
+        }
+      ],
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main"
+          ]
+        }
+      },
+      "current_user_can_bypass": "always",
+      "enforcement": "active",
+      "id": 19992457,
+      "name": "haldir-main-writer-allowlist",
+      "rules": [
+        {
+          "type": "update"
+        }
+      ],
+      "source": "sepahead/haldir",
+      "source_type": "Repository",
+      "target": "branch",
+      "updated_at": null
+    },
+    "updated_at": "2026-07-29T20:59:51.757+02:00",
+    "version_id": 44807157
+  },
+  "schema_version": "1.0.0"
+}
