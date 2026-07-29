@@ -412,6 +412,7 @@ impl<S: SnapshotStorage + Send, A: GenerationAnchor + Send> LeaseTermStore
 mod tests {
     use super::*;
     use core::num::NonZeroU64;
+    use haldir_contracts::cbor::CborWriter;
     use haldir_durable::{Anchor, StoreId};
     use std::collections::BTreeMap;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -503,6 +504,26 @@ mod tests {
         DeploymentPayloadDigestV1::compute(&[value])
     }
 
+    fn legacy_v1_payload_at_total_limit() -> Vec<u8> {
+        const MAX_STORE_BYTES: usize = 64 * 1024;
+        let scope_lengths = [16_384, 16_384, 16_384, 16_359];
+        let mut writer = CborWriter::new();
+        writer.array_header(4);
+        writer.uint(0);
+        writer.bytes(&[]);
+        writer.array_header(4);
+        for (marker, scope_len) in scope_lengths.into_iter().enumerate() {
+            writer.array_header(2);
+            writer.bytes(&vec![u8::try_from(marker).unwrap(); scope_len]);
+            writer.uint(1);
+        }
+        writer.array_header(0);
+
+        let payload = writer.into_bytes();
+        assert_eq!(payload.len(), MAX_STORE_BYTES);
+        payload
+    }
+
     fn provision(
         storage: MemoryStorage,
         anchor: MemoryAnchor,
@@ -547,6 +568,111 @@ mod tests {
             Err(DurableAntiRollbackError::Durable(DurableError::Storage))
         );
         assert_eq!(store.highest_term(b"lease"), 0);
+    }
+
+    #[test]
+    fn semantic_capacity_failure_neither_commits_nor_mutates_live_state() {
+        const MAX_STORE_BYTES: usize = 64 * 1024;
+        const MAX_SCOPE_BYTES: usize = 16 * 1024;
+
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let mut store = DurableAntiRollbackStore::provision_new(
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            binding(),
+            MAX_STORE_BYTES,
+        )
+        .unwrap();
+        for marker in 0..3 {
+            store
+                .accept_term(&vec![marker; MAX_SCOPE_BYTES], 1)
+                .unwrap();
+        }
+        let persisted_before = storage.bytes.lock().unwrap().clone();
+        let anchor_before = anchor.heads.lock().unwrap().clone();
+        let rejected_scope = vec![3; MAX_SCOPE_BYTES];
+
+        assert_eq!(
+            store.accept_term(&rejected_scope, 1),
+            Err(DurableAntiRollbackError::State(
+                AntiRollbackError::CapacityExceeded
+            ))
+        );
+        assert_eq!(store.highest_term(&rejected_scope), 0);
+        assert_eq!(*storage.bytes.lock().unwrap(), persisted_before);
+        assert_eq!(*anchor.heads.lock().unwrap(), anchor_before);
+        drop(store);
+
+        let (reopened, recovery) = DurableAntiRollbackStore::open_existing(
+            storage,
+            anchor,
+            key(),
+            binding(),
+            MAX_STORE_BYTES,
+        )
+        .unwrap();
+        assert_eq!(recovery, RecoveryStatus::Clean);
+        assert_eq!(reopened.highest_term(&rejected_scope), 0);
+        for marker in 0..3 {
+            assert_eq!(reopened.highest_term(&vec![marker; MAX_SCOPE_BYTES]), 1);
+        }
+    }
+
+    #[test]
+    fn boundary_legacy_migration_failure_preserves_snapshot_anchor_and_reopens() {
+        const MAX_STORE_BYTES: usize = 64 * 1024;
+        const MAX_SCOPE_BYTES: usize = 16 * 1024;
+
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let legacy_payload = legacy_v1_payload_at_total_limit();
+        let snapshots = AuthenticatedSnapshotStore::provision_new(
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            binding(),
+            MAX_STORE_BYTES,
+            &legacy_payload,
+        )
+        .unwrap();
+        drop(snapshots);
+        let (mut store, recovery) = DurableAntiRollbackStore::open_existing(
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            binding(),
+            MAX_STORE_BYTES,
+        )
+        .unwrap();
+        assert_eq!(recovery, RecoveryStatus::Clean);
+        let persisted_before = storage.bytes.lock().unwrap().clone();
+        let anchor_before = anchor.heads.lock().unwrap().clone();
+        let first_scope = vec![0; MAX_SCOPE_BYTES];
+
+        assert_eq!(
+            store.accept_term(&first_scope, 2),
+            Err(DurableAntiRollbackError::State(
+                AntiRollbackError::CapacityExceeded
+            ))
+        );
+        assert_eq!(store.highest_term(&first_scope), 1);
+        assert_eq!(*storage.bytes.lock().unwrap(), persisted_before);
+        assert_eq!(*anchor.heads.lock().unwrap(), anchor_before);
+        drop(store);
+
+        let (reopened, recovery) = DurableAntiRollbackStore::open_existing(
+            storage,
+            anchor,
+            key(),
+            binding(),
+            MAX_STORE_BYTES,
+        )
+        .unwrap();
+        assert_eq!(recovery, RecoveryStatus::Clean);
+        assert_eq!(reopened.highest_term(&first_scope), 1);
+        assert!(reopened.deployment_package_migration_required());
     }
 
     #[test]

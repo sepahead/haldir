@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 const BOOT_ID_DOMAIN: &[u8] = b"haldir.state.gate-boot-id.v1\0";
 const STORE_FORMAT_VERSION: u64 = 3;
 const LEGACY_V2_FORMAT_VERSION: u64 = 2;
+const STORE_LIMITS: Limits = Limits::LARGE;
 
 const PACKAGE_STATE_PRISTINE_UNBOUND: u64 = 0;
 const PACKAGE_STATE_BOUND: u64 = 1;
@@ -69,6 +70,7 @@ enum DeploymentPackageRatchet {
 
 /// An anti-rollback failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AntiRollbackError {
     /// A term/epoch/boot value did not strictly advance (a rollback attempt).
     Rollback,
@@ -84,6 +86,8 @@ pub enum AntiRollbackError {
     PackageEquivocation,
     /// A package-bound store requires a deployment-package boot path.
     PackageBindingRequired,
+    /// An update would exceed the durable store's collection or byte bounds.
+    CapacityExceeded,
     /// The persisted store could not be parsed (corruption).
     Corrupt,
 }
@@ -100,10 +104,19 @@ impl AntiRollbackError {
             Self::PackageRollback => "ANTI_ROLLBACK_PACKAGE_ROLLBACK",
             Self::PackageEquivocation => "ANTI_ROLLBACK_PACKAGE_EQUIVOCATION",
             Self::PackageBindingRequired => "ANTI_ROLLBACK_PACKAGE_BINDING_REQUIRED",
+            Self::CapacityExceeded => "ANTI_ROLLBACK_CAPACITY_EXCEEDED",
             Self::Corrupt => "ANTI_ROLLBACK_CORRUPT",
         }
     }
 }
+
+impl std::fmt::Display for AntiRollbackError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl std::error::Error for AntiRollbackError {}
 
 /// A Gate process incarnation that is safe to expose after durable commit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,14 +128,32 @@ pub struct BootContext {
 }
 
 /// Highest-water anti-rollback state.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// Equality compares the semantic ratchets and deliberately ignores the
+/// private durable encoding. Consequently, a decoded legacy value can compare
+/// equal to an equivalent current-format value while [`Self::to_bytes`]
+/// preserves different representations until the next successful mutation.
+#[derive(Debug, Clone)]
 pub struct AntiRollbackStore {
     boot_counter: u64,
     last_gate_boot_id: Option<GateBootId>,
     terms: BTreeMap<Vec<u8>, u64>,
     revocation_epochs: BTreeMap<Vec<u8>, u64>,
     deployment_package: DeploymentPackageRatchet,
+    encoding: StoreFormat,
 }
+
+impl PartialEq for AntiRollbackStore {
+    fn eq(&self, other: &Self) -> bool {
+        self.boot_counter == other.boot_counter
+            && self.last_gate_boot_id == other.last_gate_boot_id
+            && self.terms == other.terms
+            && self.revocation_epochs == other.revocation_epochs
+            && self.deployment_package == other.deployment_package
+    }
+}
+
+impl Eq for AntiRollbackStore {}
 
 impl Default for AntiRollbackStore {
     fn default() -> Self {
@@ -132,6 +163,7 @@ impl Default for AntiRollbackStore {
             terms: BTreeMap::new(),
             revocation_epochs: BTreeMap::new(),
             deployment_package: DeploymentPackageRatchet::PristineUnbound,
+            encoding: StoreFormat::CurrentV3,
         }
     }
 }
@@ -150,16 +182,21 @@ impl AntiRollbackStore {
     ///
     /// # Errors
     /// Returns [`AntiRollbackError::PackageBindingRequired`] once a deployment
-    /// package has been bound, or [`AntiRollbackError::Exhausted`] instead of
-    /// reusing `u64::MAX`.
+    /// package has been bound, [`AntiRollbackError::Exhausted`] instead of
+    /// reusing `u64::MAX`, or [`AntiRollbackError::CapacityExceeded`] if the
+    /// advanced state would not fit its durable representation.
     pub fn advance_boot(&mut self) -> Result<u64, AntiRollbackError> {
         self.require_plain_boot_path()?;
         let next = self
             .boot_counter
             .checked_add(1)
             .ok_or(AntiRollbackError::Exhausted)?;
-        self.boot_counter = next;
-        self.mark_unbound_state_used();
+        let mut candidate = self.clone();
+        candidate.boot_counter = next;
+        candidate.mark_unbound_state_used();
+        candidate.encoding = StoreFormat::CurrentV3;
+        candidate.ensure_encodable()?;
+        *self = candidate;
         Ok(next)
     }
 
@@ -171,7 +208,8 @@ impl AntiRollbackStore {
     /// # Errors
     /// Returns [`AntiRollbackError::PackageBindingRequired`] once a deployment
     /// package has been bound or [`AntiRollbackError::Exhausted`] at the
-    /// counter limit.
+    /// counter limit. Returns [`AntiRollbackError::CapacityExceeded`] if the
+    /// advanced state would not fit its durable representation.
     pub fn candidate_with_advanced_boot(&self) -> Result<(Self, u64), AntiRollbackError> {
         let mut candidate = self.clone();
         let counter = candidate.advance_boot()?;
@@ -187,7 +225,9 @@ impl AntiRollbackStore {
     /// Returns [`AntiRollbackError::PackageBindingRequired`] once a deployment
     /// package has been bound, [`AntiRollbackError::Exhausted`] at the counter
     /// limit, or [`AntiRollbackError::BootIdRepeat`] if the derived ID matches
-    /// the last committed Gate boot ID.
+    /// the last committed Gate boot ID. Returns
+    /// [`AntiRollbackError::CapacityExceeded`] if the candidate would not fit
+    /// its durable representation.
     pub fn candidate_for_boot(
         &self,
         gate_id: &GateId,
@@ -207,6 +247,8 @@ impl AntiRollbackStore {
         candidate.boot_counter = counter;
         candidate.last_gate_boot_id = Some(gate_boot_id);
         candidate.mark_unbound_state_used();
+        candidate.encoding = StoreFormat::CurrentV3;
+        candidate.ensure_encodable()?;
         Ok((
             candidate,
             BootContext {
@@ -228,7 +270,8 @@ impl AntiRollbackStore {
     /// Returns [`AntiRollbackError::MigrationRequired`] for legacy or previously
     /// used unbound state, [`AntiRollbackError::PackageRollback`] for a lower
     /// revision, [`AntiRollbackError::PackageEquivocation`] when the committed
-    /// revision names a different digest, or the ordinary checked boot errors.
+    /// revision names a different digest, or the ordinary checked boot errors,
+    /// including [`AntiRollbackError::CapacityExceeded`].
     pub fn candidate_for_deployment_boot(
         &self,
         gate_id: &GateId,
@@ -269,6 +312,8 @@ impl AntiRollbackStore {
         candidate.boot_counter = counter;
         candidate.last_gate_boot_id = Some(gate_boot_id);
         candidate.deployment_package = DeploymentPackageRatchet::Bound(next_binding);
+        candidate.encoding = StoreFormat::CurrentV3;
+        candidate.ensure_encodable()?;
         Ok((
             candidate,
             BootContext {
@@ -319,24 +364,31 @@ impl AntiRollbackStore {
     ///
     /// # Errors
     /// Returns [`AntiRollbackError::Rollback`] if `term` is not greater than the
-    /// stored high-water.
+    /// stored high-water, or [`AntiRollbackError::CapacityExceeded`] if the
+    /// update would make the durable representation exceed its fixed bounds.
     pub fn accept_term(&mut self, scope: &[u8], term: u64) -> Result<(), AntiRollbackError> {
-        let hw = self.highest_term(scope);
-        if term <= hw {
-            return Err(AntiRollbackError::Rollback);
-        }
-        self.terms.insert(scope.to_vec(), term);
-        self.mark_unbound_state_used();
+        let candidate = self.candidate_with_term(scope, term)?;
+        *self = candidate;
         Ok(())
     }
 
     /// Prepare a term update without mutating the live store.
     ///
     /// # Errors
-    /// Returns [`AntiRollbackError::Rollback`] when the term does not advance.
+    /// Returns [`AntiRollbackError::Rollback`] when the term does not advance,
+    /// or [`AntiRollbackError::CapacityExceeded`] when the candidate would not
+    /// fit the durable representation.
     pub fn candidate_with_term(&self, scope: &[u8], term: u64) -> Result<Self, AntiRollbackError> {
+        validate_scope(scope)?;
+        let hw = self.highest_term(scope);
+        if term <= hw {
+            return Err(AntiRollbackError::Rollback);
+        }
         let mut candidate = self.clone();
-        candidate.accept_term(scope, term)?;
+        candidate.terms.insert(scope.to_vec(), term);
+        candidate.mark_unbound_state_used();
+        candidate.encoding = StoreFormat::CurrentV3;
+        candidate.ensure_encodable()?;
         Ok(candidate)
     }
 
@@ -349,42 +401,60 @@ impl AntiRollbackStore {
     /// Durably accept a revocation epoch (monotonic non-decreasing).
     ///
     /// # Errors
-    /// Returns [`AntiRollbackError::Rollback`] if `epoch` is below the stored value.
+    /// Returns [`AntiRollbackError::Rollback`] if `epoch` is below the stored
+    /// value, or [`AntiRollbackError::CapacityExceeded`] if the update would
+    /// make the durable representation exceed its fixed bounds.
     pub fn accept_revocation_epoch(
         &mut self,
         scope: &[u8],
         epoch: u64,
     ) -> Result<(), AntiRollbackError> {
-        let cur = self.revocation_epoch(scope);
-        if epoch < cur {
-            return Err(AntiRollbackError::Rollback);
-        }
-        self.revocation_epochs.insert(scope.to_vec(), epoch);
-        self.mark_unbound_state_used();
+        let candidate = self.candidate_with_revocation_epoch(scope, epoch)?;
+        *self = candidate;
         Ok(())
     }
 
     /// Prepare a revocation-epoch update without mutating the live store.
     ///
     /// # Errors
-    /// Returns [`AntiRollbackError::Rollback`] when the epoch rewinds.
+    /// Returns [`AntiRollbackError::Rollback`] when the epoch rewinds, or
+    /// [`AntiRollbackError::CapacityExceeded`] when the candidate would not fit
+    /// the durable representation.
     pub fn candidate_with_revocation_epoch(
         &self,
         scope: &[u8],
         epoch: u64,
     ) -> Result<Self, AntiRollbackError> {
+        validate_scope(scope)?;
+        let cur = self.revocation_epoch(scope);
+        if epoch < cur {
+            return Err(AntiRollbackError::Rollback);
+        }
         let mut candidate = self.clone();
-        candidate.accept_revocation_epoch(scope, epoch)?;
+        candidate.revocation_epochs.insert(scope.to_vec(), epoch);
+        candidate.mark_unbound_state_used();
+        candidate.encoding = StoreFormat::CurrentV3;
+        candidate.ensure_encodable()?;
         Ok(candidate)
     }
 
-    /// Serialize to the current durable byte representation.
+    /// Serialize to the store's durable byte representation.
     ///
-    /// The representation is canonical and deterministic. Legacy state is
-    /// rewritten with an explicit migration-required marker rather than being
-    /// silently treated as eligible for package binding.
+    /// The representation is canonical and deterministic. A decoded legacy store
+    /// retains its byte-exact legacy representation until a semantic mutation can
+    /// be represented in the bounded current format. Legacy encoding still implies
+    /// migration-required state and can never make the store eligible for package
+    /// binding.
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
+        match self.encoding {
+            StoreFormat::LegacyV1 => self.to_legacy_v1_bytes(),
+            StoreFormat::LegacyV2 => self.to_legacy_v2_bytes(),
+            StoreFormat::CurrentV3 => self.to_current_v3_bytes(),
+        }
+    }
+
+    fn to_current_v3_bytes(&self) -> Vec<u8> {
         let mut w = CborWriter::new();
         w.array_header(6);
         w.uint(STORE_FORMAT_VERSION);
@@ -409,7 +479,10 @@ impl AntiRollbackStore {
     /// Returns [`AntiRollbackError::Corrupt`] on any structural, canonical, or
     /// v3 state-invariant failure.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, AntiRollbackError> {
-        let mut r = CborReader::new(bytes, Limits::LARGE);
+        if bytes.len() > STORE_LIMITS.max_total_bytes {
+            return Err(AntiRollbackError::Corrupt);
+        }
+        let mut r = CborReader::new(bytes, STORE_LIMITS);
         let n = r.read_array_len().map_err(|_| AntiRollbackError::Corrupt)?;
         let format = match n {
             4 => StoreFormat::LegacyV1,
@@ -452,6 +525,7 @@ impl AntiRollbackStore {
             terms,
             revocation_epochs,
             deployment_package,
+            encoding: format,
         };
         if store.boot_counter == 0 && store.last_gate_boot_id.is_some() {
             return Err(AntiRollbackError::Corrupt);
@@ -470,11 +544,10 @@ impl AntiRollbackStore {
         {
             return Err(AntiRollbackError::Corrupt);
         }
-        let canonical = match format {
-            StoreFormat::LegacyV1 => store.to_legacy_v1_bytes(),
-            StoreFormat::LegacyV2 => store.to_legacy_v2_bytes(),
-            StoreFormat::CurrentV3 => store.to_bytes(),
-        };
+        store
+            .ensure_encodable()
+            .map_err(|_| AntiRollbackError::Corrupt)?;
+        let canonical = store.to_bytes();
         if canonical != bytes {
             return Err(AntiRollbackError::Corrupt);
         }
@@ -530,6 +603,15 @@ impl AntiRollbackStore {
             && self.last_gate_boot_id.is_none()
             && self.terms.is_empty()
             && self.revocation_epochs.is_empty()
+    }
+
+    fn ensure_encodable(&self) -> Result<(), AntiRollbackError> {
+        validate_map(&self.terms)?;
+        validate_map(&self.revocation_epochs)?;
+        if self.to_bytes().len() > STORE_LIMITS.max_total_bytes {
+            return Err(AntiRollbackError::CapacityExceeded);
+        }
+        Ok(())
     }
 }
 
@@ -601,6 +683,25 @@ fn encode_map(w: &mut CborWriter, m: &BTreeMap<Vec<u8>, u64>) {
     }
 }
 
+fn validate_scope(scope: &[u8]) -> Result<(), AntiRollbackError> {
+    let len = u64::try_from(scope.len()).map_err(|_| AntiRollbackError::CapacityExceeded)?;
+    if len > STORE_LIMITS.max_bytes_len {
+        return Err(AntiRollbackError::CapacityExceeded);
+    }
+    Ok(())
+}
+
+fn validate_map(map: &BTreeMap<Vec<u8>, u64>) -> Result<(), AntiRollbackError> {
+    let len = u64::try_from(map.len()).map_err(|_| AntiRollbackError::CapacityExceeded)?;
+    if len > STORE_LIMITS.max_array_len {
+        return Err(AntiRollbackError::CapacityExceeded);
+    }
+    for scope in map.keys() {
+        validate_scope(scope)?;
+    }
+    Ok(())
+}
+
 fn decode_map(r: &mut CborReader<'_>) -> Result<BTreeMap<Vec<u8>, u64>, AntiRollbackError> {
     let n = r.read_array_len().map_err(|_| AntiRollbackError::Corrupt)?;
     let mut m = BTreeMap::new();
@@ -627,6 +728,7 @@ fn decode_map(r: &mut CborReader<'_>) -> Result<BTreeMap<Vec<u8>, u64>, AntiRoll
 mod tests {
     use super::*;
     use core::num::NonZeroU64;
+    use proptest::prelude::*;
 
     fn gate_id() -> GateId {
         GateId::new("gate-1").unwrap()
@@ -638,6 +740,37 @@ mod tests {
 
     fn package_digest(value: u8) -> DeploymentPayloadDigestV1 {
         DeploymentPayloadDigestV1::compute(&[value])
+    }
+
+    fn legacy_bytes_at_total_limit(format: StoreFormat) -> Vec<u8> {
+        let final_scope_len = match format {
+            StoreFormat::LegacyV1 => 16_359,
+            StoreFormat::LegacyV2 => 16_358,
+            StoreFormat::CurrentV3 => unreachable!("fixture requires a legacy format"),
+        };
+        let scope_lengths = [16_384, 16_384, 16_384, final_scope_len];
+        let mut writer = CborWriter::new();
+        match format {
+            StoreFormat::LegacyV1 => writer.array_header(4),
+            StoreFormat::LegacyV2 => {
+                writer.array_header(5);
+                writer.uint(LEGACY_V2_FORMAT_VERSION);
+            }
+            StoreFormat::CurrentV3 => unreachable!("fixture requires a legacy format"),
+        }
+        writer.uint(0);
+        writer.bytes(&[]);
+        writer.array_header(4);
+        for (marker, scope_len) in scope_lengths.into_iter().enumerate() {
+            writer.array_header(2);
+            writer.bytes(&vec![u8::try_from(marker).unwrap(); scope_len]);
+            writer.uint(1);
+        }
+        writer.array_header(0);
+
+        let bytes = writer.into_bytes();
+        assert_eq!(bytes.len(), STORE_LIMITS.max_total_bytes);
+        bytes
     }
 
     #[test]
@@ -721,6 +854,162 @@ mod tests {
             Err(AntiRollbackError::Rollback)
         );
         assert_eq!(live, before);
+    }
+
+    #[test]
+    fn map_entry_limit_is_enforced_before_mutation() {
+        for update_terms in [true, false] {
+            let mut store = AntiRollbackStore::new_empty();
+            for index in 0..STORE_LIMITS.max_array_len {
+                let scope = format!("scope-{index:03}");
+                if update_terms {
+                    store.accept_term(scope.as_bytes(), 1).unwrap();
+                } else {
+                    store.accept_revocation_epoch(scope.as_bytes(), 1).unwrap();
+                }
+            }
+
+            let before = store.clone();
+            let result = if update_terms {
+                store.accept_term(b"one-scope-too-many", 1)
+            } else {
+                store.accept_revocation_epoch(b"one-scope-too-many", 1)
+            };
+
+            assert_eq!(result, Err(AntiRollbackError::CapacityExceeded));
+            assert_eq!(store, before);
+            assert_eq!(
+                AntiRollbackStore::from_bytes(&store.to_bytes()).unwrap(),
+                store
+            );
+        }
+    }
+
+    #[test]
+    fn scope_byte_limit_accepts_boundary_and_rejects_excess_atomically() {
+        let mut store = AntiRollbackStore::new_empty();
+        let boundary = vec![7; usize::try_from(STORE_LIMITS.max_bytes_len).unwrap()];
+        store.accept_term(&boundary, 1).unwrap();
+        assert_eq!(
+            AntiRollbackStore::from_bytes(&store.to_bytes()).unwrap(),
+            store
+        );
+
+        let before = store.clone();
+        let excess = vec![8; boundary.len() + 1];
+        assert_eq!(
+            store.accept_revocation_epoch(&excess, 1),
+            Err(AntiRollbackError::CapacityExceeded)
+        );
+        assert_eq!(store, before);
+    }
+
+    #[test]
+    fn aggregate_byte_limit_is_enforced_before_mutation() {
+        let scope_len = usize::try_from(STORE_LIMITS.max_bytes_len).unwrap();
+        let mut store = AntiRollbackStore::new_empty();
+        for marker in 0..3 {
+            store.accept_term(&vec![marker; scope_len], 1).unwrap();
+        }
+        assert!(store.to_bytes().len() <= STORE_LIMITS.max_total_bytes);
+        let before = store.clone();
+
+        assert_eq!(
+            store.accept_term(&vec![3; scope_len], 1),
+            Err(AntiRollbackError::CapacityExceeded)
+        );
+        assert_eq!(store, before);
+        assert_eq!(
+            AntiRollbackStore::from_bytes(&store.to_bytes()).unwrap(),
+            store
+        );
+    }
+
+    #[test]
+    fn decoder_rejects_input_above_the_total_byte_limit() {
+        let oversized = vec![0; STORE_LIMITS.max_total_bytes + 1];
+        assert_eq!(
+            AntiRollbackStore::from_bytes(&oversized),
+            Err(AntiRollbackError::Corrupt)
+        );
+    }
+
+    fn assert_boundary_legacy_roundtrip(format: StoreFormat) {
+        let bytes = legacy_bytes_at_total_limit(format);
+        let store = AntiRollbackStore::from_bytes(&bytes).unwrap();
+
+        assert!(store.deployment_package_migration_required());
+        assert_eq!(store.to_bytes(), bytes);
+        assert_eq!(
+            AntiRollbackStore::from_bytes(&store.to_bytes()).unwrap(),
+            store
+        );
+    }
+
+    #[test]
+    fn legacy_v1_at_total_limit_opens_and_reserializes_byte_identically() {
+        assert_boundary_legacy_roundtrip(StoreFormat::LegacyV1);
+    }
+
+    #[test]
+    fn legacy_v2_at_total_limit_opens_and_reserializes_byte_identically() {
+        assert_boundary_legacy_roundtrip(StoreFormat::LegacyV2);
+    }
+
+    #[test]
+    fn boundary_legacy_mutation_failure_preserves_state_and_encoding() {
+        let first_scope = vec![0; usize::try_from(STORE_LIMITS.max_bytes_len).unwrap()];
+        for format in [StoreFormat::LegacyV1, StoreFormat::LegacyV2] {
+            let bytes = legacy_bytes_at_total_limit(format);
+            let mut store = AntiRollbackStore::from_bytes(&bytes).unwrap();
+            let before = store.clone();
+
+            assert_eq!(
+                store.accept_term(&first_scope, 2),
+                Err(AntiRollbackError::CapacityExceeded)
+            );
+            assert_eq!(store, before);
+            assert_eq!(store.to_bytes(), bytes);
+            assert_eq!(
+                AntiRollbackStore::from_bytes(&store.to_bytes()).unwrap(),
+                store
+            );
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn every_accepted_public_update_remains_roundtrippable(
+            updates in prop::collection::vec(
+                (
+                    any::<bool>(),
+                    prop::collection::vec(any::<u8>(), 0..64),
+                    any::<u16>(),
+                ),
+                0..128,
+            )
+        ) {
+            let mut store = AntiRollbackStore::new_empty();
+
+            for (is_term, scope, value) in updates {
+                let before = store.clone();
+                let result = if is_term {
+                    store.accept_term(&scope, u64::from(value))
+                } else {
+                    store.accept_revocation_epoch(&scope, u64::from(value))
+                };
+                if result.is_err() {
+                    prop_assert_eq!(&store, &before);
+                }
+
+                let bytes = store.to_bytes();
+                prop_assert!(bytes.len() <= STORE_LIMITS.max_total_bytes);
+                prop_assert_eq!(
+                    AntiRollbackStore::from_bytes(&bytes).unwrap(),
+                    store.clone()
+                );
+            }
+        }
     }
 
     #[test]
@@ -842,6 +1131,7 @@ mod tests {
         let migrated = AntiRollbackStore::from_bytes(&legacy_bytes).unwrap();
         assert_eq!(migrated.highest_term(b"lease:mission-authority:uav-1"), 10);
         assert!(migrated.deployment_package_migration_required());
+        assert_eq!(migrated.to_bytes(), legacy_bytes);
         assert_eq!(
             migrated.candidate_for_deployment_boot(
                 &gate_id(),
@@ -868,11 +1158,49 @@ mod tests {
     fn legacy_v2_store_is_preserved_with_a_migration_required_marker() {
         let mut legacy = AntiRollbackStore::new_empty();
         legacy.accept_revocation_epoch(b"authority", 7).unwrap();
+        let legacy_bytes = legacy.to_legacy_v2_bytes();
+        let mut migrated = AntiRollbackStore::from_bytes(&legacy_bytes).unwrap();
 
-        let migrated = AntiRollbackStore::from_bytes(&legacy.to_legacy_v2_bytes()).unwrap();
-
+        assert_eq!(migrated.to_bytes(), legacy_bytes);
         assert_eq!(migrated.revocation_epoch(b"authority"), 7);
         assert!(migrated.deployment_package_migration_required());
+
+        migrated.accept_revocation_epoch(b"authority", 8).unwrap();
+        let rewritten_bytes = migrated.to_bytes();
+        let mut reader = CborReader::new(&rewritten_bytes, Limits::LARGE);
+        assert_eq!(reader.read_array_len().unwrap(), 6);
+        let reopened = AntiRollbackStore::from_bytes(&rewritten_bytes).unwrap();
+        assert_eq!(reopened.revocation_epoch(b"authority"), 8);
+        assert!(reopened.deployment_package_migration_required());
+    }
+
+    #[test]
+    fn equality_is_semantic_across_legacy_and_current_encodings() {
+        for format in [StoreFormat::LegacyV1, StoreFormat::LegacyV2] {
+            let mut source = AntiRollbackStore::new_empty();
+            source.accept_term(b"lease-scope", 7).unwrap();
+            let legacy_bytes = match format {
+                StoreFormat::LegacyV1 => source.to_legacy_v1_bytes(),
+                StoreFormat::LegacyV2 => source.to_legacy_v2_bytes(),
+                StoreFormat::CurrentV3 => unreachable!("fixture requires a legacy format"),
+            };
+            let mut legacy = AntiRollbackStore::from_bytes(&legacy_bytes).unwrap();
+            let mut current = legacy.clone();
+            current.encoding = StoreFormat::CurrentV3;
+
+            assert_eq!(legacy, current);
+            assert_ne!(legacy.to_bytes(), current.to_bytes());
+
+            legacy.accept_revocation_epoch(b"authority", 11).unwrap();
+            current.accept_revocation_epoch(b"authority", 11).unwrap();
+
+            assert_eq!(legacy, current);
+            assert_eq!(legacy.to_bytes(), current.to_bytes());
+            assert_eq!(
+                AntiRollbackStore::from_bytes(&legacy.to_bytes()).unwrap(),
+                legacy
+            );
+        }
     }
 
     #[test]
@@ -1142,21 +1470,37 @@ mod tests {
 
     #[test]
     fn deployment_ratchet_errors_have_stable_reason_strings() {
-        assert_eq!(
-            AntiRollbackError::MigrationRequired.as_str(),
-            "ANTI_ROLLBACK_MIGRATION_REQUIRED"
-        );
-        assert_eq!(
-            AntiRollbackError::PackageRollback.as_str(),
-            "ANTI_ROLLBACK_PACKAGE_ROLLBACK"
-        );
-        assert_eq!(
-            AntiRollbackError::PackageEquivocation.as_str(),
-            "ANTI_ROLLBACK_PACKAGE_EQUIVOCATION"
-        );
-        assert_eq!(
-            AntiRollbackError::PackageBindingRequired.as_str(),
-            "ANTI_ROLLBACK_PACKAGE_BINDING_REQUIRED"
-        );
+        for (error, reason) in [
+            (AntiRollbackError::Rollback, "ANTI_ROLLBACK_REWIND"),
+            (AntiRollbackError::Exhausted, "ANTI_ROLLBACK_EXHAUSTED"),
+            (
+                AntiRollbackError::BootIdRepeat,
+                "ANTI_ROLLBACK_BOOT_ID_REPEAT",
+            ),
+            (
+                AntiRollbackError::MigrationRequired,
+                "ANTI_ROLLBACK_MIGRATION_REQUIRED",
+            ),
+            (
+                AntiRollbackError::PackageRollback,
+                "ANTI_ROLLBACK_PACKAGE_ROLLBACK",
+            ),
+            (
+                AntiRollbackError::PackageEquivocation,
+                "ANTI_ROLLBACK_PACKAGE_EQUIVOCATION",
+            ),
+            (
+                AntiRollbackError::PackageBindingRequired,
+                "ANTI_ROLLBACK_PACKAGE_BINDING_REQUIRED",
+            ),
+            (
+                AntiRollbackError::CapacityExceeded,
+                "ANTI_ROLLBACK_CAPACITY_EXCEEDED",
+            ),
+            (AntiRollbackError::Corrupt, "ANTI_ROLLBACK_CORRUPT"),
+        ] {
+            assert_eq!(error.as_str(), reason);
+            assert_eq!(error.to_string(), reason);
+        }
     }
 }

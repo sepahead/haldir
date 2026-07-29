@@ -5,7 +5,7 @@
 //! anti-rollback (durably advanced before the lease is exposed active), and a
 //! monotonic-anchored deadline.
 
-use crate::anti_rollback::AntiRollbackStore;
+use crate::anti_rollback::{AntiRollbackError, AntiRollbackStore};
 use crate::challenge::ChallengeTable;
 use haldir_contracts::cbor::{CanonicalValue, CborWriter};
 use haldir_contracts::digest::DigestV1;
@@ -78,8 +78,10 @@ impl LeaseTermStore for AntiRollbackStore {
     }
 
     fn commit_term(&mut self, scope: &[u8], term: u64) -> Result<(), LeaseTermStoreError> {
-        self.accept_term(scope, term)
-            .map_err(|_| LeaseTermStoreError::Rollback)
+        self.accept_term(scope, term).map_err(|error| match error {
+            AntiRollbackError::Rollback => LeaseTermStoreError::Rollback,
+            _ => LeaseTermStoreError::Unavailable,
+        })
     }
 }
 
@@ -244,4 +246,26 @@ pub fn accept_lease(
         accepted_at_mono: now,
         expires_at_mono: expires_at,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use haldir_contracts::cbor::Limits;
+
+    #[test]
+    fn in_memory_term_store_maps_capacity_exhaustion_to_unavailable() {
+        let scope_len = usize::try_from(Limits::LARGE.max_bytes_len).unwrap();
+        let mut store = AntiRollbackStore::new_empty();
+        for marker in 0..3 {
+            store.accept_term(&vec![marker; scope_len], 1).unwrap();
+        }
+        let before = store.clone();
+
+        assert_eq!(
+            LeaseTermStore::commit_term(&mut store, &vec![3; scope_len], 1),
+            Err(LeaseTermStoreError::Unavailable)
+        );
+        assert_eq!(store, before);
+    }
 }

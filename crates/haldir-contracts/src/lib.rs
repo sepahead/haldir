@@ -159,6 +159,18 @@ mod codec_tests {
     }
 
     #[test]
+    fn direct_reader_enforces_the_total_byte_limit_at_finish() {
+        let bytes = [0x42, 0xaa, 0xbb];
+        let limits = Limits {
+            max_total_bytes: bytes.len() - 1,
+            ..Limits::DEFAULT
+        };
+        let mut r = CborReader::new(&bytes, limits);
+        assert_eq!(r.read_bytes().unwrap(), [0xaa, 0xbb]);
+        assert_eq!(r.finish(), Err(DecodeError::ByteLenExceeded));
+    }
+
+    #[test]
     fn rejects_non_shortest_int() {
         let bytes = [0x18u8, 0x05];
         let mut r = CborReader::new(&bytes, Limits::DEFAULT);

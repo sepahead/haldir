@@ -435,12 +435,16 @@ impl<'a> CborReader<'a> {
         self.read_argument(ai)
     }
 
-    /// Assert the input is fully consumed (no trailing bytes).
+    /// Assert the input respects the total-byte bound and is fully consumed.
     ///
     /// # Errors
-    /// Returns [`DecodeError::TrailingBytes`] if bytes remain.
+    /// Returns [`DecodeError::ByteLenExceeded`] if the supplied top-level input
+    /// exceeds its configured bound, or [`DecodeError::TrailingBytes`] if bytes
+    /// remain.
     pub fn finish(&self) -> Result<(), DecodeError> {
-        if self.pos == self.data.len() {
+        if self.data.len() > self.limits.max_total_bytes {
+            Err(DecodeError::ByteLenExceeded)
+        } else if self.pos == self.data.len() {
             Ok(())
         } else {
             Err(DecodeError::TrailingBytes)
