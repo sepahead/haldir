@@ -49,6 +49,8 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 const MAX_RETIRED: usize = 16;
+const MAX_PENDING_CHALLENGES: usize = 4;
+const MAX_RETAINED_CHALLENGES: usize = 256;
 const INTENT_SIZE_LIMIT: usize = 16 * 1024;
 
 fn checked_publication_horizon(
@@ -735,6 +737,11 @@ impl VehicleActor {
                 .transition(to)
                 .map_err(|_| GateStartupError::ProcessTransition { from, to })?;
         }
+        let challenges = ChallengeTable::for_session_with_limits(
+            cfg.session.clone(),
+            MAX_PENDING_CHALLENGES,
+            MAX_RETAINED_CHALLENGES,
+        );
         Ok(Self {
             gate_id: cfg.gate_id,
             gate_boot_id: cfg.gate_boot_id,
@@ -749,7 +756,7 @@ impl VehicleActor {
             publication: cfg.publication,
             output_epoch: cfg.output_epoch,
             output_stream: GateOutputStreamState::new(cfg.output_epoch, MAX_RETIRED),
-            challenges: ChallengeTable::new(4),
+            challenges,
             anti_rollback,
             lease: None,
             replay: ControllerReplayState::new(MAX_RETIRED),

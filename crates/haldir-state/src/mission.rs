@@ -156,6 +156,11 @@ pub fn accept_lease(
     anti_rollback: &mut dyn LeaseTermStore,
     now: MonoInstant,
 ) -> Result<ActiveMissionLeaseSnapshot, LeaseAcceptError> {
+    // The nonce table is authority state for one exact session. Reject a stale
+    // or unbound table before consulting the term store or mutating either state.
+    if challenges.session() != Some(&ctx.session) {
+        return Err(LeaseAcceptError::ScopeMismatch);
+    }
     // 1. Gate incarnation binding.
     if lease.gate_id != ctx.gate_id || lease.gate_boot_id != ctx.gate_boot_id {
         return Err(LeaseAcceptError::GateBootMismatch);

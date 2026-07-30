@@ -57,7 +57,10 @@ pub use session::{SessionBindOutcome, SessionState};
 mod model {
     //! Executable encoding of the specification's safety invariants.
     use super::*;
-    use core::num::{NonZeroU32, NonZeroU64};
+    use core::{
+        cell::Cell,
+        num::{NonZeroU32, NonZeroU64},
+    };
     use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1};
     use haldir_contracts::digest::{DigestDomain, DigestV1};
     use haldir_contracts::ids::*;
@@ -159,14 +162,17 @@ mod model {
     fn now() -> MonoInstant {
         MonoInstant::from_nanos(1_000_000_000)
     }
-    fn table_with_nonce() -> ChallengeTable {
-        let mut t = ChallengeTable::new(4);
+    fn table_with_nonce_for_session(generation: u8) -> ChallengeTable {
+        let mut t = ChallengeTable::for_session(sess(generation), 4);
         t.insert(
             ChallengeNonce::new([7; 32]),
             MonoInstant::from_nanos(u64::MAX),
             now(),
         );
         t
+    }
+    fn table_with_nonce() -> ChallengeTable {
+        table_with_nonce_for_session(1)
     }
 
     #[test]
@@ -254,6 +260,62 @@ mod model {
         let err =
             accept_lease(&lease(1, 2, 1, 10), &ctx(1, 1, 1), &mut ch, &mut ar, now()).unwrap_err();
         assert_eq!(err, LeaseAcceptError::ScopeMismatch);
+    }
+
+    #[derive(Default)]
+    struct ObservedTermStore {
+        lookup_calls: Cell<u32>,
+        commit_calls: u32,
+    }
+
+    impl LeaseTermStore for ObservedTermStore {
+        fn highest_term(&self, _scope: &[u8]) -> u64 {
+            self.lookup_calls
+                .set(self.lookup_calls.get().saturating_add(1));
+            0
+        }
+
+        fn commit_term(&mut self, _scope: &[u8], _term: u64) -> Result<(), LeaseTermStoreError> {
+            self.commit_calls = self.commit_calls.saturating_add(1);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn challenge_session_mismatch_has_no_term_or_challenge_side_effects() {
+        let nonce = ChallengeNonce::new([7; 32]);
+        let challenge_session = sess(2);
+        let mut challenges = ChallengeTable::for_session(challenge_session.clone(), 4);
+        assert!(challenges.insert(nonce, MonoInstant::from_nanos(u64::MAX), now()));
+        let mut term_store = ObservedTermStore::default();
+
+        let error = accept_lease(
+            &lease(1, 1, 1, 10),
+            &ctx(1, 1, 1),
+            &mut challenges,
+            &mut term_store,
+            now(),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            (
+                error,
+                term_store.lookup_calls.get(),
+                term_store.commit_calls,
+                challenges.session(),
+                challenges.is_pending(&nonce, now()),
+                challenges.retained_len(),
+            ),
+            (
+                LeaseAcceptError::ScopeMismatch,
+                0,
+                0,
+                Some(&challenge_session),
+                true,
+                1,
+            )
+        );
     }
 
     #[test]
@@ -357,7 +419,7 @@ mod model {
         let err = accept_lease(
             &rotated,
             &rotated_ctx,
-            &mut table_with_nonce(),
+            &mut table_with_nonce_for_session(2),
             &mut anti_rollback,
             now(),
         )
