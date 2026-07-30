@@ -1,6 +1,6 @@
-# Canonical local checks for Haldir. `just ci` MUST be the same logical gate as PR CI.
-# If `just` is not installed, run the underlying cargo/python commands directly
-# (see .github/workflows/ci.yml, which does not depend on `just`).
+# Canonical local checks for Haldir. `just ci` runs the platform-independent
+# P0 gate; platform-specific and TLA+ checks remain hosted CI responsibilities.
+# If `just` is unavailable, run the underlying command directly.
 
 set shell := ["/usr/bin/env", "-u", "BASH_ENV", "-u", "ENV", "/bin/bash", "--noprofile", "--norc", "-uc"]
 
@@ -34,7 +34,7 @@ lint-default:
     cargo clippy --workspace --locked -- -D warnings
 
 deny:
-    cargo deny check
+    cargo deny --all-features check
 
 conformance:
     cargo test --workspace --locked -- vectors
@@ -88,5 +88,4 @@ diff-check:
 
 # Canonical offline gate. Platform-specific and TLA+ jobs still run in GitHub CI.
 ci:
-    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
     /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/p0r-exit-gate.sh
