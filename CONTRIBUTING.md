@@ -6,8 +6,11 @@
 - Run `cargo fmt --all -- --check` and `git diff --check` before every commit.
 - **Never** `git push --force`/`--force-with-lease`, rewrite shared history, move tags, or
   `git reset --hard` on an owner worktree.
-- Never commit private keys, local absolute paths, captured secrets, proprietary Engram
-  content, or device credentials.
+- Never commit private keys, captured secrets, bearer tokens, proprietary
+  Engram content, production certificates, or device credentials. Normalize new
+  developer-host paths unless an exact non-secret path is required by a reviewed
+  provenance contract; retained public certificates and historical host-path
+  metadata are evidence, not production credentials.
 - Keep Haldir, NCP, Crebain, and Engram changes in separate commits and separate PRs.
 
 ## Evidence-first rule

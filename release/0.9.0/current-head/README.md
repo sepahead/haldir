@@ -18,147 +18,118 @@ artifacts are bound to their source and requirement identity through
 [`audit-inputs.json`](audit-inputs.json) and the current-head requirement ledger;
 raw logs do not make independent identity claims.
 
-The retained, checksum-bound inputs include the
+## Active epoch-16 audit gate
+
+The canonical operator entry point is:
+
+```sh
+just verify-current-audit
+```
+
+The underlying command, also used by the supply-chain CI job and the P0 exit
+gate, is:
+
+```sh
+/usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc \
+  tools/release/current-audit-gate.sh
+```
+
+The gate requires CPython `3.14.6`, a `rustup`-managed Cargo `1.96.0`,
+`/usr/bin/git`, and the exact GitHub CLI `2.96.0` executable identity pinned by
+`tools/release/verify-framework-recovery-fr-0015.py`. The pinned GitHub CLI
+artifacts support Linux amd64 and macOS arm64. On macOS, an exact executable at
+a nonstandard path may be selected with `HALDIR_FR0015_GH`; on Linux that
+variable is reserved for the CI runner's pinned extraction path. Tool
+acquisition is outside the gate and may require network access; verification of
+the retained Sigstore bundles is forced offline once the exact executable and
+bundled trust root are present.
+
+A pass verifies the frozen FR-0014 boundary, the exact FR-0015 repair,
+qualification, and activation sequence, commit signatures and linear
+first-parent ancestry, immutable trust-root paths, source and CI pins, retained
+hosted-result attestations, and the protected-path scope of later milestones.
+It also requires the checked-out `HEAD` to have exactly one parent and checks
+the immediate commit diff for whitespace errors.
+
+That result is intentionally narrow. Epoch 16 does not execute the retired task
+verifiers, semantically qualify the implementation in an ordinary successor,
+prove mutable GitHub settings at the current head, or grant release,
+publication, deployment, tag, archive, DOI, or GitHub Release authority. The
+release remains `NO_GO`.
+
+## Historical CH-T000 input cut and verifier
+
+The retained, checksum-bound CH-T000 inputs include the
 [Haldir handoff](handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip), the
 [cross-repository handoff](handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip),
-the master head/index records, the exact local baseline, and raw GitHub CI and
-formal-run evidence. Verify the cut offline with:
+the master head/index records, the exact local baseline, raw GitHub CI and
+formal-run evidence, and the bounded resource profile.
 
-```sh
-python3 -I tools/release/test_verify_current_audit.py
-python3 -I tools/release/test_current_audit_resource_profile.py
-python3 -I tools/release/verify-current-audit.py
-```
+`tools/release/verify-current-audit.py`, its legacy test suite, and
+`tools/release/current-audit-resource-profile.py` are retained historical
+programs. They are not the active operator entry point and are deliberately
+inert at epoch 16. Historical resource-profile reproduction must write only to
+untracked scratch space, such as `target/`; it must never replace
+`evidence/ch-t000-resource-profile.json` or any other retained evidence file.
 
-The verifier requires CPython `3.14.6`; the hosted supply-chain job installs
-that exact version through an immutable action commit before running the gate.
-The same sequence is wired into `just verify-current-audit`, the supply-chain CI
-job, and `tools/p0r-exit-gate.sh`. The resource profiler can also be run in
-isolation; it records direct exact-limit and one-unit-over samples for every
-declared byte and JSON-structure boundary primitive, while lifecycle timeout
-and composition behavior remains the responsibility of the exact verifier test
-suite:
+## Retired task-qualification framework
 
-```sh
-python3 -I tools/release/current-audit-resource-profile.py \
-  --output release/0.9.0/current-head/evidence/ch-t000-resource-profile.json
-```
+CH-T000 and the later task epochs used a signed `F → I → C → D` lifecycle:
+framework/freeze, implementation, qualification, and data-only activation.
+Their append-only registry walked adjacent signed commits, ran registered task
+verifiers, maintained active claims, and supported a typed `R` revocation
+transition. Registered verifiers were reviewed executable inputs, but their
+structural restrictions and signed identities did not prove their assertions
+semantically honest.
 
-## Signed qualification lifecycle
+That retired framework ran registered programs in a digest-pinned, read-only,
+network-disabled Linux container over an isolated exact Git clone. Its
+clean-Linux reproduction and container-containment statements describe the
+historical CH-T000 protocol only. The epoch-16 bridge instead executes directly
+on the host with a sanitized environment, pinned executable identities, bounded
+subprocess time and output, and protected-worktree checks. It claims no general
+host-resource containment.
 
-`CH-T000` uses three signed commits after the frozen implementation checkpoint.
-The framework commit installs the verifier while every task remains `OPEN`; the
-qualification commit binds the exact implementation, evidence, reviews, and
-resource profile; the data-only activation commit is the first commit allowed
-to mark `CH-T000` terminal. A source or framework checkpoint alone is never
-closure evidence.
+The historical task, review, revocation, and active-claim records remain
+evidence of those earlier transitions. They do not establish that epoch-16
+ordinary successors follow the retired lifecycle or have passed its registered
+verifiers.
 
-Every later task and requalification epoch follows one linear signed
-`F → I → C → D` transition on the first-parent history:
+## Epoch-16 trust and recovery boundary
 
-- `F` appends one epoch registration, its immutable task verifier and tests, a
-  freeze contract, and the exactly rendered CI/Just/P0 integration blocks.
-- `I` is one signed implementation commit whose changed paths and statuses must
-  exactly equal the frozen implementation plan.
-- `C` adds the qualification record and its exact evidence and review files. It
-  binds the detected `F` and `I` commits; no artifact is required to contain its
-  own not-yet-known commit identifier.
-- `D` adds the activation record, bounded verifier receipt, activation evidence,
-  requirement-ledger transition, and derived active-claim transition. It binds
-  `F`, `I`, and `C`, and is detected as the signed commit that first contains
-  those exact files.
+Epoch 16 accepts only signed, linear, scoped milestones after activation.
+Protected workflow, signer, recovery, gate, pin, and attestation paths cannot be
+changed by an ordinary successor. A necessary change requires a separately
+reviewed, intentional signed gate and trust-root replacement protocol.
 
-Epoch-qualified artifacts live under
-`tools/release/tasks/ch-tNNN/eNNNN/` and
-`release/0.9.0/current-head/tasks/ch-tNNN/eNNNN/`. The append-only registry,
-revocation ledger, and active claim state live under `closures/`. The framework
-walks every adjacent signed commit, so a protected file cannot be changed and
-later restored to evade review. Registered verifiers execute centrally with
-ten seconds per invocation, 7,680 aggregate seconds per history walk, and
-bounded output. Triggered verifiers run during the walk and every still-active
-verifier is forced once against the final head. Each transition must preserve
-the exact rendered integration state.
+The retained branch-protection record is a TLS-observed snapshot of mutable
+external state, not durable cryptographic proof. The trusted source signer and
+repository owner remain inside the threat model; owner-account or GitHub
+control-plane compromise is outside the active guarantee.
 
-## Verifier trust and upgrade boundary
-
-Registered Python verifiers and their tests are signed and reviewed executable
-inputs. A structural scanner restricts their imports and module shape, and a
-trusted parent runner owns the result handshake, but those controls do not prove
-that a registered program's assertions are semantically honest. That remains a
-code-review and evidence boundary.
-
-The programs run as an unprivileged user in a digest-pinned, read-only,
-network-disabled Linux container over an isolated exact Git clone. Host-side
-execution is restricted to pinned Git, `ssh-keygen`, and Docker commands; the
-live worktree, its private Git directory, and any shared Git common directory
-are checked for mutation. The local Docker daemon, its socket, and the account
-running the gate remain trusted. Endpoint, daemon, image, socket, container ID,
-and teardown state are bound and rechecked, but a compromised daemon can defeat
-the container boundary.
-
-The independent clean-Linux reproduction is a second attempt-1 GitHub-hosted
-run, manually dispatched only after the exact-head push CI run has completed.
-It executes the same full gate in a fresh checkout and retains its own raw run,
-attempt, and log records. This separates the reproduction from the push event
-without presenting either automated run as human review or platform
-attestation.
-
-The source-cut signing key and `allowed-signers` file are immutable protocol
-roots. There is no in-protocol key rotation: loss or compromise requires
-withdrawing this framework, establishing a new signed baseline, and rerunning
-the full qualification. Successor tasks likewise cannot edit the exact CI,
-Just, P0, wrapper, signer, or central-verifier paths. A necessary framework
-upgrade must use the same signed rebaseline and full-qualification path, not an
-ordinary `F → I → C → D` task.
-
-An `R` transition may revoke any verified task. It appends a typed revocation,
-restores the last valid contiguous prefix, reopens the entire dependent suffix,
-rolls back claims and release authority, and requires fresh monotonically
-increasing epochs before those tasks can become terminal again. Revocation can
-never authorize a tag, release, DOI, archive, or deployment.
+On suspected signer, owner-account, or GitHub control-plane compromise, stop all
+release, tag, publication, and deployment activity. Preserve existing evidence,
+do not regenerate or re-sign records, and treat gate results as
+non-authoritative until a separately reviewed trust-root replacement protocol
+has established a new boundary.
 
 ## Review and publication boundary
 
-Every task requires an independent review record that identifies the exact
-evidence and diff reviewed. Controls must be accepted before implementation.
-For ordinary tasks, separately keyed automated reviewer records may provide
-independent technical review and lead support only where the exact frozen
-contract permits each role. Those records must state that they are non-human,
-do not constitute external review, and grant no release, publication, or
-deployment authority. The designated human-only decisions at `CH-T124` and
-`CH-T125` cannot use automated lead support. `CH-T000` is limited to the
-narrower retrospective bootstrap process defined by the qualification
-amendment.
+The current requirement ledger still marks the independent cryptographic,
+formal-methods, secure-deployment, and clean-room review tasks `CH-T115` and
+`CH-T120` as `OPEN`. Final lead review (`CH-T124`) and the signed
+release-authority decision (`CH-T125`) are also `OPEN`. Automated review records
+do not satisfy those human and external-review requirements.
 
-Each `F` contract freezes the reviewer requirement, identity, principal, public
-key, actual key fingerprint, role, path, and stated trust basis. The source
-signer asserts and freezes every non-source reviewer key in signed `F`; later
-detached signatures prove possession of that frozen key and are purpose-bound
-to the task, epoch, `F`/`I` commits, review kind, complete file record, decision,
-and timestamps. Key separation and deterministic checks do not establish a
-person's real-world identity, organizational independence, external review, or
-independence from a shared host or operator.
+Key separation, deterministic checks, and detached signatures do not establish
+a reviewer's real-world identity, organizational independence, or independence
+from a shared host or operator. Likewise, exact file inventories and digests
+prove object identity, not the semantic correctness or completeness of the
+declared consumers and effects.
 
-The frozen affected-surface inventory covers every planned path, its status,
-claim relevance, and in-repository and external consumers. Every review must
-cover that inventory and its declared consumer context. Deterministic checks
-prove inventory completeness and object identity; whether the declared
-consumers and semantic effects are correct remains an explicit review judgment.
-Qualification limitations must retain the complete cumulative union of prior
-limitations, selected-outcome limits, review limits, unresolved finding
-dispositions, and every twenty-lens residual. Revocation restores the earlier
-union; no later task may silently discard it.
-
-Automated reviews do not satisfy `CH-T115`, which requires real named
-independent cryptographic, formal-methods, and secure-deployment reviewers, or
-`CH-T120`, which separately requires real named external clean-room validation.
-`CH-T124` requires both its independent review and the designated program
-lead's recorded disposition, and `CH-T125` requires Sepehr Mahmoudian's signed
-release-authority decision. Until each applicable boundary is truthfully
-satisfied, that task and its dependent suffix remain `OPEN`.
-
-The release remains `NO_GO` until the current requirements, evidence, review,
-cross-repository qualification, and release ceremony are truthfully complete or
-the associated optional claims are explicitly removed. No tag or GitHub Release
-is authorized while that state persists. DOI, Zenodo, and other archive fields
-remain absent or null throughout this 0.9 preparation program.
+The release remains `NO_GO` until the applicable requirements, evidence,
+independent review, cross-repository qualification, and release ceremony are
+truthfully complete or the associated optional claims are explicitly removed.
+No tag or GitHub Release is authorized while that state persists. DOI, Zenodo,
+and other archive fields remain absent or null throughout this 0.9 preparation
+program.
