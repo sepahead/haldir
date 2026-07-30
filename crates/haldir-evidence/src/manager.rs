@@ -8,7 +8,7 @@
 //! Unix process-crash scope; it does not claim power-loss durability or an
 //! external non-rewindable witness.
 
-use core::num::NonZeroU64;
+use core::{fmt, num::NonZeroU64};
 use haldir_contracts::ids::{GateBootId, GateId, KeyId};
 use haldir_crypto::{SigningKey, VerifyingKey};
 use sha2::{Digest, Sha256};
@@ -70,6 +70,25 @@ pub enum JournalVerificationError {
     /// An opaque record failed the consumer's canonical/signature validation.
     InvalidRecord,
 }
+
+impl JournalVerificationError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::UnknownSigner => "EVIDENCE_JOURNAL_VERIFICATION_UNKNOWN_SIGNER",
+            Self::InvalidRecord => "EVIDENCE_JOURNAL_VERIFICATION_INVALID_RECORD",
+        }
+    }
+}
+
+impl fmt::Display for JournalVerificationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for JournalVerificationError {}
 
 /// Dimension that rejected an opt-in recovery capture.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -171,6 +190,63 @@ pub enum JournalManagerError {
     /// An in-process recovery consumer rejected the complete ordered snapshot
     /// before prior-tail closure and current-segment creation.
     RecoveryConsumerRejected,
+}
+
+impl JournalManagerError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::Journal(_) => "EVIDENCE_JOURNAL_MANAGER_JOURNAL",
+            Self::Verification(_) => "EVIDENCE_JOURNAL_MANAGER_VERIFICATION",
+            Self::LockHeld => "EVIDENCE_JOURNAL_MANAGER_LOCK_HELD",
+            Self::Missing => "EVIDENCE_JOURNAL_MANAGER_MISSING",
+            Self::AlreadyProvisioned => "EVIDENCE_JOURNAL_MANAGER_ALREADY_PROVISIONED",
+            Self::IncompleteProvisioning => "EVIDENCE_JOURNAL_MANAGER_INCOMPLETE_PROVISIONING",
+            Self::Storage => "EVIDENCE_JOURNAL_MANAGER_STORAGE_FAILED",
+            Self::UnexpectedEntry => "EVIDENCE_JOURNAL_MANAGER_UNEXPECTED_ENTRY",
+            Self::DuplicateSequence => "EVIDENCE_JOURNAL_MANAGER_DUPLICATE_SEQUENCE",
+            Self::SequenceGap => "EVIDENCE_JOURNAL_MANAGER_SEQUENCE_GAP",
+            Self::Rewind => "EVIDENCE_JOURNAL_MANAGER_REWIND",
+            Self::Fork => "EVIDENCE_JOURNAL_MANAGER_FORK",
+            Self::MultipleActive => "EVIDENCE_JOURNAL_MANAGER_MULTIPLE_ACTIVE",
+            Self::GateMismatch => "EVIDENCE_JOURNAL_MANAGER_GATE_MISMATCH",
+            Self::TailSignerUnavailable => "EVIDENCE_JOURNAL_MANAGER_TAIL_SIGNER_UNAVAILABLE",
+            Self::Quiesced => "EVIDENCE_JOURNAL_MANAGER_QUIESCED",
+            Self::ReservationUnavailable => "EVIDENCE_JOURNAL_MANAGER_RESERVATION_UNAVAILABLE",
+            Self::ReservationMismatch => "EVIDENCE_JOURNAL_MANAGER_RESERVATION_MISMATCH",
+            Self::ReservationExhausted => "EVIDENCE_JOURNAL_MANAGER_RESERVATION_EXHAUSTED",
+            Self::Poisoned => "EVIDENCE_JOURNAL_MANAGER_POISONED",
+            Self::DuplicateRecord => "EVIDENCE_JOURNAL_MANAGER_DUPLICATE_RECORD",
+            Self::AppendCommitAmbiguous { .. } => {
+                "EVIDENCE_JOURNAL_MANAGER_APPEND_COMMIT_AMBIGUOUS"
+            }
+            Self::SequenceExhausted => "EVIDENCE_JOURNAL_MANAGER_SEQUENCE_EXHAUSTED",
+            Self::RecoveryCaptureLimitExceeded { .. } => {
+                "EVIDENCE_JOURNAL_MANAGER_RECOVERY_CAPTURE_LIMIT_EXCEEDED"
+            }
+            Self::RecoveryCaptureAllocation => {
+                "EVIDENCE_JOURNAL_MANAGER_RECOVERY_CAPTURE_ALLOCATION"
+            }
+            Self::RecoveryConsumerRejected => "EVIDENCE_JOURNAL_MANAGER_RECOVERY_CONSUMER_REJECTED",
+        }
+    }
+}
+
+impl fmt::Display for JournalManagerError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for JournalManagerError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Journal(error) => Some(error),
+            Self::Verification(error) => Some(error),
+            _ => None,
+        }
+    }
 }
 
 impl From<JournalError> for JournalManagerError {

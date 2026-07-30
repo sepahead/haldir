@@ -15,7 +15,7 @@
 //! local parent directory; path-based safe standard-library APIs cannot close
 //! ancestor-directory replacement races.
 
-use core::num::NonZeroU64;
+use core::{fmt, num::NonZeroU64};
 use haldir_contracts::ids::{GateBootId, GateId, KeyId};
 use haldir_crypto::{SigningKey, VerifyingKey};
 use sha2::{Digest, Sha256};
@@ -102,6 +102,40 @@ pub enum JournalError {
     /// A previous append failed; recovery is required before another mutation.
     Poisoned,
 }
+
+impl JournalError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::Missing => "EVIDENCE_JOURNAL_MISSING",
+            Self::AlreadyExists => "EVIDENCE_JOURNAL_ALREADY_EXISTS",
+            Self::Unsupported => "EVIDENCE_JOURNAL_UNSUPPORTED",
+            Self::Storage => "EVIDENCE_JOURNAL_STORAGE_FAILED",
+            Self::Bounds => "EVIDENCE_JOURNAL_BOUNDS",
+            Self::RecordTooLarge => "EVIDENCE_JOURNAL_RECORD_TOO_LARGE",
+            Self::RecordCannotFitSegment => "EVIDENCE_JOURNAL_RECORD_CANNOT_FIT_SEGMENT",
+            Self::RotationRequired => "EVIDENCE_JOURNAL_ROTATION_REQUIRED",
+            Self::ChainMismatch => "EVIDENCE_JOURNAL_CHAIN_MISMATCH",
+            Self::SignerMismatch => "EVIDENCE_JOURNAL_SIGNER_MISMATCH",
+            Self::CommitAmbiguous => "EVIDENCE_JOURNAL_COMMIT_AMBIGUOUS",
+            Self::CorruptHeader => "EVIDENCE_JOURNAL_CORRUPT_HEADER",
+            Self::CorruptRecord => "EVIDENCE_JOURNAL_CORRUPT_RECORD",
+            Self::CorruptFooter => "EVIDENCE_JOURNAL_CORRUPT_FOOTER",
+            Self::IdentityMismatch => "EVIDENCE_JOURNAL_IDENTITY_MISMATCH",
+            Self::SignatureInvalid => "EVIDENCE_JOURNAL_SIGNATURE_INVALID",
+            Self::Poisoned => "EVIDENCE_JOURNAL_POISONED",
+        }
+    }
+}
+
+impl fmt::Display for JournalError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for JournalError {}
 
 /// Hard limits for one evidence segment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

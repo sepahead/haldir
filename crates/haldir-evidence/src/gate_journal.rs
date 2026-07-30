@@ -14,7 +14,10 @@ use crate::manager::{
     RecoveryPrecommitPlan,
 };
 use crate::publication::{PublicationReductionError, PublicationStageReducer};
-use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
+use core::{
+    fmt,
+    num::{NonZeroU32, NonZeroU64, NonZeroUsize},
+};
 use haldir_contracts::cbor::{CanonicalMessage, Limits, from_canonical_bytes};
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::error::DecodeError;
@@ -56,6 +59,32 @@ pub enum GateJournalVerificationError {
     RecordBootMismatch,
 }
 
+impl GateJournalVerificationError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::EnvelopeTooLarge => "EVIDENCE_GATE_JOURNAL_ENVELOPE_TOO_LARGE",
+            Self::SegmentGateMismatch => "EVIDENCE_GATE_JOURNAL_SEGMENT_GATE_MISMATCH",
+            Self::SegmentSignerUntrusted => "EVIDENCE_GATE_JOURNAL_SEGMENT_SIGNER_UNTRUSTED",
+            Self::InvalidEnvelope => "EVIDENCE_GATE_JOURNAL_INVALID_ENVELOPE",
+            Self::ReceiptSemanticInvalid => "EVIDENCE_GATE_JOURNAL_RECEIPT_SEMANTIC_INVALID",
+            Self::RecordSignerMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_SIGNER_MISMATCH",
+            Self::RecordSubjectMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_SUBJECT_MISMATCH",
+            Self::RecordGateMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_GATE_MISMATCH",
+            Self::RecordBootMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_BOOT_MISMATCH",
+        }
+    }
+}
+
+impl fmt::Display for GateJournalVerificationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for GateJournalVerificationError {}
+
 /// Publication recovery failure. No partially reduced state is returned.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -73,6 +102,39 @@ pub enum PublicationRecoveryError {
     DuplicateDecisionReceipt,
     /// The linked publication trace was malformed, out of order, or over bound.
     Reduction(PublicationReductionError),
+}
+
+impl PublicationRecoveryError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::Verification(_) => "EVIDENCE_PUBLICATION_RECOVERY_VERIFICATION",
+            Self::BootResurrection => "EVIDENCE_PUBLICATION_RECOVERY_BOOT_RESURRECTION",
+            Self::SegmentTimeRegression => "EVIDENCE_PUBLICATION_RECOVERY_SEGMENT_TIME_REGRESSION",
+            Self::RecordTimeRegression => "EVIDENCE_PUBLICATION_RECOVERY_RECORD_TIME_REGRESSION",
+            Self::DuplicateDecisionReceipt => {
+                "EVIDENCE_PUBLICATION_RECOVERY_DUPLICATE_DECISION_RECEIPT"
+            }
+            Self::Reduction(_) => "EVIDENCE_PUBLICATION_RECOVERY_REDUCTION",
+        }
+    }
+}
+
+impl fmt::Display for PublicationRecoveryError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for PublicationRecoveryError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Verification(error) => Some(error),
+            Self::Reduction(error) => Some(error),
+            _ => None,
+        }
+    }
 }
 
 /// Fused Gate-journal open or semantic replay failure.
@@ -94,6 +156,34 @@ pub enum GateJournalOpenError {
     },
 }
 
+impl GateJournalOpenError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::TraceCapacityTooSmall => "EVIDENCE_GATE_JOURNAL_OPEN_TRACE_CAPACITY_TOO_SMALL",
+            Self::Journal(_) => "EVIDENCE_GATE_JOURNAL_OPEN_JOURNAL",
+            Self::Replay { .. } => "EVIDENCE_GATE_JOURNAL_OPEN_REPLAY",
+        }
+    }
+}
+
+impl fmt::Display for GateJournalOpenError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for GateJournalOpenError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Journal(error) => Some(error),
+            Self::Replay { error, .. } => Some(error),
+            Self::TraceCapacityTooSmall => None,
+        }
+    }
+}
+
 /// Transactional live/recovery append failure.
 ///
 /// A single-record operation installs no candidate reducer state until its
@@ -107,6 +197,32 @@ pub enum GateJournalMutationError {
     Journal(JournalManagerError),
     /// The typed record batch would make ordered replay fail.
     Semantic(PublicationRecoveryError),
+}
+
+impl GateJournalMutationError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::Journal(_) => "EVIDENCE_GATE_JOURNAL_MUTATION_JOURNAL",
+            Self::Semantic(_) => "EVIDENCE_GATE_JOURNAL_MUTATION_SEMANTIC",
+        }
+    }
+}
+
+impl fmt::Display for GateJournalMutationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for GateJournalMutationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Journal(error) => Some(error),
+            Self::Semantic(error) => Some(error),
+        }
+    }
 }
 
 impl From<JournalManagerError> for GateJournalMutationError {

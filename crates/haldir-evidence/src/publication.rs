@@ -7,7 +7,7 @@
 //! retained-state-bounded reducer. The verifier must also enforce the envelope
 //! byte-size/work limit before the reducer hashes those bytes.
 
-use core::num::NonZeroU32;
+use core::{fmt, num::NonZeroU32};
 use haldir_contracts::Validate;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::error::DecodeError;
@@ -63,6 +63,47 @@ pub enum PublicationReductionError {
     /// The claimed recovery boot already appeared in the reduced publication
     /// evidence and therefore is not fresh within this replay.
     RecoveryBootAlreadyObserved,
+}
+
+impl PublicationReductionError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::InvalidPreparedReceipt => {
+                "EVIDENCE_PUBLICATION_REDUCTION_INVALID_PREPARED_RECEIPT"
+            }
+            Self::CapacityExceeded => "EVIDENCE_PUBLICATION_REDUCTION_CAPACITY_EXCEEDED",
+            Self::DuplicateDecision => "EVIDENCE_PUBLICATION_REDUCTION_DUPLICATE_DECISION",
+            Self::MissingPreparedDecision => {
+                "EVIDENCE_PUBLICATION_REDUCTION_MISSING_PREPARED_DECISION"
+            }
+            Self::IdentityMismatch => "EVIDENCE_PUBLICATION_REDUCTION_IDENTITY_MISMATCH",
+            Self::GateScopeMismatch => "EVIDENCE_PUBLICATION_REDUCTION_GATE_SCOPE_MISMATCH",
+            Self::InvalidEvent(_) => "EVIDENCE_PUBLICATION_REDUCTION_INVALID_EVENT",
+            Self::InvalidTransition => "EVIDENCE_PUBLICATION_REDUCTION_INVALID_TRANSITION",
+            Self::PredecessorMismatch => "EVIDENCE_PUBLICATION_REDUCTION_PREDECESSOR_MISMATCH",
+            Self::TimeRegression => "EVIDENCE_PUBLICATION_REDUCTION_TIME_REGRESSION",
+            Self::RecoveryBootAlreadyObserved => {
+                "EVIDENCE_PUBLICATION_REDUCTION_RECOVERY_BOOT_ALREADY_OBSERVED"
+            }
+        }
+    }
+}
+
+impl fmt::Display for PublicationReductionError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for PublicationReductionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::InvalidEvent(error) => Some(error),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

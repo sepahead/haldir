@@ -25,6 +25,9 @@ pub mod journal;
 pub mod manager;
 pub mod publication;
 
+#[cfg(test)]
+mod error_tests;
+
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
