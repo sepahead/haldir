@@ -1,0 +1,182 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 18,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "state": "PENDING_QUALIFICATION",
+    "tag_authorized": false
+  },
+  "capture_tool": {
+    "bytes": 76159,
+    "git_mode": "100755",
+    "git_object_id": "756a7a5a56550320944a132b1a85966ff2200a69",
+    "git_object_type": "blob",
+    "path": "tools/release/framework_recovery_fr_0017_capture.py",
+    "sha256": "ecf56d0fe3e79ccff4346b32c9806b741985b701730fd8dcbfcb937d74913811"
+  },
+  "cargo": {
+    "executable": {
+      "bytes": 31817288,
+      "path": "/Users/torusprime/.rustup/toolchains/1.96.0-aarch64-apple-darwin/bin/cargo",
+      "sha256": "fec239e6b74df873f54ef52912bfcfcc8d8414bc14a7ae1e0be80460bae72841"
+    },
+    "resolver": {
+      "argv": [
+        "/Users/torusprime/.cargo/bin/rustup",
+        "which",
+        "--toolchain",
+        "1.96.0",
+        "cargo"
+      ],
+      "executable": {
+        "bytes": 11053296,
+        "path": "/Users/torusprime/.cargo/bin/rustup",
+        "sha256": "aeb4105778ca1bd3c6b0e75768f581c656633cd51368fa61289b6a71696ac7e1"
+      }
+    },
+    "toolchain": "1.96.0",
+    "version": "cargo 1.96.0 (30a34c682 2026-05-25)"
+  },
+  "checks": [
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/release/test_verify_framework_recovery_fr_0017.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 19405,
+      "stderr_sha256": "3b2370926c01dac5d9d31e26dab00aa07a7f5b6b751c5917b1e4f25c0054420f",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/test_pinned_cargo_deny.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 175,
+      "stderr_sha256": "4b7788913f53de37ebbb5c4282087cbabe7bd9036423a1bcc4936badefcaf974",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/test_run_formal.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 170,
+      "stderr_sha256": "03ccb6b77d9ceb987a0c197de305dd42aefd3db00459e7b08f2934acc4b2040a",
+      "stdout_bytes": 171,
+      "stdout_sha256": "326a529ed9207f5f22456de50f0bc5efc3c71c88af7593e34e8de2dfcbae5b29"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/verify-pins.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 175,
+      "stderr_sha256": "8e7d0f5a85a4aa583dd3b2ea489b8619e7688fe004166510708d5aafd2b7b83c",
+      "stdout_bytes": 152,
+      "stdout_sha256": "90b80f506c09611d0d294db1c947827b699907962c1aa461d60725316f572a02"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/verify-ci-pins.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 132,
+      "stdout_sha256": "605174e218fa176c3e661708c99c7e11eecfb1f5c4812c5f8e8b68c48c678c22"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "-I",
+        "-B",
+        "-W",
+        "error",
+        "tools/release/verify-framework-recovery-fr-0017.py"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 87,
+      "stdout_sha256": "7fe5b629b6a06eddcaacc7357f9218525117df54e2978c1e9a83fa86781b566d"
+    },
+    {
+      "argv": [
+        "/bin/bash",
+        "-n",
+        "tools/release/current-audit-gate.sh"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/usr/bin/git",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "diff",
+        "--check",
+        "7e5015092d5a4de3556b252e594c59c72636e7b9..d6c87ed727437fb30a4450b1e399b28f84307b8f"
+      ],
+      "result": "PASS",
+      "returncode": 0,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "completed_at_utc": "2026-07-30T18:08:05.681314Z",
+  "protocol": "HALDIR_FR_0017_LOCAL_VALIDATION_V1",
+  "python": {
+    "implementation": "cpython",
+    "version": "3.14.6"
+  },
+  "result": "PASS",
+  "schema_version": "1.0.0",
+  "subject_commit": "d6c87ed727437fb30a4450b1e399b28f84307b8f",
+  "subject_tree": "10c55f3af9093171bb07523eb126db0e2f506ad2"
+}
