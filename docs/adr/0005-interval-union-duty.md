@@ -1,6 +1,6 @@
 # ADR-0005 — Interval-union duty accounting with fail-closed bounded merge
 
-Status: accepted
+Status: superseded by [ADR-0008](0008-exact-action-history-accounting.md)
 
 ## Context
 

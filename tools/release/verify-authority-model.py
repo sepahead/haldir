@@ -21,6 +21,21 @@ MAX_REQUIREMENTS_BYTES = 256 * 1024
 MAX_LOG_BYTES = 4 * 1024 * 1024
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
+RUST_ATTRIBUTE = re.compile(r"#\s*!?\s*\[")
+RUST_MACRO_INVOCATION = re.compile(
+    r"(?<![\w])(?:r#)?[^\W\d]\w*\s*!\s*[\(\[\{]",
+    re.UNICODE,
+)
+GATE_PIPELINE_FUNCTION_MARKER = "fn decide_intent_inner"
+# Exact UTF-8 bytes of actor.rs. Updating this pin is an explicit semantic
+# review event; region extraction alone cannot distinguish an impl item from
+# identical tokens embedded inside an inert macro invocation.
+EXPECTED_GATE_ACTOR_SOURCE_SHA256 = (
+    "388735d2cbe38f421cef31d9272c32f944c589a6ff8646ff5276b7e204c31853"
+)
+EXPECTED_GATE_PIPELINE_ITEM_SHA256 = (
+    "29473e1e91c016291e7d7821f5722c10b4908abeb66731e3ee8af767d078c48b"
+)
 
 EXPECTED_TOP_LEVEL = {
     "schema_version",
@@ -77,8 +92,11 @@ EXPECTED_LENSES = {
     "ecosystem_composition_and_governance",
 }
 GATE_PIPELINE_ORDERED_MARKERS = (
-    "let decision = decide_validated(&PolicyInput",
+    "let decision = match try_decide_validated(&PolicyInput",
     "policy: &self.policy",
+    "Err(error) =>",
+    "self.latch_fault(error.detail_reason_code())",
+    "return self.respond(&draft, R::ErrorInternalFault, now)",
     "let effective_validity_ms = match decision.effective_validity_ms()",
     "if self.revision.get() != captured_rev",
     "if !self.publication.authorizes_acl_only_publication()",
@@ -126,7 +144,161 @@ def _require_hex(value: Any, pattern: re.Pattern[str], label: str) -> str:
     return value
 
 
-def _rust_block(source: str, marker: str) -> str:
+def _blank_rust_span(characters: list[str], start: int, end: int) -> None:
+    """Blank a lexical span without changing offsets or line boundaries."""
+
+    for index in range(start, end):
+        if characters[index] not in "\r\n":
+            characters[index] = " "
+
+
+def _rust_code_without_comments_or_literals(source: str) -> str:
+    """Return only Rust code tokens, preserving source offsets.
+
+    The authority pipeline verifier is intentionally a bounded source-shape
+    check, not a Rust parser. Removing comments and literals first prevents
+    inert text from satisfying function or ordered-pipeline markers. Rust block
+    comments nest, and raw string delimiters may contain an arbitrary number of
+    hashes, so both forms are scanned explicitly.
+    """
+
+    characters = list(source)
+    length = len(source)
+    index = 0
+
+    def token_boundary(position: int) -> bool:
+        return position == 0 or not (
+            source[position - 1].isalnum() or source[position - 1] == "_"
+        )
+
+    def raw_string_end(position: int) -> int | None:
+        prefix_length = 0
+        if source.startswith(("br", "cr"), position):
+            prefix_length = 2
+        elif source.startswith("r", position):
+            prefix_length = 1
+        if prefix_length == 0 or not token_boundary(position):
+            return None
+
+        cursor = position + prefix_length
+        while cursor < length and source[cursor] == "#":
+            cursor += 1
+        if cursor >= length or source[cursor] != '"':
+            return None
+
+        hashes = source[position + prefix_length : cursor]
+        closing = '"' + hashes
+        end = source.find(closing, cursor + 1)
+        if end < 0:
+            raise AuthorityModelError("AUTHORITY_RUST_LEX_INVALID")
+        return end + len(closing)
+
+    def quoted_string_end(position: int, quote: str) -> int:
+        cursor = position + 1
+        while cursor < length:
+            character = source[cursor]
+            if character == "\\":
+                cursor += 2
+                continue
+            if character == quote:
+                return cursor + 1
+            cursor += 1
+        raise AuthorityModelError("AUTHORITY_RUST_LEX_INVALID")
+
+    def char_literal_end(position: int) -> int | None:
+        cursor = position + 1
+        if cursor >= length or source[cursor] in "'\r\n":
+            return None
+        if source[cursor] != "\\":
+            cursor += 1
+        else:
+            cursor += 1
+            if cursor >= length or source[cursor] in "\r\n":
+                return None
+            if source[cursor] == "x":
+                cursor += 3
+            elif source[cursor] == "u":
+                cursor += 1
+                if cursor >= length or source[cursor] != "{":
+                    return None
+                closing = source.find("}", cursor + 1)
+                if closing < 0:
+                    return None
+                cursor = closing + 1
+            else:
+                cursor += 1
+        if cursor < length and source[cursor] == "'":
+            return cursor + 1
+        return None
+
+    while index < length:
+        if source.startswith("//", index):
+            end = source.find("\n", index + 2)
+            if end < 0:
+                end = length
+            _blank_rust_span(characters, index, end)
+            index = end
+            continue
+
+        if source.startswith("/*", index):
+            depth = 1
+            cursor = index + 2
+            while cursor < length and depth:
+                if source.startswith("/*", cursor):
+                    depth += 1
+                    cursor += 2
+                elif source.startswith("*/", cursor):
+                    depth -= 1
+                    cursor += 2
+                else:
+                    cursor += 1
+            if depth:
+                raise AuthorityModelError("AUTHORITY_RUST_LEX_INVALID")
+            _blank_rust_span(characters, index, cursor)
+            index = cursor
+            continue
+
+        raw_end = raw_string_end(index)
+        if raw_end is not None:
+            _blank_rust_span(characters, index, raw_end)
+            index = raw_end
+            continue
+
+        string_start = index
+        if (
+            source[index] in "bc"
+            and index + 1 < length
+            and source[index + 1] == '"'
+            and token_boundary(index)
+        ):
+            string_start = index + 1
+        if source[string_start] == '"':
+            string_end = quoted_string_end(string_start, '"')
+            _blank_rust_span(characters, index, string_end)
+            index = string_end
+            continue
+
+        char_start = index
+        if (
+            source[index] == "b"
+            and index + 1 < length
+            and source[index + 1] == "'"
+            and token_boundary(index)
+        ):
+            char_start = index + 1
+        if source[char_start] == "'":
+            char_end = char_literal_end(char_start)
+            if char_end is not None:
+                _blank_rust_span(characters, index, char_end)
+                index = char_end
+                continue
+
+        index += 1
+
+    return "".join(characters)
+
+
+def _rust_block_bounds(source: str, marker: str) -> tuple[int, int]:
     start = source.find(marker)
     if start < 0:
         raise AuthorityModelError(f"AUTHORITY_RUST_MARKER_MISSING:{marker}")
@@ -140,14 +312,47 @@ def _rust_block(source: str, marker: str) -> str:
         elif character == "}":
             depth -= 1
             if depth == 0:
-                return source[opening + 1 : offset]
+                return opening + 1, offset
     raise AuthorityModelError(f"AUTHORITY_RUST_BLOCK_UNTERMINATED:{marker}")
 
 
+def _rust_block(source: str, marker: str) -> str:
+    start, end = _rust_block_bounds(source, marker)
+    return source[start:end]
+
+
 def _verify_gate_pipeline_source(actor_source: str) -> None:
-    pipeline = _rust_block(actor_source, "fn decide_intent_inner")
-    positions = [pipeline.find(marker) for marker in GATE_PIPELINE_ORDERED_MARKERS]
-    if any(position < 0 for position in positions) or positions != sorted(positions):
+    if _sha256(actor_source.encode("utf-8")) != EXPECTED_GATE_ACTOR_SOURCE_SHA256:
+        raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
+    code = _rust_code_without_comments_or_literals(actor_source)
+    if code.count(GATE_PIPELINE_FUNCTION_MARKER) != 1:
+        raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
+    function_start = code.find(GATE_PIPELINE_FUNCTION_MARKER)
+    previous_closing_brace = code.rfind("}", 0, function_start)
+    if previous_closing_brace < 0 or (
+        code[previous_closing_brace + 1 : function_start].strip()
+        != "#[allow(clippy::too_many_lines)]"
+    ):
+        raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
+    body_start, body_end = _rust_block_bounds(code, GATE_PIPELINE_FUNCTION_MARKER)
+    function_item = actor_source[function_start : body_end + 1].encode("utf-8")
+    if _sha256(function_item) != EXPECTED_GATE_PIPELINE_ITEM_SHA256:
+        raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
+    pipeline = code[body_start:body_end]
+    cursor = 0
+    for marker in GATE_PIPELINE_ORDERED_MARKERS:
+        position = pipeline.find(marker, cursor)
+        if position < 0:
+            raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
+        cursor = position + len(marker)
+    # The verified pipeline prefix is deliberately macro- and attribute-free.
+    # Reject either construct so an inert token tree or cfg-disabled block
+    # cannot supply a required marker while the executable path drifts. A
+    # receipt-construction `vec!` after the final marker is outside this check.
+    verified_prefix = pipeline[:cursor]
+    if RUST_MACRO_INVOCATION.search(verified_prefix) or RUST_ATTRIBUTE.search(
+        verified_prefix
+    ):
         raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
 
 

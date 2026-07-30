@@ -24,7 +24,7 @@ use haldir_contracts::session::{
 use haldir_contracts::status::{GateProcessStateV1, PlantPublicationAuthorityStateV1};
 use haldir_core::snapshot::ActiveMissionLeaseSnapshot;
 use haldir_core::snapshot::{AdmittedControllerSnapshot, TrustedStateSnapshotV1};
-use haldir_core::time::MonoInstant;
+use haldir_core::time::{MonoDuration, MonoInstant};
 use haldir_crypto::{
     CryptoError, ExpectedContext, KeyClass, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
     sign_message, verify_and_decode,
@@ -36,8 +36,8 @@ use haldir_ncp08::{
     SelectedNcpCommandAdapter,
 };
 use haldir_policy_native::{
-    BoundedActionHistory, NativePolicyError, NativePolicySnapshot, PolicyInput,
-    ValidatedNativePolicy, decide_validated,
+    ActionHistoryError, BoundedActionHistory, MAX_RETAINED_ACTIVE_INTERVALS, NativePolicyError,
+    NativePolicySnapshot, PolicyInput, ValidatedNativePolicy, try_decide_validated,
 };
 use haldir_reference_plant::{PlantAction, PlantCommand};
 use haldir_state::{
@@ -102,6 +102,8 @@ pub enum GateConfigError {
     LocalCapTooShort,
     /// The executable native policy snapshot is semantically invalid.
     InvalidPolicy(NativePolicyError),
+    /// The policy's bounded duty-history state cannot be constructed exactly.
+    ActionHistory(ActionHistoryError),
     /// The supplied policy identity is not the canonical executable policy digest.
     PolicyDigestMismatch,
     /// The configured Gate signing key id is absent from the trust store.
@@ -122,8 +124,47 @@ pub enum GateConfigError {
     PublicationOutputEpochMismatch,
 }
 
+impl GateConfigError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::LocalCapZero => "GATE_CONFIG_LOCAL_CAP_ZERO",
+            Self::LocalCapTooShort => "GATE_CONFIG_LOCAL_CAP_TOO_SHORT",
+            Self::InvalidPolicy(_) => "GATE_CONFIG_INVALID_POLICY",
+            Self::ActionHistory(_) => "GATE_CONFIG_ACTION_HISTORY",
+            Self::PolicyDigestMismatch => "GATE_CONFIG_POLICY_DIGEST_MISMATCH",
+            Self::GateSignerKidUnknown => "GATE_CONFIG_SIGNER_KID_UNKNOWN",
+            Self::GateSignerKidRevoked => "GATE_CONFIG_SIGNER_KID_REVOKED",
+            Self::GateSignerRoleMismatch => "GATE_CONFIG_SIGNER_ROLE_MISMATCH",
+            Self::GateSignerNotAssurance => "GATE_CONFIG_SIGNER_NOT_ASSURANCE",
+            Self::GateSignerSubjectMismatch => "GATE_CONFIG_SIGNER_SUBJECT_MISMATCH",
+            Self::GateSignerPublicKeyMismatch => "GATE_CONFIG_SIGNER_PUBLIC_KEY_MISMATCH",
+            Self::PublicationSessionMismatch => "GATE_CONFIG_PUBLICATION_SESSION_MISMATCH",
+            Self::PublicationOutputEpochMismatch => "GATE_CONFIG_PUBLICATION_OUTPUT_EPOCH_MISMATCH",
+        }
+    }
+}
+
+impl std::fmt::Display for GateConfigError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for GateConfigError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::InvalidPolicy(error) => Some(error),
+            Self::ActionHistory(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
 /// A failure to construct a session-bound vehicle actor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum GateStartupError {
     /// Static configuration validation failed.
     Config(GateConfigError),
@@ -145,6 +186,36 @@ pub enum GateStartupError {
 impl From<GateConfigError> for GateStartupError {
     fn from(error: GateConfigError) -> Self {
         Self::Config(error)
+    }
+}
+
+impl GateStartupError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::Config(_) => "GATE_STARTUP_CONFIG",
+            Self::AntiRollback(_) => "GATE_STARTUP_ANTI_ROLLBACK",
+            Self::StoreGateMismatch => "GATE_STARTUP_STORE_GATE_MISMATCH",
+            Self::BootContextMismatch => "GATE_STARTUP_BOOT_CONTEXT_MISMATCH",
+            Self::ProcessTransition { .. } => "GATE_STARTUP_PROCESS_TRANSITION",
+        }
+    }
+}
+
+impl std::fmt::Display for GateStartupError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for GateStartupError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Config(error) => Some(error),
+            Self::AntiRollback(error) => Some(error),
+            _ => None,
+        }
     }
 }
 
@@ -171,6 +242,7 @@ pub enum PublicationState {
 
 /// A rejected publication-state transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum PublicationError {
     /// The token does not own the actor's current publication slot.
     StateMismatch,
@@ -182,10 +254,47 @@ pub enum PublicationError {
     DeadlineElapsed,
     /// A publication horizon could not be represented exactly.
     ArithmeticOverflow,
+    /// The publisher returned success, but exact history commit failed.
+    ///
+    /// The command may already be active at the plant. It must never be retried
+    /// or resubmitted; the actor remains fault-latched with its called slot held.
+    PublishedHistoryCommitFailed(ActionHistoryError),
     /// Plant-publication authority is no longer present.
     PublicationAuthorityLost,
     /// The actor is fault-latched or detected a monotonic-clock regression.
     Faulted,
+}
+
+impl PublicationError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::StateMismatch => "PUBLICATION_STATE_MISMATCH",
+            Self::AuthorizationChanged => "PUBLICATION_AUTHORIZATION_CHANGED",
+            Self::CausalStateChanged => "PUBLICATION_CAUSAL_STATE_CHANGED",
+            Self::DeadlineElapsed => "PUBLICATION_DEADLINE_ELAPSED",
+            Self::ArithmeticOverflow => "PUBLICATION_ARITHMETIC_OVERFLOW",
+            Self::PublishedHistoryCommitFailed(_) => "PUBLICATION_PUBLISHED_HISTORY_COMMIT_FAILED",
+            Self::PublicationAuthorityLost => "PUBLICATION_AUTHORITY_LOST",
+            Self::Faulted => "PUBLICATION_FAULTED",
+        }
+    }
+}
+
+impl std::fmt::Display for PublicationError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for PublicationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::PublishedHistoryCommitFailed(error) => Some(error),
+            _ => None,
+        }
+    }
 }
 
 /// Opaque, non-cloneable proof that exact output was prepared.
@@ -724,6 +833,12 @@ impl VehicleActor {
         if policy.canonical_digest() != cfg.policy_snapshot_digest {
             return Err(GateConfigError::PolicyDigestMismatch.into());
         }
+        let duty_window =
+            MonoDuration::checked_from_millis(u64::from(policy.snapshot().duty_window_ms)).ok_or(
+                GateConfigError::ActionHistory(ActionHistoryError::ArithmeticOverflow),
+            )?;
+        let history = BoundedActionHistory::new(MAX_RETAINED_ACTIVE_INTERVALS, duty_window)
+            .map_err(GateConfigError::ActionHistory)?;
 
         let mut process = GateProcessMachine::new();
         let fault = haldir_state::FaultLatch::new();
@@ -760,7 +875,7 @@ impl VehicleActor {
             anti_rollback,
             lease: None,
             replay: ControllerReplayState::new(MAX_RETIRED),
-            history: BoundedActionHistory::new(64),
+            history,
             trusted_state: None,
             fault,
             revision: RevisionCounter::new(),
@@ -1011,8 +1126,12 @@ impl VehicleActor {
     /// # Errors
     /// Returns [`PublicationError::StateMismatch`] for a token that does not own
     /// the called slot, or [`PublicationError::Faulted`] if `returned_at` regresses
-    /// the actor's monotonic clock. A reported success is still conservatively
-    /// charged before a regression fault is latched.
+    /// the actor's monotonic clock. Returns
+    /// [`PublicationError::PublishedHistoryCommitFailed`] if a command that the
+    /// publisher already reported successful cannot be committed to exact
+    /// history; the actor fault-latches and retains the called slot, and callers
+    /// must not retry or resubmit the command. A reported success is still
+    /// conservatively charged before a return-time regression fault is latched.
     pub fn mark_publish_returned_ok(
         &mut self,
         called: PublishCalledPublication,
@@ -1027,17 +1146,23 @@ impl VehicleActor {
             return Err(PublicationError::StateMismatch);
         }
 
-        let window_start = MonoInstant::from_nanos(called.called_at.as_nanos().saturating_sub(
-            u64::from(self.policy.snapshot().duty_window_ms).saturating_mul(1_000_000),
-        ));
-        match called.plant_action {
-            PlantAction::Hold => self.history.record_hold(called.called_at),
-            PlantAction::Velocity(velocity) => self.history.record_velocity(
-                velocity,
-                called.called_at,
-                called.active_until,
-                window_start,
-            ),
+        let expected_window =
+            MonoDuration::checked_from_millis(u64::from(self.policy.snapshot().duty_window_ms))
+                .ok_or(ActionHistoryError::ArithmeticOverflow);
+        let history_result = expected_window.and_then(|expected_window| {
+            self.history
+                .validate_for_policy(called.called_at, expected_window)?;
+            match called.plant_action {
+                PlantAction::Hold => self.history.record_hold(called.called_at),
+                PlantAction::Velocity(velocity) => {
+                    self.history
+                        .record_velocity(velocity, called.called_at, called.active_until)
+                }
+            }
+        });
+        if let Err(error) = history_result {
+            self.latch_fault(error.reason_code());
+            return Err(PublicationError::PublishedHistoryCommitFailed(error));
         }
         self.publication_state = PublicationState::Idle;
 
@@ -1150,6 +1275,21 @@ impl VehicleActor {
         publication: PlantPublicationAuthorityStateV1,
     ) {
         self.publication = publication;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_history_for_test(&mut self, history: BoundedActionHistory) {
+        self.history = history;
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn history_for_test(&self) -> &BoundedActionHistory {
+        &self.history
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn fault_reason_for_test(&self) -> Option<&'static str> {
+        self.fault.reason()
     }
 
     /// Register a pending challenge nonce (issued out of band by the orchestrator).
@@ -1586,14 +1726,20 @@ impl VehicleActor {
         }
 
         // Stage 8-11 — deterministic native policy + effective validity
-        let decision = decide_validated(&PolicyInput {
+        let decision = match try_decide_validated(&PolicyInput {
             now,
             lease: &lease,
             state: &state,
             action: &intent.action,
             history: &self.history,
             policy: &self.policy,
-        });
+        }) {
+            Ok(decision) => decision,
+            Err(error) => {
+                self.latch_fault(error.detail_reason_code());
+                return self.respond(&draft, R::ErrorInternalFault, now);
+            }
+        };
         let effective_validity_ms = match decision.effective_validity_ms() {
             Some(v) => v,
             None => {

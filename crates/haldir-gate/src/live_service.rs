@@ -488,7 +488,15 @@ impl fmt::Display for LiveServiceFatal {
     }
 }
 
-impl std::error::Error for LiveServiceFatal {}
+impl std::error::Error for LiveServiceFatal {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Publication(error) => Some(error),
+            Self::InvalidFinalCommandRoute(error) => Some(error),
+            _ => None,
+        }
+    }
+}
 
 /// Concrete strict-publisher failure observed after locally journaling Called.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

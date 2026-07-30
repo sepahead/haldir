@@ -969,6 +969,11 @@ impl<C: MonotonicClock, P> DurableCalledPublication<C, P> {
             called_envelope_digest,
             returned_at,
         );
+        // Persist the publisher's known return result before the fallible
+        // in-process accounting transition. If history commit then fails, the
+        // runtime is consumed and every recovered Called-or-later trace
+        // (including ReturnedOk) requires explicit restart clearance; the
+        // locally journaled evidence remains truthful about the external call.
         let terminal_envelope_digest = sign_and_append_terminal_stage(
             core.as_mut(),
             &mut reservation,

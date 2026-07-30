@@ -92,7 +92,7 @@ mod e2e {
         KinematicStateFixedV1, StateUncertaintyFixedV1, TrustedStateSnapshotV1,
         VerifiedSourceStateV1,
     };
-    use haldir_core::time::{MonoInstant, MonotonicClock};
+    use haldir_core::time::{MonoDuration, MonoInstant, MonotonicClock};
     use haldir_crypto::{
         ExpectedContext, KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
         sign_message, verify_and_decode,
@@ -108,7 +108,8 @@ mod e2e {
     };
     use haldir_evidence::publication::PublicationTraceState;
     use haldir_policy_native::{
-        GeofenceBoxV1, NativePolicyError, NativePolicySnapshot, PhaseRuleV1,
+        ActionHistoryError, BoundedActionHistory, GeofenceBoxV1, MAX_RETAINED_ACTIVE_INTERVALS,
+        NativePolicyError, NativePolicySnapshot, PhaseRuleV1,
     };
     use haldir_reference_plant::{PlantAction, PlantConfig, PlantEventKind, ReferencePlant};
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
@@ -1653,6 +1654,110 @@ mod e2e {
                 .state(decision_boot, decision_id),
             Some(PublicationTraceState::PublishReturnedOk)
         );
+    }
+
+    #[test]
+    fn publisher_ok_history_commit_failure_is_journaled_and_restart_blocked() {
+        let mut actor_fixture = setup();
+        actor_fixture.actor.force_history_for_test(
+            BoundedActionHistory::new(
+                MAX_RETAINED_ACTIVE_INTERVALS,
+                MonoDuration::checked_from_millis(9_999).unwrap(),
+            )
+            .unwrap(),
+        );
+        let JournalBoundFixture {
+            bound,
+            clock,
+            output_pool,
+            ctrl_sk,
+            admission_digest,
+            directory,
+        } = journal_bound_fixture(
+            64,
+            None,
+            actor_fixture,
+            GateRuntimeProfile::InProcessReference,
+        );
+        let coordinator =
+            PublicationCoordinator::new_reference_for_test(bound, clock.clone()).unwrap();
+        let record = admission_record();
+        let hold = RequestedActionV1::Hold {
+            requested_validity_ms: NonZeroU32::new(300).unwrap(),
+        };
+        let envelope = sign_intent(&ctrl_sk, &build_intent(admission_digest, &record, 1, hold));
+        let permit = output_pool.try_reserve().unwrap();
+        let prepared = match coordinator.decide(permit, &envelope, INTENT_KEY) {
+            Ok(DecisionTransition::Prepared(prepared)) => prepared,
+            _ => panic!("history-independent Hold must prepare"),
+        };
+        let decision_boot = prepared.decision().receipt.gate_boot_id;
+        let decision_id = prepared.decision().receipt.decision_id;
+        let effective_validity_ms = prepared.decision().receipt.effective_validity_ms.unwrap();
+        let called = match prepared.enter_called_boundary().unwrap() {
+            CallTransition::Called(called) => called,
+            CallTransition::Rejected { .. } => panic!("fresh Hold call must pass"),
+        };
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        let publisher = TestPublisher {
+            drops: Arc::clone(&drops),
+        };
+        let observed_calls = Arc::clone(&calls);
+        let mut publish = Box::pin(called.publish_once_with_test_future(
+            publisher,
+            move |_frame| {
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok::<(), TestPublishError>(()))
+            },
+        ));
+        let source = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed {
+                publisher_error: None,
+                source,
+            })) => source,
+            _ => panic!("successful publication with invalid history must fail-stop"),
+        };
+        assert_eq!(
+            source,
+            CoordinatorFatal::Publication(PublicationError::PublishedHistoryCommitFailed(
+                ActionHistoryError::RetentionWindowMismatch,
+            ))
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(output_pool.available(), 1);
+        drop(publish);
+
+        let restarted = reopen_publication_directory(
+            directory,
+            effective_validity_ms,
+            decision_boot,
+            decision_id,
+            PublicationTraceState::PublishReturnedOk,
+            0,
+        );
+        let coordinator =
+            PublicationCoordinator::new_reference_for_test(restarted.bound, restarted.clock)
+                .unwrap();
+        assert_eq!(
+            coordinator.publication_trace_state(decision_boot, decision_id),
+            Some(PublicationTraceState::PublishReturnedOk)
+        );
+        let restart_pool = OutputCapacityPool::new(NonZeroUsize::new(1).unwrap());
+        let permit = restart_pool.try_reserve().unwrap();
+        let error = match coordinator.decide(permit, b"ignored", INTENT_KEY) {
+            Err(error) => error,
+            Ok(_) => panic!("ReturnedOk recovery must require explicit clearance"),
+        };
+        let (_coordinator, permit, reason) = error.into_unavailable().unwrap();
+        assert!(matches!(
+            reason,
+            DecisionUnavailable::RestartClearanceRequired { .. }
+        ));
+        drop(permit);
+        assert_eq!(restart_pool.available(), 1);
     }
 
     #[test]
@@ -4216,6 +4321,186 @@ mod e2e {
     }
 
     #[test]
+    fn gate_binds_history_capacity_and_window_to_validated_policy() {
+        let fixture = setup();
+        let history = fixture.actor.history_for_test();
+        assert_eq!(history.max_intervals(), MAX_RETAINED_ACTIVE_INTERVALS);
+        assert_eq!(
+            history.retention_window(),
+            MonoDuration::checked_from_millis(10_000).unwrap()
+        );
+    }
+
+    #[test]
+    fn velocity_history_failure_latches_error_and_prepares_no_output() {
+        let mut fixture = setup();
+        let malformed = BoundedActionHistory::new(
+            MAX_RETAINED_ACTIVE_INTERVALS,
+            MonoDuration::checked_from_millis(9_999).unwrap(),
+        )
+        .unwrap();
+        fixture.actor.force_history_for_test(malformed);
+
+        let record = admission_record();
+        let envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 1, velocity(1, 400)),
+        );
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Error);
+        assert!(!decision.has_prepared_publication());
+        assert_eq!(
+            decision.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::ErrorInternalFault]
+        );
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+        assert_eq!(
+            fixture.actor.fault_reason_for_test(),
+            Some("ACTION_HISTORY_RETENTION_WINDOW_MISMATCH")
+        );
+        assert_eq!(fixture.actor.publication_state(), PublicationState::Idle);
+    }
+
+    #[test]
+    fn hold_remains_available_but_failed_success_commit_faults_and_retains_called() {
+        let mut fixture = setup();
+        let mismatched_history = BoundedActionHistory::new(
+            MAX_RETAINED_ACTIVE_INTERVALS,
+            MonoDuration::checked_from_millis(9_999).unwrap(),
+        )
+        .unwrap();
+        fixture.actor.force_history_for_test(mismatched_history);
+
+        let record = admission_record();
+        let hold = RequestedActionV1::Hold {
+            requested_validity_ms: NonZeroU32::new(300).unwrap(),
+        };
+        let envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 1, hold),
+        );
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
+        let prepared = decision.into_prepared_publication().unwrap();
+        let called = fixture
+            .actor
+            .mark_publish_called(prepared, fixture.now)
+            .unwrap();
+
+        assert_eq!(
+            fixture.actor.mark_publish_returned_ok(called, fixture.now),
+            Err(PublicationError::PublishedHistoryCommitFailed(
+                ActionHistoryError::RetentionWindowMismatch,
+            ))
+        );
+        assert!(matches!(
+            fixture.actor.publication_state(),
+            PublicationState::PublishCalled { .. }
+        ));
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+
+        let next = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 2, velocity(2, 100)),
+        );
+        let next = fixture.actor.decide_intent(&next, INTENT_KEY, fixture.now);
+        assert_eq!(next.outcome, DecisionOutcomeV1::Error);
+        assert!(!next.has_prepared_publication());
+    }
+
+    #[test]
+    fn returned_clock_regression_charges_history_before_faulting() {
+        let mut fixture = setup();
+        let record = admission_record();
+        let envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 1, velocity(1, 400)),
+        );
+        let prepared = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now)
+            .into_prepared_publication()
+            .unwrap();
+        let called = fixture
+            .actor
+            .mark_publish_called(prepared, fixture.now)
+            .unwrap();
+        let regressed_return = MonoInstant::from_nanos(fixture.now.as_nanos() - 1);
+
+        assert_eq!(
+            fixture
+                .actor
+                .mark_publish_returned_ok(called, regressed_return),
+            Err(PublicationError::Faulted)
+        );
+        assert_eq!(fixture.actor.publication_state(), PublicationState::Idle);
+        assert_eq!(
+            fixture.actor.history_for_test().last_recorded_at(),
+            Some(fixture.now)
+        );
+        assert_eq!(fixture.actor.history_for_test().active_intervals().len(), 1);
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+    }
+
+    #[test]
+    fn gate_error_layers_preserve_stable_standard_sources() {
+        fn assert_standard_error<T: std::error::Error + Send + Sync + 'static>() {}
+        assert_standard_error::<GateConfigError>();
+        assert_standard_error::<GateStartupError>();
+        assert_standard_error::<DurableGateStartupError>();
+        assert_standard_error::<PublicationError>();
+
+        let history = ActionHistoryError::RetentionWindowMismatch;
+        let publication = PublicationError::PublishedHistoryCommitFailed(history);
+        assert_eq!(
+            publication.to_string(),
+            "PUBLICATION_PUBLISHED_HISTORY_COMMIT_FAILED"
+        );
+        assert_eq!(
+            std::error::Error::source(&publication).map(ToString::to_string),
+            Some(history.to_string())
+        );
+
+        let config = GateConfigError::ActionHistory(history);
+        let startup = GateStartupError::Config(config);
+        assert_eq!(config.to_string(), "GATE_CONFIG_ACTION_HISTORY");
+        assert_eq!(startup.to_string(), "GATE_STARTUP_CONFIG");
+        assert_eq!(
+            std::error::Error::source(&startup).map(ToString::to_string),
+            Some(config.to_string())
+        );
+        let durable_startup = DurableGateStartupError::Config(config);
+        assert_eq!(durable_startup.to_string(), "DURABLE_GATE_STARTUP_CONFIG");
+        assert_eq!(
+            std::error::Error::source(&durable_startup).map(ToString::to_string),
+            Some(config.to_string())
+        );
+
+        #[cfg(feature = "live-zenoh")]
+        {
+            let fatal = LiveServiceFatal::Publication(publication);
+            assert_eq!(
+                std::error::Error::source(&fatal).map(ToString::to_string),
+                Some(publication.to_string())
+            );
+        }
+    }
+
+    #[test]
     fn second_prepare_is_overload_until_the_single_slot_is_resolved() {
         let mut f = setup();
         let rec = admission_record();
@@ -4667,15 +4952,23 @@ mod e2e {
             &boundary.ctrl_sk,
             &build_intent(boundary.admission_digest, &rec, 1, velocity(1, 400)),
         );
-        let prepared = boundary
-            .actor
-            .decide_intent(&env, INTENT_KEY, boundary.now)
+        let decision = boundary.actor.decide_intent(&env, INTENT_KEY, boundary.now);
+        let effective_validity_ms = decision.receipt.effective_validity_ms.unwrap();
+        let prepared = decision
             .into_prepared_publication()
             .expect("output prepared");
         let exact_deadline = boundary
             .now
             .checked_add_ms(20)
             .expect("fixture time is representable");
+        let maximum_call_delay_ms = exact_deadline
+            .checked_duration_since(boundary.now)
+            .unwrap()
+            .as_millis();
+        assert!(
+            u64::from(effective_validity_ms) + maximum_call_delay_ms <= 300,
+            "the conservatively charged candidate must cover call delay plus published horizon"
+        );
         let called = boundary
             .actor
             .mark_publish_called(prepared, exact_deadline)

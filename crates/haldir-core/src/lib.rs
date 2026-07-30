@@ -22,4 +22,4 @@ pub use snapshot::{
     ActiveMissionLeaseSnapshot, AdmittedControllerSnapshot, KinematicStateFixedV1,
     StateUncertaintyFixedV1, TrustedStateSnapshotV1, VerifiedSourceStateV1,
 };
-pub use time::{MonoDuration, MonoInstant, MonotonicClock};
+pub use time::{MonoDuration, MonoDurationOverflow, MonoInstant, MonotonicClock};

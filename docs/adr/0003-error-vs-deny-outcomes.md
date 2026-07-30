@@ -16,8 +16,12 @@ the reason code is an internal-fault code. Authorization refusals (bad signature
 scope mismatch, expired lease, policy denial, rate limit) yield `DecisionOutcomeV1::Deny`
 with a `DECIDED_DENY` stage. Internal faults (fault latch, monotonic-clock
 regression, an in-decision TOCTOU revision change, NCP build/validate failure, namespace/counter
-exhaustion) yield `DecisionOutcomeV1::Error` with a `DECIDED_ERROR` stage and an
+exhaustion, or malformed action history required by velocity evaluation) yield
+`DecisionOutcomeV1::Error` with a `DECIDED_ERROR` stage and an
 `ERROR_*` reason. Both paths still sign a receipt and emit no plant command.
+Hold evaluation is intentionally independent of motion-duty history so a stop
+command remains available; a failure to commit its reported successful
+publication still fault-latches under ADR-0008.
 Publication-transition failures occur after the signed `AllowPrepared` receipt and
 are governed separately by `CL-PUBLICATION-STATE-01`; they do not rewrite that receipt.
 
@@ -31,5 +35,8 @@ are governed separately by `CL-PUBLICATION-STATE-01`; they do not rewrite that r
 
 ## Evidence
 
-`haldir-gate` `respond()` / `is_error()`; `clock_regression_latches_and_errors`
+`haldir-gate` `respond()` / `is_error()`;
+`clock_regression_latches_and_errors`,
+`velocity_history_failure_latches_error_and_prepares_no_output`, and
+`hold_remains_available_but_failed_success_commit_faults_and_retains_called`
 (`CL-ERROR-01`).

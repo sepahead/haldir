@@ -674,6 +674,7 @@ impl JournalBoundRunningGate {
 
 /// Durable startup orchestration failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DurableGateStartupError {
     /// Static actor configuration failed validation.
     Config(GateConfigError),
@@ -713,6 +714,48 @@ pub enum DurableGateStartupError {
     Durable(DurableAntiRollbackError),
     /// Recovered actor construction failed after boot commit.
     Actor(GateStartupError),
+}
+
+impl DurableGateStartupError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::Config(_) => "DURABLE_GATE_STARTUP_CONFIG",
+            Self::UnsupportedPublicationProfile => {
+                "DURABLE_GATE_STARTUP_UNSUPPORTED_PUBLICATION_PROFILE"
+            }
+            Self::NcpWireProfileMismatch { .. } => "DURABLE_GATE_STARTUP_NCP_WIRE_PROFILE_MISMATCH",
+            Self::LiveZenohSupportNotCompiled => "DURABLE_GATE_STARTUP_LIVE_ZENOH_NOT_COMPILED",
+            Self::StoreGateMismatch => "DURABLE_GATE_STARTUP_STORE_GATE_MISMATCH",
+            Self::InvalidSizeLimit => "DURABLE_GATE_STARTUP_INVALID_SIZE_LIMIT",
+            Self::AnchorProtectionMismatch { .. } => {
+                "DURABLE_GATE_STARTUP_ANCHOR_PROTECTION_MISMATCH"
+            }
+            Self::EntropyUnavailable => "DURABLE_GATE_STARTUP_ENTROPY_UNAVAILABLE",
+            Self::LockUnavailable => "DURABLE_GATE_STARTUP_LOCK_UNAVAILABLE",
+            Self::LockHeld => "DURABLE_GATE_STARTUP_LOCK_HELD",
+            Self::StateDirectoryUnavailable => "DURABLE_GATE_STARTUP_STATE_DIRECTORY_UNAVAILABLE",
+            Self::Durable(_) => "DURABLE_GATE_STARTUP_DURABLE_STATE",
+            Self::Actor(_) => "DURABLE_GATE_STARTUP_ACTOR",
+        }
+    }
+}
+
+impl std::fmt::Display for DurableGateStartupError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for DurableGateStartupError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Config(error) => Some(error),
+            Self::Actor(error) => Some(error),
+            _ => None,
+        }
+    }
 }
 
 impl From<DurableAntiRollbackError> for DurableGateStartupError {

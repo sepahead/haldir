@@ -7,26 +7,96 @@
 //! computed before the effective-validity minimum (B10). The slew reference is
 //! the last **published** command (H7).
 
-use crate::input::{PolicyInput, ValidatedPolicyInput};
+use crate::input::{ActionHistoryError, PolicyInput, ValidatedPolicyInput};
 use crate::output::{PolicyDecision, PolicyOutcome};
-use crate::policy::NativePolicySnapshot;
+use crate::policy::{NativePolicyError, NativePolicySnapshot};
 use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
 use haldir_contracts::receipt::DecisionReasonCodeV1 as R;
 use haldir_core::snapshot::{ActiveMissionLeaseSnapshot, TrustedStateSnapshotV1};
-use haldir_core::time::MonoInstant;
+use haldir_core::time::{MonoDuration, MonoInstant};
 
 const MAX_REASONS: usize = 32;
+const NANOS_PER_MILLISECOND: u128 = 1_000_000;
 
-/// Evaluate the native mission policy for one intent.
-#[must_use]
-pub fn decide(input: &PolicyInput<'_>) -> PolicyDecision {
-    // The evaluator is public independently of Gate construction. Invalid
-    // executable policy data must therefore fail closed here as well as during
-    // integrated startup.
-    if input.policy.validate().is_err() {
-        return deny(vec![R::DenyPolicyDiagnostic]);
+/// A policy-input failure that prevents a trustworthy authorization decision.
+///
+/// This is distinct from a normal [`PolicyOutcome::Deny`]: invalid executable
+/// policy or malformed accounting state needed for velocity evaluation is an
+/// internal failure, not evidence that a controller violated a policy limit.
+/// Hold evaluation intentionally does not depend on motion-duty history.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum PolicyEvaluationError {
+    /// The raw executable policy snapshot is semantically invalid.
+    InvalidPolicy(NativePolicyError),
+    /// Retained duty or slew-accounting state is malformed.
+    ActionHistory(ActionHistoryError),
+}
+
+impl PolicyEvaluationError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::InvalidPolicy(_) => "POLICY_EVALUATION_INVALID_POLICY",
+            Self::ActionHistory(_) => "POLICY_EVALUATION_ACTION_HISTORY",
+        }
     }
 
+    /// Stable machine-readable code of the underlying invariant failure.
+    #[must_use]
+    pub const fn detail_reason_code(self) -> &'static str {
+        match self {
+            Self::InvalidPolicy(error) => error.reason_code(),
+            Self::ActionHistory(error) => error.reason_code(),
+        }
+    }
+}
+
+impl std::fmt::Display for PolicyEvaluationError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for PolicyEvaluationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::InvalidPolicy(error) => Some(error),
+            Self::ActionHistory(error) => Some(error),
+        }
+    }
+}
+
+impl From<ActionHistoryError> for PolicyEvaluationError {
+    fn from(error: ActionHistoryError) -> Self {
+        Self::ActionHistory(error)
+    }
+}
+
+/// Evaluate the native mission policy for one intent.
+///
+/// This compatibility API maps an internal evaluation failure to
+/// [`R::DenyPolicyDiagnostic`]. Integrated monitors should use [`try_decide`]
+/// so they can report and fault-latch an internal error instead of presenting it
+/// as an authorization refusal.
+#[must_use]
+pub fn decide(input: &PolicyInput<'_>) -> PolicyDecision {
+    try_decide(input).unwrap_or_else(|_| deny(vec![R::DenyPolicyDiagnostic]))
+}
+
+/// Evaluate a raw native policy, preserving internal evaluation failures.
+///
+/// # Errors
+/// Returns [`PolicyEvaluationError::InvalidPolicy`] for an invalid executable
+/// policy. Velocity evaluation returns
+/// [`PolicyEvaluationError::ActionHistory`] for malformed retained history;
+/// Hold evaluation deliberately remains independent of duty history.
+pub fn try_decide(input: &PolicyInput<'_>) -> Result<PolicyDecision, PolicyEvaluationError> {
+    input
+        .policy
+        .validate()
+        .map_err(PolicyEvaluationError::InvalidPolicy)?;
     decide_inner(input)
 }
 
@@ -35,8 +105,24 @@ pub fn decide(input: &PolicyInput<'_>) -> PolicyDecision {
 /// This is the integrated Gate path. Construction of
 /// [`crate::ValidatedNativePolicy`] establishes the invariant that lets this
 /// function avoid repeated whole-policy validation.
+///
+/// This compatibility API maps an internal accounting failure to
+/// [`R::DenyPolicyDiagnostic`]. Integrated monitors should use
+/// [`try_decide_validated`].
 #[must_use]
 pub fn decide_validated(input: &ValidatedPolicyInput<'_>) -> PolicyDecision {
+    try_decide_validated(input).unwrap_or_else(|_| deny(vec![R::DenyPolicyDiagnostic]))
+}
+
+/// Evaluate with a retained validated policy, preserving accounting failures.
+///
+/// # Errors
+/// Velocity evaluation returns [`PolicyEvaluationError::ActionHistory`] when
+/// retained history cannot be validated or accumulated exactly. Hold evaluation
+/// deliberately remains independent of duty history.
+pub fn try_decide_validated(
+    input: &ValidatedPolicyInput<'_>,
+) -> Result<PolicyDecision, PolicyEvaluationError> {
     let input = PolicyInput {
         now: input.now,
         lease: input.lease,
@@ -48,7 +134,7 @@ pub fn decide_validated(input: &ValidatedPolicyInput<'_>) -> PolicyDecision {
     decide_inner(&input)
 }
 
-fn decide_inner(input: &PolicyInput<'_>) -> PolicyDecision {
+fn decide_inner(input: &PolicyInput<'_>) -> Result<PolicyDecision, PolicyEvaluationError> {
     let mut reasons: Vec<R> = Vec::new();
     let p = input.policy;
     let lease = input.lease;
@@ -126,18 +212,27 @@ fn decide_inner(input: &PolicyInput<'_>) -> PolicyDecision {
             push(&mut reasons, R::DenyNormBound);
         }
         // slew vs last published command, bounded by ACTUAL elapsed time (H-P01)
-        if let Some(prev) = input.history.last_published_velocity_mm_s {
+        if let Some(prev) = input.history.last_published_velocity_mm_s() {
             let elapsed_ms = input.history.slew_elapsed_ms(now, p.nominal_update_ms);
             if !slew_ok(v, prev, elapsed_ms, lease) {
                 push(&mut reasons, R::DenySlew);
             }
         }
-        // duty window (charged conservatively on the requested horizon)
-        let window_start =
-            MonoInstant::from_nanos(now.as_nanos().saturating_sub(ms_to_ns(p.duty_window_ms)));
-        let active = input.history.active_ms_in_window(window_start, now);
+        // Duty window: retained activity stays nanosecond-exact, while the
+        // prospective command is conservatively charged on the requested/NCP
+        // horizon (an upper bound on final effective published validity).
+        // Equality is allowed; one nanosecond over the configured cap denies.
+        let retention_window = MonoDuration::checked_from_millis(u64::from(p.duty_window_ms))
+            .ok_or(ActionHistoryError::ArithmeticOverflow)?;
+        let active = input
+            .history
+            .active_duration_in_window(now, retention_window)?;
         let candidate = horizon_ms(requested_validity_ms.get(), p);
-        if active.saturating_add(candidate) > u64::from(p.max_active_ms_in_window) {
+        let charged_ns = u128::from(active.as_nanos())
+            .checked_add(u128::from(candidate) * NANOS_PER_MILLISECOND)
+            .ok_or(ActionHistoryError::ArithmeticOverflow)?;
+        let limit_ns = u128::from(p.max_active_ms_in_window) * NANOS_PER_MILLISECOND;
+        if charged_ns > limit_ns {
             push(&mut reasons, R::DenyDutyLimit);
         }
         // prospective geofence over an upper bound of the published horizon (B10)
@@ -147,20 +242,20 @@ fn decide_inner(input: &PolicyInput<'_>) -> PolicyDecision {
     }
 
     if !reasons.is_empty() {
-        return deny(reasons);
+        return Ok(deny(reasons));
     }
 
     // --- effective validity (H1): full min-set minus publication safety margin ---
     let eff = effective_validity_ms(input, src_cap, src_age, state_cap, state_age);
     if eff >= p.min_useful_validity_ms {
-        PolicyDecision {
+        Ok(PolicyDecision {
             outcome: PolicyOutcome::Allow {
                 effective_validity_ms: eff,
             },
             reasons,
-        }
+        })
     } else {
-        deny(vec![R::DenyValidityTooShort])
+        Ok(deny(vec![R::DenyValidityTooShort]))
     }
 }
 
@@ -180,16 +275,12 @@ fn deny(mut reasons: Vec<R>) -> PolicyDecision {
     }
 }
 
-fn ms_to_ns(ms: u32) -> u64 {
-    u64::from(ms).saturating_mul(1_000_000)
-}
-
 fn age_ms(now: MonoInstant, earlier: MonoInstant) -> Option<u64> {
     // Round the elapsed age UP so the staleness guard is conservative (fail-closed):
     // a source 50.9 ms old must not pass a 50 ms cap (punch-list BUG-5). `None` on a
     // monotonic regression (`now < earlier`) — the caller treats that as stale.
     now.checked_duration_since(earlier)
-        .map(|d| d.as_nanos().div_ceil(1_000_000))
+        .map(MonoDuration::as_millis_ceil)
 }
 
 fn within_speed(v: [i32; 3], max_speed: i64) -> bool {

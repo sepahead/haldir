@@ -135,17 +135,31 @@ class AuthorityModelVerificationTests(unittest.TestCase):
             ):
                 VERIFY.verify(path, self.repo)
 
-    def test_regression_gate_pipeline_requires_retained_validated_policy(self) -> None:
+    def test_regression_gate_pipeline_requires_fallible_retained_policy(self) -> None:
         actor_path = self.repo / "crates/haldir-gate/src/actor.rs"
         actor_source = actor_path.read_text(encoding="utf-8")
         mutations = (
             (
+                "try_decide_validated(&PolicyInput",
                 "decide_validated(&PolicyInput",
-                "decide(&PolicyInput",
             ),
             (
                 "policy: &self.policy",
                 "policy: &untrusted_policy",
+            ),
+            (
+                "Err(error) =>",
+                "Ok(error) =>",
+            ),
+            (
+                "self.latch_fault(error.detail_reason_code())",
+                "self.latch_fault(error.reason_code())",
+            ),
+            (
+                "self.latch_fault(error.detail_reason_code());\n"
+                "                return self.respond(&draft, R::ErrorInternalFault, now);",
+                "self.latch_fault(error.detail_reason_code());\n"
+                "                return self.respond(&draft, R::DenyPolicyDiagnostic, now);",
             ),
         )
         pipeline_start = actor_source.index("fn decide_intent_inner")
@@ -163,6 +177,136 @@ class AuthorityModelVerificationTests(unittest.TestCase):
                     "AUTHORITY_RUST_GATE_PIPELINE_DRIFT",
                 ):
                     VERIFY._verify_gate_pipeline_source(mutated)
+
+    def test_regression_gate_pipeline_rejects_inert_source_decoys(self) -> None:
+        actor_path = self.repo / "crates/haldir-gate/src/actor.rs"
+        actor_source = actor_path.read_text(encoding="utf-8")
+        pipeline_start = actor_source.index("fn decide_intent_inner")
+        contract_start = actor_source.index(
+            "try_decide_validated(&PolicyInput", pipeline_start
+        )
+        without_real_call = (
+            actor_source[:contract_start]
+            + "decide_validated(&PolicyInput"
+            + actor_source[contract_start + len("try_decide_validated(&PolicyInput") :]
+        )
+        opening = without_real_call.index("{", pipeline_start) + 1
+        marker_text = "\n".join(VERIFY.GATE_PIPELINE_ORDERED_MARKERS)
+        decoys = (
+            f"\n/*\n{marker_text}\n*/\n",
+            f'\nlet _authority_pipeline_decoy = r####"\n{marker_text}\n"####;\n',
+            "\nstringify!(let decision = match "
+            "try_decide_validated(&PolicyInput));\n",
+            "\n#[cfg(any())]\n"
+            "{ let decision = match try_decide_validated(&PolicyInput); }\n",
+        )
+
+        for decoy in decoys:
+            with self.subTest(decoy=decoy.splitlines()[1]):
+                mutated = without_real_call[:opening] + decoy + without_real_call[opening:]
+                with self.assertRaisesRegex(
+                    VERIFY.AuthorityModelError,
+                    "AUTHORITY_RUST_GATE_PIPELINE_DRIFT",
+                ):
+                    VERIFY._verify_gate_pipeline_source(mutated)
+
+    def test_regression_gate_pipeline_rejects_dead_or_duplicate_items(self) -> None:
+        actor_path = self.repo / "crates/haldir-gate/src/actor.rs"
+        actor_source = actor_path.read_text(encoding="utf-8")
+        code = VERIFY._rust_code_without_comments_or_literals(actor_source)
+        pipeline_start = code.index(VERIFY.GATE_PIPELINE_FUNCTION_MARKER)
+        body_start, body_end = VERIFY._rust_block_bounds(
+            code, VERIFY.GATE_PIPELINE_FUNCTION_MARKER
+        )
+        contract_start = actor_source.index(
+            "try_decide_validated(&PolicyInput", body_start
+        )
+        mutated_real_call = (
+            actor_source[:contract_start]
+            + "decide_validated(&PolicyInput"
+            + actor_source[contract_start + len("try_decide_validated(&PolicyInput") :]
+        )
+        dead_code_decoy = (
+            "\n        if false {\n"
+            "            let _ = try_decide_validated(&PolicyInput);\n"
+            "        }\n"
+        )
+        duplicate_item = actor_source[pipeline_start : body_end + 1]
+        mutations = (
+            (
+                mutated_real_call[:body_start]
+                + dead_code_decoy
+                + mutated_real_call[body_start:]
+            ),
+            (
+                mutated_real_call[:pipeline_start]
+                + "#[cfg(any())]\n"
+                + duplicate_item
+                + "\n"
+                + mutated_real_call[pipeline_start:]
+            ),
+            (
+                actor_source[:pipeline_start]
+                + "#[cfg(any())]\n"
+                + actor_source[pipeline_start:]
+            ),
+        )
+
+        for mutated in mutations:
+            with self.subTest(mutated_sha256=VERIFY._sha256(mutated.encode("utf-8"))):
+                with self.assertRaisesRegex(
+                    VERIFY.AuthorityModelError,
+                    "AUTHORITY_RUST_GATE_PIPELINE_DRIFT",
+                ):
+                    VERIFY._verify_gate_pipeline_source(mutated)
+
+    def test_regression_gate_pipeline_rejects_item_tokens_inside_macro(self) -> None:
+        actor_path = self.repo / "crates/haldir-gate/src/actor.rs"
+        actor_source = actor_path.read_text(encoding="utf-8")
+        code = VERIFY._rust_code_without_comments_or_literals(actor_source)
+        pipeline_start = code.index(VERIFY.GATE_PIPELINE_FUNCTION_MARKER)
+        _, body_end = VERIFY._rust_block_bounds(
+            code, VERIFY.GATE_PIPELINE_FUNCTION_MARKER
+        )
+        function_item = actor_source[pipeline_start : body_end + 1]
+        renamed = actor_source.replace(
+            "decide_intent_inner", "evaluate_intent_inner"
+        )
+        renamed_start = renamed.index("fn evaluate_intent_inner")
+        attribute_start = renamed.rfind(
+            "#[allow(clippy::too_many_lines)]", 0, renamed_start
+        )
+        self.assertGreaterEqual(attribute_start, 0)
+        inert_item = (
+            "    const _AUTHORITY_PIPELINE_DECOY: &str = stringify!("
+            "{} #[allow(clippy::too_many_lines)] "
+            f"{function_item});\n\n"
+        )
+        mutated = renamed[:attribute_start] + inert_item + renamed[attribute_start:]
+
+        with self.assertRaisesRegex(
+            VERIFY.AuthorityModelError,
+            "AUTHORITY_RUST_GATE_PIPELINE_DRIFT",
+        ):
+            VERIFY._verify_gate_pipeline_source(mutated)
+
+    def test_rust_lexical_filter_preserves_code_offsets_and_lifetimes(self) -> None:
+        source = (
+            "fn checked<'a>(value: &'a str) {\n"
+            "  let brace = '}'; // fn decide_intent_inner { decoy }\n"
+            '  let raw = r##"fn decide_intent_inner { decoy }"##;\n'
+            "  /* outer /* nested */ marker */\n"
+            "  let retained_code = value;\n"
+            "}\n"
+        )
+        filtered = VERIFY._rust_code_without_comments_or_literals(source)
+
+        self.assertEqual(len(filtered), len(source))
+        self.assertEqual(filtered.count("\n"), source.count("\n"))
+        self.assertIn("fn checked<'a>(value: &'a str)", filtered)
+        self.assertIn("let retained_code = value", filtered)
+        self.assertNotIn("decoy", filtered)
+        self.assertNotIn("marker", filtered)
 
 
 if __name__ == "__main__":

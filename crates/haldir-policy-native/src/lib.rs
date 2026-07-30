@@ -1,14 +1,16 @@
 //! `haldir-policy-native` — the smallest trustworthy mission policy for `Hold`
 //! and local-NED velocity, using fixed-point checked arithmetic.
 //!
-//! The raw [`decide()`] function validates its policy and fails closed;
-//! [`decide_validated()`] accepts a retained [`ValidatedNativePolicy`] so an
-//! integrated Gate need not repeat whole-policy work. Both paths are pure: no I/O,
-//! no floats, and no unbounded allocation. An out-of-range value can never wrap
-//! into an accepted boundary value, a monotonic-clock regression denies (never
-//! "fresh"), the prospective geofence over-approximates the reachable set, and the
-//! effective validity is the minimum of the full contributing set minus a
-//! publication safety margin.
+//! The [`try_decide()`] path validates a raw policy and preserves typed internal
+//! failures; [`try_decide_validated()`] accepts a retained
+//! [`ValidatedNativePolicy`] so an integrated Gate need not repeat whole-policy
+//! work. The infallible [`decide()`] compatibility wrapper remains fail-closed but
+//! deliberately loses that error distinction. Evaluation is pure: no I/O, no
+//! floats, and no unbounded allocation. An out-of-range value can never wrap into
+//! an accepted boundary value, a monotonic-clock regression denies (never
+//! "fresh"), duty is accumulated exactly in nanoseconds, the prospective
+//! geofence over-approximates the reachable set, and effective validity is the
+//! minimum of the full contributing set minus a publication safety margin.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -29,8 +31,13 @@ pub mod policy;
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use decide::{decide, decide_validated};
-pub use input::{BoundedActionHistory, PolicyInput, PublishedInterval, ValidatedPolicyInput};
+pub use decide::{
+    PolicyEvaluationError, decide, decide_validated, try_decide, try_decide_validated,
+};
+pub use input::{
+    ActionHistoryError, BoundedActionHistory, MAX_RETAINED_ACTIVE_INTERVALS, PolicyInput,
+    PublishedInterval, ValidatedPolicyInput,
+};
 pub use output::{PolicyDecision, PolicyOutcome};
 pub use policy::{
     GeofenceBoxV1, NATIVE_POLICY_DIGEST_SCHEMA_V1, NativePolicyError, NativePolicySnapshot,
@@ -52,7 +59,8 @@ mod tests {
         ActiveMissionLeaseSnapshot, AdmittedControllerSnapshot, KinematicStateFixedV1,
         StateUncertaintyFixedV1, TrustedStateSnapshotV1, VerifiedSourceStateV1,
     };
-    use haldir_core::time::MonoInstant;
+    use haldir_core::time::{MonoDuration, MonoInstant};
+    use proptest::prelude::*;
 
     fn dig(s: u8) -> DigestV1 {
         DigestV1::compute(DigestDomain::Payload, &[s])
@@ -181,10 +189,18 @@ mod tests {
         }
     }
 
+    fn history(max_intervals: usize) -> BoundedActionHistory {
+        BoundedActionHistory::new(max_intervals, duration_ms(10_000)).unwrap()
+    }
+
+    fn duration_ms(milliseconds: u64) -> MonoDuration {
+        MonoDuration::checked_from_millis(milliseconds).unwrap()
+    }
+
     fn decide_vel(action: &RequestedActionV1, st: &TrustedStateSnapshotV1) -> PolicyDecision {
         let ls = lease();
         let pl = policy();
-        let hist = BoundedActionHistory::new(16);
+        let hist = history(16);
         decide(&PolicyInput {
             now: MonoInstant::from_nanos(1_000_000_000),
             lease: &ls,
@@ -293,8 +309,27 @@ mod tests {
         let lease = lease();
         let mut invalid = policy();
         invalid.uncertainty_margin_mm = -1;
-        let history = BoundedActionHistory::new(16);
+        let history = history(16);
         let action = vel(100, 0, 0, 100);
+
+        let error = try_decide(&PolicyInput {
+            now: MonoInstant::from_nanos(1_000_000_000),
+            lease: &lease,
+            state: &st,
+            action: &action,
+            history: &history,
+            policy: &invalid,
+        })
+        .unwrap_err();
+        assert_eq!(
+            error,
+            PolicyEvaluationError::InvalidPolicy(NativePolicyError::NegativeSafetyDistance)
+        );
+        assert_eq!(error.reason_code(), "POLICY_EVALUATION_INVALID_POLICY");
+        assert_eq!(
+            error.detail_reason_code(),
+            "NATIVE_POLICY_NEGATIVE_SAFETY_DISTANCE"
+        );
 
         let decision = decide(&PolicyInput {
             now: MonoInstant::from_nanos(1_000_000_000),
@@ -315,7 +350,7 @@ mod tests {
         let lease = lease();
         let policy = policy();
         let validated = ValidatedNativePolicy::new(policy.clone()).unwrap();
-        let history = BoundedActionHistory::new(16);
+        let history = history(16);
         let action = vel(100, 0, 0, 100);
         let now = MonoInstant::from_nanos(1_000_000_000);
 
@@ -352,7 +387,7 @@ mod tests {
         let st = state(1_000_000_000, 10, [0, 0, 0], [10, 10, 10]);
         let ls = lease();
         let pl = policy();
-        let hist = BoundedActionHistory::new(16);
+        let hist = history(16);
         let action = RequestedActionV1::Hold {
             requested_validity_ms: NonZeroU32::new(300).unwrap(),
         };
@@ -396,6 +431,24 @@ mod tests {
         })
     }
 
+    fn try_decide_with_history(
+        action: &RequestedActionV1,
+        st: &TrustedStateSnapshotV1,
+        hist: &BoundedActionHistory,
+        now_ns: u64,
+    ) -> Result<PolicyDecision, PolicyEvaluationError> {
+        let ls = lease();
+        let validated = ValidatedNativePolicy::new(policy()).unwrap();
+        try_decide_validated(&PolicyInput {
+            now: MonoInstant::from_nanos(now_ns),
+            lease: &ls,
+            state: st,
+            action,
+            history: hist,
+            policy: &validated,
+        })
+    }
+
     #[test]
     fn slew_bound_tracks_actual_elapsed_time() {
         // H-P01: the admissible velocity change scales with the ACTUAL elapsed time
@@ -403,13 +456,13 @@ mod tests {
         // 100 mm/s command, then request a change of 600 mm/s at two elapsed times.
         // slew_limit = 100_000 mm/s^2, nominal cap = 20 ms.
         let t_prev = 1_000_000_000u64;
-        let mut hist = BoundedActionHistory::new(16);
+        let mut hist = history(16);
         hist.record_velocity(
             [100, 0, 0],
             MonoInstant::from_nanos(t_prev),
             MonoInstant::from_nanos(t_prev + 300_000_000),
-            MonoInstant::from_nanos(t_prev.saturating_sub(10_000_000_000)),
-        );
+        )
+        .unwrap();
         // 5 ms later: bound = 100_000 * 5 / 1000 = 500 mm/s < 600 -> DENY_SLEW.
         let now5 = t_prev + 5_000_000;
         let st5 = state(now5, 5, [0, 0, 0], [10, 10, 10]);
@@ -425,26 +478,30 @@ mod tests {
     #[test]
     fn duty_union_does_not_double_count_overlap() {
         // H-P02/H-P03: overlapping published horizons are unioned, not summed.
-        let mut hist = BoundedActionHistory::new(16);
-        let ws = MonoInstant::from_nanos(0);
+        let mut hist = history(16);
         hist.record_velocity(
             [100, 0, 0],
             MonoInstant::from_nanos(1_000_000_000),
             MonoInstant::from_nanos(2_000_000_000),
-            ws,
-        );
+        )
+        .unwrap();
         hist.record_velocity(
             [100, 0, 0],
             MonoInstant::from_nanos(1_100_000_000),
             MonoInstant::from_nanos(2_100_000_000),
-            ws,
-        );
+        )
+        .unwrap();
         // Two overlapping 1000 ms intervals collapse to one [1.0s, 2.1s] = 1100 ms;
         // a naive sum would report 2000 ms.
-        assert_eq!(hist.active_intervals.len(), 1);
+        assert_eq!(hist.active_intervals().len(), 1);
         assert_eq!(
-            hist.active_ms_in_window(ws, MonoInstant::from_nanos(3_000_000_000)),
-            1100
+            hist.active_duration_in_window(
+                MonoInstant::from_nanos(3_000_000_000),
+                MonoDuration::checked_from_millis(10_000).unwrap(),
+            )
+            .unwrap()
+            .as_nanos(),
+            1_100_000_000
         );
     }
 
@@ -453,17 +510,22 @@ mod tests {
         // H-B04: at capacity, the ring must not silently drop an active interval
         // (that would UNDER-count duty). It merges the closest pair instead, which
         // over-approximates (counts gaps as active) and so can only deny more.
-        let mut hist = BoundedActionHistory::new(2);
-        let ws = MonoInstant::from_nanos(0);
+        let mut hist = history(2);
         for k in 0..4u64 {
             let s = MonoInstant::from_nanos(k * 1_000_000_000 + 1_000_000_000);
             let e = MonoInstant::from_nanos(k * 1_000_000_000 + 1_100_000_000);
-            hist.record_velocity([100, 0, 0], s, e, ws);
+            hist.record_velocity([100, 0, 0], s, e).unwrap();
         }
-        assert!(hist.active_intervals.len() <= 2);
-        let counted = hist.active_ms_in_window(ws, MonoInstant::from_nanos(6_000_000_000));
-        // True active = 4 * 100 ms = 400 ms; merging can only raise the count.
-        assert!(counted >= 400, "under-counted duty: {counted}");
+        assert!(hist.active_intervals().len() <= 2);
+        let counted = hist
+            .active_duration_in_window(
+                MonoInstant::from_nanos(6_000_000_000),
+                MonoDuration::checked_from_millis(10_000).unwrap(),
+            )
+            .unwrap()
+            .as_nanos();
+        // True active = 4 * 100 ms; merging can only raise the count.
+        assert!(counted >= 400_000_000, "under-counted duty: {counted} ns");
     }
 
     #[test]
@@ -472,10 +534,10 @@ mod tests {
         // a velocity command shortly after must ramp up from rest within the slew
         // limit, never unconstrained (previously the reference was cleared to None,
         // silently skipping the slew check).
-        let mut hist = BoundedActionHistory::new(16);
+        let mut hist = history(16);
         let t = 1_000_000_000u64;
-        hist.record_hold(MonoInstant::from_nanos(t));
-        assert_eq!(hist.last_published_velocity_mm_s, Some([0, 0, 0]));
+        hist.record_hold(MonoInstant::from_nanos(t)).unwrap();
+        assert_eq!(hist.last_published_velocity_mm_s(), Some([0, 0, 0]));
         // 3 ms later: bound = 100_000 * 3 / 1000 = 300 mm/s < 500 -> DENY_SLEW.
         let now = t + 3_000_000;
         let st = state(now, 5, [0, 0, 0], [10, 10, 10]);
@@ -487,16 +549,501 @@ mod tests {
     fn clear_slew_reference_drops_cross_lease_reference() {
         // A lease boundary must not carry a prior mission's velocity forward as a
         // slew reference (the gate calls this on accept/revoke).
-        let mut hist = BoundedActionHistory::new(16);
+        let mut hist = history(16);
         hist.record_velocity(
             [500, 0, 0],
             MonoInstant::from_nanos(1),
             MonoInstant::from_nanos(2),
-            MonoInstant::from_nanos(0),
-        );
-        assert_eq!(hist.last_published_velocity_mm_s, Some([500, 0, 0]));
+        )
+        .unwrap();
+        assert_eq!(hist.last_published_velocity_mm_s(), Some([500, 0, 0]));
         hist.clear_slew_reference();
-        assert_eq!(hist.last_published_velocity_mm_s, None);
-        assert_eq!(hist.last_published_at, None);
+        assert_eq!(hist.last_published_velocity_mm_s(), None);
+        assert_eq!(hist.last_published_at(), None);
+    }
+
+    #[test]
+    fn duty_exact_cap_allows_and_one_nanosecond_over_denies() {
+        let now = 7_000_000_000;
+        let state = state(now, 10, [0, 0, 0], [10, 10, 10]);
+        let action = vel(100, 0, 0, 100);
+
+        let mut exactly_at_cap = history(16);
+        exactly_at_cap
+            .record_velocity(
+                [100, 0, 0],
+                MonoInstant::from_nanos(0),
+                MonoInstant::from_nanos(5_900_000_000),
+            )
+            .unwrap();
+        let exact = try_decide_with_history(&action, &state, &exactly_at_cap, now).unwrap();
+        assert!(exact.is_allow(), "{:?}", exact.reasons);
+
+        let mut one_nanosecond_over = history(16);
+        one_nanosecond_over
+            .record_velocity(
+                [100, 0, 0],
+                MonoInstant::from_nanos(0),
+                MonoInstant::from_nanos(5_900_000_001),
+            )
+            .unwrap();
+        let over = try_decide_with_history(&action, &state, &one_nanosecond_over, now).unwrap();
+        assert!(over.has_reason(R::DenyDutyLimit), "{:?}", over.reasons);
+    }
+
+    #[test]
+    fn disjoint_fractional_intervals_are_summed_before_duty_comparison() {
+        let now = 7_000_000_000;
+        let state = state(now, 10, [0, 0, 0], [10, 10, 10]);
+        let action = vel(100, 0, 0, 100);
+        let mut hist = history(16);
+        hist.record_velocity(
+            [100, 0, 0],
+            MonoInstant::from_nanos(0),
+            MonoInstant::from_nanos(2_900_000_001),
+        )
+        .unwrap();
+        hist.record_velocity(
+            [100, 0, 0],
+            MonoInstant::from_nanos(3_000_000_000),
+            MonoInstant::from_nanos(6_000_000_000),
+        )
+        .unwrap();
+
+        assert_eq!(
+            hist.active_duration_in_window(MonoInstant::from_nanos(now), duration_ms(10_000),)
+                .unwrap()
+                .as_nanos(),
+            5_900_000_001
+        );
+        let decision = try_decide_with_history(&action, &state, &hist, now).unwrap();
+        assert!(
+            decision.has_reason(R::DenyDutyLimit),
+            "{:?}",
+            decision.reasons
+        );
+    }
+
+    #[test]
+    fn half_open_window_clips_both_boundaries_exactly() {
+        let mut hist = history(16);
+        hist.record_velocity(
+            [100, 0, 0],
+            MonoInstant::from_nanos(5_000_000_000),
+            MonoInstant::from_nanos(12_000_000_000),
+        )
+        .unwrap();
+        hist.record_velocity(
+            [100, 0, 0],
+            MonoInstant::from_nanos(18_000_000_000),
+            MonoInstant::from_nanos(25_000_000_000),
+        )
+        .unwrap();
+
+        // [5s, 12s) contributes [10s, 12s); [18s, 25s) contributes
+        // [18s, 20s) to the owned [10s, 20s) window.
+        assert_eq!(
+            hist.active_duration_in_window(
+                MonoInstant::from_nanos(20_000_000_000),
+                duration_ms(10_000),
+            )
+            .unwrap()
+            .as_nanos(),
+            4_000_000_000
+        );
+    }
+
+    #[test]
+    fn history_construction_and_policy_window_are_checked() {
+        assert_eq!(
+            BoundedActionHistory::new(0, duration_ms(10_000)).unwrap_err(),
+            ActionHistoryError::InvalidCapacity
+        );
+        assert_eq!(
+            BoundedActionHistory::new(MAX_RETAINED_ACTIVE_INTERVALS + 1, duration_ms(10_000),)
+                .unwrap_err(),
+            ActionHistoryError::InvalidCapacity
+        );
+        assert_eq!(
+            BoundedActionHistory::new(1, MonoDuration::from_nanos(0)).unwrap_err(),
+            ActionHistoryError::InvalidRetentionWindow
+        );
+        assert_eq!(
+            history(1)
+                .active_duration_in_window(MonoInstant::from_nanos(0), duration_ms(9_999))
+                .unwrap_err(),
+            ActionHistoryError::RetentionWindowMismatch
+        );
+    }
+
+    #[test]
+    fn recording_failures_are_transactional_and_high_water_survives_slew_reset() {
+        let mut hist = history(16);
+        hist.record_hold(MonoInstant::from_nanos(100)).unwrap();
+        hist.clear_slew_reference();
+        assert_eq!(hist.last_recorded_at(), Some(MonoInstant::from_nanos(100)));
+
+        let before_regression = hist.clone();
+        assert_eq!(
+            hist.record_velocity(
+                [100, 0, 0],
+                MonoInstant::from_nanos(99),
+                MonoInstant::from_nanos(200),
+            ),
+            Err(ActionHistoryError::FutureRecord)
+        );
+        assert_eq!(hist, before_regression);
+
+        let before_invalid = hist.clone();
+        assert_eq!(
+            hist.record_velocity(
+                [100, 0, 0],
+                MonoInstant::from_nanos(101),
+                MonoInstant::from_nanos(101),
+            ),
+            Err(ActionHistoryError::InvalidInterval)
+        );
+        assert_eq!(hist, before_invalid);
+        assert_eq!(
+            hist.record_velocity(
+                [100, 0, 0],
+                MonoInstant::from_nanos(102),
+                MonoInstant::from_nanos(101),
+            ),
+            Err(ActionHistoryError::InvalidInterval)
+        );
+        assert_eq!(hist, before_invalid);
+
+        let mut future_end = history(1);
+        future_end
+            .record_velocity(
+                [100, 0, 0],
+                MonoInstant::from_nanos(200),
+                MonoInstant::from_nanos(300),
+            )
+            .unwrap();
+        assert_eq!(
+            future_end
+                .active_duration_in_window(MonoInstant::from_nanos(250), duration_ms(10_000),)
+                .unwrap()
+                .as_nanos(),
+            50
+        );
+    }
+
+    #[test]
+    fn complete_history_validation_rejects_each_structural_contradiction() {
+        let now = MonoInstant::from_nanos(10);
+
+        let mut inconsistent_slew = history(4);
+        inconsistent_slew.last_published_velocity_mm_s = Some([0; 3]);
+        assert_eq!(
+            inconsistent_slew.validate_at(now),
+            Err(ActionHistoryError::InconsistentSlewReference)
+        );
+
+        let mut future_slew = history(4);
+        future_slew.last_recorded_at = Some(now);
+        future_slew.last_published_velocity_mm_s = Some([0; 3]);
+        future_slew.last_published_at = Some(MonoInstant::from_nanos(11));
+        assert_eq!(
+            future_slew.validate_at(now),
+            Err(ActionHistoryError::FutureSlewReference)
+        );
+
+        let mut future_interval = history(4);
+        future_interval.last_recorded_at = Some(now);
+        future_interval.active_intervals = vec![
+            PublishedInterval::new(MonoInstant::from_nanos(11), MonoInstant::from_nanos(12))
+                .unwrap(),
+        ];
+        assert_eq!(
+            future_interval.validate_at(now),
+            Err(ActionHistoryError::FutureInterval)
+        );
+
+        let mut invalid_interval = history(4);
+        invalid_interval.last_recorded_at = Some(now);
+        invalid_interval.active_intervals = vec![PublishedInterval {
+            start: now,
+            end: now,
+        }];
+        assert_eq!(
+            invalid_interval.validate_at(now),
+            Err(ActionHistoryError::InvalidInterval)
+        );
+
+        let noncanonical_cases = [
+            vec![
+                PublishedInterval::new(MonoInstant::from_nanos(1), MonoInstant::from_nanos(3))
+                    .unwrap(),
+                PublishedInterval::new(MonoInstant::from_nanos(3), MonoInstant::from_nanos(5))
+                    .unwrap(),
+            ],
+            vec![
+                PublishedInterval::new(MonoInstant::from_nanos(1), MonoInstant::from_nanos(4))
+                    .unwrap(),
+                PublishedInterval::new(MonoInstant::from_nanos(3), MonoInstant::from_nanos(5))
+                    .unwrap(),
+            ],
+            vec![
+                PublishedInterval::new(MonoInstant::from_nanos(4), MonoInstant::from_nanos(5))
+                    .unwrap(),
+                PublishedInterval::new(MonoInstant::from_nanos(1), MonoInstant::from_nanos(2))
+                    .unwrap(),
+            ],
+        ];
+        for intervals in noncanonical_cases {
+            let mut malformed = history(4);
+            malformed.last_recorded_at = Some(MonoInstant::from_nanos(5));
+            malformed.active_intervals = intervals;
+            assert_eq!(
+                malformed.validate_at(now),
+                Err(ActionHistoryError::NonCanonicalHistory)
+            );
+        }
+
+        let mut missing_high_water = history(4);
+        missing_high_water.active_intervals = vec![
+            PublishedInterval::new(MonoInstant::from_nanos(1), MonoInstant::from_nanos(2)).unwrap(),
+        ];
+        assert_eq!(
+            missing_high_water.validate_at(now),
+            Err(ActionHistoryError::InconsistentRecordHighWater)
+        );
+
+        let mut lagging_high_water = history(4);
+        lagging_high_water.last_recorded_at = Some(MonoInstant::from_nanos(1));
+        lagging_high_water.active_intervals = vec![
+            PublishedInterval::new(MonoInstant::from_nanos(2), MonoInstant::from_nanos(3)).unwrap(),
+        ];
+        assert_eq!(
+            lagging_high_water.validate_at(now),
+            Err(ActionHistoryError::InconsistentRecordHighWater)
+        );
+
+        let mut over_capacity = history(1);
+        over_capacity.last_recorded_at = Some(MonoInstant::from_nanos(4));
+        over_capacity.active_intervals = vec![
+            PublishedInterval::new(MonoInstant::from_nanos(1), MonoInstant::from_nanos(2)).unwrap(),
+            PublishedInterval::new(MonoInstant::from_nanos(3), MonoInstant::from_nanos(4)).unwrap(),
+        ];
+        assert_eq!(
+            over_capacity.validate_at(now),
+            Err(ActionHistoryError::CapacityExceeded)
+        );
+    }
+
+    #[test]
+    fn hold_bypasses_corrupt_motion_history_but_velocity_returns_typed_error() {
+        let now = 1_000_000_000;
+        let state = state(now, 10, [0, 0, 0], [10, 10, 10]);
+        let lease = lease();
+        let validated = ValidatedNativePolicy::new(policy()).unwrap();
+        let mut malformed = history(16);
+        malformed.last_recorded_at = Some(MonoInstant::from_nanos(now + 1));
+        let hold = RequestedActionV1::Hold {
+            requested_validity_ms: NonZeroU32::new(100).unwrap(),
+        };
+
+        let hold_decision = try_decide_validated(&PolicyInput {
+            now: MonoInstant::from_nanos(now),
+            lease: &lease,
+            state: &state,
+            action: &hold,
+            history: &malformed,
+            policy: &validated,
+        })
+        .unwrap();
+        assert!(hold_decision.is_allow(), "{:?}", hold_decision.reasons);
+
+        let mismatched = BoundedActionHistory::new(16, duration_ms(9_999)).unwrap();
+        let hold_with_mismatched_window = try_decide_validated(&PolicyInput {
+            now: MonoInstant::from_nanos(now),
+            lease: &lease,
+            state: &state,
+            action: &hold,
+            history: &mismatched,
+            policy: &validated,
+        })
+        .unwrap();
+        assert!(
+            hold_with_mismatched_window.is_allow(),
+            "{:?}",
+            hold_with_mismatched_window.reasons
+        );
+
+        let velocity = vel(100, 0, 0, 100);
+        let error = try_decide_validated(&PolicyInput {
+            now: MonoInstant::from_nanos(now),
+            lease: &lease,
+            state: &state,
+            action: &velocity,
+            history: &malformed,
+            policy: &validated,
+        })
+        .unwrap_err();
+        assert_eq!(
+            error,
+            PolicyEvaluationError::ActionHistory(ActionHistoryError::FutureRecord)
+        );
+        assert_eq!(error.detail_reason_code(), "ACTION_HISTORY_FUTURE_RECORD");
+
+        let lossy = decide_validated(&PolicyInput {
+            now: MonoInstant::from_nanos(now),
+            lease: &lease,
+            state: &state,
+            action: &velocity,
+            history: &malformed,
+            policy: &validated,
+        });
+        assert!(lossy.has_reason(R::DenyPolicyDiagnostic));
+    }
+
+    #[test]
+    fn public_history_errors_have_stable_codes_and_standard_sources() {
+        fn assert_standard_error<T: std::error::Error + Send + Sync + 'static>() {}
+        assert_standard_error::<ActionHistoryError>();
+        assert_standard_error::<PolicyEvaluationError>();
+
+        let cases = [
+            (
+                ActionHistoryError::InvalidCapacity,
+                "ACTION_HISTORY_INVALID_CAPACITY",
+            ),
+            (
+                ActionHistoryError::CapacityExceeded,
+                "ACTION_HISTORY_CAPACITY_EXCEEDED",
+            ),
+            (
+                ActionHistoryError::InvalidRetentionWindow,
+                "ACTION_HISTORY_INVALID_RETENTION_WINDOW",
+            ),
+            (
+                ActionHistoryError::RetentionWindowMismatch,
+                "ACTION_HISTORY_RETENTION_WINDOW_MISMATCH",
+            ),
+            (
+                ActionHistoryError::InvalidInterval,
+                "ACTION_HISTORY_INVALID_INTERVAL",
+            ),
+            (
+                ActionHistoryError::FutureInterval,
+                "ACTION_HISTORY_FUTURE_INTERVAL",
+            ),
+            (
+                ActionHistoryError::NonCanonicalHistory,
+                "ACTION_HISTORY_NON_CANONICAL_HISTORY",
+            ),
+            (
+                ActionHistoryError::InconsistentSlewReference,
+                "ACTION_HISTORY_INCONSISTENT_SLEW_REFERENCE",
+            ),
+            (
+                ActionHistoryError::FutureSlewReference,
+                "ACTION_HISTORY_FUTURE_SLEW_REFERENCE",
+            ),
+            (
+                ActionHistoryError::FutureRecord,
+                "ACTION_HISTORY_FUTURE_RECORD",
+            ),
+            (
+                ActionHistoryError::InconsistentRecordHighWater,
+                "ACTION_HISTORY_INCONSISTENT_RECORD_HIGH_WATER",
+            ),
+            (
+                ActionHistoryError::ArithmeticOverflow,
+                "ACTION_HISTORY_ARITHMETIC_OVERFLOW",
+            ),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(error.reason_code(), expected);
+            assert_eq!(error.to_string(), expected);
+        }
+
+        let source = ActionHistoryError::RetentionWindowMismatch;
+        let error = PolicyEvaluationError::ActionHistory(source);
+        assert_eq!(
+            source.to_string(),
+            "ACTION_HISTORY_RETENTION_WINDOW_MISMATCH"
+        );
+        assert_eq!(error.to_string(), "POLICY_EVALUATION_ACTION_HISTORY");
+        assert_eq!(
+            std::error::Error::source(&error).map(ToString::to_string),
+            Some(source.to_string())
+        );
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(512))]
+
+        #[test]
+        fn exact_duty_reason_matches_widened_reference(
+            historical_ns in 0_u64..=6_000_000_000,
+            candidate_ms in 100_u32..=500,
+        ) {
+            let now = 7_000_000_000;
+            let state = state(now, 10, [0, 0, 0], [10, 10, 10]);
+            let action = vel(100, 0, 0, candidate_ms);
+            let mut hist = history(16);
+            if historical_ns != 0 {
+                hist.record_velocity(
+                    [100, 0, 0],
+                    MonoInstant::from_nanos(0),
+                    MonoInstant::from_nanos(historical_ns),
+                )
+                .unwrap();
+            }
+
+            let decision = try_decide_with_history(&action, &state, &hist, now).unwrap();
+            let expected_over = u128::from(historical_ns)
+                + u128::from(candidate_ms) * 1_000_000
+                > 6_000_000_000;
+            prop_assert_eq!(decision.has_reason(R::DenyDutyLimit), expected_over);
+        }
+
+        #[test]
+        fn bounded_compression_and_eviction_never_undercount_reference_union(
+            pieces in prop::collection::vec(
+                (1_u64..=2_000_000_000, 1_u64..=2_000_000_000),
+                3..=12,
+            ),
+        ) {
+            let mut hist = history(2);
+            let mut cursor = 0_u64;
+            let mut source_intervals = Vec::with_capacity(pieces.len());
+            for (gap, length) in pieces {
+                cursor = cursor.checked_add(gap).unwrap();
+                let start = cursor;
+                cursor = cursor.checked_add(length).unwrap();
+                let end = cursor;
+                source_intervals.push((start, end));
+                hist.record_velocity(
+                    [100, 0, 0],
+                    MonoInstant::from_nanos(start),
+                    MonoInstant::from_nanos(end),
+                )
+                .unwrap();
+            }
+            let now = cursor.checked_add(1).unwrap();
+            let window_start = now.saturating_sub(duration_ms(10_000).as_nanos());
+            let exact_ns = source_intervals
+                .iter()
+                .map(|&(start, end)| {
+                    end.min(now).saturating_sub(start.max(window_start))
+                })
+                .sum::<u64>();
+            let retained_ns = hist
+                .active_duration_in_window(
+                    MonoInstant::from_nanos(now),
+                    duration_ms(10_000),
+                )
+                .unwrap()
+                .as_nanos();
+            prop_assert!(
+                retained_ns >= exact_ns,
+                "retained={retained_ns}, reference={exact_ns}"
+            );
+        }
     }
 }
