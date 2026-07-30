@@ -1,0 +1,116 @@
+{
+  "authority": {
+    "cryptographic_proof": false,
+    "durable_external_state_proof": false,
+    "release_authority": false,
+    "transport_observation": "GITHUB_API_OVER_TLS"
+  },
+  "capture": {
+    "captured_at_utc": "2026-07-30T18:42:09.583087Z",
+    "commands": {
+      "actions_permissions": "gh api --method GET repos/sepahead/haldir/actions/permissions",
+      "dependabot_security_updates": "gh api --method GET repos/sepahead/haldir/automated-security-fixes",
+      "fork_pull_request_contributor_approval": "gh api --method GET repos/sepahead/haldir/actions/permissions/fork-pr-contributor-approval",
+      "main_ref_after": "gh api --method GET repos/sepahead/haldir/git/ref/heads/main",
+      "main_ref_before": "gh api --method GET repos/sepahead/haldir/git/ref/heads/main",
+      "private_vulnerability_reporting": "gh api --method GET repos/sepahead/haldir/private-vulnerability-reporting",
+      "repository": "gh api --method GET repos/sepahead/haldir",
+      "selected_actions": "gh api --method GET repos/sepahead/haldir/actions/permissions/selected-actions",
+      "vulnerability_alerts": "gh api --method GET --include repos/sepahead/haldir/vulnerability-alerts",
+      "workflow_permissions": "gh api --method GET repos/sepahead/haldir/actions/permissions/workflow"
+    },
+    "result": "PASS",
+    "transport": "GITHUB_API_OVER_TLS"
+  },
+  "history_scope": {
+    "activation_commit_self_observed": false,
+    "durable_historical_transition_proof": false,
+    "observation_scope": "QUALIFICATION_COMMIT_ONLY",
+    "settings_transition_time_claimed": false
+  },
+  "observed_commit": "9dcbcc3ac9ec1628027f26e71fb0be5225fa24e7",
+  "protocol": "HALDIR_FR_0017_HOSTED_SETTINGS_CAPTURE_V1",
+  "ref_after": {
+    "node_id": "REF_kwDOTQ6aIK9yZWZzL2hlYWRzL21haW4",
+    "object": {
+      "sha": "9dcbcc3ac9ec1628027f26e71fb0be5225fa24e7",
+      "type": "commit",
+      "url": "https://api.github.com/repos/sepahead/haldir/git/commits/9dcbcc3ac9ec1628027f26e71fb0be5225fa24e7"
+    },
+    "ref": "refs/heads/main",
+    "url": "https://api.github.com/repos/sepahead/haldir/git/refs/heads/main"
+  },
+  "ref_before": {
+    "node_id": "REF_kwDOTQ6aIK9yZWZzL2hlYWRzL21haW4",
+    "object": {
+      "sha": "9dcbcc3ac9ec1628027f26e71fb0be5225fa24e7",
+      "type": "commit",
+      "url": "https://api.github.com/repos/sepahead/haldir/git/commits/9dcbcc3ac9ec1628027f26e71fb0be5225fa24e7"
+    },
+    "ref": "refs/heads/main",
+    "url": "https://api.github.com/repos/sepahead/haldir/git/refs/heads/main"
+  },
+  "repository": {
+    "default_branch": "main",
+    "fork": false,
+    "full_name": "sepahead/haldir",
+    "has_parent": false,
+    "has_source": false,
+    "id": 1292802592,
+    "name": "haldir",
+    "owner": {
+      "id": 10104569,
+      "login": "sepahead",
+      "type": "User"
+    }
+  },
+  "schema_version": "1.0.0",
+  "settings": {
+    "actions_permissions": {
+      "allowed_actions": "selected",
+      "enabled": true,
+      "selected_actions_url": "https://api.github.com/repositories/1292802592/actions/permissions/selected-actions",
+      "sha_pinning_required": true
+    },
+    "dependabot_security_updates": {
+      "enabled": true,
+      "paused": false
+    },
+    "fork_pull_request_contributor_approval": {
+      "approval_policy": "first_time_contributors"
+    },
+    "private_vulnerability_reporting": {
+      "enabled": true
+    },
+    "repository_security_and_analysis": {
+      "dependabot_security_updates": {
+        "status": "enabled"
+      },
+      "secret_scanning": {
+        "status": "enabled"
+      },
+      "secret_scanning_non_provider_patterns": {
+        "status": "disabled"
+      },
+      "secret_scanning_push_protection": {
+        "status": "enabled"
+      },
+      "secret_scanning_validity_checks": {
+        "status": "disabled"
+      }
+    },
+    "selected_actions": {
+      "github_owned_allowed": true,
+      "patterns_allowed": [],
+      "verified_allowed": false
+    },
+    "vulnerability_alerts": {
+      "enabled": true,
+      "http_status": 204
+    },
+    "workflow_permissions": {
+      "can_approve_pull_request_reviews": false,
+      "default_workflow_permissions": "read"
+    }
+  }
+}
