@@ -779,6 +779,69 @@ mod e2e {
     }
 
     #[test]
+    fn active_actor_rejects_replacement_before_clock_term_or_challenge_mutation() {
+        let controller_signer = SigningKey::from_seed([1; 32]);
+        let mission_signer = SigningKey::from_seed([2; 32]);
+        let gate_signer = SigningKey::from_seed([3; 32]);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let later = now.checked_add_ms(1).unwrap();
+        let (cfg, record, admission_digest) = gate_config(
+            acl_publication(),
+            &controller_signer,
+            &mission_signer,
+            gate_signer,
+        );
+        let mut actor = VehicleActor::new(cfg).unwrap();
+
+        let first_nonce = ChallengeNonce::new([7; 32]);
+        assert!(actor.register_challenge(first_nonce, MonoInstant::from_nanos(u64::MAX), now));
+        let first_envelope = sign_message(
+            &build_lease(admission_digest, &record),
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &mission_signer,
+        );
+        actor.accept_lease_env(&first_envelope, now).unwrap();
+
+        let second_nonce = ChallengeNonce::new([8; 32]);
+        assert!(actor.register_challenge(second_nonce, MonoInstant::from_nanos(u64::MAX), now));
+        let mut second_lease = build_lease(admission_digest, &record);
+        second_lease.lease_id = MissionLeaseId::new([3; 16]);
+        second_lease.lease_term = NonZeroU64::new(11).unwrap();
+        second_lease.challenge_nonce = second_nonce;
+        let second_envelope = sign_message(
+            &second_lease,
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &mission_signer,
+        );
+
+        let validator_calls = AtomicUsize::new(0);
+        let rejected = actor.accept_lease_env_with_validator(&second_envelope, later, |_| {
+            validator_calls.fetch_add(1, Ordering::SeqCst);
+            Ok::<(), ()>(())
+        });
+
+        assert_eq!(
+            rejected,
+            Err(crate::actor::LeaseEnvelopeValidationError::Gate(
+                GateError::NotSessionBound
+            ))
+        );
+        assert_eq!(validator_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(actor.process_state(), GateProcessStateV1::Active);
+
+        actor.revoke_active_lease();
+        assert_eq!(actor.process_state(), GateProcessStateV1::SessionBound);
+        actor
+            .accept_lease_env(&second_envelope, now)
+            .expect("rejected replacement must not advance time, term, or challenge state");
+        assert_eq!(actor.process_state(), GateProcessStateV1::Active);
+    }
+
+    #[test]
     fn gate_config_rejects_unknown_gate_signer_kid() {
         let mut cfg = valid_config(acl_publication());
         cfg.trust = TrustStore::new();

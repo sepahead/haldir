@@ -62,6 +62,7 @@ fn checked_publication_horizon(
 
 /// A gate-level error for authority-establishment operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum GateError {
     /// A crypto/verification failure.
     Crypto(&'static str),
@@ -73,6 +74,8 @@ pub enum GateError {
     Faulted,
     /// A prepared/called publication must be resolved before authority changes.
     PublicationPending,
+    /// Lease acceptance is only valid from the session-bound state.
+    NotSessionBound,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1217,8 +1220,9 @@ impl VehicleActor {
     /// Accept a signed mission lease and become ACTIVE.
     ///
     /// # Errors
-    /// Returns a [`GateError`] if a publication slot is unresolved or signature,
-    /// admission, or acceptance fails.
+    /// Returns a [`GateError`] if the lifecycle is not session-bound, a
+    /// publication slot is unresolved, or signature, admission, or acceptance
+    /// validation fails.
     pub fn accept_lease_env(&mut self, env: &[u8], now: MonoInstant) -> Result<(), GateError> {
         match self
             .accept_lease_env_with_validator(env, now, |_| Ok::<(), core::convert::Infallible>(()))
@@ -1243,6 +1247,9 @@ impl VehicleActor {
         }
         if self.publication_state != PublicationState::Idle {
             return Err(GateError::PublicationPending.into());
+        }
+        if self.process.state() != GateProcessStateV1::SessionBound {
+            return Err(GateError::NotSessionBound.into());
         }
         if !self.mono_ok(now) {
             return Err(GateError::Faulted.into());
