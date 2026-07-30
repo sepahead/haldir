@@ -96,11 +96,13 @@ plugin-free client feature.
 
 ## Automated update proposals
 
-`.github/dependabot.yml` asks Dependabot to propose weekly Cargo lockfile and
-GitHub Actions updates. It is discovery automation only: a bot pull request has
-no merge, release, deployment, or audit authority. There is no auto-approval or
-auto-merge path, no Dependabot registry credential, and no reason to expose an
-Actions secret to dependency-update code.
+`.github/dependabot.yml` keeps Dependabot security-update pull requests enabled
+while disabling routine Cargo version-update pull requests. GitHub Actions
+version updates are grouped into at most one monthly proposal after a 14-day
+cooldown. This is discovery automation only: a bot pull request has no merge,
+release, deployment, or audit authority. There is no auto-approval or auto-merge
+path, no Dependabot registry credential, and no reason to expose an Actions
+secret to dependency-update code.
 
 GitHub runs the update-generation jobs on Actions runners even when repository
 or organization Actions policy would otherwise disable them. That
@@ -121,14 +123,12 @@ NCP, Zenoh, rustix, Rust toolchain, downloaded-tool, RustSec, TLA+/Java, GitHub
 CLI, container-image, and policy pins remain coordinated manual changes.
 
 `Cargo.lock` legitimately contains parallel incompatible `getrandom` 0.2, 0.3,
-and 0.4 lines. The hosted Cargo updater reproducibly tried to replace the 0.2
-line with the already-present 0.4 line, produced no lockfile change, and failed
-the whole update job. Routine `getrandom` proposals therefore exclude only
-breaking updates (for Cargo, each pre-1.0 minor line is incompatible), while
-compatible patch updates remain eligible. Incompatible-line migrations require
-a reviewed manifest change or an update to the parent crate that owns the
-requirement. This version-update filter does not suppress Dependabot security
-updates.
+and 0.4 lines. A hosted Cargo updater reproducibly tried to replace the 0.2 line
+with the already-present 0.4 line, produced no lockfile change, and failed the
+whole update job. Incompatible-line migrations require a reviewed manifest
+change or an update to the parent crate that owns the requirement. Routine
+Cargo version proposals stay disabled; maintainers can still perform deliberate
+signed lockfile updates, and Dependabot security updates remain enabled.
 
 Actions proposals must retain a full 40-hex commit SHA and its same-line release
 comment. Reviewers must authenticate the upstream repository, tag, and commit,
@@ -141,11 +141,11 @@ to relax that verifier. Pull-request workflows must keep read-only permissions
 and `persist-credentials: false`; OIDC attesters remain limited to pushes on
 `main`, and dependency code must never be moved to `pull_request_target`.
 
-Dependabot alerts do not cover vulnerable Actions pinned by SHA. Weekly update
-proposals and independent upstream-advisory monitoring are therefore
-complementary; neither proves that a proposed commit is safe. The two-open-PR
-limit applies only to version updates, so maintainers should promptly triage
-stale proposals without delaying security-update pull requests.
+Dependabot alerts do not cover vulnerable Actions pinned by SHA. A grouped,
+monthly update proposal and independent upstream-advisory monitoring are
+therefore complementary; neither proves that a proposed commit is safe. The
+one-open-PR limit applies only to version updates, so it does not delay
+security-update pull requests.
 
 ## Deliberately absent
 
