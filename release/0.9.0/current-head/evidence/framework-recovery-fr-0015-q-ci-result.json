@@ -1,0 +1,154 @@
+{
+  "authority": {
+    "deployment_authority": false,
+    "provenance_only": true,
+    "publication_authority": false,
+    "release_authority": false,
+    "tag_authority": false
+  },
+  "execution": {
+    "command": "/usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh",
+    "job": "supply-chain",
+    "result": "PASS",
+    "run_attempt": 2,
+    "run_id": 30519979192,
+    "run_number": 166,
+    "workflow": "ci",
+    "workflow_ref": "sepahead/haldir/.github/workflows/ci.yml@refs/heads/main"
+  },
+  "materials": [
+    {
+      "bytes": 78860,
+      "git_mode": "100644",
+      "git_object_id": "8cfa383996dbfbcfc0706b2f2e8f692f91ed294c",
+      "git_object_type": "blob",
+      "path": "Cargo.lock",
+      "sha256": "8767fc69ea7b90b374de6ca77e9d22dbfac0e3b1db236ea03d24f05470d2831f"
+    },
+    {
+      "bytes": 18458,
+      "git_mode": "100644",
+      "git_object_id": "055d5cc77c5af4269f29a942f45c975a510ba4a4",
+      "git_object_type": "blob",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "1acbadbb45c122e57dc7a6f834bbae759e0c65570baaa0b9e306a0c44b88f847"
+    },
+    {
+      "bytes": 4691,
+      "git_mode": "100644",
+      "git_object_id": "a84c6a6ecdb350e2266cbc23db0ef53c3b985dd3",
+      "git_object_type": "blob",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "fd7e2b4356843eb7458c2f4efa964339a1094ebe788a4c409bb5da846c3ff1a5"
+    },
+    {
+      "bytes": 2429,
+      "git_mode": "100644",
+      "git_object_id": "b42b31edf06a9832d5709fb991a8329ceaf3df89",
+      "git_object_type": "blob",
+      "path": "deny.toml",
+      "sha256": "08e563a6f20d8a5423b0a85a2c2183a9b3d82d0b40ca6efac0ab62976e863ae6"
+    },
+    {
+      "bytes": 239,
+      "git_mode": "100644",
+      "git_object_id": "df86927b8d1d31ec794020847d54f961ff14b779",
+      "git_object_type": "blob",
+      "path": "rust-toolchain.toml",
+      "sha256": "61d97acc9676fd1b6348a44dee3c372804b9a1e984385c7d73a2620b322d4927"
+    },
+    {
+      "bytes": 4452,
+      "git_mode": "100644",
+      "git_object_id": "c407bcdad55c86a190519622ab13dbe427325711",
+      "git_object_type": "blob",
+      "path": "tools/pins.toml",
+      "sha256": "534e979a3af0bb4edb8781f4bc9d6c46ed73250c43aeb1ac59f03c9c15bf70b1"
+    },
+    {
+      "bytes": 48390,
+      "git_mode": "100644",
+      "git_object_id": "879141df5d9f896db2e3128158308d9297cfab74",
+      "git_object_type": "blob",
+      "path": "tools/pinned_cargo_deny.py",
+      "sha256": "0f2addfa07fa3cbb0dab90c18b62e5e0d183c9555264c395c8eb337da94927ae"
+    },
+    {
+      "bytes": 44492,
+      "git_mode": "100644",
+      "git_object_id": "58f8674b0512277e5dedc86be073877209daf2bd",
+      "git_object_type": "blob",
+      "path": "tools/test_pinned_cargo_deny.py",
+      "sha256": "24796f718717cf8b2b5fc147934db211c3489d4140f3e0fa34175adb4f3d4fb2"
+    },
+    {
+      "bytes": 15269,
+      "git_mode": "100644",
+      "git_object_id": "25f2d397956dbf334c52dae82bee70f469b2caba",
+      "git_object_type": "blob",
+      "path": "tools/verify-pins.py",
+      "sha256": "d7ef400612cdcf2a5eaefb1b2cfb2a9829dc2f73a9ae08f9f0c547c6d1c0e12f"
+    },
+    {
+      "bytes": 21628,
+      "git_mode": "100755",
+      "git_object_id": "ed396058c632d72cd0f828376b4434869e707c69",
+      "git_object_type": "blob",
+      "path": "tools/verify-ci-pins.py",
+      "sha256": "a4131010e15928ad26941fed9fcf1fd96423b4e687560a95b22a4a358b1acea8"
+    },
+    {
+      "bytes": 3352,
+      "git_mode": "100755",
+      "git_object_id": "825aa99612a6319d7fbd55d7fdfbdca7900b14fa",
+      "git_object_type": "blob",
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "a35d28d7c2823c3391ccba70247929a9c135a6a6a0387ff85b9446d12e9d6a6e"
+    },
+    {
+      "bytes": 33932,
+      "git_mode": "100644",
+      "git_object_id": "144d7745bfa5001da68783a1bc9048229802152b",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0015.py",
+      "sha256": "6f1936aba9c8d88f90474cb47c1d9ac3e39eae21566e4dcb3eac6796af51278e"
+    },
+    {
+      "bytes": 10455,
+      "git_mode": "100755",
+      "git_object_id": "cb4fdc83e0163519fb688c7ee9163cbffd5eb342",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0015_result.py",
+      "sha256": "42bcc3488049fbd0bf43db94eb8f5a1c1504bb58df29507c91682137624f90fe"
+    },
+    {
+      "bytes": 122349,
+      "git_mode": "100644",
+      "git_object_id": "888978acdae4b06da4641ff0c19ec536f9421707",
+      "git_object_type": "blob",
+      "path": "tools/release/test_verify_framework_recovery_fr_0015.py",
+      "sha256": "cde629277f9eb2f7b18efff218477c8722cefd22dbee4dffe4d04552bec0b707"
+    },
+    {
+      "bytes": 128807,
+      "git_mode": "100755",
+      "git_object_id": "244338c6be7f14017032bbd3db25bce55fbc58a5",
+      "git_object_type": "blob",
+      "path": "tools/release/verify-framework-recovery-fr-0015.py",
+      "sha256": "04c1cb3569315a1c38d393fa83804b98a04236f950e6345b1769caa8c1e774fb"
+    }
+  ],
+  "protocol": "HALDIR_EPOCH_16_HOSTED_RESULT_V1",
+  "repository": {
+    "database_id": 1292802592,
+    "name": "sepahead/haldir",
+    "owner_database_id": 10104569
+  },
+  "schema_version": "1.0.0",
+  "subject": {
+    "commit": "60f43a3afdbad84050fc424a43ffd6b9602ac200",
+    "event": "push",
+    "ref": "refs/heads/main",
+    "tree": "0928b0d049f4ae2e62f55934a29a880b4b213b39"
+  }
+}
