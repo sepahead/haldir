@@ -65,7 +65,7 @@ limitations inside `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
 | 18 — backend-aware admission research | Not started | No NEST reconstruction, independent backend, NIR, or XyloSim campaign (`CL-BACKEND-01`). |
 | 19 — adversarial range | Partial | P0 contract/state/policy attacks and the synthetic command/intent ACL subset exist; live service bypass, certificate-lifecycle, backend, and plant campaigns do not. |
 | 20 — performance and reliability | Not started | No p99/p99.9, overload, soak, or recovery campaign (`CL-TIMING-01`). |
-| 21 — first experimental release | Partial | CI/supply-chain hardening is underway; no SBOM, provenance, signed tag, release artifacts, or release evidence (`CL-PRODUCTION-01`). |
+| 21 — first experimental release | Partial | Protected CI directly installs exact verified cargo-deny assets, reconstructs the bounded pinned RustSec snapshot, primes locked inputs online, and performs the final audit frozen and network-isolated. Acquisition availability, SBOM, end-to-end provenance, signed tag, reproducible release artifacts, and release evidence remain open (`CL-PRODUCTION-01`). |
 | 22 — future NCP authority increments | Not started / upstream-triggered | NCP v0.8.0 still defers plant authority, publisher binding, and apply/stop acknowledgements. |
 
 ## Ecosystem re-check (2026-07-13)

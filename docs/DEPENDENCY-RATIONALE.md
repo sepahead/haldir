@@ -43,21 +43,28 @@ transport back on while the LZ4 exception exists.
 
 `tools/pins.toml` records exact archive and executable sizes and SHA-256
 identities for cargo-deny 0.20.2 on the admitted x86_64 Linux and arm64 macOS
-hosts.
-`tools/pinned_cargo_deny.py` can install only a separately fetched matching
-archive: it uses bounded decompression, accepts only the reviewed bounded member
-set with exact entry types and modes, never extracts archive paths, writes into
-a new directory without overwrite, re-verifies the executable, and runs that
-exact path for an exact version check.
+hosts. It also binds one freshness-checked RustSec advisory-database snapshot by
+upstream commit, Git tree, archive identity, reconstructed repository identity,
+and bounded member inventory.
+`tools/pinned_cargo_deny.py` accepts only separately fetched matching inputs. It
+uses bounded decompression, validates the complete reviewed member set and entry
+types, never extracts archive paths, writes into new destinations without
+overwrite, reconstructs and verifies the exact RustSec Git repository, and
+re-verifies the cargo-deny executable before an exact version check.
 Its adversarial suite is executed by `tools/verify-pins.py`, so the protected
-source-pin step covers the parser and installer boundary on every hosted run.
+source-pin step covers both acquisition parsers and installers on every hosted
+run.
 
-This is a reviewed replacement boundary, not yet a claim that protected CI
-executes the verified binary. The current pinned upstream Docker Action still
-downloads its own versioned release URL and Alpine packages without consuming
-Haldir's recorded digests. A subsequent protected-workflow recovery must replace
-that Action path with the repository's verified installer before the cargo-deny
-execution can be called hermetic.
+Protected CI now downloads those bounded assets, verifies their exact sizes and
+digests, installs them directly without the retired cargo-deny Docker Action,
+and primes the locked Cargo inputs while network access is still available. The
+authoritative audit then revalidates the executable, RustSec commit/tree, and
+toolchain; drops privileges and ambient capabilities; enters a Linux network
+namespace; and runs the exact cargo-deny binary with `--frozen --all-features`.
+That final execution is frozen and network-isolated. Asset acquisition still
+depends on upstream availability and the hosted runner's network path, so this
+does not claim an availability-independent bootstrap, reproducible release, SBOM,
+or end-to-end release provenance.
 
 Zenoh 1.9's TLS client unconditionally combines public WebPKI roots with the
 configured custom CA; it has no exclusive-custom-root setting. The reference
