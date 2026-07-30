@@ -780,6 +780,55 @@ mod e2e {
     }
 
     #[test]
+    fn gate_rejects_validly_signed_lease_with_nonzero_schema_minor() {
+        let controller_signer = SigningKey::from_seed([1; 32]);
+        let mission_signer = SigningKey::from_seed([2; 32]);
+        let gate_signer = SigningKey::from_seed([3; 32]);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let (cfg, record, admission_digest) = gate_config(
+            acl_publication(),
+            &controller_signer,
+            &mission_signer,
+            gate_signer,
+        );
+        let mut actor = VehicleActor::new(cfg).unwrap();
+        assert!(actor.register_challenge(
+            ChallengeNonce::new([7; 32]),
+            MonoInstant::from_nanos(u64::MAX),
+            now,
+        ));
+        let mut lease = build_lease(admission_digest, &record);
+        lease.schema_minor = 1;
+        let envelope = sign_message(&lease, MissionLeaseV1::KIND, 1, &kid(2), &mission_signer);
+
+        assert_eq!(
+            actor.accept_lease_env(&envelope, now),
+            Err(GateError::Crypto("DENY_NONCANONICAL"))
+        );
+        assert_eq!(actor.process_state(), GateProcessStateV1::SessionBound);
+    }
+
+    #[test]
+    fn gate_rejects_validly_signed_intent_with_nonzero_schema_minor() {
+        let mut fixture = setup();
+        let record = admission_record();
+        let mut intent = build_intent(fixture.admission_digest, &record, 1, velocity(1, 400));
+        intent.schema_minor = 1;
+        let envelope = sign_intent(&fixture.ctrl_sk, &intent);
+
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(
+            decision.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::DenyNonCanonical]
+        );
+        assert!(!decision.has_prepared_publication());
+    }
+
+    #[test]
     fn active_actor_rejects_replacement_before_clock_term_or_challenge_mutation() {
         let controller_signer = SigningKey::from_seed([1; 32]);
         let mission_signer = SigningKey::from_seed([2; 32]);

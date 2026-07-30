@@ -10,9 +10,10 @@ use crate::scalar::{AsciiId, BoundedVec};
 use crate::session::NcpSessionIdentityV1;
 
 canonical_struct! {
-    /// A signed Gate challenge. Its local validity deadline is intentionally not an
-    /// externally authoritative timestamp; Gate stores the nonce in a bounded
-    /// pending-challenge table with a local monotonic expiry (spec §GateChallengeV1).
+    /// A signed schema v1.0 Gate challenge. Its local validity deadline is
+    /// intentionally not an externally authoritative timestamp; Gate stores the
+    /// nonce in a bounded pending-challenge table with a local monotonic expiry
+    /// (spec §GateChallengeV1).
     pub struct GateChallengeV1 kind "haldir.gate_challenge" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -33,7 +34,7 @@ canonical_struct! {
 
 impl crate::cbor::Validate for GateChallengeV1 {
     fn validate(&self) -> Result<(), crate::error::DecodeError> {
-        if self.schema_major != 1 {
+        if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(crate::error::DecodeError::UnsupportedVersion);
         }
         if self.accepted_contract_versions.is_empty() {

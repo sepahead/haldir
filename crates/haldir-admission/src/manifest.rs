@@ -6,8 +6,9 @@ use haldir_contracts::ids::ControllerId;
 use haldir_contracts::scalar::{AsciiId, BoundedVec};
 
 haldir_contracts::canonical_struct! {
-    /// A profile-complete controller bundle manifest (spec §ControllerBundleManifestV1).
-    /// It is profile-complete only when `opaque_dependencies` is empty.
+    /// A schema v1.0 profile-complete controller bundle manifest
+    /// (spec §ControllerBundleManifestV1). It is profile-complete only when
+    /// `opaque_dependencies` is empty.
     pub struct ControllerBundleManifestV1 kind "haldir.controller_bundle" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -36,7 +37,7 @@ impl ControllerBundleManifestV1 {
 
 impl haldir_contracts::cbor::Validate for ControllerBundleManifestV1 {
     fn validate(&self) -> Result<(), haldir_contracts::error::DecodeError> {
-        if self.schema_major != 1 {
+        if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(haldir_contracts::error::DecodeError::UnsupportedVersion);
         }
         Ok(())

@@ -14,7 +14,7 @@ use crate::session::NcpSessionIdentityV1;
 use core::num::{NonZeroU32, NonZeroU64};
 
 canonical_struct! {
-    /// A signed mission-intent lease (spec §MissionLeaseV1).
+    /// A signed schema v1.0 mission-intent lease (spec §MissionLeaseV1).
     pub struct MissionLeaseV1 kind "haldir.mission_lease" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -52,7 +52,7 @@ canonical_struct! {
 
 impl crate::cbor::Validate for MissionLeaseV1 {
     fn validate(&self) -> Result<(), crate::error::DecodeError> {
-        if self.schema_major != 1 {
+        if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(crate::error::DecodeError::UnsupportedVersion);
         }
         if self.allowed_actions.is_empty() {

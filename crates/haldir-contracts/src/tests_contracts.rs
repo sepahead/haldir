@@ -288,6 +288,54 @@ fn all_contracts_roundtrip() {
 }
 
 #[test]
+fn challenge_rejects_nonzero_schema_minor() {
+    let mut challenge = challenge();
+    challenge.schema_minor = 1;
+    let bytes = to_canonical_bytes(&challenge);
+
+    assert_eq!(
+        from_canonical_bytes::<GateChallengeV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::UnsupportedVersion)
+    );
+}
+
+#[test]
+fn lease_rejects_nonzero_schema_minor() {
+    let mut lease = lease();
+    lease.schema_minor = 1;
+    let bytes = to_canonical_bytes(&lease);
+
+    assert_eq!(
+        from_canonical_bytes::<MissionLeaseV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::UnsupportedVersion)
+    );
+}
+
+#[test]
+fn intent_rejects_nonzero_schema_minor() {
+    let mut intent = intent();
+    intent.schema_minor = 1;
+    let bytes = to_canonical_bytes(&intent);
+
+    assert_eq!(
+        from_canonical_bytes::<HaldirIntentV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::UnsupportedVersion)
+    );
+}
+
+#[test]
+fn revocation_rejects_nonzero_schema_minor() {
+    let mut revocation = revocation();
+    revocation.schema_minor = 1;
+    let bytes = to_canonical_bytes(&revocation);
+
+    assert_eq!(
+        from_canonical_bytes::<AuthorityRevocationV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::UnsupportedVersion)
+    );
+}
+
+#[test]
 fn one_bit_mutation_is_rejected_or_changes_value() {
     // Flipping any byte of a canonical encoding must either fail to decode or
     // decode to a different value (never silently accept as the same object).

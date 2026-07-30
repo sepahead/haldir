@@ -9,8 +9,8 @@ use haldir_contracts::ids::{AdmissionId, ControllerId};
 use haldir_contracts::scalar::AsciiId;
 
 haldir_contracts::canonical_struct! {
-    /// A signed admission record binding a logical bundle, admission profile,
-    /// backend execution profile, codec, and evidence level.
+    /// A signed schema v1.0 admission record binding a logical bundle, admission
+    /// profile, backend execution profile, codec, and evidence level.
     pub struct AdmissionRecordV1 kind "haldir.admission_record" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -38,7 +38,7 @@ impl AdmissionRecordV1 {
 
 impl haldir_contracts::cbor::Validate for AdmissionRecordV1 {
     fn validate(&self) -> Result<(), haldir_contracts::error::DecodeError> {
-        if self.schema_major != 1 {
+        if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(haldir_contracts::error::DecodeError::UnsupportedVersion);
         }
         // A semantic admission requires that the level actually be semantic.

@@ -81,7 +81,7 @@ pub enum DecodeError {
     },
     /// The embedded `message_kind` did not match the expected contract kind.
     WrongMessageKind,
-    /// The schema major version is not supported by this build.
+    /// The schema version is not supported by this build.
     UnsupportedVersion,
     /// A canonicalized UUIDv4 string was malformed.
     BadUuid,

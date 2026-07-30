@@ -17,8 +17,9 @@ tagged_enum! {
 }
 
 canonical_struct! {
-    /// A signed revocation. Carries an issuer-monotonic `revocation_epoch` and
-    /// either a specific object digest or a `revoke_terms_at_or_below` cutoff.
+    /// A signed schema v1.0 revocation. Carries an issuer-monotonic
+    /// `revocation_epoch` and either a specific object digest or a
+    /// `revoke_terms_at_or_below` cutoff.
     pub struct AuthorityRevocationV1 kind "haldir.authority_revocation" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -35,7 +36,7 @@ canonical_struct! {
 
 impl crate::cbor::Validate for AuthorityRevocationV1 {
     fn validate(&self) -> Result<(), crate::error::DecodeError> {
-        if self.schema_major != 1 {
+        if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(crate::error::DecodeError::UnsupportedVersion);
         }
         // A revocation must name at least one of: a specific object, or a cutoff.

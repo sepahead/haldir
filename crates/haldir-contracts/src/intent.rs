@@ -17,7 +17,7 @@ use crate::session::{HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV
 use core::num::NonZeroU64;
 
 canonical_struct! {
-    /// A signed controller intent (spec §HaldirIntentV1).
+    /// A signed schema v1.0 controller intent (spec §HaldirIntentV1).
     pub struct HaldirIntentV1 kind "haldir.intent" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -48,7 +48,7 @@ canonical_struct! {
 
 impl crate::cbor::Validate for HaldirIntentV1 {
     fn validate(&self) -> Result<(), crate::error::DecodeError> {
-        if self.schema_major != 1 {
+        if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(crate::error::DecodeError::UnsupportedVersion);
         }
         Ok(())

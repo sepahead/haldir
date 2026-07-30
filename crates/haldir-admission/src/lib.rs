@@ -37,7 +37,9 @@ pub use types::{AdmissionLevelV1, ArtifactRefV1};
 mod tests {
     use super::*;
     use core::num::NonZeroU64;
+    use haldir_contracts::cbor::{Limits, from_canonical_bytes, to_canonical_bytes};
     use haldir_contracts::digest::{DigestDomain, DigestV1};
+    use haldir_contracts::error::DecodeError;
     use haldir_contracts::ids::{AdmissionId, ControllerId};
     use haldir_contracts::scalar::{AsciiId, BoundedVec};
 
@@ -106,6 +108,30 @@ mod tests {
     #[test]
     fn manifest_is_profile_complete_without_opaque_deps() {
         assert!(manifest().is_profile_complete());
+    }
+
+    #[test]
+    fn manifest_rejects_nonzero_schema_minor() {
+        let mut manifest = manifest();
+        manifest.schema_minor = 1;
+        let bytes = to_canonical_bytes(&manifest);
+
+        assert_eq!(
+            from_canonical_bytes::<ControllerBundleManifestV1>(&bytes, Limits::LARGE),
+            Err(DecodeError::UnsupportedVersion)
+        );
+    }
+
+    #[test]
+    fn admission_record_rejects_nonzero_schema_minor() {
+        let mut record = semantic_record();
+        record.schema_minor = 1;
+        let bytes = to_canonical_bytes(&record);
+
+        assert_eq!(
+            from_canonical_bytes::<AdmissionRecordV1>(&bytes, Limits::LARGE),
+            Err(DecodeError::UnsupportedVersion)
+        );
     }
 
     #[test]
