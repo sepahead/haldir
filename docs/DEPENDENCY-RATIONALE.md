@@ -77,6 +77,49 @@ and the pinned router launch re-disables the daemon's forced loader after config
 load, but the transitive code remains in the binary graph until Zenoh provides a
 plugin-free client feature.
 
+## Automated update proposals
+
+`.github/dependabot.yml` asks Dependabot to propose weekly Cargo lockfile and
+GitHub Actions updates. It is discovery automation only: a bot pull request has
+no merge, release, deployment, or audit authority. There is no auto-approval or
+auto-merge path, no Dependabot registry credential, and no reason to expose an
+Actions secret to dependency-update code.
+
+GitHub runs the update-generation jobs on Actions runners even when repository
+or organization Actions policy would otherwise disable them. That
+GitHub-managed exception creates proposals only; it grants no merge, release,
+deployment, or audit authority.
+
+Do not merge a Dependabot commit directly. When the accepted paths are not
+epoch-18 protected, reproduce the reviewed diff in a single-parent maintainer
+commit signed by the allowed release principal; the audit chain rejects a
+post-activation commit with another identity or signature. A proposal touching a
+protected path instead requires an intentional signed gate and trust-root
+replacement.
+
+Cargo proposals are lockfile-only and may include transitive crates. A maintainer
+must review the upstream source, changelog, resolved graph, licenses, and
+advisories, then require every protected check. Manifest constraints and exact
+NCP, Zenoh, rustix, Rust toolchain, downloaded-tool, RustSec, TLA+/Java, GitHub
+CLI, container-image, and policy pins remain coordinated manual changes.
+
+Actions proposals must retain a full 40-hex commit SHA and its same-line release
+comment. Reviewers must authenticate the upstream repository, tag, and commit,
+then deliberately update the exact pin constants, tests, and protected job
+hashes. The workflows and their pin-verification boundary are epoch-18 protected,
+so an accepted Actions update cannot land as an ordinary successor: it requires
+the intentional signed recovery process and a new gate/trust root. A proposal
+that initially fails `tools/verify-ci-pins.py` is a review prompt, not permission
+to relax that verifier. Pull-request workflows must keep read-only permissions
+and `persist-credentials: false`; OIDC attesters remain limited to pushes on
+`main`, and dependency code must never be moved to `pull_request_target`.
+
+Dependabot alerts do not cover vulnerable Actions pinned by SHA. Weekly update
+proposals and independent upstream-advisory monitoring are therefore
+complementary; neither proves that a proposed commit is safe. The two-open-PR
+limit applies only to version updates, so maintainers should promptly triage
+stale proposals without delaying security-update pull requests.
+
 ## Deliberately absent
 
 - **No general CBOR library on the trusted path.** The canonical codec is
