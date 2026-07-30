@@ -411,13 +411,13 @@ mod range {
         let prepared = record.into_prepared_publication()?;
         let called = actor.mark_publish_called(prepared, published_at).ok()?;
         let cmd = called.reference_plant_command().clone();
-        let mut plant = ReferencePlant::new(PlantConfig::default());
+        let mut plant = ReferencePlant::new(PlantConfig::default()).ok()?;
         if plant.ingest(cmd).is_err() {
             let _ = actor.mark_publish_returned_error(called);
             return None;
         }
         actor.mark_publish_returned_ok(called, published_at).ok()?;
-        plant.run(ticks);
+        plant.run(ticks).ok()?;
         Some(plant)
     }
 
@@ -451,7 +451,7 @@ mod range {
                     .any(|e| e.kind == PlantEventKind::ResponseObserved)
             );
             // after command expiry the plant reaches its declared hold region
-            plant.run(30);
+            plant.run(30).expect("bounded reference plant run");
             assert!(plant.safe_region_reached());
         }
 

@@ -45,7 +45,11 @@ identity, publisher worker, process manager, delivery, remote cleanup, or a prod
 - **Plant** (`haldir-reference-plant`) records its own stages: `Received`,
   `Validated`, `Accepted`, `Rejected(reason)`, `Selected`, `Applied`, `Expired`,
   `SafeActionStarted`, `SafeRegionReached`, `ResponseObserved`. In P0 these are
-  **simulation model values**, never physical actuation.
+  **simulation model values**, never physical actuation. Its checked constructor
+  enforces hard evidence and retired-epoch bounds. A semantic receiver rejection
+  atomically records `Received` + `Rejected`; a local capacity, allocation, time,
+  or fixed-point arithmetic failure returns a typed error without changing
+  receiver state or evidence.
 
 ## Digest domains are separated
 

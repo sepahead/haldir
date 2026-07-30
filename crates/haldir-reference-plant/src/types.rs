@@ -48,6 +48,7 @@ pub struct PlantCommand {
 
 /// Why a command was rejected by the receiver.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RejectReason {
     /// The session pair did not match the plant's current session.
     WrongSession,
@@ -58,6 +59,27 @@ pub enum RejectReason {
     /// The validity was zero.
     ZeroValidity,
 }
+
+impl RejectReason {
+    /// Stable machine-readable rejection class.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::WrongSession => "PLANT_REJECT_WRONG_SESSION",
+            Self::RetiredEpoch => "PLANT_REJECT_RETIRED_EPOCH",
+            Self::DuplicateOrStale => "PLANT_REJECT_DUPLICATE_OR_STALE",
+            Self::ZeroValidity => "PLANT_REJECT_ZERO_VALIDITY",
+        }
+    }
+}
+
+impl std::fmt::Display for RejectReason {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl std::error::Error for RejectReason {}
 
 /// A kinematic snapshot recorded in evidence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

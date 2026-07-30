@@ -210,7 +210,11 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   simulator. The `haldir-reference-plant` is a deterministic integer point-mass
   **simulation model**. Its `applied` / `observed response` events are **model
   values, never physical actuation**. `reference-kinematic-hold-v1` safe action is
-  simulation-only and must not be reused as evidence for any real vehicle.
+  simulation-only and must not be reused as evidence for any real vehicle. The
+  model has checked hard bounds for retained evidence and retired epochs and
+  returns typed, transactional failures when time or fixed-point position space
+  is exhausted. It has no durable evidence export, restart/recovery protocol, or
+  physical fault-handling claim.
 - **Second backend / NIR / neuromorphic hardware.** Not attempted. No
   backend-aware admission research result exists.
 - **Cross-repository plant/controller integration.** A narrow NCP release-tool fix

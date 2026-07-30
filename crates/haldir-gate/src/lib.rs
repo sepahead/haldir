@@ -4217,12 +4217,13 @@ mod e2e {
             .expect("reference publication called");
         let cmd = called.reference_plant_command().clone();
 
-        let mut plant = ReferencePlant::new(PlantConfig::default());
+        let mut plant =
+            ReferencePlant::new(PlantConfig::default()).expect("valid reference plant config");
         plant.ingest(cmd).expect("plant accepts Gate command");
         f.actor
             .mark_publish_returned_ok(called, f.now)
             .expect("reference publication returned ok");
-        plant.run(15);
+        plant.run(15).expect("bounded reference plant run");
         assert!(
             plant
                 .events()
@@ -4344,7 +4345,8 @@ mod e2e {
             .actor
             .mark_publish_called(prepared, f.now)
             .expect("publication called");
-        let mut plant = ReferencePlant::new(PlantConfig::default());
+        let mut plant =
+            ReferencePlant::new(PlantConfig::default()).expect("valid reference plant config");
         plant
             .ingest(called.reference_plant_command().clone())
             .expect("reference receiver accepted");
