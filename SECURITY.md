@@ -7,6 +7,16 @@ through an independent security review, penetration test, or certification. Do
 **not** deploy it to control any physical vehicle or actuator. There is **no
 production-use status**.
 
+## Supported versions
+
+| Version | Security support |
+| --- | --- |
+| Current default branch | Reports accepted; fixes provided on a best-effort basis |
+| Tags, release snapshots, and earlier commits | Unsupported |
+
+Haldir has no security-support service-level agreement while it remains
+experimental.
+
 ## Reporting a vulnerability
 
 Use GitHub's
