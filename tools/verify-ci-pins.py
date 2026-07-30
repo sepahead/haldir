@@ -43,6 +43,14 @@ BLOCK_SCALAR_VALUE = re.compile(r"^[>|](?:[+-](?:[1-9])?|[1-9](?:[+-])?)?\s*(?:#
 GITHUB_EXPRESSION = re.compile(r"\$\{\{[^{}\r\n]*\}\}")
 REQUIRED_ACTION_PINS = {
     (
+        "actions/checkout",
+        "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+    ): 7,
+    (
+        "actions/cache",
+        "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    ): 1,
+    (
         "actions/attest",
         "508db95dd578ae2727ebd6217d5ba78e4fbda05d",
     ): 2,
@@ -55,10 +63,6 @@ REQUIRED_ACTION_PINS = {
         "03ad4de0992f5dab5e18fcb136590ce7c4a0ac95",
     ): 1,
     (
-        "EmbarkStudios/cargo-deny-action",
-        "3c6349835b2b7b196a839186cb8b78e02f7b5f25",
-    ): 1,
-    (
         "actions/download-artifact",
         "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
     ): 2,
@@ -68,13 +72,13 @@ REQUIRED_ACTION_PINS = {
     ): 3,
 }
 REQUIRED_ACTION_COMMENTS = {
+    ("actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0"): 7,
+    ("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0"): 1,
     ("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0"): 1,
     ("actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0"): 1,
     ("actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1"): 2,
-    (
-        "EmbarkStudios/cargo-deny-action@"
-        "3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1"
-    ): 1,
+    ("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1"): 2,
+    ("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"): 3,
 }
 MAX_WORKFLOW_BYTES = 1024 * 1024
 GH_CLI_VERSION = "2.96.0"
@@ -92,12 +96,15 @@ EXPECTED_RUNNERS = {
 }
 OIDC_JOB_SHA256 = {
     "attest-ci-audit-result": (
-        "7ebd1c43ac42bb1e8c3e2919aa3c3e0122cb9fca33a6e99d82b051155f7319aa"
+        "f9685078dba2d50ec8b0e91221e6e35b50556fa928fa220160357fc1766e497e"
     ),
     "attest-formal-audit-result": (
-        "3a88e23f66c9025dffcc407f947ef93727e845e8ffee184f4eda88e2aa24a5e7"
+        "889a27a1a0ffa7907e99e521be3614d6c1b70f240969aba29ef1d907af7a1e48"
     ),
 }
+SUPPLY_CHAIN_JOB_SHA256 = (
+    "383df1e48d29bf331c2ba3e874800686142fae0d57d8071c0c08fdf1057d611a"
+)
 RUNS_ON_LINE = re.compile(r"^    runs-on:\s*(\S+)\s*$", re.MULTILINE)
 
 
@@ -147,6 +154,11 @@ def validate_workflow_syntax(text: str, *, label: str) -> list[str]:
             continue
         mapping = SIMPLE_MAPPING_LINE.fullmatch(line)
         if mapping is not None:
+            if mapping.group("key") in {"container", "services"}:
+                problems.append(
+                    f"{label}:{line_number} uses a forbidden job container surface"
+                )
+                continue
             value = mapping.group("value").strip()
             if BLOCK_SCALAR_VALUE.fullmatch(value) is not None:
                 block_header_indent = len(mapping.group("indent")) + (
@@ -208,7 +220,9 @@ def collect_uses(text: str, *, label: str) -> tuple[list[Use], list[str]]:
                 )
             )
         elif LOCAL.fullmatch(value) is not None:
-            uses.append(Use("local", value, "", line_number))
+            problems.append(
+                f"{label}:{line_number} uses a forbidden repository-local action"
+            )
         else:
             problems.append(
                 f"{label}:{line_number} uses a mutable or invalid reference {value}"
@@ -296,6 +310,19 @@ def verify_oidc_job(
     return problems
 
 
+def verify_supply_chain_job(text: str, *, label: str) -> list[str]:
+    """Bind the complete reviewed supply-chain job, including command order."""
+
+    try:
+        block = _job_block(text, "supply-chain", label=label)
+    except ValueError as error:
+        return [str(error)]
+    observed = hashlib.sha256(block.encode("utf-8")).hexdigest()
+    if observed != SUPPLY_CHAIN_JOB_SHA256:
+        return [f"{label}:supply-chain exact reviewed job block digest mismatch"]
+    return []
+
+
 def _read_workflow(path: Path) -> str:
     if path.is_symlink() or not path.is_file():
         raise ValueError(f"{path.relative_to(ROOT)} is not a regular file")
@@ -319,6 +346,9 @@ def main() -> None:
     workflow_files = sorted(WORKFLOWS.glob("*.y*ml"))
     if not workflow_files:
         fail(["no workflow files found"])
+    observed_workflow_names = {path.name for path in workflow_files}
+    if observed_workflow_names != {"ci.yml", "formal.yml"}:
+        problems.append("workflow set differs from the reviewed ci.yml/formal.yml pair")
 
     action_count = 0
     docker_count = 0
@@ -340,6 +370,12 @@ def main() -> None:
             elif use.kind == "docker":
                 docker_count += 1
     if "ci.yml" in workflow_texts:
+        problems.extend(
+            verify_supply_chain_job(
+                workflow_texts["ci.yml"],
+                label=".github/workflows/ci.yml",
+            )
+        )
         problems.extend(
             verify_oidc_job(
                 workflow_texts["ci.yml"],
@@ -375,10 +411,10 @@ def main() -> None:
             "https://github.com/cli/cli/releases/download/"
             "v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.tar.gz"
         ): 1,
-        "/usr/bin/sha256sum --check --strict": 3,
-        "--proto '=https'": 1,
-        "--proto-redir '=https'": 1,
-        "--tlsv1.2": 1,
+        "/usr/bin/sha256sum --check --strict": 4,
+        "--proto '=https'": 2,
+        "--proto-redir '=https'": 2,
+        "--tlsv1.2": 2,
         "--no-same-owner": 1,
         "--no-same-permissions": 1,
         '-- "gh_${GH_CLI_VERSION}_linux_amd64/bin/gh"': 1,
@@ -389,6 +425,69 @@ def main() -> None:
             problems.append(
                 f"ci workflow must contain exact pinned gh material {exact!r}"
             )
+    try:
+        supply_chain_block = _job_block(
+            ci_text,
+            "supply-chain",
+            label=".github/workflows/ci.yml",
+        )
+    except ValueError as error:
+        problems.append(str(error))
+        supply_chain_block = ""
+    required_cargo_deny_fragments = {
+        (
+            "CARGO_DENY_URL: https://github.com/EmbarkStudios/cargo-deny/"
+            "releases/download/0.20.2/"
+            "cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"
+        ): 1,
+        (
+            "RUSTSEC_URL: https://codeload.github.com/RustSec/advisory-db/"
+            "tar.gz/7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2"
+        ): 1,
+        "python3 -I -B tools/pinned_cargo_deny.py install": 1,
+        "python3 -I -B tools/pinned_cargo_deny.py seed-advisory-db": 1,
+        "--target x86_64-unknown-linux-musl": 1,
+        'cargo fetch --locked --manifest-path "$GITHUB_WORKSPACE/Cargo.toml"': 1,
+        "/usr/bin/unshare --net --": 1,
+        "/usr/bin/setpriv": 1,
+        '--reuid="$RUNNER_UID"': 1,
+        '--regid="$RUNNER_GID"': 1,
+        "--clear-groups": 1,
+        "--inh-caps=-all": 1,
+        "--bounding-set=-all": 1,
+        "--no-new-privs": 1,
+        '--max-filesize "$MAX_BYTES"': 1,
+        "${CARGO_DENY_URL}|${DENY_ARCHIVE}|4936832": 1,
+        "${RUSTSEC_URL}|${RUSTSEC_ARCHIVE}|441027": 1,
+        'PATH="$TOOLCHAIN_BIN:/usr/bin:/bin"': 1,
+        "GIT_CONFIG_GLOBAL=/dev/null": 2,
+        "GIT_CONFIG_NOSYSTEM=1": 2,
+        "GIT_NO_REPLACE_OBJECTS=1": 2,
+        "b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a": 1,
+        "1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce": 1,
+        "2d3ab21e05f8b06ad2e232f92894b5e247d817ce": 1,
+        'CARGO_NET_OFFLINE: "true"': 1,
+        "RUSTUP_TOOLCHAIN=1.96.0": 1,
+        "      - name: Install pinned Rust toolchain\n"
+        "        run: rustup toolchain install 1.96.0 --profile minimal\n"
+        "      - name: Verify current-head 0.9 audit cut": 1,
+        "      - name: Prime exact locked dependency inputs\n"
+        "        shell: /bin/bash --noprofile --norc -euo pipefail {0}\n"
+        "        run: cargo fetch --locked --manifest-path "
+        '"$GITHUB_WORKSPACE/Cargo.toml"': 1,
+        "--frozen": 1,
+        "--all-features": 1,
+        '--manifest-path "$GITHUB_WORKSPACE/Cargo.toml"': 2,
+    }
+    for exact, expected_count in required_cargo_deny_fragments.items():
+        observed_count = supply_chain_block.count(exact)
+        if observed_count != expected_count:
+            problems.append(
+                "supply-chain job must contain exact cargo-deny contract "
+                f"{exact!r} {expected_count} time(s), observed {observed_count}"
+            )
+    if "EmbarkStudios/cargo-deny-action" in "\n".join(workflow_texts.values()):
+        problems.append("the superseded cargo-deny Action must be absent")
     for workflow, expected_runners in EXPECTED_RUNNERS.items():
         observed_runners = Counter(
             RUNS_ON_LINE.findall(workflow_texts.get(workflow, ""))
@@ -405,6 +504,17 @@ def main() -> None:
                 f"required action pin {identity[0]}@{identity[1]} occurs "
                 f"{observed_count} times; expected {expected_count}"
             )
+    expected_actions = Counter(REQUIRED_ACTION_PINS)
+    if observed_actions != expected_actions:
+        problems.append(
+            "complete Action pin multiset differs: "
+            f"observed {dict(observed_actions)!r}; "
+            f"expected {dict(expected_actions)!r}"
+        )
+    if action_count != sum(REQUIRED_ACTION_PINS.values()):
+        problems.append("total immutable Action use count differs")
+    if docker_count != 0:
+        problems.append("workflow Docker uses are forbidden")
     all_workflows = "\n".join(workflow_texts.values())
     for fragment, expected_count in REQUIRED_ACTION_COMMENTS.items():
         observed_count = all_workflows.count(fragment)

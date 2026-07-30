@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import copy
 import contextlib
+import datetime as dt
 import gzip
 import hashlib
 import importlib.util
 import io
 import runpy
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -24,6 +26,13 @@ VERSION = "0.20.2"
 ARCHIVE_ROOT = f"cargo-deny-{VERSION}-{TARGET}"
 GOOD_BINARY = b"#!/bin/sh\nprintf 'cargo-deny 0.20.2\\n'\n"
 BAD_VERSION_BINARY = b"#!/bin/sh\nprintf 'cargo-deny 0.20.1\\n'\n"
+SNAPSHOT_COMMIT = "1" * 40
+SNAPSHOT_TREE = "2590718dd483f03cf0186695708d71aa685b1c92"
+SNAPSHOT_SEED_COMMIT = "e32789151cc1da843f93b89e55f67ed859534f3b"
+SNAPSHOT_COMMITTED_AT = "2026-07-29T08:17:10-07:00"
+SNAPSHOT_ROOT = f"advisory-db-{SNAPSHOT_COMMIT}"
+SNAPSHOT_README = b"fixture\n"
+SNAPSHOT_ADVISORY = b'[advisory]\nid = "RUSTSEC-2099-0001"\n'
 
 
 def load_module() -> ModuleType:
@@ -110,6 +119,92 @@ def asset_for(archive: bytes, binary: bytes = GOOD_BINARY):
     )
 
 
+def advisory_members() -> list[tuple[tarfile.TarInfo, bytes]]:
+    """Return a minimal canonical RustSec snapshot tree."""
+
+    records: list[tuple[str, bytes | None]] = [
+        (SNAPSHOT_ROOT, None),
+        (f"{SNAPSHOT_ROOT}/crates", None),
+        (f"{SNAPSHOT_ROOT}/crates/demo", None),
+        (f"{SNAPSHOT_ROOT}/README.md", SNAPSHOT_README),
+        (
+            f"{SNAPSHOT_ROOT}/crates/demo/RUSTSEC-2099-0001.md",
+            SNAPSHOT_ADVISORY,
+        ),
+    ]
+    members: list[tuple[tarfile.TarInfo, bytes]] = []
+    for name, payload in records:
+        member = tarfile.TarInfo(name)
+        member.mtime = 0
+        member.uid = 0
+        member.gid = 0
+        member.pax_headers = {"comment": SNAPSHOT_COMMIT}
+        if payload is None:
+            member.type = tarfile.DIRTYPE
+            member.mode = 0o775
+            member.size = 0
+            members.append((member, b""))
+        else:
+            member.type = tarfile.REGTYPE
+            member.mode = 0o664
+            member.size = len(payload)
+            members.append((member, payload))
+    return members
+
+
+def advisory_tar_payload(
+    members: list[tuple[tarfile.TarInfo, bytes]] | None = None,
+) -> bytes:
+    """Serialize one deterministic PAX snapshot fixture."""
+
+    output = io.BytesIO()
+    with tarfile.open(fileobj=output, mode="w", format=tarfile.PAX_FORMAT) as archive:
+        selected = advisory_members() if members is None else members
+        for member, payload in selected:
+            archive.addfile(member, io.BytesIO(payload) if member.isreg() else None)
+    return output.getvalue()
+
+
+def snapshot_for(
+    archive: bytes,
+    tar: bytes,
+    *,
+    tree: str = SNAPSHOT_TREE,
+    member_count: int = 5,
+    regular_file_count: int = 2,
+    directory_count: int = 3,
+    worktree_bytes: int = len(SNAPSHOT_README) + len(SNAPSHOT_ADVISORY),
+) -> object:
+    """Build exact pins for one synthetic snapshot archive."""
+
+    payload = POLICY._seed_commit_payload(
+        commit=SNAPSHOT_COMMIT,
+        tree=tree,
+        committed_at=SNAPSHOT_COMMITTED_AT,
+    )
+    seed_commit = POLICY._git_object_id("commit", payload)
+    return POLICY.RustSecSnapshot(
+        repository_url=POLICY.RUSTSEC_REPOSITORY_URL,
+        archive_url=(
+            f"https://codeload.github.com/RustSec/advisory-db/tar.gz/{SNAPSHOT_COMMIT}"
+        ),
+        commit=SNAPSHOT_COMMIT,
+        committed_at=SNAPSHOT_COMMITTED_AT,
+        tree=tree,
+        seed_commit=seed_commit,
+        database_directory=POLICY.RUSTSEC_DATABASE_DIRECTORY,
+        maximum_staleness_days=POLICY.RUSTSEC_MAXIMUM_STALENESS_DAYS,
+        archive_bytes=len(archive),
+        archive_sha256=hashlib.sha256(archive).hexdigest(),
+        tar_bytes=len(tar),
+        tar_sha256=hashlib.sha256(tar).hexdigest(),
+        member_count=member_count,
+        regular_file_count=regular_file_count,
+        directory_count=directory_count,
+        worktree_bytes=worktree_bytes,
+    )
+
+
 class CargoDenyPinTests(unittest.TestCase):
     """Exercise closed schema and repository identity bindings."""
 
@@ -120,6 +215,10 @@ class CargoDenyPinTests(unittest.TestCase):
     def test_repository_policy_passes(self) -> None:
         policy = POLICY.verify_repository_policy(ROOT, self.pins)
         self.assertEqual(policy.version, VERSION)
+        self.assertEqual(
+            policy.advisory_db.commit,
+            "7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+        )
         self.assertEqual(
             {asset.target for asset in policy.assets},
             POLICY.SUPPORTED_TARGETS,
@@ -164,6 +263,43 @@ class CargoDenyPinTests(unittest.TestCase):
             "b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a",
         )
 
+    def test_recorded_rustsec_snapshot_matches_independent_measurement(self) -> None:
+        snapshot = POLICY.parse_policy(self.pins).advisory_db
+        self.assertEqual(snapshot.repository_url, POLICY.RUSTSEC_REPOSITORY_URL)
+        self.assertEqual(
+            snapshot.archive_url,
+            "https://codeload.github.com/RustSec/advisory-db/tar.gz/"
+            "7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+        )
+        self.assertEqual(snapshot.committed_at, "2026-07-29T08:17:10-07:00")
+        self.assertEqual(
+            snapshot.tree,
+            "2d3ab21e05f8b06ad2e232f92894b5e247d817ce",
+        )
+        self.assertEqual(
+            snapshot.seed_commit,
+            "1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce",
+        )
+        self.assertEqual(snapshot.archive_bytes, 441_027)
+        self.assertEqual(
+            snapshot.archive_sha256,
+            "ab968b67150079bc386d098311cdab98e23745d555b3018837c91f3ae847967a",
+        )
+        self.assertEqual(snapshot.tar_bytes, 2_652_160)
+        self.assertEqual(
+            snapshot.tar_sha256,
+            "69306513f06cac8750f3e8dd17ce1a5eebce958b3ed9511ab7a3939b15555471",
+        )
+        self.assertEqual(
+            (
+                snapshot.member_count,
+                snapshot.regular_file_count,
+                snapshot.directory_count,
+                snapshot.worktree_bytes,
+            ),
+            (2_083, 1_192, 891, 1_283_107),
+        )
+
     def test_unknown_schema_keys_are_rejected_at_every_level(self) -> None:
         mutations = []
         top_level = copy.deepcopy(self.pins)
@@ -178,6 +314,9 @@ class CargoDenyPinTests(unittest.TestCase):
         asset = copy.deepcopy(self.pins)
         asset["supply_chain"]["cargo_deny"]["assets"][0]["unknown"] = "value"
         mutations.append(asset)
+        advisory_db = copy.deepcopy(self.pins)
+        advisory_db["supply_chain"]["cargo_deny"]["advisory_db"]["unknown"] = "value"
+        mutations.append(advisory_db)
         for index, mutation in enumerate(mutations):
             with self.subTest(mutation=index):
                 with self.assertRaisesRegex(POLICY.PinPolicyError, "schema differs"):
@@ -227,11 +366,8 @@ class CargoDenyPinTests(unittest.TestCase):
         root = Path(temporary.name)
         relative_paths = (
             ".github/workflows/ci.yml",
+            ".github/workflows/formal.yml",
             "tools/verify-ci-pins.py",
-            (
-                "release/0.9.0/current-head/closures/framework-recovery/"
-                "FR-0014-plan.json"
-            ),
         )
         for relative in relative_paths:
             destination = root / relative
@@ -239,48 +375,442 @@ class CargoDenyPinTests(unittest.TestCase):
             shutil.copy2(ROOT / relative, destination)
         return temporary
 
-    def test_protected_action_drift_is_rejected(self) -> None:
+    def test_retired_cargo_deny_action_is_rejected_in_each_workflow(self) -> None:
+        policy = POLICY.parse_policy(self.pins)
+        action_names = (
+            "EmbarkStudios/cargo-deny-action",
+            "embarkstudios/CARGO-DENY-ACTION",
+            "EmbarkStudios/cargo-deny-action/subdirectory",
+        )
+        for workflow in ("ci.yml", "formal.yml"):
+            for action_name in action_names:
+                with self.subTest(workflow=workflow, action_name=action_name):
+                    with self.binding_fixture() as directory:
+                        root = Path(directory)
+                        path = root / ".github/workflows" / workflow
+                        action = (
+                            f"      - uses: {action_name}@"
+                            "3c6349835b2b7b196a839186cb8b78e02f7b5f25\n"
+                        )
+                        path.write_text(path.read_text() + action)
+                        with self.assertRaisesRegex(
+                            POLICY.PinPolicyError,
+                            "must not execute",
+                        ):
+                            POLICY.verify_repository_bindings(root, policy)
+
+    def test_commented_action_text_is_not_an_executable_use(self) -> None:
         policy = POLICY.parse_policy(self.pins)
         with self.binding_fixture() as directory:
             root = Path(directory)
             path = root / ".github/workflows/ci.yml"
-            path.write_text(path.read_text().replace(policy.action_commit, "0" * 40, 1))
-            with self.assertRaisesRegex(POLICY.PinPolicyError, "protected CI"):
-                POLICY.verify_repository_bindings(root, policy)
+            comment = (
+                "\n# uses: EmbarkStudios/cargo-deny-action@"
+                "3c6349835b2b7b196a839186cb8b78e02f7b5f25\n"
+            )
+            path.write_text(path.read_text() + comment)
+            POLICY.verify_repository_bindings(root, policy)
 
-    def test_commented_action_text_cannot_spoof_executable_binding(self) -> None:
-        policy = POLICY.parse_policy(self.pins)
-        with self.binding_fixture() as directory:
-            root = Path(directory)
-            path = root / ".github/workflows/ci.yml"
-            exact = (
-                f"        uses: {policy.action_repository}@{policy.action_commit} "
-                f"# v{policy.action_version}"
-            )
-            drifted = (
-                f"        uses: {policy.action_repository}@{'0' * 40} "
-                f"# v{policy.action_version}"
-            )
-            text = path.read_text()
-            self.assertEqual(text.count(exact), 1)
-            path.write_text(text.replace(exact, drifted) + f"\n# {exact}\n")
-            with self.assertRaisesRegex(POLICY.PinPolicyError, "protected CI"):
-                POLICY.verify_repository_bindings(root, policy)
+    def test_snapshot_freshness_is_strict_and_offset_aware(self) -> None:
+        snapshot = POLICY.parse_policy(self.pins).advisory_db
+        committed = dt.datetime.fromisoformat(snapshot.committed_at)
+        POLICY.verify_snapshot_fresh(
+            snapshot,
+            now=committed + dt.timedelta(days=89, hours=23),
+        )
+        for now in (
+            committed - dt.timedelta(microseconds=1),
+            committed + dt.timedelta(days=90),
+        ):
+            with self.subTest(now=now):
+                with self.assertRaisesRegex(
+                    POLICY.PinPolicyError,
+                    "future-dated|90 days stale",
+                ):
+                    POLICY.verify_snapshot_fresh(snapshot, now=now)
+        with self.assertRaisesRegex(POLICY.PinPolicyError, "offset-aware"):
+            POLICY.verify_snapshot_fresh(snapshot, now=dt.datetime(2026, 7, 30))
 
-    def test_signed_plan_drift_is_rejected(self) -> None:
-        policy = POLICY.parse_policy(self.pins)
-        with self.binding_fixture() as directory:
-            root = Path(directory)
-            path = (
-                root / "release/0.9.0/current-head/closures/framework-recovery/"
-                "FR-0014-plan.json"
+    def test_snapshot_seed_commit_and_directory_are_closed(self) -> None:
+        mutations = (
+            ("seed_commit", "0" * 40, "deterministic seed"),
+            ("database_directory", "advisory-db-attacker", "canonical URL mapping"),
+            ("maximum_staleness_days", 91, "must be 90"),
+            ("committed_at", "2026-07-29T15:17:10Z", "not canonical"),
+        )
+        for field, replacement, diagnostic in mutations:
+            with self.subTest(field=field):
+                pins = copy.deepcopy(self.pins)
+                pins["supply_chain"]["cargo_deny"]["advisory_db"][field] = replacement
+                with self.assertRaisesRegex(POLICY.PinPolicyError, diagnostic):
+                    POLICY.parse_policy(pins)
+
+
+class RustSecSnapshotTests(unittest.TestCase):
+    """Exercise exact snapshot extraction, freshness, and Git seeding."""
+
+    @staticmethod
+    def write_archive(root: Path, archive: bytes) -> Path:
+        path = root / "advisory-db.tar.gz"
+        path.write_bytes(archive)
+        return path
+
+    @staticmethod
+    def fresh_now() -> dt.datetime:
+        return dt.datetime.fromisoformat(SNAPSHOT_COMMITTED_AT) + dt.timedelta(days=1)
+
+    def seed(
+        self,
+        root: Path,
+        archive: bytes,
+        tar: bytes,
+        snapshot: object | None = None,
+    ) -> tuple[Path, Path]:
+        cargo_home = root / "cargo-home"
+        cargo_home.mkdir(mode=0o700)
+        archive_path = self.write_archive(root, archive)
+        destination = POLICY.seed_advisory_database(
+            archive_path,
+            cargo_home,
+            snapshot or snapshot_for(archive, tar),
+            now=self.fresh_now(),
+        )
+        return cargo_home, destination
+
+    def test_exact_snapshot_seeds_clean_deterministic_git_tree(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+            cargo_home, destination = self.seed(Path(directory), archive, tar)
+            self.assertEqual(
+                destination,
+                cargo_home / "advisory-dbs" / POLICY.RUSTSEC_DATABASE_DIRECTORY,
             )
-            text = path.read_text()
-            marker = '"cargo_deny_version": "0.20.2"'
-            self.assertEqual(text.count(marker), 1)
-            path.write_text(text.replace(marker, '"cargo_deny_version": "0.20.1"'))
-            with self.assertRaisesRegex(POLICY.PinPolicyError, "signed FR-0014"):
-                POLICY.verify_repository_bindings(root, policy)
+            self.assertEqual(
+                (destination / "README.md").read_bytes(),
+                SNAPSHOT_README,
+            )
+            self.assertEqual(
+                (destination / "crates/demo/RUSTSEC-2099-0001.md").read_bytes(),
+                SNAPSHOT_ADVISORY,
+            )
+            self.assertEqual(
+                (destination / "README.md").stat().st_mode & 0o777,
+                0o600,
+            )
+            self.assertEqual(
+                (destination / "crates").stat().st_mode & 0o777,
+                0o700,
+            )
+            head = (
+                subprocess.run(
+                    ("/usr/bin/git", "-C", str(destination), "rev-parse", "HEAD"),
+                    check=True,
+                    stdout=subprocess.PIPE,
+                )
+                .stdout.decode()
+                .strip()
+            )
+            tree = (
+                subprocess.run(
+                    (
+                        "/usr/bin/git",
+                        "-C",
+                        str(destination),
+                        "show",
+                        "-s",
+                        "--format=%T",
+                        "HEAD",
+                    ),
+                    check=True,
+                    stdout=subprocess.PIPE,
+                )
+                .stdout.decode()
+                .strip()
+            )
+            status = subprocess.run(
+                (
+                    "/usr/bin/git",
+                    "-C",
+                    str(destination),
+                    "status",
+                    "--porcelain=v1",
+                ),
+                check=True,
+                stdout=subprocess.PIPE,
+            ).stdout
+            self.assertEqual(head, SNAPSHOT_SEED_COMMIT)
+            self.assertEqual(tree, SNAPSHOT_TREE)
+            self.assertEqual(status, b"")
+
+    def test_snapshot_archive_size_and_digest_are_exact(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        descriptor = snapshot_for(archive, tar)
+        mutations = (
+            descriptor._replace(archive_bytes=len(archive) + 1),
+            descriptor._replace(archive_sha256="0" * 64),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+                    root = Path(directory)
+                    cargo_home = root / "cargo-home"
+                    cargo_home.mkdir(mode=0o700)
+                    path = self.write_archive(root, archive)
+                    with self.assertRaisesRegex(
+                        POLICY.PinPolicyError,
+                        "byte size|SHA-256",
+                    ):
+                        POLICY.seed_advisory_database(
+                            path,
+                            cargo_home,
+                            mutation,
+                            now=self.fresh_now(),
+                        )
+                    self.assertFalse((cargo_home / "advisory-dbs").exists())
+
+    def test_snapshot_tar_size_and_digest_are_exact(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        descriptor = snapshot_for(archive, tar)
+        mutations = (
+            descriptor._replace(tar_bytes=len(tar) + 1),
+            descriptor._replace(tar_sha256="0" * 64),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+                    root = Path(directory)
+                    cargo_home = root / "cargo-home"
+                    cargo_home.mkdir(mode=0o700)
+                    path = self.write_archive(root, archive)
+                    with self.assertRaisesRegex(
+                        POLICY.PinPolicyError,
+                        "tar byte size|tar SHA-256",
+                    ):
+                        POLICY.seed_advisory_database(
+                            path,
+                            cargo_home,
+                            mutation,
+                            now=self.fresh_now(),
+                        )
+                    self.assertFalse((cargo_home / "advisory-dbs").exists())
+
+    def test_snapshot_rejects_escape_and_absolute_paths(self) -> None:
+        for hostile_name in (
+            f"{SNAPSHOT_ROOT}/../escape",
+            "/tmp/escape",
+        ):
+            members = advisory_members()
+            hostile = copy.copy(members[3][0])
+            hostile.name = hostile_name
+            members[3] = (hostile, members[3][1])
+            tar = advisory_tar_payload(members)
+            archive = compress_tar(tar)
+            with self.subTest(name=hostile_name):
+                with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+                    root = Path(directory)
+                    with self.assertRaisesRegex(
+                        POLICY.PinPolicyError,
+                        "not normalized",
+                    ):
+                        self.seed(root, archive, tar)
+                    self.assertFalse((root / "escape").exists())
+                    self.assertFalse((root / "cargo-home/advisory-dbs").exists())
+
+    def test_snapshot_rejects_links_and_special_files(self) -> None:
+        for member_type in (
+            tarfile.SYMTYPE,
+            tarfile.LNKTYPE,
+            tarfile.FIFOTYPE,
+        ):
+            members = advisory_members()
+            hostile = copy.copy(members[3][0])
+            hostile.type = member_type
+            hostile.size = 0
+            hostile.linkname = "../escape"
+            members[3] = (hostile, b"")
+            tar = advisory_tar_payload(members)
+            archive = compress_tar(tar)
+            with self.subTest(member_type=member_type):
+                with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+                    root = Path(directory)
+                    with self.assertRaisesRegex(
+                        POLICY.PinPolicyError,
+                        "not an admitted file",
+                    ):
+                        self.seed(root, archive, tar)
+                    self.assertFalse((root / "cargo-home/advisory-dbs").exists())
+
+    def test_snapshot_rejects_archive_controlled_git_state(self) -> None:
+        for reserved in (".git", ".GIT"):
+            members = advisory_members()
+            hostile = copy.copy(members[3][0])
+            hostile.name = f"{SNAPSHOT_ROOT}/{reserved}/config"
+            members[3] = (hostile, members[3][1])
+            tar = advisory_tar_payload(members)
+            archive = compress_tar(tar)
+            with self.subTest(reserved=reserved):
+                with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+                    root = Path(directory)
+                    with self.assertRaisesRegex(
+                        POLICY.PinPolicyError,
+                        "reserved .git state",
+                    ):
+                        self.seed(root, archive, tar)
+                    self.assertFalse((root / "cargo-home/advisory-dbs").exists())
+
+    def test_snapshot_rejects_duplicate_members(self) -> None:
+        members = advisory_members()
+        duplicate = copy.copy(members[3][0])
+        members[4] = (duplicate, members[3][1])
+        tar = advisory_tar_payload(members)
+        archive = compress_tar(tar)
+        with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(POLICY.PinPolicyError, "duplicate"):
+                self.seed(root, archive, tar)
+            self.assertFalse((root / "cargo-home/advisory-dbs").exists())
+
+    def test_snapshot_rejects_pax_and_mode_drift(self) -> None:
+        mutations = []
+        pax_members = advisory_members()
+        pax_member = copy.copy(pax_members[3][0])
+        pax_member.pax_headers = {"comment": "0" * 40}
+        pax_members[3] = (pax_member, pax_members[3][1])
+        mutations.append((pax_members, "PAX metadata"))
+        mode_members = advisory_members()
+        mode_member = copy.copy(mode_members[3][0])
+        mode_member.mode = 0o755
+        mode_members[3] = (mode_member, mode_members[3][1])
+        mutations.append((mode_members, "not an admitted file"))
+        for members, diagnostic in mutations:
+            tar = advisory_tar_payload(members)
+            archive = compress_tar(tar)
+            with self.subTest(diagnostic=diagnostic):
+                with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+                    root = Path(directory)
+                    with self.assertRaisesRegex(
+                        POLICY.PinPolicyError,
+                        diagnostic,
+                    ):
+                        self.seed(root, archive, tar)
+                    self.assertFalse((root / "cargo-home/advisory-dbs").exists())
+
+    def test_snapshot_count_and_payload_drift_are_rejected(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        descriptor = snapshot_for(archive, tar)
+        mutations = (
+            descriptor._replace(member_count=6),
+            descriptor._replace(regular_file_count=3),
+            descriptor._replace(directory_count=4),
+            descriptor._replace(worktree_bytes=descriptor.worktree_bytes + 1),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+                    root = Path(directory)
+                    with self.assertRaisesRegex(
+                        POLICY.PinPolicyError,
+                        "member counts|worktree byte size",
+                    ):
+                        self.seed(root, archive, tar, mutation)
+                    self.assertFalse((root / "cargo-home/advisory-dbs").exists())
+
+    def test_snapshot_tree_mismatch_removes_partial_seed(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        snapshot = snapshot_for(archive, tar, tree="0" * 40)
+        with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(POLICY.PinPolicyError, "Git tree differs"):
+                self.seed(root, archive, tar, snapshot)
+            self.assertFalse((root / "cargo-home/advisory-dbs").exists())
+
+    def test_stale_snapshot_fails_before_creating_output(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        snapshot = snapshot_for(archive, tar)
+        with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+            root = Path(directory)
+            cargo_home = root / "cargo-home"
+            cargo_home.mkdir(mode=0o700)
+            archive_path = self.write_archive(root, archive)
+            stale_now = dt.datetime.fromisoformat(SNAPSHOT_COMMITTED_AT) + dt.timedelta(
+                days=90
+            )
+            with self.assertRaisesRegex(POLICY.PinPolicyError, "90 days stale"):
+                POLICY.seed_advisory_database(
+                    archive_path,
+                    cargo_home,
+                    snapshot,
+                    now=stale_now,
+                )
+            self.assertFalse((cargo_home / "advisory-dbs").exists())
+
+    def test_existing_advisory_root_is_preserved(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        snapshot = snapshot_for(archive, tar)
+        with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+            root = Path(directory)
+            cargo_home = root / "cargo-home"
+            cargo_home.mkdir(mode=0o700)
+            db_root = cargo_home / "advisory-dbs"
+            db_root.mkdir(mode=0o700)
+            marker = db_root / "owned"
+            marker.write_text("preserve")
+            archive_path = self.write_archive(root, archive)
+            with self.assertRaisesRegex(
+                POLICY.PinPolicyError,
+                "root must be a new directory",
+            ):
+                POLICY.seed_advisory_database(
+                    archive_path,
+                    cargo_home,
+                    snapshot,
+                    now=self.fresh_now(),
+                )
+            self.assertEqual(marker.read_text(), "preserve")
+
+    def test_symlink_cargo_home_is_rejected(self) -> None:
+        tar = advisory_tar_payload()
+        archive = compress_tar(tar)
+        snapshot = snapshot_for(archive, tar)
+        with tempfile.TemporaryDirectory(prefix="haldir-rustsec-") as directory:
+            root = Path(directory)
+            real_home = root / "real-cargo-home"
+            real_home.mkdir(mode=0o700)
+            cargo_home = root / "cargo-home"
+            cargo_home.symlink_to(real_home, target_is_directory=True)
+            archive_path = self.write_archive(root, archive)
+            with self.assertRaisesRegex(POLICY.PinPolicyError, "real directory"):
+                POLICY.seed_advisory_database(
+                    archive_path,
+                    cargo_home,
+                    snapshot,
+                    now=self.fresh_now(),
+                )
+            self.assertEqual(list(real_home.iterdir()), [])
+
+    def test_cli_exposes_explicit_seed_command(self) -> None:
+        options = POLICY._parser().parse_args(
+            [
+                "seed-advisory-db",
+                "--archive",
+                "snapshot.tar.gz",
+                "--cargo-home",
+                "/tmp/cargo-home",
+                "--git",
+                "/usr/bin/git",
+            ]
+        )
+        self.assertEqual(options.command, "seed-advisory-db")
+        self.assertEqual(options.archive, Path("snapshot.tar.gz"))
+        self.assertEqual(options.cargo_home, Path("/tmp/cargo-home"))
+        self.assertEqual(options.git, Path("/usr/bin/git"))
 
 
 class CargoDenyArchiveTests(unittest.TestCase):

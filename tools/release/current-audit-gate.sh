@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Epoch-15 current-head gate. The signed FR-0010 through FR-0012 repair
-# boundaries and the signed FR-0013 qualification boundary are frozen; none of
-# their Python verifiers execute on successors.
+# Epoch-16 current-head gate. The signed FR-0014 active boundary and all
+# earlier recovery boundaries are frozen; none of their Python verifiers
+# execute on successors.
 set -euo pipefail
 IFS=$'\n\t'
 umask 077
@@ -13,7 +13,7 @@ builtin unset \
   GIT_OBJECT_DIRECTORY GIT_REPLACE_REF_BASE GIT_WORK_TREE \
   PYTHONHOME PYTHONINSPECT PYTHONPATH PYTHONSTARTUP
 builtin unalias -a 2>/dev/null || true
-builtin unset -f python3 2>/dev/null || true
+builtin unset -f cargo python3 rustup 2>/dev/null || true
 builtin hash -r
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_NOSYSTEM=1
@@ -49,15 +49,56 @@ readonly PYTHON3
     'current-audit-gate: untrusted python3 executable' >&2
   exit 1
 }
-export PATH="${PYTHON3%/*}:/usr/bin:/bin"
+
+RUSTUP_CANDIDATE="$(builtin type -P rustup)"
+readonly RUSTUP_CANDIDATE
+RUSTUP="$(/usr/bin/readlink -f "$RUSTUP_CANDIDATE")"
+readonly RUSTUP
+[[ \
+  -n "$RUSTUP" \
+  && -f "$RUSTUP" \
+  && -x "$RUSTUP" \
+  && ! -L "$RUSTUP" \
+  && "$RUSTUP" != "$ROOT/"* \
+  && -z "$(/usr/bin/find "$RUSTUP" -prune -perm -022 -print)" \
+]] || {
+  builtin printf '%s\n' \
+    'current-audit-gate: untrusted rustup executable' >&2
+  exit 1
+}
+CARGO_CANDIDATE="$("$RUSTUP" which --toolchain 1.96.0 cargo)"
+readonly CARGO_CANDIDATE
+CARGO="$(/usr/bin/readlink -f "$CARGO_CANDIDATE")"
+readonly CARGO
+[[ \
+  -n "$CARGO" \
+  && -f "$CARGO" \
+  && -x "$CARGO" \
+  && ! -L "$CARGO" \
+  && "$CARGO" != "$ROOT/"* \
+  && -z "$(/usr/bin/find "$CARGO" -prune -perm -022 -print)" \
+]] || {
+  builtin printf '%s\n' \
+    'current-audit-gate: untrusted cargo executable' >&2
+  exit 1
+}
+
+export PATH="${PYTHON3%/*}:${CARGO%/*}:/usr/bin:/bin"
 "$PYTHON3" -I -B -S -c \
   'import sys; assert sys.implementation.name == "cpython"; assert sys.version_info[:3] == (3, 14, 6)'
+[[ "$("$CARGO" --version)" == "cargo 1.96.0 ("*")" ]] || {
+  builtin printf '%s\n' \
+    'current-audit-gate: cargo version differs from 1.96.0' >&2
+  exit 1
+}
 
 "$PYTHON3" -I -B -W error \
-  tools/release/test_verify_framework_recovery_fr_0014.py
+  tools/release/test_verify_framework_recovery_fr_0015.py
+"$PYTHON3" -I -B -W error tools/test_pinned_cargo_deny.py
+"$PYTHON3" -I -B -W error tools/verify-pins.py
 "$PYTHON3" -I -B -W error tools/verify-ci-pins.py
 "$PYTHON3" -I -B -W error \
-  tools/release/verify-framework-recovery-fr-0014.py
+  tools/release/verify-framework-recovery-fr-0015.py
 
 parent_count="$("$GIT" show -s --format=%P HEAD | /usr/bin/wc -w)"
 [[ "$parent_count" -eq 1 ]] || {
@@ -67,4 +108,4 @@ parent_count="$("$GIT" show -s --format=%P HEAD | /usr/bin/wc -w)"
 "$GIT" -c core.hooksPath=/dev/null diff --check HEAD^ HEAD
 
 printf '%s\n' \
-  'current-audit-gate: OK (epoch 15; signed linear scope; release NO_GO)'
+  'current-audit-gate: OK (epoch 16; signed linear scope; release NO_GO)'

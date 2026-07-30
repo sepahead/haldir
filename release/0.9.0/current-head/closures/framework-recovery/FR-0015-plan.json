@@ -1,0 +1,889 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 16,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "state": "PENDING_QUALIFICATION",
+    "tag_authorized": false
+  },
+  "core_diff": {
+    "base": "e98924aa5dfd36169febf9a47aa7a15b44548e31",
+    "patch_bytes": 441531,
+    "patch_lines": 11814,
+    "patch_sha256": "bb33cf3502976c0e1690cde813fbf7cad5348673d8fe6c936ef3c5134a32aa85",
+    "paths": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/formal.yml",
+      "tools/verify-ci-pins.py",
+      "tools/verify-pins.py",
+      "tools/pins.toml",
+      "tools/pinned_cargo_deny.py",
+      "tools/test_pinned_cargo_deny.py",
+      "tools/release/current-audit-gate.sh",
+      "tools/release/framework_recovery_fr_0015.py",
+      "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "tools/release/framework_recovery_fr_0015_capture.py",
+      "tools/release/framework_recovery_fr_0015_result.py",
+      "tools/release/verify-framework-recovery-fr-0015.py",
+      "tools/release/test_verify_framework_recovery_fr_0015.py"
+    ],
+    "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+  },
+  "core_records": [
+    {
+      "bytes": 18458,
+      "git_mode": "100644",
+      "git_object_id": "055d5cc77c5af4269f29a942f45c975a510ba4a4",
+      "git_object_type": "blob",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "1acbadbb45c122e57dc7a6f834bbae759e0c65570baaa0b9e306a0c44b88f847"
+    },
+    {
+      "bytes": 4691,
+      "git_mode": "100644",
+      "git_object_id": "a84c6a6ecdb350e2266cbc23db0ef53c3b985dd3",
+      "git_object_type": "blob",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "fd7e2b4356843eb7458c2f4efa964339a1094ebe788a4c409bb5da846c3ff1a5"
+    },
+    {
+      "bytes": 21628,
+      "git_mode": "100755",
+      "git_object_id": "ed396058c632d72cd0f828376b4434869e707c69",
+      "git_object_type": "blob",
+      "path": "tools/verify-ci-pins.py",
+      "sha256": "a4131010e15928ad26941fed9fcf1fd96423b4e687560a95b22a4a358b1acea8"
+    },
+    {
+      "bytes": 15269,
+      "git_mode": "100644",
+      "git_object_id": "25f2d397956dbf334c52dae82bee70f469b2caba",
+      "git_object_type": "blob",
+      "path": "tools/verify-pins.py",
+      "sha256": "d7ef400612cdcf2a5eaefb1b2cfb2a9829dc2f73a9ae08f9f0c547c6d1c0e12f"
+    },
+    {
+      "bytes": 4452,
+      "git_mode": "100644",
+      "git_object_id": "c407bcdad55c86a190519622ab13dbe427325711",
+      "git_object_type": "blob",
+      "path": "tools/pins.toml",
+      "sha256": "534e979a3af0bb4edb8781f4bc9d6c46ed73250c43aeb1ac59f03c9c15bf70b1"
+    },
+    {
+      "bytes": 48390,
+      "git_mode": "100644",
+      "git_object_id": "879141df5d9f896db2e3128158308d9297cfab74",
+      "git_object_type": "blob",
+      "path": "tools/pinned_cargo_deny.py",
+      "sha256": "0f2addfa07fa3cbb0dab90c18b62e5e0d183c9555264c395c8eb337da94927ae"
+    },
+    {
+      "bytes": 44492,
+      "git_mode": "100644",
+      "git_object_id": "58f8674b0512277e5dedc86be073877209daf2bd",
+      "git_object_type": "blob",
+      "path": "tools/test_pinned_cargo_deny.py",
+      "sha256": "24796f718717cf8b2b5fc147934db211c3489d4140f3e0fa34175adb4f3d4fb2"
+    },
+    {
+      "bytes": 3352,
+      "git_mode": "100755",
+      "git_object_id": "825aa99612a6319d7fbd55d7fdfbdca7900b14fa",
+      "git_object_type": "blob",
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "a35d28d7c2823c3391ccba70247929a9c135a6a6a0387ff85b9446d12e9d6a6e"
+    },
+    {
+      "bytes": 33932,
+      "git_mode": "100644",
+      "git_object_id": "144d7745bfa5001da68783a1bc9048229802152b",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0015.py",
+      "sha256": "6f1936aba9c8d88f90474cb47c1d9ac3e39eae21566e4dcb3eac6796af51278e"
+    },
+    {
+      "bytes": 5748,
+      "git_mode": "100644",
+      "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+      "git_object_type": "blob",
+      "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+    },
+    {
+      "bytes": 38697,
+      "git_mode": "100755",
+      "git_object_id": "446f3d2b6158f3f6c6bcef86248af36b50ac3fc4",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0015_capture.py",
+      "sha256": "c097f7515a6d7726ebc2addcca3855bf11e3de3e9101ddd53a5f605c0144daa2"
+    },
+    {
+      "bytes": 10455,
+      "git_mode": "100755",
+      "git_object_id": "cb4fdc83e0163519fb688c7ee9163cbffd5eb342",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0015_result.py",
+      "sha256": "42bcc3488049fbd0bf43db94eb8f5a1c1504bb58df29507c91682137624f90fe"
+    },
+    {
+      "bytes": 128807,
+      "git_mode": "100755",
+      "git_object_id": "244338c6be7f14017032bbd3db25bce55fbc58a5",
+      "git_object_type": "blob",
+      "path": "tools/release/verify-framework-recovery-fr-0015.py",
+      "sha256": "04c1cb3569315a1c38d393fa83804b98a04236f950e6345b1769caa8c1e774fb"
+    },
+    {
+      "bytes": 122349,
+      "git_mode": "100644",
+      "git_object_id": "888978acdae4b06da4641ff0c19ec536f9421707",
+      "git_object_type": "blob",
+      "path": "tools/release/test_verify_framework_recovery_fr_0015.py",
+      "sha256": "cde629277f9eb2f7b18efff218477c8722cefd22dbee4dffe4d04552bec0b707"
+    }
+  ],
+  "correction": {
+    "automated_paid_model_reviews": {
+      "authority_conferred": false,
+      "normative": false,
+      "reason": "NO_INDEPENDENTLY_ATTESTED_PROVIDER_PROVENANCE",
+      "required": false
+    },
+    "bounded_subprocess_identity": "WAITID_WNOWAIT_PROVEN_PRE_REAP_SIGNALING_NO_POST_REAP_PID_OR_PGID_SIGNALING",
+    "bounded_subprocess_pipes": "PIPES_CLOSED_AND_LEADER_REAPED_ON_SUCCESS_TIMEOUT_BOUND_AND_ERROR",
+    "branch_control_get": {
+      "omitted_update_parameter_reconstructed": false,
+      "repository_identity": "EXACT_NONFORK_IDENTITY_WITH_ABSENT_PARENT_AND_SOURCE",
+      "ruleset_history_and_version_required": true,
+      "ruleset_update_rule": {
+        "type": "update"
+      }
+    },
+    "branch_protection_policy": {
+      "capture_method": "GET_ONLY",
+      "endpoint": "repos/sepahead/haldir/branches/main/protection",
+      "expected_policy": {
+        "allow_deletions": false,
+        "allow_force_pushes": false,
+        "allow_fork_syncing": false,
+        "block_creations": false,
+        "enforce_admins": true,
+        "lock_branch": false,
+        "required_conversation_resolution": false,
+        "required_linear_history": true,
+        "required_pull_request_reviews": null,
+        "required_signatures": {
+          "enabled": true
+        },
+        "required_status_checks": {
+          "checks": [
+            {
+              "app_id": 15368,
+              "context": "build-test"
+            },
+            {
+              "app_id": 15368,
+              "context": "clean-build"
+            },
+            {
+              "app_id": 15368,
+              "context": "feature-matrix"
+            },
+            {
+              "app_id": 15368,
+              "context": "interop"
+            },
+            {
+              "app_id": 15368,
+              "context": "macos-compile"
+            },
+            {
+              "app_id": 15368,
+              "context": "supply-chain"
+            },
+            {
+              "app_id": 15368,
+              "context": "tlc-model-check"
+            }
+          ],
+          "strict": true
+        },
+        "restrictions": null
+      },
+      "get_materializes_contexts_and_checks": true,
+      "mutation_performed": false
+    },
+    "data_record_modes": "REGULAR_100644_ONLY",
+    "ecosystem_pin_contract": {
+      "cargo_deny_direct_execution": {
+        "action_uses": 0,
+        "maximum_staleness_days": 90,
+        "mode": "SAFE_BOUNDED_EXTRACT_EXACT_GIT_TREE_DIRECT_BINARY_FROZEN_NETWORK_ISOLATED",
+        "rustsec_archive_bytes": 441027,
+        "rustsec_archive_sha256": "ab968b67150079bc386d098311cdab98e23745d555b3018837c91f3ae847967a",
+        "rustsec_archive_url": "https://codeload.github.com/RustSec/advisory-db/tar.gz/7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+        "rustsec_commit": "7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+        "rustsec_committed_at": "2026-07-29T08:17:10-07:00",
+        "rustsec_repository_url": "https://github.com/RustSec/advisory-db",
+        "rustsec_tree": "2d3ab21e05f8b06ad2e232f92894b5e247d817ce",
+        "version": "0.20.2"
+      },
+      "fr0015_change_reason": "REPLACE_UNVERIFIED_DOCKER_ACTION_RUNTIME_INPUTS",
+      "github_cli_security_advisory": "GHSA-8cg3-r6g9-fpg2",
+      "inherited_immutable_action_baseline": [
+        {
+          "commit": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "name": "actions/setup-python",
+          "version": "v7.0.0"
+        },
+        {
+          "commit": "03ad4de0992f5dab5e18fcb136590ce7c4a0ac95",
+          "name": "actions/setup-java",
+          "version": "v5.6.0"
+        },
+        {
+          "commit": "508db95dd578ae2727ebd6217d5ba78e4fbda05d",
+          "name": "actions/attest",
+          "version": "v4.2.1"
+        }
+      ]
+    },
+    "hosted_result_transport": {
+      "authority_conferred": false,
+      "governance_epoch": 16,
+      "protocol": "HALDIR_EPOCH_16_HOSTED_RESULT_V1",
+      "state": "EPOCH_16_PROVENANCE_FORMAT"
+    },
+    "json_numeric_identity": "SCHEMA_INTEGER_FIELDS_REQUIRE_EXACT_JSON_INTEGER_BOOLEAN_AND_FLOAT_REJECTED",
+    "normative_qualification_evidence": [
+      "SIGNED_FR_0014_ACTIVE_BOUNDARY_AND_LINEAR_SUCCESSORS",
+      "FR_0015_R_MAIN_CI_RESULT_AND_GITHUB_OIDC_ATTESTATION",
+      "FR_0015_R_MAIN_FORMAL_RESULT_AND_GITHUB_OIDC_ATTESTATION",
+      "FR_0015_R_EXACT_LOCAL_VALIDATION",
+      "SIGNED_SOURCE_AUTHORITY"
+    ],
+    "offline_verifier_tool": {
+      "linux_amd64_archive": "https://github.com/cli/cli/releases/download/v2.96.0/gh_2.96.0_linux_amd64.tar.gz",
+      "linux_amd64_archive_bytes": 14652560,
+      "linux_amd64_archive_sha256": "83d5c2ccad5498f58bf6368acb1ab32588cf43ab3a4b1c301bf36328b1c8bd60",
+      "linux_amd64_binary_bytes": 40722594,
+      "linux_amd64_binary_sha256": "56b8bbbb27b066ecb33dbef9a256dc9d1314adaeff0908a752feba6c34053b40",
+      "linux_install": "DIGEST_VERIFIED_ARCHIVE_NO_CURL_TO_SHELL",
+      "local_binary_admission": "EXACT_PLATFORM_BINARY_SIZE_AND_SHA256",
+      "macos_arm64_archive": "https://github.com/cli/cli/releases/download/v2.96.0/gh_2.96.0_macOS_arm64.zip",
+      "macos_arm64_archive_bytes": 13950131,
+      "macos_arm64_archive_sha256": "f23a0c37d963aacc3bed703ccbd59b41c5ca22101fab7f00eb2b7cad23aba463",
+      "macos_arm64_binary_bytes": 38817216,
+      "macos_arm64_binary_sha256": "b1d6c442fde99ca27c04e1e74d624895abe37785f4a3e9e9b684bf7586ce4bc8",
+      "name": "gh",
+      "version": "2.96.0"
+    },
+    "oidc_job_isolation": "NO_CHECKOUT_NO_REPOSITORY_CODE_CANONICAL_MAIN_PUSH_ONLY",
+    "run_attempt_chronology": {
+      "all_job_bounds": "ORIGINAL_RUN_LIFETIME",
+      "attempt_created_and_started_bounds": "ORIGINAL_RUN_LIFETIME_AND_ATTEMPT_COMPLETION",
+      "attempt_created_vs_started_order_assumed": false,
+      "critical_current_attempt_bounds": "ATTEMPT_STARTED_AT_THROUGH_ATTEMPT_UPDATED_AT",
+      "ordinary_attempt_jobs": "EXACT_CANONICAL_EQUALITY"
+    },
+    "trusted_root_bootstrap": {
+      "bytes": 5748,
+      "evidence_selected_root_allowed": false,
+      "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+    },
+    "workflow_yaml_pin_scanner": "USES_SAFE_SIMPLE_KEY_SUBSET_NO_COMPLEX_OR_FLOW_MAPPING_KEYS",
+    "worktree_modes": "GIT_EXECUTABLE_PARITY_AND_NO_GROUP_OR_WORLD_WRITE"
+  },
+  "defects": [
+    {
+      "authority_produced": false,
+      "id": "FR0015-D01",
+      "prior_state": "PINNED_ACTION_COMMIT_WITH_UNVERIFIED_RUNTIME_INPUTS",
+      "summary": "The epoch-15 cargo-deny Docker Action fetched mutable Alpine packages and streamed a release archive into tar without authenticating the archive digest."
+    },
+    {
+      "id": "FR0015-D02",
+      "required_state": "DIGEST_VERIFIED_SNAPSHOT_VALID_GIT_TREE_AND_OFFLINE_CHECK",
+      "summary": "cargo-deny frozen mode is offline and cannot initialize an absent RustSec advisory database, so a cold runner requires an independently pinned database snapshot."
+    }
+  ],
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0015-plan-v1",
+    "principal": "sepmhn@gmail.com",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAApaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDE1LXBs\nYW4tdjEAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABABuqViex/G97I6Z\nzqN97MSZDK6upx9pQmdDHUpMTQZDiqGwcfzPxOWQ+VS7LEqVCvD+a6T8Vm116vLkp71TBZ\nBQ==\n-----END SSH SIGNATURE-----\n"
+  },
+  "legacy_boundary": {
+    "activation_commit": "116b6ab39051821a70641c4111710ac55d2d2d14",
+    "activation_tree": "24087f581393b25c3788bfac90b4a7120e63340f",
+    "commit": "e98924aa5dfd36169febf9a47aa7a15b44548e31",
+    "earlier_recovery_python_executed": false,
+    "fr_0010_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-local.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-response.json"
+    ],
+    "fr_0011_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-local.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-response.json"
+    ],
+    "fr_0012_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-local.json"
+    ],
+    "fr_0013_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0013-activation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-result.json"
+    ],
+    "fr_0014_activation_namespace": "haldir-framework-recovery-fr-0014-activation-v1",
+    "fr_0014_plan_namespace": "haldir-framework-recovery-fr-0014-plan-v1",
+    "fr_0014_qualification_namespace": "haldir-framework-recovery-fr-0014-qualification-v1",
+    "fr_0014_state": "ACTIVE",
+    "fr_0014_successor_verifier_executed": false,
+    "fr_0014_successor_verifier_state": "RETIRED_AT_FR_0015_REPAIR",
+    "historical_recovery_tool_paths": [
+      "tools/release/framework_recovery_fr_0010.py",
+      "tools/release/framework_recovery_fr_0010_capture.py",
+      "tools/release/framework_recovery_fr_0010_result.py",
+      "tools/release/framework_recovery_fr_0011.py",
+      "tools/release/framework_recovery_fr_0011_capture.py",
+      "tools/release/framework_recovery_fr_0011_result.py",
+      "tools/release/framework_recovery_fr_0012.py",
+      "tools/release/framework_recovery_fr_0012_capture.py",
+      "tools/release/framework_recovery_fr_0012_result.py",
+      "tools/release/framework_recovery_fr_0013.py",
+      "tools/release/framework_recovery_fr_0013_capture.py",
+      "tools/release/framework_recovery_fr_0013_result.py",
+      "tools/release/framework_recovery_fr_0014.py",
+      "tools/release/framework_recovery_fr_0014_capture.py",
+      "tools/release/framework_recovery_fr_0014_result.py",
+      "tools/release/test_verify_framework_recovery_fr_0010.py",
+      "tools/release/test_verify_framework_recovery_fr_0011.py",
+      "tools/release/test_verify_framework_recovery_fr_0012.py",
+      "tools/release/test_verify_framework_recovery_fr_0013.py",
+      "tools/release/test_verify_framework_recovery_fr_0014.py",
+      "tools/release/verify-framework-recovery-fr-0010.py",
+      "tools/release/verify-framework-recovery-fr-0011.py",
+      "tools/release/verify-framework-recovery-fr-0012.py",
+      "tools/release/verify-framework-recovery-fr-0013.py",
+      "tools/release/verify-framework-recovery-fr-0014.py"
+    ],
+    "parent": "cf3f2f175602d878884df7daa875296657e35e61",
+    "qualification_commit": "a628aa9880ab46b8181be6f1873c0503db45b11f",
+    "qualification_tree": "eb4d7011556cea987b77afaa29cdc52f3b4c88c8",
+    "records": {
+      "release/0.9.0/allowed-signers": {
+        "bytes": 98,
+        "git_mode": "100644",
+        "git_object_id": "7e563049b65dc6761e76b7d0c96c1cc10bd5c0dc",
+        "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+      },
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0014-activation.json": {
+        "bytes": 23327,
+        "git_mode": "100644",
+        "git_object_id": "ea694bf4fd967454a3ef4d2853d1ef6a54d80e73",
+        "sha256": "85d72e88953550147c83d692b5747cc377345a094b7ab363456e92e2324507c2"
+      },
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0014-plan.json": {
+        "bytes": 44282,
+        "git_mode": "100644",
+        "git_object_id": "f6c68a0e2a7778fb2c2cc6364c6835940e3ea476",
+        "sha256": "d21a12f096c7bddc5a62f2ccb92bec3ddc3b50736426a93f121720448c511d05"
+      },
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0014-qualification.json": {
+        "bytes": 18286,
+        "git_mode": "100644",
+        "git_object_id": "72a28c3adce16a0acfed08a1d1016dbcc6b53074",
+        "sha256": "15f4929d4bb7af1485b56765029bdb9cf29539579844a6b8bf2f4fbdec69d907"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-attestation.json": {
+        "bytes": 10347,
+        "git_mode": "100644",
+        "git_object_id": "e3a579e430c6452647b8589e1dda1345e5927b21",
+        "sha256": "4f115b23c70efcea52f3852db04bf5c4eb053b6b1ffb97ae0a80662a77617867"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-capture.json": {
+        "bytes": 64530,
+        "git_mode": "100644",
+        "git_object_id": "43b5d59027fe7c0b63feb0df66efa6a6711e1470",
+        "sha256": "d1bab48ff3f0c92709715f39b7035158a8ebf2c7353f0a9642ab99ca7588d5c1"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-result.json": {
+        "bytes": 2467,
+        "git_mode": "100644",
+        "git_object_id": "780a7b602d40c9eb36accc7bfedf2c18783da0e2",
+        "sha256": "a4a57d526d16707503d8b829b9f7abdd62176d8255c20bce2f04c8945515db12"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-attestation.json": {
+        "bytes": 10380,
+        "git_mode": "100644",
+        "git_object_id": "17ac9e6c299c900262aeb71717966b7f039cc1f0",
+        "sha256": "a37445792ea2a11074778f84b8d266c7b65f9473139c8d187858a99327d881c6"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-capture.json": {
+        "bytes": 32698,
+        "git_mode": "100644",
+        "git_object_id": "33058af6e2d262e13ee6cff6c95d9375fc805e96",
+        "sha256": "4691f057a20dbbe80a00fbd62dcb58acec0c503cc04a4380c5d39f6f6ed076d9"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-result.json": {
+        "bytes": 2446,
+        "git_mode": "100644",
+        "git_object_id": "752610ddb3502ee79530472c50a356de0153aa43",
+        "sha256": "557fc456a6d1240575863c9ed26318d7f2eaab349b638cba09127b598238390c"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-local.json": {
+        "bytes": 3586,
+        "git_mode": "100644",
+        "git_object_id": "5022a1ede48e0ad6b1a9c69367ff056aad008daa",
+        "sha256": "979d82232ccbc3059a20e9c5a3094a6f8e46082ae40685e87f9881e3937d4377"
+      },
+      "tools/release/framework_recovery_fr_0014.py": {
+        "bytes": 33411,
+        "git_mode": "100644",
+        "git_object_id": "bfc4252775e977435328db5a68ebc73ca7b113af",
+        "sha256": "ba48f97b611aace5e038764e91ec5569bb977130cc40489bf7558aad83a8eae7"
+      },
+      "tools/release/framework_recovery_fr_0014_capture.py": {
+        "bytes": 34800,
+        "git_mode": "100755",
+        "git_object_id": "dbf6562b7d1a02a7d61e79a49be25a6a34372a70",
+        "sha256": "ce21ad28b85f069d0192ad6076ff69523c9ef16eaf8d80372d2c4b7dc7b06c56"
+      },
+      "tools/release/framework_recovery_fr_0014_result.py": {
+        "bytes": 9934,
+        "git_mode": "100755",
+        "git_object_id": "c6b3cb6e87867f000e48b610a2a56d3a088383eb",
+        "sha256": "f9282aa0ecd5f9c7bcd546fecf04b6b3e2534ee5c8050db03b382ccde0a66bac"
+      },
+      "tools/release/sigstore-public-good-trusted-root.jsonl": {
+        "bytes": 5748,
+        "git_mode": "100644",
+        "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+        "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+      },
+      "tools/release/test_verify_framework_recovery_fr_0014.py": {
+        "bytes": 116615,
+        "git_mode": "100644",
+        "git_object_id": "cf02a5c1f47c89144c5d186e2e5de516fb08255d",
+        "sha256": "38c6fa9b27141240117191285d65ad9cd41d28cd527f00c841be6e028c8ff3f9"
+      },
+      "tools/release/verify-framework-recovery-fr-0014.py": {
+        "bytes": 119655,
+        "git_mode": "100755",
+        "git_object_id": "6de5106e10505050b88924bb8f5252892076511a",
+        "sha256": "be94190428c56c966d6d8df107febfc0fa022b2c4de1c7abc38536b63871a880"
+      }
+    },
+    "repair_commit": "c2ac5b6512d070ecc7f5a560405a05388b7fe86c",
+    "repair_parent": "62c1e0e0bfe7d81ca6f6ac3cff31c835bbff1089",
+    "repair_subject": "release: supersede incomplete epoch-14 recovery",
+    "repair_tree": "c6a211d1670ac5d423000c78d7dc0b8988e78842",
+    "signed_successor_chain": [
+      {
+        "commit": "573d9d28de894e7056010cb7288ed94712809fd3",
+        "parent": "116b6ab39051821a70641c4111710ac55d2d2d14",
+        "subject": "state: bound anti-rollback persistence",
+        "tree": "fc4905533cbeb90e80b571a1a6944de324ac6e90"
+      },
+      {
+        "commit": "3f364b83b25ddf42b616d882ed0646e3f063ade4",
+        "parent": "573d9d28de894e7056010cb7288ed94712809fd3",
+        "subject": "policy: bind executable configuration identity",
+        "tree": "5f9b5a6f2ea5f442d995ed9e9f8f8882c4bff3bf"
+      },
+      {
+        "commit": "ec6ac8d251b1e2891827075a7e911fa5288a416b",
+        "parent": "3f364b83b25ddf42b616d882ed0646e3f063ade4",
+        "subject": "audit: track validated policy pipeline",
+        "tree": "54d84723b4dd2c0897f4e754b93196c71910837a"
+      },
+      {
+        "commit": "bfb12613ecc0091267c77282c891208c45444004",
+        "parent": "ec6ac8d251b1e2891827075a7e911fa5288a416b",
+        "subject": "gate: reject active lease replacement",
+        "tree": "5151596916b7081c25d4eac0416a3f2b112ff776"
+      },
+      {
+        "commit": "742e4a4d0b808670f5525fb002f1eefda4a9fe1b",
+        "parent": "bfb12613ecc0091267c77282c891208c45444004",
+        "subject": "admission: reject conflicting authority bindings",
+        "tree": "b8f87981c14034abfa30a4f41d6d7531f3790e86"
+      },
+      {
+        "commit": "cf3f2f175602d878884df7daa875296657e35e61",
+        "parent": "742e4a4d0b808670f5525fb002f1eefda4a9fe1b",
+        "subject": "state: bind challenge lifetime to session",
+        "tree": "e81f034b74298e8ae91de91f65916c20b36fe54f"
+      },
+      {
+        "commit": "e98924aa5dfd36169febf9a47aa7a15b44548e31",
+        "parent": "cf3f2f175602d878884df7daa875296657e35e61",
+        "subject": "supply-chain: define verified cargo-deny assets",
+        "tree": "e64a9c27ed1720da7e445ad6b6c881c5665d5781"
+      }
+    ],
+    "state": "HISTORICAL_SIGNED_FR_0014_ACTIVE_BOUNDARY",
+    "subject": "supply-chain: define verified cargo-deny assets",
+    "tree": "e64a9c27ed1720da7e445ad6b6c881c5665d5781"
+  },
+  "limitations": [
+    "GitHub OIDC proves the isolated attestation workflow identity; the producer result remains a statement from repository code.",
+    "The epoch-16 artifact syntax is an evidence transport only and confers no release authority.",
+    "cargo-deny and RustSec acquisition still require network availability, but exact size and SHA-256 identities are checked before either input is installed or executed.",
+    "The dependency-policy execution is frozen and network-isolated; the pinned RustSec snapshot is rejected after its finite 90-day staleness window and requires an intentional signed refresh.",
+    "Branch-protection API evidence is a TLS-observed snapshot of mutable external state, not durable cryptographic proof.",
+    "Epoch 16 performs no branch-control mutation. Its activation captures the existing protected state at the qualification commit through bounded GET requests and claims no durable external-state proof.",
+    "Activation necessarily binds qualification-main hosted proof; the activation commit cannot contain hosted proof of itself.",
+    "Offline successor verification proves signature, ancestry, and protected-path scope, but cannot prove mutable hosted settings.",
+    "Bounded subprocess cleanup terminates descendants that remain in the child process group. A hostile descendant that successfully creates a new session or double-forks outside that group can escape this local process-tree boundary. No host-resource containment or availability guarantee is claimed.",
+    "The owner/admin can mutate external settings; owner-account or GitHub control-plane compromise is outside this local guarantee.",
+    "This bridge grants no release, deployment, publication, tag, archive, DOI, or GitHub Release authority."
+  ],
+  "post_activation_contract": {
+    "future_framework_recovery_epoch": "REQUIRES_INTENTIONAL_SIGNED_GATE_AND_TRUST_ROOT_REPLACEMENT",
+    "main_update_ruleset": {
+      "enforcement": "active",
+      "layers_with_classic_branch_protection": true,
+      "name": "haldir-main-writer-allowlist",
+      "observed_get_rule": {
+        "type": "update"
+      },
+      "omitted_update_parameter_reconstructed": false,
+      "scope": "refs/heads/main",
+      "sole_bypass_actor": {
+        "actor_id": 10104569,
+        "actor_type": "User",
+        "bypass_mode": "always"
+      }
+    },
+    "model": "SIGNED_LINEAR_SCOPED_MILESTONES",
+    "post_main_attestation_jobs": [
+      "attest-ci-audit-result",
+      "attest-formal-audit-result"
+    ],
+    "recovery_namespace_match": "UNICODE_CASEFOLD_PREFIX",
+    "recovery_namespace_prefixes_immutable": [
+      "release/0.9.0/current-head/closures/framework-recovery/",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-"
+    ],
+    "required_pre_accept_checks": [
+      {
+        "app_id": 15368,
+        "context": "build-test"
+      },
+      {
+        "app_id": 15368,
+        "context": "clean-build"
+      },
+      {
+        "app_id": 15368,
+        "context": "feature-matrix"
+      },
+      {
+        "app_id": 15368,
+        "context": "interop"
+      },
+      {
+        "app_id": 15368,
+        "context": "macos-compile"
+      },
+      {
+        "app_id": 15368,
+        "context": "supply-chain"
+      },
+      {
+        "app_id": 15368,
+        "context": "tlc-model-check"
+      }
+    ],
+    "threat_model": "TRUSTED_SOURCE_AUTHORITY_AND_OWNER_ACCOUNT",
+    "trust_root_paths_immutable": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/formal.yml",
+      "release/0.9.0/allowed-signers",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0013-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0014-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0014-plan.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0014-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-plan.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0014-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-local.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-response.json",
+      "tools/pinned_cargo_deny.py",
+      "tools/pins.toml",
+      "tools/release/current-audit-gate.sh",
+      "tools/release/framework_recovery_fr_0010.py",
+      "tools/release/framework_recovery_fr_0010_capture.py",
+      "tools/release/framework_recovery_fr_0010_result.py",
+      "tools/release/framework_recovery_fr_0011.py",
+      "tools/release/framework_recovery_fr_0011_capture.py",
+      "tools/release/framework_recovery_fr_0011_result.py",
+      "tools/release/framework_recovery_fr_0012.py",
+      "tools/release/framework_recovery_fr_0012_capture.py",
+      "tools/release/framework_recovery_fr_0012_result.py",
+      "tools/release/framework_recovery_fr_0013.py",
+      "tools/release/framework_recovery_fr_0013_capture.py",
+      "tools/release/framework_recovery_fr_0013_result.py",
+      "tools/release/framework_recovery_fr_0014.py",
+      "tools/release/framework_recovery_fr_0014_capture.py",
+      "tools/release/framework_recovery_fr_0014_result.py",
+      "tools/release/framework_recovery_fr_0015.py",
+      "tools/release/framework_recovery_fr_0015_capture.py",
+      "tools/release/framework_recovery_fr_0015_result.py",
+      "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "tools/release/test_verify_current_audit_fr_0009.py",
+      "tools/release/test_verify_framework_recovery_fr_0010.py",
+      "tools/release/test_verify_framework_recovery_fr_0011.py",
+      "tools/release/test_verify_framework_recovery_fr_0012.py",
+      "tools/release/test_verify_framework_recovery_fr_0013.py",
+      "tools/release/test_verify_framework_recovery_fr_0014.py",
+      "tools/release/test_verify_framework_recovery_fr_0015.py",
+      "tools/release/verify-current-audit.py",
+      "tools/release/verify-framework-recovery-fr-0010.py",
+      "tools/release/verify-framework-recovery-fr-0011.py",
+      "tools/release/verify-framework-recovery-fr-0012.py",
+      "tools/release/verify-framework-recovery-fr-0013.py",
+      "tools/release/verify-framework-recovery-fr-0014.py",
+      "tools/release/verify-framework-recovery-fr-0015.py",
+      "tools/test_pinned_cargo_deny.py",
+      "tools/verify-ci-pins.py",
+      "tools/verify-pins.py"
+    ],
+    "writer_adversarial_immutability_claimed": false
+  },
+  "protocol_parent": {
+    "commit": "e98924aa5dfd36169febf9a47aa7a15b44548e31",
+    "tree": "e64a9c27ed1720da7e445ad6b6c881c5665d5781"
+  },
+  "recovery_id": "FR-0015",
+  "release_target": "0.9.0",
+  "repair_identity": {
+    "commit": "SIGNED_COMMIT_CONTAINING_THIS_PLAN",
+    "required_parent": "e98924aa5dfd36169febf9a47aa7a15b44548e31",
+    "subject": "release: establish epoch-16 audit trust root"
+  },
+  "repair_scope": {
+    ".github/workflows/ci.yml": "M",
+    ".github/workflows/formal.yml": "M",
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0015-plan.json": "A",
+    "tools/pinned_cargo_deny.py": "M",
+    "tools/pins.toml": "M",
+    "tools/release/current-audit-gate.sh": "M",
+    "tools/release/framework_recovery_fr_0015.py": "A",
+    "tools/release/framework_recovery_fr_0015_capture.py": "A",
+    "tools/release/framework_recovery_fr_0015_result.py": "A",
+    "tools/release/test_verify_framework_recovery_fr_0015.py": "A",
+    "tools/release/verify-framework-recovery-fr-0015.py": "A",
+    "tools/test_pinned_cargo_deny.py": "M",
+    "tools/verify-ci-pins.py": "M",
+    "tools/verify-pins.py": "M"
+  },
+  "schema_version": "1.0.0",
+  "stage_contract": {
+    "activation": {
+      "data_only": true,
+      "namespace": "haldir-framework-recovery-fr-0015-activation-v1",
+      "state_after": "ACTIVE",
+      "statuses": {
+        "release/0.9.0/current-head/closures/framework-recovery/FR-0015-activation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-branch-protection.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-ci-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-ci-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-ci-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-formal-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-formal-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-q-formal-result.json": "A"
+      },
+      "subject": "release: activate epoch-16 audit trust root"
+    },
+    "ordinary_successor_before_activation": "REJECT",
+    "qualification": {
+      "data_only": true,
+      "namespace": "haldir-framework-recovery-fr-0015-qualification-v1",
+      "state_after": "QUALIFIED_PENDING_ACTIVATION",
+      "statuses": {
+        "release/0.9.0/current-head/closures/framework-recovery/FR-0015-qualification.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-local.json": "A"
+      },
+      "subject": "release: qualify epoch-16 audit trust root"
+    },
+    "repair": {
+      "state_after": "PENDING_QUALIFICATION",
+      "subject": "release: establish epoch-16 audit trust root"
+    }
+  }
+}

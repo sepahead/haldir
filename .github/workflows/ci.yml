@@ -173,9 +173,11 @@ jobs:
           /usr/bin/chmod go-w "$GH_BIN"
           [[ "$("$GH_BIN" --version | /usr/bin/head -n 1)" == \
             "gh version ${GH_CLI_VERSION} (2026-07-02)" ]]
-          printf 'HALDIR_FR0014_GH=%s\n' "$GH_BIN" >> "$GITHUB_ENV"
+          printf 'HALDIR_FR0015_GH=%s\n' "$GH_BIN" >> "$GITHUB_ENV"
       - name: Preload isolated task-runner image
         run: /usr/bin/docker pull python@sha256:4a3a38c8710794e278c3651352dd6195d5798eb6ec5ad41db6258e753c9e4ceb
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal
       - name: Verify current-head 0.9 audit cut
         run: /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
       - name: Verify source pins
@@ -210,25 +212,142 @@ jobs:
           python3 tools/verify-live-gate-dev-smoke.py
       - name: Forbidden-claim drift check
         run: python3 tools/verify-claims.py
-      - name: cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
-      - name: Emit canonical epoch-15 audit result
+      - name: Install verified cargo-deny and RustSec snapshot
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        env:
+          CARGO_DENY_URL: https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz
+          RUSTSEC_URL: https://codeload.github.com/RustSec/advisory-db/tar.gz/7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2
+        run: |
+          DENY_ARCHIVE="${RUNNER_TEMP}/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"
+          DENY_ROOT="${RUNNER_TEMP}/haldir-cargo-deny"
+          RUSTSEC_ARCHIVE="${RUNNER_TEMP}/rustsec-advisory-db-7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2.tar.gz"
+          HALDIR_CARGO_HOME="${RUNNER_TEMP}/haldir-cargo-home"
+          /usr/bin/mkdir -m 0700 "$HALDIR_CARGO_HOME"
+          for record in \
+            "${CARGO_DENY_URL}|${DENY_ARCHIVE}|4936832" \
+            "${RUSTSEC_URL}|${RUSTSEC_ARCHIVE}|441027"
+          do
+            IFS='|' read -r URL OUTPUT MAX_BYTES <<< "$record"
+            /usr/bin/curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --proto '=https' \
+              --proto-redir '=https' \
+              --tlsv1.2 \
+              --retry 3 \
+              --connect-timeout 30 \
+              --max-time 300 \
+              --max-filesize "$MAX_BYTES" \
+              --output "$OUTPUT" \
+              "$URL"
+          done
+          python3 -I -B tools/pinned_cargo_deny.py install \
+            --archive "$DENY_ARCHIVE" \
+            --destination "$DENY_ROOT" \
+            --target x86_64-unknown-linux-musl
+          python3 -I -B tools/pinned_cargo_deny.py seed-advisory-db \
+            --archive "$RUSTSEC_ARCHIVE" \
+            --cargo-home "$HALDIR_CARGO_HOME" \
+            --git /usr/bin/git
+          printf 'CARGO_HOME=%s\n' "$HALDIR_CARGO_HOME" >> "$GITHUB_ENV"
+      - name: Prime exact locked dependency inputs
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        run: cargo fetch --locked --manifest-path "$GITHUB_WORKSPACE/Cargo.toml"
+      - name: Frozen cargo-deny with networking disabled
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        env:
+          CARGO_NET_OFFLINE: "true"
+          CARGO_TERM_COLOR: never
+        run: |
+          FINAL_CARGO_HOME="${RUNNER_TEMP}/haldir-cargo-home"
+          FINAL_CARGO_DENY="${RUNNER_TEMP}/haldir-cargo-deny/cargo-deny"
+          FINAL_RUSTSEC_DB="${FINAL_CARGO_HOME}/advisory-dbs/advisory-db-3157b0e258782691"
+          ISOLATED_HOME="${RUNNER_TEMP}/haldir-cargo-deny-home"
+          RUSTUP_BIN="$(/usr/bin/readlink -f "${HOME}/.cargo/bin/rustup")"
+          RUSTUP_ROOT="${HOME}/.rustup"
+          TOOLCHAIN_CARGO="$("$RUSTUP_BIN" which --toolchain 1.96.0 cargo)"
+          TOOLCHAIN_CARGO="$(/usr/bin/readlink -f "$TOOLCHAIN_CARGO")"
+          TOOLCHAIN_BIN="${TOOLCHAIN_CARGO%/*}"
+          /usr/bin/mkdir -m 0700 "$ISOLATED_HOME"
+          /usr/bin/test -d "$FINAL_CARGO_HOME"
+          /usr/bin/test ! -L "$FINAL_CARGO_HOME"
+          /usr/bin/test -f "$FINAL_CARGO_DENY"
+          /usr/bin/test ! -L "$FINAL_CARGO_DENY"
+          /usr/bin/test -f "$RUSTUP_BIN"
+          /usr/bin/test ! -L "$RUSTUP_BIN"
+          /usr/bin/test -f "$TOOLCHAIN_CARGO"
+          /usr/bin/test ! -L "$TOOLCHAIN_CARGO"
+          /usr/bin/test -d "$RUSTUP_ROOT"
+          /usr/bin/test ! -L "$RUSTUP_ROOT"
+          [[ "$FINAL_CARGO_HOME" != "$GITHUB_WORKSPACE/"* ]]
+          [[ "$FINAL_CARGO_DENY" != "$GITHUB_WORKSPACE/"* ]]
+          [[ "$RUSTUP_BIN" != "$GITHUB_WORKSPACE/"* ]]
+          [[ "$TOOLCHAIN_CARGO" != "$GITHUB_WORKSPACE/"* ]]
+          [[ -z "$(/usr/bin/find \
+            "$FINAL_CARGO_DENY" "$RUSTUP_BIN" "$TOOLCHAIN_CARGO" \
+            -prune -perm -022 -print)" ]]
+          [[ "$("$TOOLCHAIN_CARGO" --version)" == "cargo 1.96.0 ("*")" ]]
+          [[ "$(/usr/bin/stat --format=%s "$FINAL_CARGO_DENY")" == 8844624 ]]
+          printf '%s  %s\n' \
+            b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a \
+            "$FINAL_CARGO_DENY" \
+            | /usr/bin/sha256sum --check --strict
+          export GIT_CONFIG_GLOBAL=/dev/null
+          export GIT_CONFIG_NOSYSTEM=1
+          export GIT_NO_REPLACE_OBJECTS=1
+          [[ "$(/usr/bin/git -C "$FINAL_RUSTSEC_DB" rev-parse HEAD)" == \
+            1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce ]]
+          [[ "$(/usr/bin/git -C "$FINAL_RUSTSEC_DB" rev-parse 'HEAD^{tree}')" == \
+            2d3ab21e05f8b06ad2e232f92894b5e247d817ce ]]
+          [[ -z "$(/usr/bin/git -C "$FINAL_RUSTSEC_DB" status \
+            --porcelain=v1 --untracked-files=all)" ]]
+          RUNNER_GID="$(/usr/bin/id -g)"
+          RUNNER_UID="$(/usr/bin/id -u)"
+          /usr/bin/sudo --non-interactive \
+            /usr/bin/unshare --net -- \
+            /usr/bin/setpriv \
+              --reuid="$RUNNER_UID" \
+              --regid="$RUNNER_GID" \
+              --clear-groups \
+              --inh-caps=-all \
+              --bounding-set=-all \
+              --no-new-privs \
+            /usr/bin/env -i \
+              CARGO_HOME="$FINAL_CARGO_HOME" \
+              CARGO_NET_OFFLINE="$CARGO_NET_OFFLINE" \
+              CARGO_TERM_COLOR="$CARGO_TERM_COLOR" \
+              GIT_CONFIG_GLOBAL=/dev/null \
+              GIT_CONFIG_NOSYSTEM=1 \
+              GIT_NO_REPLACE_OBJECTS=1 \
+              HOME="$ISOLATED_HOME" \
+              LC_ALL=C \
+              PATH="$TOOLCHAIN_BIN:/usr/bin:/bin" \
+              RUSTUP_HOME="$RUSTUP_ROOT" \
+              RUSTUP_TOOLCHAIN=1.96.0 \
+              "$FINAL_CARGO_DENY" \
+                --frozen \
+                --all-features \
+                --manifest-path "$GITHUB_WORKSPACE/Cargo.toml" \
+                check
+      - name: Emit canonical epoch-16 audit result
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 tools/release/framework_recovery_fr_0014_result.py \
+          python3 tools/release/framework_recovery_fr_0015_result.py \
             --workflow ci \
-            --output "epoch-15-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "epoch-16-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-15-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "epoch-16-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-15 audit result
+      - name: Upload canonical epoch-16 audit result
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-15-ci-result-attempt-${{ github.run_attempt }}.json
+          path: epoch-16-ci-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -268,7 +387,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-audit-result/epoch-15-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-audit-result/epoch-16-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-audit-result -mindepth 1 -maxdepth 1 \
@@ -280,7 +399,7 @@ jobs:
       - name: Attest exact audit result
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
-          subject-path: attested-audit-result/epoch-15-ci-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-audit-result/epoch-16-ci-result-attempt-${{ github.run_attempt }}.json
 
   interop:
     # An independent (second-implementation) check of the COSE_Sign1 /

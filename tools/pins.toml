@@ -53,14 +53,32 @@ tokio = "1"
 zenoh = "1.9.0"
 
 [supply_chain.cargo_deny]
-# The protected CI workflow runs this exact immutable Action. Its signed
-# epoch-15 recovery-plan entry binds the Action to cargo-deny 0.20.2.
-# The asset identities below define the reviewed replacement installer; the
-# current upstream Docker Action does not consume these hashes.
+# Protected CI installs and invokes this release directly; no cargo-deny
+# GitHub Action is admitted. The binary and RustSec database are independently
+# verified before the final network-isolated `--frozen` check.
 version = "0.20.2"
-action_repository = "EmbarkStudios/cargo-deny-action"
-action_version = "2.1.1"
-action_commit = "3c6349835b2b7b196a839186cb8b78e02f7b5f25"
+
+[supply_chain.cargo_deny.advisory_db]
+# Official RustSec snapshot measured independently on 2026-07-30. The archive
+# is accepted only while the upstream commit timestamp is less than 90 days
+# old. Safe extraction reconstructs the exact Git tree and a deterministic
+# local commit at cargo-deny's canonical database directory.
+repository_url = "https://github.com/RustSec/advisory-db"
+archive_url = "https://codeload.github.com/RustSec/advisory-db/tar.gz/7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2"
+commit = "7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2"
+committed_at = "2026-07-29T08:17:10-07:00"
+tree = "2d3ab21e05f8b06ad2e232f92894b5e247d817ce"
+seed_commit = "1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce"
+database_directory = "advisory-db-3157b0e258782691"
+maximum_staleness_days = 90
+archive_bytes = 441027
+archive_sha256 = "ab968b67150079bc386d098311cdab98e23745d555b3018837c91f3ae847967a"
+tar_bytes = 2652160
+tar_sha256 = "69306513f06cac8750f3e8dd17ce1a5eebce958b3ed9511ab7a3939b15555471"
+member_count = 2083
+regular_file_count = 1192
+directory_count = 891
+worktree_bytes = 1283107
 
 [[supply_chain.cargo_deny.assets]]
 target = "aarch64-apple-darwin"

@@ -9,8 +9,8 @@ Enforces:
   * the always-on NCP key builder and off-by-default Zenoh transport use exact pins;
   * Zenoh has default features off and TLS as its sole enabled transport feature;
   * Cargo.lock exists (dependencies are pinned);
-  * the closed cargo-deny schema agrees with protected CI and the signed plan;
-  * cargo-deny release archives and binaries have exact bounded identities.
+  * protected workflows cannot execute the retired cargo-deny Action;
+  * cargo-deny binaries and the RustSec snapshot have exact bounded identities.
 
 Exits non-zero on the first violation. No third-party dependencies.
 """
@@ -352,7 +352,7 @@ def main() -> None:
     print(
         "verify-pins: OK "
         "(NCP command-subset record/dependency/corpus, exact TLS-only Zenoh, "
-        "toolchain, Cargo.lock, closed cargo-deny identities)"
+        "toolchain, Cargo.lock, closed cargo-deny/RustSec identities)"
     )
 
 
