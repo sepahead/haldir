@@ -134,8 +134,11 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   campaign proves only immediate local bind/shutdown with zero processing/publication
   (`CL-LIVE-GATE-DEV-BIND-01`). The remaining operation/route and certificate-lifecycle matrix,
   p99/p99.9 latency, and long-run resource campaign are absent.
-- **PARTIAL** — Exact commits/lockfile pinned and `pins.toml`/`verify-pins.py`
-  present; SBOM/provenance/reproducible-release is a release-phase task.
+- **PARTIAL** — Exact commits/lockfile and reviewed cargo-deny release assets
+  are pinned and `pins.toml`/`verify-pins.py` are present. The current protected
+  cargo-deny Action does not yet execute through those asset digests; hermetic
+  bootstrap, SBOM/provenance, and reproducible release remain release-phase
+  work.
 - **YES** — Every push was normal and non-forced.
 
 ## Verdict

@@ -39,6 +39,26 @@ transitives; `cargo deny --all-features check` still rejects every new advisory.
 second dependency cannot silently feature-unify Zenoh compression or another
 transport back on while the LZ4 exception exists.
 
+## Supply-chain tooling boundary
+
+`tools/pins.toml` records exact archive and executable sizes and SHA-256
+identities for cargo-deny 0.20.2 on the admitted x86_64 Linux and arm64 macOS
+hosts.
+`tools/pinned_cargo_deny.py` can install only a separately fetched matching
+archive: it uses bounded decompression, accepts only the reviewed bounded member
+set with exact entry types and modes, never extracts archive paths, writes into
+a new directory without overwrite, re-verifies the executable, and runs that
+exact path for an exact version check.
+Its adversarial suite is executed by `tools/verify-pins.py`, so the protected
+source-pin step covers the parser and installer boundary on every hosted run.
+
+This is a reviewed replacement boundary, not yet a claim that protected CI
+executes the verified binary. The current pinned upstream Docker Action still
+downloads its own versioned release URL and Alpine packages without consuming
+Haldir's recorded digests. A subsequent protected-workflow recovery must replace
+that Action path with the repository's verified installer before the cargo-deny
+execution can be called hermetic.
+
 Zenoh 1.9's TLS client unconditionally combines public WebPKI roots with the
 configured custom CA; it has no exclusive-custom-root setting. The reference
 profile therefore uses a reserved `.invalid` router hostname and never claims

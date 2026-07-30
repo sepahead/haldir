@@ -1,6 +1,8 @@
 # Human-reviewable pin source of truth. `tools/verify-pins.py` enforces these.
 # A branch name or short SHA is never an acceptable pin.
 
+schema_version = 1
+
 [toolchain]
 rust_channel = "1.96.0"
 edition = "2024"
@@ -43,11 +45,38 @@ zeroize = "1"
 subtle = "2"
 getrandom = "0.2"
 proptest = "1"
+rustix = "1.1.4"
 ncp-core = "0.8.0@2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
 serde_json = "1.0"
 hmac = "0.12.1"
 tokio = "1"
 zenoh = "1.9.0"
+
+[supply_chain.cargo_deny]
+# The protected CI workflow runs this exact immutable Action. Its signed
+# epoch-15 recovery-plan entry binds the Action to cargo-deny 0.20.2.
+# The asset identities below define the reviewed replacement installer; the
+# current upstream Docker Action does not consume these hashes.
+version = "0.20.2"
+action_repository = "EmbarkStudios/cargo-deny-action"
+action_version = "2.1.1"
+action_commit = "3c6349835b2b7b196a839186cb8b78e02f7b5f25"
+
+[[supply_chain.cargo_deny.assets]]
+target = "aarch64-apple-darwin"
+url = "https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-aarch64-apple-darwin.tar.gz"
+archive_bytes = 4517865
+archive_sha256 = "fe67d82a10d8597a3549364cb733a3f9cc1bfff9031b7ae46384a9f2a72090c3"
+binary_bytes = 7456248
+binary_sha256 = "5f65c07c459c9514f0c97cc2e2fb6b120daef2d95aee31062cab4816cf027eb1"
+
+[[supply_chain.cargo_deny.assets]]
+target = "x86_64-unknown-linux-musl"
+url = "https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"
+archive_bytes = 4936832
+archive_sha256 = "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f"
+binary_bytes = 8844624
+binary_sha256 = "b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a"
 
 [formal]
 # Exact release asset used by the formal workflow. The workflow verifies this

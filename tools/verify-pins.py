@@ -8,21 +8,26 @@ Enforces:
   * the compiled NCP compatibility constants agree with tools/pins.toml;
   * the always-on NCP key builder and off-by-default Zenoh transport use exact pins;
   * Zenoh has default features off and TLS as its sole enabled transport feature;
-  * Cargo.lock exists (dependencies are pinned).
+  * Cargo.lock exists (dependencies are pinned);
+  * the closed cargo-deny schema agrees with protected CI and the signed plan;
+  * cargo-deny release archives and binaries have exact bounded identities.
 
 Exits non-zero on the first violation. No third-party dependencies.
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
 import re
+import runpy
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+PIN_TEST_TIMEOUT_SECONDS = 60
 
 
 def fail(msg: str) -> None:
@@ -30,11 +35,52 @@ def fail(msg: str) -> None:
     sys.exit(1)
 
 
+def verify_cargo_deny_policy(pins: dict[str, object]) -> None:
+    """Load the sibling policy module by exact path and enforce it in CI."""
+
+    module_path = ROOT / "tools" / "pinned_cargo_deny.py"
+    if not module_path.is_file() or module_path.is_symlink():
+        fail("tools/pinned_cargo_deny.py must be a regular file")
+    try:
+        namespace = runpy.run_path(str(module_path))
+        verifier = namespace["verify_repository_policy"]
+        policy_error = namespace["PinPolicyError"]
+        verifier(ROOT, pins)
+    except KeyError as error:
+        fail(f"cargo-deny pin verifier API is missing: {error}")
+    except (OSError, SyntaxError, TypeError) as error:
+        fail(f"cannot load cargo-deny pin verifier: {error}")
+    except policy_error as error:
+        fail(str(error))
+
+
+def verify_cargo_deny_tests() -> None:
+    """Run the adversarial archive/installer suite on every authoritative gate."""
+
+    test_path = ROOT / "tools" / "test_pinned_cargo_deny.py"
+    if not test_path.is_file() or test_path.is_symlink():
+        fail("tools/test_pinned_cargo_deny.py must be a regular file")
+    try:
+        completed = subprocess.run(
+            (sys.executable, "-I", str(test_path)),
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            check=False,
+            timeout=PIN_TEST_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        fail(f"cannot run cargo-deny pin tests: {error}")
+    if completed.returncode != 0:
+        fail(f"cargo-deny pin tests failed with status {completed.returncode}")
+
+
 def main() -> None:
     pins_path = ROOT / "tools" / "pins.toml"
     if not pins_path.is_file():
         fail("tools/pins.toml missing")
     pins = tomllib.loads(pins_path.read_text())
+    verify_cargo_deny_policy(pins)
+    verify_cargo_deny_tests()
 
     commit = pins.get("ncp", {}).get("commit", "")
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
@@ -83,18 +129,27 @@ def main() -> None:
         fail("zenoh.features must contain only transport_tls")
 
     workspace_deps = cargo.get("workspace", {}).get("dependencies", {})
+    rustix_pin = pins.get("dependencies", {}).get("rustix", "")
+    rustix_dep = workspace_deps.get("rustix", {})
+    if rustix_pin != "1.1.4" or rustix_dep != {
+        "version": f"={rustix_pin}",
+        "default-features": False,
+        "features": ["std", "fs"],
+    }:
+        fail("workspace rustix dependency differs from its exact direct pin")
     zenoh_dep = workspace_deps.get("zenoh", {})
     if (
         zenoh_dep.get("version") != f"={zenoh_version}"
         or zenoh_dep.get("default-features") is not False
         or zenoh_dep.get("features") != expected_zenoh_features
     ):
-        fail("workspace zenoh dependency is not exact, TLS-only, and default-features=false")
+        fail(
+            "workspace zenoh dependency is not exact, TLS-only, and default-features=false"
+        )
     tokio_dep = workspace_deps.get("tokio", {})
-    if (
-        tokio_dep.get("default-features") is not False
-        or tokio_dep.get("features") != ["sync"]
-    ):
+    if tokio_dep.get("default-features") is not False or tokio_dep.get("features") != [
+        "sync"
+    ]:
         fail("workspace Tokio dependency must be default-features=false with only sync")
 
     zenoh_packages = [
@@ -104,8 +159,23 @@ def main() -> None:
     ]
     if len(zenoh_packages) != 1 or zenoh_packages[0].get("version") != zenoh_version:
         fail(f"Cargo.lock must resolve exactly zenoh {zenoh_version}")
-    if zenoh_packages[0].get("source") != "registry+https://github.com/rust-lang/crates.io-index":
+    if (
+        zenoh_packages[0].get("source")
+        != "registry+https://github.com/rust-lang/crates.io-index"
+    ):
         fail("Cargo.lock zenoh package is not from the admitted crates.io registry")
+    rustix_packages = [
+        package
+        for package in cargo_lock_data.get("package", [])
+        if package.get("name") == "rustix"
+    ]
+    if len(rustix_packages) != 1 or rustix_packages[0].get("version") != rustix_pin:
+        fail(f"Cargo.lock must resolve exactly rustix {rustix_pin}")
+    if (
+        rustix_packages[0].get("source")
+        != "registry+https://github.com/rust-lang/crates.io-index"
+    ):
+        fail("Cargo.lock rustix package is not from the admitted crates.io registry")
 
     transport_manifest = tomllib.loads(
         (ROOT / "crates" / "haldir-transport-zenoh" / "Cargo.toml").read_text()
@@ -127,9 +197,13 @@ def main() -> None:
     if transport_deps.get("ncp-core", {}).get("optional") is True:
         fail("haldir-transport-zenoh ncp-core key builder must not be optional")
     if transport_deps.get("zenoh") != {"workspace": True, "optional": True}:
-        fail("haldir-transport-zenoh Zenoh dependency must remain workspace-pinned and optional")
+        fail(
+            "haldir-transport-zenoh Zenoh dependency must remain workspace-pinned and optional"
+        )
     if "ncp-zenoh" in transport_deps:
-        fail("haldir-transport-zenoh must not import the broader ncp-zenoh feature graph")
+        fail(
+            "haldir-transport-zenoh must not import the broader ncp-zenoh feature graph"
+        )
 
     try:
         metadata_process = subprocess.run(
@@ -188,9 +262,7 @@ def main() -> None:
     )
     if profile.get("router", {}).get("image") != router_image:
         fail("live transport router pin differs from the secure-reference profile")
-    dockerfile = (
-        ROOT / "tools" / "live-secure-zenoh" / "Dockerfile"
-    ).read_text()
+    dockerfile = (ROOT / "tools" / "live-secure-zenoh" / "Dockerfile").read_text()
     from_images = re.findall(r"^FROM\s+(\S+)", dockerfile, re.MULTILINE)
     if from_images != [probe_builder_image, probe_builder_image]:
         fail("every live probe Dockerfile stage must use the pinned builder image")
@@ -280,7 +352,7 @@ def main() -> None:
     print(
         "verify-pins: OK "
         "(NCP command-subset record/dependency/corpus, exact TLS-only Zenoh, "
-        "toolchain, Cargo.lock)"
+        "toolchain, Cargo.lock, closed cargo-deny identities)"
     )
 
 
