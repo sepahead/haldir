@@ -4,7 +4,7 @@
 //! an exact controller/backend relation is admitted, revoked, opaque, or outside
 //! profile (spec Phase 4 exit gate).
 
-use crate::error::AdmissionError;
+use crate::error::{AdmissionError, AdmissionSnapshotError};
 use crate::record::AdmissionRecordV1;
 use crate::types::AdmissionLevelV1;
 use haldir_contracts::digest::DigestV1;
@@ -56,12 +56,38 @@ impl AdmissionSnapshot {
         }
     }
 
-    /// Insert a verified admission record, computing and storing its digest.
+    /// Insert a verified admission record without replacing an existing id.
+    ///
+    /// This method retains its original `()` return type for source
+    /// compatibility. Conflicting records are left unapplied; callers that
+    /// need to distinguish conflicts must use [`Self::try_insert`].
     pub fn insert(&mut self, record: AdmissionRecordV1) {
-        let digest = record.admission_digest();
+        let _ = self.try_insert(record);
+    }
+
+    /// Insert a verified admission record, computing and storing its digest.
+    ///
+    /// An exact duplicate is idempotent. A different record with the same
+    /// admission id is rejected instead of silently replacing the established
+    /// authority binding.
+    ///
+    /// # Errors
+    /// Returns [`AdmissionSnapshotError::ConflictingAdmissionId`] when an
+    /// existing id is bound to a different record.
+    pub fn try_insert(&mut self, record: AdmissionRecordV1) -> Result<(), AdmissionSnapshotError> {
         let id = *record.admission_id.as_bytes();
+        if let Some(existing) = self.records.get(&id) {
+            return if existing.record == record {
+                Ok(())
+            } else {
+                Err(AdmissionSnapshotError::ConflictingAdmissionId)
+            };
+        }
+
+        let digest = record.admission_digest();
         self.records
             .insert(id, AdmissionRelation { record, digest });
+        Ok(())
     }
 
     /// Mark an admission id revoked and advance the revocation epoch monotonically.

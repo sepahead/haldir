@@ -531,7 +531,7 @@ mod e2e {
         let rec = admission_record();
         let admission_digest = rec.admission_digest();
         let mut admission = AdmissionSnapshot::new();
-        admission.insert(rec.clone());
+        admission.try_insert(rec.clone()).unwrap();
 
         let policy = policy();
         let policy_snapshot_digest = policy.canonical_digest().unwrap();

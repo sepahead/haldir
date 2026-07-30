@@ -604,7 +604,9 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
     }
     let admission_record = fixture_admission()?;
     let mut admission = AdmissionSnapshot::new();
-    admission.insert(admission_record);
+    admission
+        .try_insert(admission_record)
+        .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
     Ok(GateConfigTemplate {
         gate_id,
         realm: AsciiId::new(FIXTURE_REALM)

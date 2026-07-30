@@ -27,7 +27,7 @@ pub mod types;
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use error::AdmissionError;
+pub use error::{AdmissionError, AdmissionSnapshotError};
 pub use manifest::ControllerBundleManifestV1;
 pub use record::AdmissionRecordV1;
 pub use snapshot::{AdmissionClaim, AdmissionRelation, AdmissionSnapshot};
@@ -89,6 +89,20 @@ mod tests {
         DigestV1::of_value(DigestDomain::Bundle, m)
     }
 
+    fn semantic_record() -> AdmissionRecordV1 {
+        record_for(
+            bundle_digest(&manifest()),
+            AdmissionLevelV1::A2ReferenceConformance,
+        )
+    }
+
+    fn conflicting_record(record: &AdmissionRecordV1) -> AdmissionRecordV1 {
+        let mut conflicting = record.clone();
+        conflicting.backend_profile_digest =
+            DigestV1::compute(DigestDomain::BackendProfile, b"norse-2.0");
+        conflicting
+    }
+
     #[test]
     fn manifest_is_profile_complete_without_opaque_deps() {
         assert!(manifest().is_profile_complete());
@@ -126,7 +140,7 @@ mod tests {
         let admission_digest = rec.admission_digest();
         let backend = rec.backend_profile_digest;
         let mut snap = AdmissionSnapshot::new();
-        snap.insert(rec);
+        snap.try_insert(rec).unwrap();
         let cid = ControllerId::new("survey-v1").unwrap();
         let aid = AdmissionId::new([4; 16]);
         let claim = AdmissionClaim {
@@ -151,7 +165,7 @@ mod tests {
         let admission_digest = rec.admission_digest();
         let backend = rec.backend_profile_digest;
         let mut snap = AdmissionSnapshot::new();
-        snap.insert(rec);
+        snap.try_insert(rec).unwrap();
 
         let mut mutated = manifest();
         mutated.parameter_tensors = BoundedVec::from_vec(vec![art(3), art(200)]).unwrap();
@@ -179,7 +193,7 @@ mod tests {
         let good_digest = rec.admission_digest();
         let backend = rec.backend_profile_digest;
         let mut snap = AdmissionSnapshot::new();
-        snap.insert(rec);
+        snap.try_insert(rec).unwrap();
         let cid = ControllerId::new("survey-v1").unwrap();
         let aid = AdmissionId::new([4; 16]);
         let other = AdmissionId::new([9; 16]);
@@ -234,5 +248,99 @@ mod tests {
             snap.verify_admission(&claim, false).err(),
             Some(AdmissionError::Revoked)
         );
+    }
+
+    #[test]
+    fn try_insert_is_idempotent_for_exact_duplicate() {
+        let record = semantic_record();
+        let admission_id = record.admission_id;
+        let expected_digest = record.admission_digest();
+        let mut snapshot = AdmissionSnapshot::new();
+
+        snapshot.try_insert(record.clone()).unwrap();
+        snapshot.try_insert(record.clone()).unwrap();
+
+        let relation = snapshot.resolve(&admission_id).unwrap();
+        assert_eq!(
+            (&relation.record, relation.digest),
+            (&record, expected_digest)
+        );
+    }
+
+    #[test]
+    fn try_insert_rejects_conflicting_same_id() {
+        let record = semantic_record();
+        let conflict = conflicting_record(&record);
+        let mut snapshot = AdmissionSnapshot::new();
+        snapshot.try_insert(record).unwrap();
+
+        assert_eq!(
+            snapshot.try_insert(conflict),
+            Err(AdmissionSnapshotError::ConflictingAdmissionId)
+        );
+    }
+
+    #[test]
+    fn try_insert_conflict_preserves_original_record_and_digest() {
+        let record = semantic_record();
+        let admission_id = record.admission_id;
+        let expected_digest = record.admission_digest();
+        let conflict = conflicting_record(&record);
+        let mut snapshot = AdmissionSnapshot::new();
+        snapshot.try_insert(record.clone()).unwrap();
+
+        assert_eq!(
+            snapshot.try_insert(conflict),
+            Err(AdmissionSnapshotError::ConflictingAdmissionId)
+        );
+        let relation = snapshot.resolve(&admission_id).unwrap();
+        assert_eq!(
+            (&relation.record, relation.digest),
+            (&record, expected_digest),
+            "conflict must leave the original record and digest unchanged"
+        );
+    }
+
+    #[test]
+    fn insert_compatibility_shim_never_overwrites_same_id() {
+        let record = semantic_record();
+        let admission_id = record.admission_id;
+        let expected_digest = record.admission_digest();
+        let conflict = conflicting_record(&record);
+        let mut snapshot = AdmissionSnapshot::new();
+
+        snapshot.insert(record.clone());
+        snapshot.insert(conflict);
+
+        let relation = snapshot.resolve(&admission_id).unwrap();
+        assert_eq!(
+            (&relation.record, relation.digest),
+            (&record, expected_digest),
+            "legacy insertion must retain the first authority binding"
+        );
+    }
+
+    #[test]
+    fn insert_compatibility_signature_is_retained() {
+        let _: fn(&mut AdmissionSnapshot, AdmissionRecordV1) = AdmissionSnapshot::insert;
+    }
+
+    #[test]
+    fn admission_snapshot_error_reason_code_and_display_are_stable() {
+        let error = AdmissionSnapshotError::ConflictingAdmissionId;
+        assert_eq!(
+            (error.reason_code(), error.to_string()),
+            (
+                "ADMISSION_SNAPSHOT_CONFLICTING_ADMISSION_ID",
+                "ADMISSION_SNAPSHOT_CONFLICTING_ADMISSION_ID".to_owned()
+            )
+        );
+    }
+
+    #[test]
+    fn admission_snapshot_error_is_standard_thread_safe_and_static() {
+        fn assert_error_contract<E: std::error::Error + Send + Sync + 'static>() {}
+
+        assert_error_contract::<AdmissionSnapshotError>();
     }
 }
