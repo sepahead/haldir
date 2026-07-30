@@ -7,11 +7,12 @@
   `AllocateOutput` are disabled at their configured caps (a previous version grew
   gateBoot/sessionGen/lastOutputSeq without bound and would not have terminated).
 
-  STATUS: TLC is run in CI (`.github/workflows/formal.yml`) where a JRE is
-  available; it was NOT run in the delivery shell (no local JRE). Until the first
-  public green TLC run is recorded, treat the CI-enforced executable `model` tests
-  in `crates/haldir-state/src/lib.rs` as the authoritative encoding, and see
-  `docs/CLAIM-LEDGER.md` (CL-FORMAL-01).
+  STATUS: The registered finite model has retained historical green evidence
+  under the SHA-256-pinned TLA+ v1.7.4 jar; `docs/CLAIM-LEDGER.md`
+  (`CL-FORMAL-01`) identifies exact hosted run and commit provenance. That
+  evidence is commit-scoped and does not by itself validate later runner or
+  workflow bytes, a wired live service, or durable runtime behavior. The
+  repository runner supports separately scoped local checks.
 *)
 EXTENDS Naturals, FiniteSets
 

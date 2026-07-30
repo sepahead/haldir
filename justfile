@@ -1,5 +1,6 @@
 # Canonical local checks for Haldir. `just ci` runs the platform-independent
-# P0 gate; platform-specific and TLA+ checks remain hosted CI responsibilities.
+# P0 gate. Platform-specific checks remain hosted CI responsibilities; the
+# Java-dependent TLA+ recipes are explicit and intentionally separate.
 # If `just` is unavailable, run the underlying command directly.
 
 set shell := ["/usr/bin/env", "-u", "BASH_ENV", "-u", "ENV", "/bin/bash", "--noprofile", "--norc", "-uc"]
@@ -41,6 +42,18 @@ conformance:
 
 model:
     cargo test -p haldir-state --locked -- model::
+
+# Populate or reuse the verified formal-tool cache, then run the bounded model.
+formal:
+    python3 -I tools/run_formal.py
+
+# Require the verified cache to be present and prohibit formal-tool acquisition.
+formal-offline:
+    python3 -I tools/run_formal.py --offline
+
+# Hermetic adversarial tests for acquisition, caching, Java, and TLC handling.
+formal-runner-test:
+    python3 -I -B tools/test_run_formal.py
 
 fuzz-smoke:
     cargo test --workspace --locked -- malformed
@@ -86,6 +99,6 @@ interop:
 diff-check:
     git diff --check
 
-# Canonical offline gate. Platform-specific and TLA+ jobs still run in GitHub CI.
+# Canonical offline P0 gate; excludes the Java-dependent formal recipes.
 ci:
     /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/p0r-exit-gate.sh
