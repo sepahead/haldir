@@ -120,6 +120,16 @@ advisories, then require every protected check. Manifest constraints and exact
 NCP, Zenoh, rustix, Rust toolchain, downloaded-tool, RustSec, TLA+/Java, GitHub
 CLI, container-image, and policy pins remain coordinated manual changes.
 
+`Cargo.lock` legitimately contains parallel incompatible `getrandom` 0.2, 0.3,
+and 0.4 lines. The hosted Cargo updater reproducibly tried to replace the 0.2
+line with the already-present 0.4 line, produced no lockfile change, and failed
+the whole update job. Routine `getrandom` proposals therefore exclude only
+breaking updates (for Cargo, each pre-1.0 minor line is incompatible), while
+compatible patch updates remain eligible. Incompatible-line migrations require
+a reviewed manifest change or an update to the parent crate that owns the
+requirement. This version-update filter does not suppress Dependabot security
+updates.
+
 Actions proposals must retain a full 40-hex commit SHA and its same-line release
 comment. Reviewers must authenticate the upstream repository, tag, and commit,
 then deliberately update the exact pin constants, tests, and protected job
