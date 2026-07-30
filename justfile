@@ -45,11 +45,11 @@ model:
 
 # Populate or reuse the verified formal-tool cache, then run the bounded model.
 formal:
-    python3 -I tools/run_formal.py
+    python3 -I -B tools/run_formal.py
 
 # Require the verified cache to be present and prohibit formal-tool acquisition.
 formal-offline:
-    python3 -I tools/run_formal.py --offline
+    python3 -I -B tools/run_formal.py --offline
 
 # Hermetic adversarial tests for acquisition, caching, Java, and TLC handling.
 formal-runner-test:

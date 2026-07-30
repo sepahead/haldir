@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Validate and install Haldir's exact cargo-deny supply-chain inputs.
+"""Validate Haldir's closed pins and install exact cargo-deny inputs.
 
 The repository verifier calls :func:`verify_repository_policy`, so the
-protected ``Verify source pins`` CI step rejects schema, workflow, binary, and
-RustSec snapshot drift. Installation is deliberately offline: callers fetch
-archives separately, then this module verifies exact sizes and digests, parses
-closed bounded tar layouts without ``extractall``, verifies the binary, and
-seeds cargo-deny's canonical advisory-database path as an exact Git tree.
+protected ``Verify source pins`` CI step rejects schema, workflow, formal
+runtime, binary, and RustSec snapshot drift. Installation is deliberately
+offline: callers fetch archives separately, then this module verifies exact
+sizes and digests, parses closed bounded tar layouts without ``extractall``,
+verifies the binary, and seeds cargo-deny's canonical advisory-database path as
+an exact Git tree.
 """
 
 from __future__ import annotations
@@ -32,9 +33,11 @@ from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN_SCHEMA_VERSION = 1
+PIN_SCHEMA_VERSION = 3
 MAX_POLICY_BYTES = 64 * 1024
 MAX_WORKFLOW_BYTES = 1024 * 1024
+MAX_FORMAL_ASSET_BYTES = 4_000_000
+MAX_JAVA_ARCHIVE_BYTES = 64 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 8_000_000
 MAX_TAR_BYTES = 12_000_000
 MAX_BINARY_BYTES = 10_000_000
@@ -50,7 +53,28 @@ GIT_TIMEOUT_SECONDS = 30
 VERSION_TIMEOUT_SECONDS = 10
 CHECKSUM = re.compile(r"[0-9a-f]{64}")
 FULL_SHA = re.compile(r"[0-9a-f]{40}")
-EXACT_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
+EXACT_VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)")
+EXACT_JAVA_PINS: dict[str, str | int] = {
+    "java_distribution": "temurin",
+    "java_release_tag": "jdk-21.0.11+10",
+    "java_archive_package": "jre",
+    "java_archive_architecture": "x64",
+    "java_archive_name": ("OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"),
+    "java_archive_root": "jdk-21.0.11+10-jre",
+    "java_archive_url": (
+        "https://github.com/adoptium/temurin21-binaries/releases/download/"
+        "jdk-21.0.11%2B10/"
+        "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+    ),
+    "java_archive_bytes": 52_099_793,
+    "java_archive_sha256": (
+        "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb"
+    ),
+    "java_runtime_vendor": "Eclipse Adoptium",
+    "java_runtime_version": "21.0.11+10-LTS",
+    "java_specification_version": "21",
+    "java_runtime_architecture": "amd64",
+}
 FORBIDDEN_ACTION_REPOSITORY = "EmbarkStudios/cargo-deny-action"
 RUSTSEC_REPOSITORY_URL = "https://github.com/RustSec/advisory-db"
 RUSTSEC_DATABASE_DIRECTORY = "advisory-db-3157b0e258782691"
@@ -108,7 +132,26 @@ TABLE_KEYS = {
         }
     ),
     "supply_chain": frozenset({"cargo_deny"}),
-    "formal": frozenset({"tla_tools_version", "tla_tools_sha256"}),
+    "formal": frozenset(
+        {
+            "tla_tools_version",
+            "tla_tools_bytes",
+            "tla_tools_sha256",
+            "java_distribution",
+            "java_release_tag",
+            "java_archive_package",
+            "java_archive_architecture",
+            "java_archive_name",
+            "java_archive_root",
+            "java_archive_url",
+            "java_archive_bytes",
+            "java_archive_sha256",
+            "java_runtime_vendor",
+            "java_runtime_version",
+            "java_specification_version",
+            "java_runtime_architecture",
+        }
+    ),
 }
 CARGO_DENY_KEYS = frozenset(
     {
@@ -445,6 +488,42 @@ def parse_policy(pins: Mapping[str, Any]) -> CargoDenyPolicy:
         dependencies["rustix"] == "1.1.4",
         "dependencies.rustix must be the exact direct dependency pin",
     )
+    formal = pins["formal"]
+    require(
+        isinstance(formal["tla_tools_version"], str)
+        and EXACT_VERSION.fullmatch(formal["tla_tools_version"]) is not None,
+        "formal.tla_tools_version must be an exact release",
+    )
+    require(
+        type(formal["tla_tools_bytes"]) is int
+        and 0 < formal["tla_tools_bytes"] <= MAX_FORMAL_ASSET_BYTES,
+        "formal.tla_tools_bytes violates the hard bound",
+    )
+    require(
+        isinstance(formal["tla_tools_sha256"], str)
+        and CHECKSUM.fullmatch(formal["tla_tools_sha256"]) is not None,
+        "formal.tla_tools_sha256 is not exact",
+    )
+    require(
+        type(formal["java_archive_bytes"]) is int
+        and 0 < formal["java_archive_bytes"] <= MAX_JAVA_ARCHIVE_BYTES,
+        "formal.java_archive_bytes violates the hard bound",
+    )
+    require(
+        type(formal["java_archive_sha256"]) is str
+        and CHECKSUM.fullmatch(formal["java_archive_sha256"]) is not None,
+        "formal.java_archive_sha256 is not exact",
+    )
+    for field, expected in EXACT_JAVA_PINS.items():
+        observed = formal[field]
+        require(
+            type(observed) is type(expected),
+            f"formal.{field} must have type {type(expected).__name__}",
+        )
+        require(
+            observed == expected,
+            f"formal.{field} differs from the reviewed Temurin identity",
+        )
 
     cargo_deny = pins["supply_chain"]["cargo_deny"]
     _require_exact_keys(cargo_deny, CARGO_DENY_KEYS, "supply_chain.cargo_deny")

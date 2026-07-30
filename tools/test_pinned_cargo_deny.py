@@ -1,4 +1,4 @@
-"""Adversarial tests for the exact cargo-deny pin and archive boundary."""
+"""Adversarial tests for closed pins, workflows, and cargo-deny archives."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import io
 import runpy
+import shlex
 import shutil
 import subprocess
 import sys
@@ -48,7 +49,21 @@ def load_module() -> ModuleType:
     return module
 
 
+def load_ci_policy() -> ModuleType:
+    """Load the CI pin verifier without executing its command-line entrypoint."""
+
+    path = ROOT / "tools" / "verify-ci-pins.py"
+    spec = importlib.util.spec_from_file_location("haldir_verify_ci_pins", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 POLICY = load_module()
+CI_POLICY = load_ci_policy()
 
 
 def regular(name: str, payload: bytes, mode: int = 0o644) -> tarfile.TarInfo:
@@ -317,16 +332,26 @@ class CargoDenyPinTests(unittest.TestCase):
         advisory_db = copy.deepcopy(self.pins)
         advisory_db["supply_chain"]["cargo_deny"]["advisory_db"]["unknown"] = "value"
         mutations.append(advisory_db)
+        formal = copy.deepcopy(self.pins)
+        formal["formal"]["unknown"] = "value"
+        mutations.append(formal)
         for index, mutation in enumerate(mutations):
             with self.subTest(mutation=index):
                 with self.assertRaisesRegex(POLICY.PinPolicyError, "schema differs"):
                     POLICY.parse_policy(mutation)
 
     def test_missing_schema_key_is_rejected(self) -> None:
-        pins = copy.deepcopy(self.pins)
-        del pins["supply_chain"]["cargo_deny"]["assets"][0]["binary_sha256"]
-        with self.assertRaisesRegex(POLICY.PinPolicyError, "schema differs"):
-            POLICY.parse_policy(pins)
+        mutations = []
+        missing_asset = copy.deepcopy(self.pins)
+        del missing_asset["supply_chain"]["cargo_deny"]["assets"][0]["binary_sha256"]
+        mutations.append(missing_asset)
+        missing_formal = copy.deepcopy(self.pins)
+        del missing_formal["formal"]["java_runtime_architecture"]
+        mutations.append(missing_formal)
+        for index, pins in enumerate(mutations):
+            with self.subTest(mutation=index):
+                with self.assertRaisesRegex(POLICY.PinPolicyError, "schema differs"):
+                    POLICY.parse_policy(pins)
 
     def test_boolean_size_is_not_accepted_as_an_integer(self) -> None:
         pins = copy.deepcopy(self.pins)
@@ -358,6 +383,78 @@ class CargoDenyPinTests(unittest.TestCase):
                     "dependencies.rustix",
                 ):
                     POLICY.parse_policy(pins)
+
+    def test_recorded_formal_runtime_and_asset_are_exact(self) -> None:
+        self.assertEqual(self.pins["schema_version"], 3)
+        self.assertEqual(len(self.pins["formal"]), 16)
+        self.assertEqual(len(POLICY.EXACT_JAVA_PINS), 13)
+        self.assertEqual(len(CI_POLICY.FORMAL_PIN_KEYS), 16)
+        self.assertEqual(
+            self.pins["formal"],
+            {
+                "tla_tools_version": "1.7.4",
+                "tla_tools_bytes": 2_274_532,
+                "tla_tools_sha256": (
+                    "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
+                ),
+                **POLICY.EXACT_JAVA_PINS,
+            },
+        )
+
+    def test_pin_schema_version_rejects_stale_and_unknown_values(self) -> None:
+        for replacement in (1, 2, 4, True):
+            with self.subTest(schema_version=replacement):
+                pins = copy.deepcopy(self.pins)
+                pins["schema_version"] = replacement
+                with self.assertRaisesRegex(
+                    POLICY.PinPolicyError,
+                    "schema_version must be 3",
+                ):
+                    POLICY.parse_policy(pins)
+
+    def test_formal_pin_types_and_platform_policy_are_closed(self) -> None:
+        tla_mutations = (
+            ("tla_tools_version", "latest", "exact release"),
+            ("tla_tools_version", "01.7.4", "exact release"),
+            ("tla_tools_bytes", True, "hard bound"),
+            (
+                "tla_tools_bytes",
+                POLICY.MAX_FORMAL_ASSET_BYTES + 1,
+                "hard bound",
+            ),
+            ("tla_tools_sha256", "0" * 63, "not exact"),
+        )
+        for field, replacement, diagnostic in tla_mutations:
+            with self.subTest(field=field, replacement=replacement):
+                pins = copy.deepcopy(self.pins)
+                pins["formal"][field] = replacement
+                with self.assertRaisesRegex(POLICY.PinPolicyError, diagnostic):
+                    POLICY.parse_policy(pins)
+        java_mutations = {
+            "java_distribution": "zulu",
+            "java_release_tag": "jdk-21.0.11+11",
+            "java_archive_package": "jdk",
+            "java_archive_architecture": "aarch64",
+            "java_archive_name": "OpenJDK21U-jre_x64_linux_hotspot_latest.tar.gz",
+            "java_archive_root": "jdk-21.0.11+10",
+            "java_archive_url": (
+                "http://github.com/adoptium/temurin21-binaries/releases/latest/"
+                "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+            ),
+            "java_archive_bytes": True,
+            "java_archive_sha256": "0" * 64,
+            "java_runtime_vendor": "Oracle Corporation",
+            "java_runtime_version": "21.0.11+11-LTS",
+            "java_specification_version": "22",
+            "java_runtime_architecture": "x86_64",
+        }
+        for field, replacement in java_mutations.items():
+            with self.subTest(field=field, replacement=replacement):
+                pins = copy.deepcopy(self.pins)
+                pins["formal"][field] = replacement
+                with self.assertRaises(POLICY.PinPolicyError) as raised:
+                    POLICY.parse_policy(pins)
+                self.assertIn(f"formal.{field}", str(raised.exception))
 
     def binding_fixture(self) -> tempfile.TemporaryDirectory[str]:
         """Copy only the two repository-bound identity inputs."""
@@ -444,6 +541,851 @@ class CargoDenyPinTests(unittest.TestCase):
                 pins["supply_chain"]["cargo_deny"]["advisory_db"][field] = replacement
                 with self.assertRaisesRegex(POLICY.PinPolicyError, diagnostic):
                     POLICY.parse_policy(pins)
+
+
+class WorkflowPinContractTests(unittest.TestCase):
+    """Exercise PR isolation, main concurrency, and formal runtime bindings."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.pins = tomllib.loads((ROOT / "tools" / "pins.toml").read_text())
+        cls.ci = (ROOT / ".github/workflows/ci.yml").read_text()
+        cls.formal = (ROOT / ".github/workflows/formal.yml").read_text()
+        cls.formal_pins = CI_POLICY.parse_formal_pins(cls.pins)
+
+    def test_repository_workflow_pin_verifier_passes(self) -> None:
+        completed = subprocess.run(
+            (sys.executable, "-I", "-B", "tools/verify-ci-pins.py"),
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("16 immutable Action uses", completed.stdout)
+        self.assertIn("Java 21.0.11+10-LTS pinned", completed.stdout)
+
+    def test_setup_java_is_retired_from_the_exact_action_baseline(self) -> None:
+        self.assertEqual(sum(CI_POLICY.REQUIRED_ACTION_PINS.values()), 16)
+        self.assertFalse(
+            any(
+                repository == "actions/setup-java"
+                for repository, _digest in CI_POLICY.REQUIRED_ACTION_PINS
+            )
+        )
+        self.assertNotIn("actions/setup-java@", self.formal)
+
+    def test_workflow_envelopes_and_event_isolation_pass(self) -> None:
+        for workflow, text in (("ci", self.ci), ("formal", self.formal)):
+            with self.subTest(workflow=workflow):
+                self.assertEqual(
+                    CI_POLICY.verify_workflow_envelope(
+                        text,
+                        label=workflow,
+                        workflow=workflow,
+                    ),
+                    [],
+                )
+                self.assertEqual(
+                    CI_POLICY.verify_required_checks_run_on_pr(
+                        text,
+                        label=workflow,
+                    ),
+                    [],
+                )
+                self.assertEqual(
+                    CI_POLICY.verify_python_isolation(
+                        text,
+                        label=workflow,
+                    ),
+                    [],
+                )
+                self.assertEqual(
+                    CI_POLICY.verify_required_job_blocks(
+                        text,
+                        label=workflow,
+                    ),
+                    [],
+                )
+        self.assertEqual(
+            CI_POLICY.verify_supply_chain_job(
+                self.ci,
+                label="ci",
+            ),
+            [],
+        )
+        self.assertEqual(
+            CI_POLICY.verify_gh_cli_material(
+                self.ci,
+                label="ci",
+            ),
+            [],
+        )
+        self.assertEqual(
+            CI_POLICY.verify_trusted_event_steps(
+                self.ci,
+                label="ci",
+                job="supply-chain",
+            ),
+            [],
+        )
+        self.assertEqual(
+            CI_POLICY.verify_pr_recovery_step(
+                self.ci,
+                label="ci",
+            ),
+            [],
+        )
+        self.assertEqual(
+            CI_POLICY.verify_trusted_event_steps(
+                self.formal,
+                label="formal",
+                job="tlc-model-check",
+            ),
+            [],
+        )
+        self.assertEqual(
+            CI_POLICY.verify_formal_job(
+                self.formal,
+                label="formal",
+                pins=self.formal_pins,
+            ),
+            [],
+        )
+
+    def test_github_cli_environment_interface_is_epoch_17(self) -> None:
+        canonical = "HALDIR_FR0016_GH"
+        mutations = (
+            self.ci.replace(canonical, "HALDIR_FR0015_GH", 1),
+            self.ci.replace(
+                f"          printf '{canonical}=%s\\n'",
+                "          printf 'HALDIR_FR0015_GH=%s\\n' \"$GH_BIN\""
+                ' >> "$GITHUB_ENV"\n'
+                f"          printf '{canonical}=%s\\n'",
+                1,
+            ),
+        )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index):
+                problems = CI_POLICY.verify_gh_cli_material(
+                    mutation,
+                    label="ci",
+                )
+                self.assertTrue(
+                    any(
+                        "environment interface differs" in problem
+                        for problem in problems
+                    ),
+                    problems,
+                )
+
+    def test_pr_recovery_step_has_exact_hermetic_commands(self) -> None:
+        mutations = (
+            self.ci.replace(
+                "        if: github.event_name == 'pull_request'\n",
+                "        if: github.event_name != 'pull_request'\n",
+                1,
+            ),
+            self.ci.replace(
+                "python3 -I -B -W error "
+                "tools/release/test_verify_framework_recovery_fr_0016.py",
+                "python3 -I -B tools/release/test_verify_framework_recovery_fr_0016.py",
+                1,
+            ),
+            self.ci.replace(
+                "          python3 -I -B -W error tools/test_pinned_cargo_deny.py\n",
+                "",
+                1,
+            ),
+            self.ci.replace(
+                "          python3 -I -B -W error tools/test_run_formal.py\n",
+                "",
+                1,
+            ),
+            self.ci.replace(
+                "          python3 -I -B -W error tools/test_run_formal.py\n",
+                "          python3 -I -B -W error tools/test_run_formal.py\n"
+                "          python3 -I -B tools/verify-ci-pins.py\n",
+                1,
+            ),
+        )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index):
+                problems = CI_POLICY.verify_pr_recovery_step(
+                    mutation,
+                    label="ci",
+                )
+                self.assertTrue(problems)
+
+    def test_workflow_python_entrypoints_require_exact_isolation(self) -> None:
+        mutations = (
+            self.ci.replace(
+                "run: python3 -I -B tools/verify-pins.py",
+                "run: python3 tools/verify-pins.py",
+                1,
+            ),
+            self.ci.replace(
+                "run: python3 -I -B tools/verify-pins.py",
+                "run: /usr/bin/python3 -I -B tools/verify-pins.py",
+                1,
+            ),
+            self.ci.replace(
+                "run: python3 -I -B tools/verify-pins.py",
+                "run: python3 -B tools/verify-pins.py",
+                1,
+            ),
+            self.ci.replace(
+                CI_POLICY.ISOLATED_SECURE_ZENOH_COMMAND,
+                CI_POLICY.ISOLATED_SECURE_ZENOH_COMMAND.replace(
+                    "verify-secure-zenoh.py",
+                    "verify-claims.py",
+                ),
+                1,
+            ),
+            self.ci.replace(
+                CI_POLICY.PR_RECOVERY_COMMANDS[2],
+                CI_POLICY.PR_RECOVERY_COMMANDS[2].replace(
+                    "test_run_formal.py",
+                    "verify-claims.py",
+                ),
+                1,
+            ),
+        )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index):
+                problems = CI_POLICY.verify_python_isolation(
+                    mutation,
+                    label="ci",
+                )
+                self.assertTrue(
+                    any("isolated command" in problem for problem in problems),
+                    problems,
+                )
+
+    def test_isolated_python_blocks_sibling_stdlib_shadowing(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="haldir-python-isolation-",
+        ) as directory:
+            root = Path(directory)
+            for relative in (
+                ".github/workflows/ci.yml",
+                ".github/workflows/formal.yml",
+                "tools/pins.toml",
+                "tools/verify-ci-pins.py",
+            ):
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / relative, destination)
+            (root / "tools/hashlib.py").write_text("import os\nos._exit(0)\n")
+            plain = subprocess.run(
+                (sys.executable, "tools/verify-ci-pins.py"),
+                cwd=root,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            isolated = subprocess.run(
+                (sys.executable, "-I", "-B", "tools/verify-ci-pins.py"),
+                cwd=root,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        self.assertEqual(plain.returncode, 0, plain.stderr)
+        self.assertEqual(plain.stdout, "")
+        self.assertEqual(isolated.returncode, 0, isolated.stderr)
+        self.assertIn("verify-ci-pins: OK", isolated.stdout)
+
+    def test_whitelisted_sibling_launcher_preserves_stdlib_priority(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="haldir-sibling-launcher-",
+        ) as directory:
+            root = Path(directory)
+            tools = root / "tools"
+            tools.mkdir()
+            for name in ("secure_zenoh.py", "verify-secure-zenoh.py"):
+                shutil.copy2(ROOT / "tools" / name, tools / name)
+            shutil.copytree(
+                ROOT / "deploy" / "secure-reference-v1",
+                root / "deploy" / "secure-reference-v1",
+            )
+            (tools / "hashlib.py").write_text("import os\nos._exit(0)\n")
+            command = shlex.split(CI_POLICY.ISOLATED_SECURE_ZENOH_COMMAND)
+            command[0] = sys.executable
+            completed = subprocess.run(
+                command,
+                cwd=root,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("verify-secure-zenoh: OK", completed.stdout)
+
+    def test_ci_result_identity_is_epoch_17_and_fr_0016(self) -> None:
+        mutation = self.ci.replace(
+            "framework_recovery_fr_0016_result.py",
+            "framework_recovery_fr_0015_result.py",
+            1,
+        )
+        problems = CI_POLICY.verify_supply_chain_job(
+            mutation,
+            label="ci",
+        )
+        self.assertTrue(
+            any(
+                "framework_recovery_fr_0016_result.py" in problem
+                for problem in problems
+            ),
+            problems,
+        )
+
+    def test_main_runs_cannot_be_cancelled_or_coalesced(self) -> None:
+        mutations = (
+            self.ci.replace(
+                "ci-${{ github.ref == 'refs/heads/main' && "
+                "github.run_id || github.ref }}",
+                "ci-${{ github.ref }}",
+                1,
+            ),
+            self.ci.replace(
+                "cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}",
+                "cancel-in-progress: true",
+                1,
+            ),
+        )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index):
+                problems = CI_POLICY.verify_workflow_envelope(
+                    mutation,
+                    label="ci",
+                    workflow="ci",
+                )
+                self.assertTrue(
+                    any("isolate every main run" in problem for problem in problems),
+                    problems,
+                )
+
+    def test_workflow_event_and_concurrency_surfaces_are_closed(self) -> None:
+        extra_event = self.formal.replace(
+            "  workflow_dispatch:\n\nconcurrency:\n",
+            "  workflow_dispatch:\n  pull_request_target:\n\nconcurrency:\n",
+            1,
+        )
+        queued_main = self.formal.replace(
+            "  cancel-in-progress: "
+            "${{ github.ref != 'refs/heads/main' }}\n\n"
+            "permissions:\n",
+            "  cancel-in-progress: "
+            "${{ github.ref != 'refs/heads/main' }}\n"
+            "  queue: max\n\n"
+            "permissions:\n",
+            1,
+        )
+        expectations = (
+            (extra_event, "every branch push"),
+            (queued_main, "isolate every main run"),
+            (
+                self.formal + "\non:\n  workflow_dispatch:\n",
+                "top-level 'on' key",
+            ),
+        )
+        for mutation, diagnostic in expectations:
+            with self.subTest(diagnostic=diagnostic):
+                problems = CI_POLICY.verify_workflow_envelope(
+                    mutation,
+                    label="formal",
+                    workflow="formal",
+                )
+                self.assertTrue(
+                    any(diagnostic in problem for problem in problems),
+                    problems,
+                )
+
+    def test_workflow_level_environment_and_shell_overrides_are_forbidden(self) -> None:
+        environment = self.ci.replace(
+            "\npermissions:\n",
+            "\nenv:\n  BASH_ENV: tools/attacker.sh\n\npermissions:\n",
+            1,
+        )
+        defaults = self.ci.replace(
+            "\npermissions:\n",
+            "\ndefaults:\n"
+            "  run:\n"
+            "    shell: /bin/bash --noprofile --norc {0}\n\n"
+            "permissions:\n",
+            1,
+        )
+        for name, mutation in (("environment", environment), ("defaults", defaults)):
+            with self.subTest(mutation=name):
+                _uses, syntax_problems = CI_POLICY.collect_uses(
+                    mutation,
+                    label="ci",
+                )
+                self.assertEqual(syntax_problems, [])
+                problems = CI_POLICY.verify_workflow_envelope(
+                    mutation,
+                    label="ci",
+                    workflow="ci",
+                )
+                self.assertTrue(
+                    any(
+                        "top-level key multiset differs" in problem
+                        for problem in problems
+                    ),
+                    problems,
+                )
+
+    def test_pull_requests_cannot_bypass_the_merge_commit(self) -> None:
+        mutation = self.formal.replace(
+            "          fetch-depth: 0\n",
+            "          fetch-depth: 0\n"
+            "          ref: ${{ github.event.pull_request.head.sha }}\n",
+            1,
+        )
+        problems = CI_POLICY.verify_workflow_envelope(
+            mutation,
+            label="formal",
+            workflow="formal",
+        )
+        self.assertTrue(
+            any("merge commit" in problem for problem in problems),
+            problems,
+        )
+        self.assertTrue(
+            any("head bypass" in problem for problem in problems),
+            problems,
+        )
+
+    def test_required_job_hashes_reject_checkout_and_command_bypasses(self) -> None:
+        foreign_checkout = self.ci.replace(
+            "          persist-credentials: false\n",
+            "          persist-credentials: false\n"
+            "          repository: octocat/Hello-World\n",
+            1,
+        )
+        continue_on_error = self.ci.replace(
+            "      - name: Format check\n        run: cargo fmt --all -- --check\n",
+            "      - name: Format check\n"
+            "        continue-on-error: true\n"
+            "        run: cargo fmt --all -- --check\n",
+            1,
+        )
+        no_op = self.ci.replace(
+            "        run: cargo fmt --all -- --check\n",
+            '        run: "true"\n',
+            1,
+        )
+        for name, mutation in (
+            ("foreign-checkout", foreign_checkout),
+            ("continue-on-error", continue_on_error),
+            ("no-op", no_op),
+        ):
+            with self.subTest(mutation=name):
+                _uses, syntax_problems = CI_POLICY.collect_uses(
+                    mutation,
+                    label="ci",
+                )
+                self.assertEqual(syntax_problems, [])
+                problems = CI_POLICY.verify_required_job_blocks(
+                    mutation,
+                    label="ci",
+                )
+                self.assertIn(
+                    "ci:build-test exact reviewed job block mismatch",
+                    problems,
+                )
+
+    def test_required_check_job_names_are_closed(self) -> None:
+        mutation = self.ci.replace("  build-test:\n", "  build-tests:\n", 1)
+        problems = CI_POLICY.verify_workflow_envelope(
+            mutation,
+            label="ci",
+            workflow="ci",
+        )
+        self.assertTrue(any("job set" in problem for problem in problems), problems)
+
+    def test_required_build_steps_cannot_be_event_gated(self) -> None:
+        mutation = self.ci.replace(
+            "      - name: Format check\n",
+            "      - name: Format check\n"
+            "        if: github.event_name != 'pull_request'\n",
+            1,
+        )
+        problems = CI_POLICY.verify_required_checks_run_on_pr(
+            mutation,
+            label="ci",
+        )
+        self.assertTrue(
+            any("run every required step" in problem for problem in problems),
+            problems,
+        )
+
+    def test_oidc_permission_cannot_escape_the_attester(self) -> None:
+        mutation = self.ci.replace(
+            "permissions:\n  contents: read\n",
+            "permissions:\n  contents: read\n  id-token: write\n",
+            1,
+        )
+        problems = CI_POLICY.verify_workflow_envelope(
+            mutation,
+            label="ci",
+            workflow="ci",
+        )
+        self.assertTrue(
+            any("isolated attester" in problem for problem in problems),
+            problems,
+        )
+
+    def test_required_jobs_cannot_override_permissions_with_yaml_scalars(self) -> None:
+        quoted_write = self.ci.replace(
+            "  build-test:\n    runs-on: ubuntu-24.04\n",
+            "  build-test:\n"
+            "    permissions:\n"
+            "      contents: read\n"
+            "      id-token: 'write'\n"
+            "    runs-on: ubuntu-24.04\n",
+            1,
+        )
+        folded_write_all = self.ci.replace(
+            "  build-test:\n    runs-on: ubuntu-24.04\n",
+            "  build-test:\n"
+            "    permissions: >-\n"
+            "      write-all\n"
+            "    runs-on: ubuntu-24.04\n",
+            1,
+        )
+        for name, mutation in (
+            ("quoted-write", quoted_write),
+            ("folded-write-all", folded_write_all),
+        ):
+            with self.subTest(mutation=name):
+                syntax_problems = CI_POLICY.validate_workflow_syntax(
+                    mutation,
+                    label="ci",
+                )
+                self.assertEqual(syntax_problems, [])
+                problems = CI_POLICY.verify_workflow_envelope(
+                    mutation,
+                    label="ci",
+                    workflow="ci",
+                )
+                self.assertTrue(
+                    any(
+                        "job-level permissions are forbidden" in problem
+                        for problem in problems
+                    ),
+                    problems,
+                )
+
+    def test_only_named_history_bound_steps_are_pr_excluded(self) -> None:
+        mutation = self.ci.replace(
+            "        if: github.event_name != 'pull_request'\n",
+            "        if: github.ref == 'refs/heads/main'\n",
+            1,
+        )
+        problems = CI_POLICY.verify_trusted_event_steps(
+            mutation,
+            label="ci",
+            job="supply-chain",
+        )
+        self.assertTrue(
+            any("skipped only for pull requests" in problem for problem in problems),
+            problems,
+        )
+        self.assertTrue(
+            any("pull-request exclusions" in problem for problem in problems),
+            problems,
+        )
+
+    def test_diagnostic_log_upload_remains_distinct_from_canonical_result(self) -> None:
+        job = CI_POLICY._job_block(
+            self.formal,
+            "tlc-model-check",
+            label="formal",
+        )
+        diagnostic = CI_POLICY._step_block(
+            job,
+            "Upload TLC log",
+            label="formal:tlc-model-check",
+        )
+        canonical = CI_POLICY._step_block(
+            job,
+            "Upload canonical epoch-17 formal result",
+            label="formal:tlc-model-check",
+        )
+        self.assertIn("        if: always()\n", diagnostic)
+        self.assertNotIn("github.event_name != 'pull_request'", diagnostic)
+        self.assertTrue(
+            canonical.startswith(
+                "      - name: Upload canonical epoch-17 formal result\n"
+                "        if: github.event_name != 'pull_request'\n"
+            )
+        )
+
+    def test_formal_pipeline_requires_pipefail_and_hardened_tls(self) -> None:
+        no_pipefail = self.formal.replace(
+            "      - name: Model-check HaldirAuthority\n"
+            "        shell: /bin/bash --noprofile --norc -euo pipefail {0}\n",
+            "      - name: Model-check HaldirAuthority\n"
+            "        shell: /bin/bash --noprofile --norc -eu {0}\n",
+            1,
+        )
+        problems = CI_POLICY.verify_formal_job(
+            no_pipefail,
+            label="formal",
+            pins=self.formal_pins,
+        )
+        self.assertTrue(
+            any("pipeline failures fatal" in problem for problem in problems),
+            problems,
+        )
+        weak_tls = self.formal.replace("            --tlsv1.2 \\\n", "", 1)
+        problems = CI_POLICY.verify_formal_job(
+            weak_tls,
+            label="formal",
+            pins=self.formal_pins,
+        )
+        self.assertTrue(any("--tlsv1.2" in problem for problem in problems), problems)
+
+    def test_formal_workflow_must_match_every_closed_pin(self) -> None:
+        for field in self.formal_pins._fields:
+            current = getattr(self.formal_pins, field)
+            replacement = current + 1 if type(current) is int else f"{current}-mutated"
+            with self.subTest(field=field):
+                parsed = self.formal_pins._replace(**{field: replacement})
+                problems = CI_POLICY.verify_formal_job(
+                    self.formal,
+                    label="formal",
+                    pins=parsed,
+                )
+                self.assertTrue(
+                    any(
+                        "requires" in problem and str(replacement) in problem
+                        for problem in problems
+                    ),
+                    problems,
+                )
+
+    def test_ci_formal_pin_parser_rejects_schema_and_type_ambiguity(self) -> None:
+        mutations = []
+        stale_schema = copy.deepcopy(self.pins)
+        stale_schema["schema_version"] = 1
+        mutations.append(stale_schema)
+        previous_schema = copy.deepcopy(self.pins)
+        previous_schema["schema_version"] = 2
+        mutations.append(previous_schema)
+        future_schema = copy.deepcopy(self.pins)
+        future_schema["schema_version"] = 4
+        mutations.append(future_schema)
+        unknown = copy.deepcopy(self.pins)
+        unknown["formal"]["unknown"] = "value"
+        mutations.append(unknown)
+        missing = copy.deepcopy(self.pins)
+        del missing["formal"]["java_archive_package"]
+        mutations.append(missing)
+        boolean_size = copy.deepcopy(self.pins)
+        boolean_size["formal"]["tla_tools_bytes"] = True
+        mutations.append(boolean_size)
+        boolean_archive_size = copy.deepcopy(self.pins)
+        boolean_archive_size["formal"]["java_archive_bytes"] = True
+        mutations.append(boolean_archive_size)
+        for field, current in POLICY.EXACT_JAVA_PINS.items():
+            wrong_java = copy.deepcopy(self.pins)
+            wrong_java["formal"][field] = (
+                current + 1 if type(current) is int else f"{current}-mutated"
+            )
+            mutations.append(wrong_java)
+        for index, pins in enumerate(mutations):
+            with self.subTest(mutation=index):
+                with self.assertRaises(ValueError):
+                    CI_POLICY.parse_formal_pins(pins)
+
+    def test_formal_archive_member_grammar_rejects_traversal_and_types(self) -> None:
+        mutations = (
+            (
+                self.formal.replace(
+                    '                [[ "$COMPONENT" != ".." ]]\n',
+                    "",
+                    1,
+                ),
+                '[[ "$COMPONENT" != ".." ]]',
+            ),
+            (
+                self.formal.replace(
+                    "d) ((DIRECTORY_COUNT += 1)) ;;\n",
+                    "d|h|b|c|p) ((DIRECTORY_COUNT += 1)) ;;\n",
+                    1,
+                ),
+                "d) ((DIRECTORY_COUNT += 1)) ;;",
+            ),
+            (
+                self.formal.replace("            --no-same-owner \\\n", "", 1),
+                "--no-same-owner",
+            ),
+            (
+                self.formal.replace(
+                    '/usr/bin/find "$JAVA_HOME" -xdev -type l -print -quit',
+                    '/usr/bin/find "$JAVA_HOME" -xdev -type l -delete',
+                    1,
+                ),
+                "type l -print -quit",
+            ),
+        )
+        for mutation, diagnostic in mutations:
+            with self.subTest(diagnostic=diagnostic):
+                problems = CI_POLICY.verify_formal_job(
+                    mutation,
+                    label="formal",
+                    pins=self.formal_pins,
+                )
+                self.assertTrue(
+                    any(diagnostic in problem for problem in problems),
+                    problems,
+                )
+
+    def test_formal_legal_links_have_an_exact_excluded_manifest(self) -> None:
+        count_check = '[[ "$LINK_COUNT" -eq "$JAVA_LEGAL_LINK_COUNT" ]]'
+        target_check = '[[ "$LINK_TARGET" == "../java.base/$LINK_NAME" ]]'
+        link_location = '[[ "$LINK_PATH" == "$JAVA_ARCHIVE_ROOT/legal/"* ]]'
+        mutations = (
+            (
+                self.formal.replace(count_check, count_check.replace("-eq", "-ge"), 1),
+                count_check,
+            ),
+            (
+                self.formal.replace(count_check, count_check.replace("-eq", "-le"), 1),
+                count_check,
+            ),
+            (
+                self.formal.replace(
+                    link_location,
+                    '[[ "$LINK_PATH" == "$JAVA_ARCHIVE_ROOT/"* ]]',
+                    1,
+                ),
+                link_location,
+            ),
+            (
+                self.formal.replace(
+                    target_check,
+                    '[[ "$LINK_TARGET" == "/java.base/$LINK_NAME" ]]',
+                    1,
+                ),
+                target_check,
+            ),
+            (
+                self.formal.replace(
+                    target_check,
+                    '[[ "$LINK_TARGET" == "../../java.base/$LINK_NAME" ]]',
+                    1,
+                ),
+                target_check,
+            ),
+            (
+                self.formal.replace(
+                    target_check,
+                    '[[ "$LINK_TARGET" == "../java.desktop/$LINK_NAME" ]]',
+                    1,
+                ),
+                target_check,
+            ),
+            (
+                self.formal.replace(
+                    "e623b66f52db07699c4723e448b1a34531097e6c38ee63630da3dcd81729d576",
+                    "0" * 64,
+                    1,
+                ),
+                "e623b66f52db07699c4723e448b1a345",
+            ),
+            (
+                self.formal.replace(
+                    '            --exclude="${JAVA_ARCHIVE_ROOT}/legal" \\\n',
+                    "",
+                    1,
+                ).replace(
+                    '            --exclude="${JAVA_ARCHIVE_ROOT}/legal/*" \\\n',
+                    "",
+                    1,
+                ),
+                "--exclude=",
+            ),
+        )
+        for mutation, diagnostic in mutations:
+            with self.subTest(diagnostic=diagnostic):
+                problems = CI_POLICY.verify_formal_job(
+                    mutation,
+                    label="formal",
+                    pins=self.formal_pins,
+                )
+                self.assertTrue(
+                    any(diagnostic in problem for problem in problems),
+                    problems,
+                )
+
+    def test_formal_archive_identity_and_runtime_checks_are_fail_closed(self) -> None:
+        mutations = (
+            (
+                self.formal.replace(
+                    '/usr/bin/test ! -L "$JAVA_ARCHIVE"\n',
+                    "",
+                    1,
+                ),
+                '/usr/bin/test ! -L "$JAVA_ARCHIVE"',
+            ),
+            (
+                self.formal.replace(
+                    "| /usr/bin/sha256sum --check --strict\n",
+                    "| /usr/bin/sha256sum --check\n",
+                    1,
+                ),
+                "sha256sum --check --strict",
+            ),
+            (
+                self.formal.replace(
+                    "count != 1 || matches != 1",
+                    "count < 1 || matches < 1",
+                    1,
+                ),
+                "count != 1 || matches != 1",
+            ),
+            (
+                self.formal.replace(
+                    'assert_property java.runtime.version "$JAVA_RUNTIME_VERSION"\n',
+                    "",
+                    1,
+                ),
+                "assert_property java.runtime.version",
+            ),
+            (
+                self.formal.replace(
+                    "      - name: Fetch and install pinned Temurin JRE\n",
+                    "      - uses: actions/setup-java@"
+                    "03ad4de0992f5dab5e18fcb136590ce7c4a0ac95\n"
+                    "      - name: Fetch and install pinned Temurin JRE\n",
+                    1,
+                ),
+                "actions/setup-java",
+            ),
+        )
+        for mutation, diagnostic in mutations:
+            with self.subTest(diagnostic=diagnostic):
+                problems = CI_POLICY.verify_formal_job(
+                    mutation,
+                    label="formal",
+                    pins=self.formal_pins,
+                )
+                self.assertTrue(
+                    any(diagnostic in problem for problem in problems),
+                    problems,
+                )
 
 
 class RustSecSnapshotTests(unittest.TestCase):

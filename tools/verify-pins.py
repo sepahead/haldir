@@ -11,6 +11,7 @@ Enforces:
   * Cargo.lock exists (dependencies are pinned);
   * protected workflows cannot execute the retired cargo-deny Action;
   * cargo-deny binaries and the RustSec snapshot have exact bounded identities.
+  * the formal model-checker jar and Java runtime have exact closed pins.
 
 Exits non-zero on the first violation. No third-party dependencies.
 """
@@ -62,7 +63,7 @@ def verify_cargo_deny_tests() -> None:
         fail("tools/test_pinned_cargo_deny.py must be a regular file")
     try:
         completed = subprocess.run(
-            (sys.executable, "-I", str(test_path)),
+            (sys.executable, "-I", "-B", str(test_path)),
             cwd=ROOT,
             stdin=subprocess.DEVNULL,
             check=False,
@@ -352,7 +353,7 @@ def main() -> None:
     print(
         "verify-pins: OK "
         "(NCP command-subset record/dependency/corpus, exact TLS-only Zenoh, "
-        "toolchain, Cargo.lock, closed cargo-deny/RustSec identities)"
+        "toolchain, Cargo.lock, closed cargo-deny/RustSec/formal identities)"
     )
 
 

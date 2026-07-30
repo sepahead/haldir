@@ -53,7 +53,19 @@ def _tiny_pins(payload: bytes = b"verified-tla-tools") -> tuple[object, bytes]:
         version="1.2.3",
         sha256=hashlib.sha256(payload).hexdigest(),
         size=len(payload),
-        java_specification_version="21",
+        java_distribution=RUNNER.ADMITTED_JAVA_DISTRIBUTION,
+        java_release_tag=RUNNER.ADMITTED_JAVA_RELEASE_TAG,
+        java_archive_package=RUNNER.ADMITTED_JAVA_ARCHIVE_PACKAGE,
+        java_archive_architecture=RUNNER.ADMITTED_JAVA_ARCHIVE_ARCHITECTURE,
+        java_archive_name=RUNNER.ADMITTED_JAVA_ARCHIVE_NAME,
+        java_archive_root=RUNNER.ADMITTED_JAVA_ARCHIVE_ROOT,
+        java_archive_url=RUNNER.ADMITTED_JAVA_ARCHIVE_URL,
+        java_archive_bytes=RUNNER.ADMITTED_JAVA_ARCHIVE_BYTES,
+        java_archive_sha256=RUNNER.ADMITTED_JAVA_ARCHIVE_SHA256,
+        java_runtime_vendor=RUNNER.ADMITTED_JAVA_RUNTIME_VENDOR,
+        java_runtime_version=RUNNER.ADMITTED_JAVA_RUNTIME_VERSION,
+        java_specification_version=RUNNER.ADMITTED_JAVA_SPECIFICATION_VERSION,
+        java_runtime_architecture=RUNNER.ADMITTED_HOSTED_JAVA_RUNTIME_ARCHITECTURE,
     )
     return pins, payload
 
@@ -156,34 +168,89 @@ class PinPolicyTests(RunnerTestCase):
     @staticmethod
     def _valid_document() -> bytes:
         return (
-            "schema_version = 1\n"
+            "schema_version = 3\n"
             "[formal]\n"
             f'tla_tools_version = "{RUNNER.ADMITTED_TLA_VERSION}"\n'
+            f"tla_tools_bytes = {RUNNER.ADMITTED_TLA_BYTES}\n"
             f'tla_tools_sha256 = "{RUNNER.ADMITTED_TLA_SHA256}"\n'
+            f'java_distribution = "{RUNNER.ADMITTED_JAVA_DISTRIBUTION}"\n'
+            f'java_release_tag = "{RUNNER.ADMITTED_JAVA_RELEASE_TAG}"\n'
+            f'java_archive_package = "{RUNNER.ADMITTED_JAVA_ARCHIVE_PACKAGE}"\n'
+            "java_archive_architecture = "
+            f'"{RUNNER.ADMITTED_JAVA_ARCHIVE_ARCHITECTURE}"\n'
+            f'java_archive_name = "{RUNNER.ADMITTED_JAVA_ARCHIVE_NAME}"\n'
+            f'java_archive_root = "{RUNNER.ADMITTED_JAVA_ARCHIVE_ROOT}"\n'
+            f'java_archive_url = "{RUNNER.ADMITTED_JAVA_ARCHIVE_URL}"\n'
+            f"java_archive_bytes = {RUNNER.ADMITTED_JAVA_ARCHIVE_BYTES}\n"
+            f'java_archive_sha256 = "{RUNNER.ADMITTED_JAVA_ARCHIVE_SHA256}"\n'
+            f'java_runtime_vendor = "{RUNNER.ADMITTED_JAVA_RUNTIME_VENDOR}"\n'
+            f'java_runtime_version = "{RUNNER.ADMITTED_JAVA_RUNTIME_VERSION}"\n'
+            "java_specification_version = "
+            f'"{RUNNER.ADMITTED_JAVA_SPECIFICATION_VERSION}"\n'
+            "java_runtime_architecture = "
+            f'"{RUNNER.ADMITTED_HOSTED_JAVA_RUNTIME_ARCHITECTURE}"\n'
         ).encode()
 
     def test_repository_pin_file_is_the_closed_admitted_identity(self) -> None:
         pins = RUNNER.load_pins(ROOT)
-        self.assertEqual(pins.version, "1.7.4")
-        self.assertEqual(pins.sha256, RUNNER.ADMITTED_TLA_SHA256)
-        self.assertEqual(pins.size, 2_274_532)
-        self.assertEqual(pins.java_specification_version, "21")
+        self.assertEqual(
+            pins,
+            RUNNER.FormalPins(
+                version="1.7.4",
+                sha256=RUNNER.ADMITTED_TLA_SHA256,
+                size=2_274_532,
+                java_distribution="temurin",
+                java_release_tag="jdk-21.0.11+10",
+                java_archive_package="jre",
+                java_archive_architecture="x64",
+                java_archive_name=(
+                    "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+                ),
+                java_archive_root="jdk-21.0.11+10-jre",
+                java_archive_url=(
+                    "https://github.com/adoptium/temurin21-binaries/releases/"
+                    "download/jdk-21.0.11%2B10/"
+                    "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+                ),
+                java_archive_bytes=52_099_793,
+                java_archive_sha256=RUNNER.ADMITTED_JAVA_ARCHIVE_SHA256,
+                java_runtime_vendor="Eclipse Adoptium",
+                java_runtime_version="21.0.11+10-LTS",
+                java_specification_version="21",
+                java_runtime_architecture="amd64",
+            ),
+        )
+        self.assertEqual(
+            RUNNER._asset_url(pins),
+            "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar",
+        )
 
-    def test_minimal_valid_formal_table_is_accepted(self) -> None:
+    def test_exact_schema_v3_formal_table_is_accepted(self) -> None:
         with tempfile.TemporaryDirectory(prefix="haldir-formal-pins-") as directory:
             repository = self._repository(Path(directory), self._valid_document())
             pins = RUNNER.load_pins(repository)
             self.assertEqual(pins.version, RUNNER.ADMITTED_TLA_VERSION)
+            self.assertEqual(pins.size, RUNNER.ADMITTED_TLA_BYTES)
+            self.assertEqual(
+                pins.java_archive_sha256,
+                RUNNER.ADMITTED_JAVA_ARCHIVE_SHA256,
+            )
 
     def test_schema_type_and_value_are_exact(self) -> None:
         mutations = (
             self._valid_document().replace(
-                b"schema_version = 1", b"schema_version = true"
+                b"schema_version = 3", b"schema_version = true"
             ),
             self._valid_document().replace(
-                b"schema_version = 1", b"schema_version = 2"
+                b"schema_version = 3", b"schema_version = 1"
             ),
-            self._valid_document().replace(b"schema_version = 1\n", b""),
+            self._valid_document().replace(
+                b"schema_version = 3", b"schema_version = 2"
+            ),
+            self._valid_document().replace(
+                b"schema_version = 3", b"schema_version = 4"
+            ),
+            self._valid_document().replace(b"schema_version = 3\n", b""),
         )
         for index, document in enumerate(mutations):
             with (
@@ -198,10 +265,47 @@ class PinPolicyTests(RunnerTestCase):
                 )
 
     def test_formal_table_rejects_missing_and_unknown_fields(self) -> None:
-        missing = self._valid_document().splitlines(keepends=True)[:-1]
-        unknown = self._valid_document() + b'unknown = "value"\n'
-        for document in (b"".join(missing), unknown):
-            with tempfile.TemporaryDirectory(prefix="haldir-formal-pins-") as directory:
+        valid = self._valid_document()
+        fields = (
+            b"tla_tools_version",
+            b"tla_tools_bytes",
+            b"tla_tools_sha256",
+            b"java_distribution",
+            b"java_release_tag",
+            b"java_archive_package",
+            b"java_archive_architecture",
+            b"java_archive_name",
+            b"java_archive_root",
+            b"java_archive_url",
+            b"java_archive_bytes",
+            b"java_archive_sha256",
+            b"java_runtime_vendor",
+            b"java_runtime_version",
+            b"java_specification_version",
+            b"java_runtime_architecture",
+        )
+        self.assertEqual(len(fields), 16)
+        mutations = [
+            b"\n".join(
+                line
+                for line in valid.splitlines()
+                if not line.startswith(field + b" =")
+            )
+            + b"\n"
+            for field in fields
+        ]
+        mutations.extend(
+            (
+                valid.replace(b"[formal]\n", b""),
+                b"schema_version = 3\nformal = 7\n",
+                valid + b'unknown = "value"\n',
+            )
+        )
+        for index, document in enumerate(mutations):
+            with (
+                self.subTest(index=index),
+                tempfile.TemporaryDirectory(prefix="haldir-formal-pins-") as directory,
+            ):
                 repository = self._repository(Path(directory), document)
                 self.assert_formal_error(
                     "FORMAL_PINS_FIELDS",
@@ -213,6 +317,9 @@ class PinPolicyTests(RunnerTestCase):
         valid = self._valid_document()
         mutations = (
             valid.replace(b'tla_tools_version = "1.7.4"', b"tla_tools_version = 174"),
+            valid.replace(b"tla_tools_bytes = 2274532", b'tla_tools_bytes = "2274532"'),
+            valid.replace(b"tla_tools_bytes = 2274532", b"tla_tools_bytes = true"),
+            valid.replace(b"tla_tools_bytes = 2274532", b"tla_tools_bytes = 0"),
             valid.replace(
                 f'tla_tools_sha256 = "{RUNNER.ADMITTED_TLA_SHA256}"'.encode(),
                 b"tla_tools_sha256 = 123",
@@ -221,6 +328,55 @@ class PinPolicyTests(RunnerTestCase):
             valid.replace(
                 RUNNER.ADMITTED_TLA_SHA256.encode(),
                 RUNNER.ADMITTED_TLA_SHA256.upper().encode(),
+            ),
+            valid.replace(b'java_distribution = "temurin"', b"java_distribution = 21"),
+            valid.replace(
+                b'java_release_tag = "jdk-21.0.11+10"',
+                b"java_release_tag = 21",
+            ),
+            valid.replace(b'"jdk-21.0.11+10"', b'"jdk-21.00.11+10"'),
+            valid.replace(
+                b'java_archive_package = "jre"',
+                b"java_archive_package = false",
+            ),
+            valid.replace(
+                b'java_archive_architecture = "x64"',
+                b"java_archive_architecture = 64",
+            ),
+            valid.replace(b"java_archive_name = ", b"java_archive_name = false # "),
+            valid.replace(b"java_archive_root = ", b"java_archive_root = 21 # "),
+            valid.replace(b"java_archive_url = ", b"java_archive_url = false # "),
+            valid.replace(
+                b"java_archive_bytes = 52099793",
+                b'java_archive_bytes = "52099793"',
+            ),
+            valid.replace(
+                b"java_archive_bytes = 52099793", b"java_archive_bytes = true"
+            ),
+            valid.replace(b"java_archive_bytes = 52099793", b"java_archive_bytes = 0"),
+            valid.replace(
+                RUNNER.ADMITTED_JAVA_ARCHIVE_SHA256.encode(),
+                RUNNER.ADMITTED_JAVA_ARCHIVE_SHA256.upper().encode(),
+            ),
+            valid.replace(
+                b'java_runtime_vendor = "Eclipse Adoptium"',
+                b"java_runtime_vendor = false",
+            ),
+            valid.replace(
+                b'java_runtime_version = "21.0.11+10-LTS"',
+                b"java_runtime_version = 21",
+            ),
+            valid.replace(
+                b'java_specification_version = "21"',
+                b"java_specification_version = false",
+            ),
+            valid.replace(
+                b'java_specification_version = "21"',
+                b'java_specification_version = "021"',
+            ),
+            valid.replace(
+                b'java_runtime_architecture = "amd64"',
+                b"java_runtime_architecture = 64",
             ),
         )
         for index, document in enumerate(mutations):
@@ -235,12 +391,81 @@ class PinPolicyTests(RunnerTestCase):
                     repository,
                 )
 
-    def test_well_formed_but_unadmitted_identity_is_rejected(self) -> None:
-        document = self._valid_document().replace(b'"1.7.4"', b'"1.7.5"')
+    def test_well_formed_but_unadmitted_identities_are_rejected(self) -> None:
+        valid = self._valid_document()
+        mutations = (
+            valid.replace(b'"1.7.4"', b'"1.7.5"'),
+            valid.replace(b"tla_tools_bytes = 2274532", b"tla_tools_bytes = 2274533"),
+            valid.replace(
+                RUNNER.ADMITTED_TLA_SHA256.encode(),
+                b"0" * 64,
+            ),
+            valid.replace(b'"temurin"', b'"zulu"'),
+            valid.replace(
+                b'java_release_tag = "jdk-21.0.11+10"',
+                b'java_release_tag = "jdk-21.0.11+11"',
+            ),
+            valid.replace(
+                b'java_archive_package = "jre"',
+                b'java_archive_package = "jdk"',
+            ),
+            valid.replace(
+                b'java_archive_architecture = "x64"',
+                b'java_archive_architecture = "aarch64"',
+            ),
+            valid.replace(
+                b"java_archive_name = "
+                b'"OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"',
+                b"java_archive_name = "
+                b'"OpenJDK21U-jre_x64_linux_hotspot_21.0.11_11.tar.gz"',
+            ),
+            valid.replace(
+                b'java_archive_root = "jdk-21.0.11+10-jre"',
+                b'java_archive_root = "jdk-21.0.11+11-jre"',
+            ),
+            valid.replace(
+                b"jdk-21.0.11%2B10/OpenJDK21U",
+                b"jdk-21.0.11%2B11/OpenJDK21U",
+            ),
+            valid.replace(
+                b"java_archive_bytes = 52099793", b"java_archive_bytes = 52099794"
+            ),
+            valid.replace(
+                RUNNER.ADMITTED_JAVA_ARCHIVE_SHA256.encode(),
+                b"0" * 64,
+            ),
+            valid.replace(b'"Eclipse Adoptium"', b'"Other Vendor"'),
+            valid.replace(b'"21.0.11+10-LTS"', b'"21.0.11+11-LTS"'),
+            valid.replace(
+                b'java_specification_version = "21"',
+                b'java_specification_version = "22"',
+            ),
+            valid.replace(
+                b'java_runtime_architecture = "amd64"',
+                b'java_runtime_architecture = "x86_64"',
+            ),
+        )
+        for index, document in enumerate(mutations):
+            with (
+                self.subTest(index=index),
+                tempfile.TemporaryDirectory(prefix="haldir-formal-pins-") as directory,
+            ):
+                repository = self._repository(Path(directory), document)
+                self.assert_formal_error(
+                    "FORMAL_PINS_UNADMITTED",
+                    RUNNER.load_pins,
+                    repository,
+                )
+
+    def test_asset_size_pin_cannot_exceed_the_download_hard_cap(self) -> None:
+        document = self._valid_document().replace(
+            b"tla_tools_bytes = 2274532",
+            f"tla_tools_bytes = {RUNNER.TLA_ASSET_HARD_CAP + 1}".encode(),
+        )
         with tempfile.TemporaryDirectory(prefix="haldir-formal-pins-") as directory:
             repository = self._repository(Path(directory), document)
             self.assert_formal_error(
-                "FORMAL_PINS_UNADMITTED",
+                "FORMAL_PINS_TYPES",
                 RUNNER.load_pins,
                 repository,
             )
@@ -1036,13 +1261,20 @@ class DownloadTests(RunnerTestCase):
 
 class JavaTests(RunnerTestCase):
     @staticmethod
-    def _java_output(specification: str = "21") -> bytes:
+    def _java_output(
+        specification: str = "21",
+        *,
+        vendor: str = "Eclipse Adoptium",
+        runtime_version: str = "21.0.11+10-LTS",
+        architecture: str = "amd64",
+    ) -> bytes:
         return (
             b"Property settings:\n"
             + f"    java.specification.version = {specification}\n".encode()
-            + b"    java.vendor = Test Vendor\n"
-            + b"    java.runtime.version = 21.0.0-test\n"
+            + f"    java.vendor = {vendor}\n".encode()
+            + f"    java.runtime.version = {runtime_version}\n".encode()
             + b"    java.vm.name = Test VM\n"
+            + f"    os.arch = {architecture}\n".encode()
         )
 
     def _java_file(self, root: Path) -> Path:
@@ -1074,7 +1306,7 @@ class JavaTests(RunnerTestCase):
             self.assertEqual(environment["LC_ALL"], "C")
             self.assertEqual(environment["TZ"], "UTC")
 
-    def test_validate_java_requires_exact_specification_major(self) -> None:
+    def test_validate_java_requires_the_exact_pinned_runtime_identity(self) -> None:
         pins, _payload = _tiny_pins()
         with tempfile.TemporaryDirectory(prefix="haldir-formal-java-") as directory:
             root = Path(directory)
@@ -1098,9 +1330,10 @@ class JavaTests(RunnerTestCase):
                 (str(java.resolve()), "-XshowSettings:properties", "-version"),
             )
             self.assertEqual(identity.specification_version, "21")
-            self.assertEqual(identity.vendor, "Test Vendor")
-            self.assertEqual(identity.runtime_version, "21.0.0-test")
+            self.assertEqual(identity.vendor, "Eclipse Adoptium")
+            self.assertEqual(identity.runtime_version, "21.0.11+10-LTS")
             self.assertEqual(identity.vm_name, "Test VM")
+            self.assertEqual(identity.architecture, "amd64")
             self.assertEqual(identity.executable_bytes, java.stat().st_size)
             self.assertEqual(
                 environment["PATH"].split(":")[0],
@@ -1111,6 +1344,36 @@ class JavaTests(RunnerTestCase):
             self.assertEqual(kwargs["timeout_seconds"], RUNNER.JAVA_TIMEOUT_SECONDS)
             self.assertEqual(kwargs["output_limit"], RUNNER.JAVA_OUTPUT_CAP)
             self.assertTrue(kwargs["capture"])
+
+    def test_local_runtime_architectures_are_admitted_and_measured_separately(
+        self,
+    ) -> None:
+        self.assertEqual(
+            RUNNER.ADMITTED_LOCAL_JAVA_RUNTIME_ARCHITECTURES,
+            frozenset({"aarch64", "amd64", "x86_64"}),
+        )
+        self.assertEqual(RUNNER.ADMITTED_HOSTED_JAVA_RUNTIME_ARCHITECTURE, "amd64")
+        self.assertIn(
+            RUNNER.ADMITTED_HOSTED_JAVA_RUNTIME_ARCHITECTURE,
+            RUNNER.ADMITTED_LOCAL_JAVA_RUNTIME_ARCHITECTURES,
+        )
+        pins, _payload = _tiny_pins()
+        with tempfile.TemporaryDirectory(prefix="haldir-formal-java-") as directory:
+            root = Path(directory)
+            java = self._java_file(root)
+            for architecture in ("aarch64", "x86_64"):
+                output = self._java_output(architecture=architecture)
+                result = RUNNER.ProcessResult(0, output, len(output), "EXITED")
+                with (
+                    self.subTest(architecture=architecture),
+                    mock.patch.object(RUNNER, "_run_bounded", return_value=result),
+                ):
+                    identity, _environment = RUNNER.validate_java(
+                        str(java),
+                        pins=pins,
+                        private_root=root / "private",
+                    )
+                    self.assertEqual(identity.architecture, architecture)
 
     def test_wrong_or_duplicate_java_specification_is_rejected(self) -> None:
         pins, _payload = _tiny_pins()
@@ -1134,6 +1397,95 @@ class JavaTests(RunnerTestCase):
                             pins=pins,
                             private_root=root / "private",
                         )
+
+    def test_wrong_java_runtime_identity_is_rejected(self) -> None:
+        pins, _payload = _tiny_pins()
+        outputs = (
+            self._java_output(vendor="Not Adoptium"),
+            self._java_output(runtime_version="21.0.11+11-LTS"),
+            self._java_output(runtime_version="21.0.11+10"),
+            self._java_output(architecture="sparcv9"),
+        )
+        with tempfile.TemporaryDirectory(prefix="haldir-formal-java-") as directory:
+            root = Path(directory)
+            java = self._java_file(root)
+            for output in outputs:
+                with (
+                    self.subTest(output=output),
+                    mock.patch.object(
+                        RUNNER,
+                        "_run_bounded",
+                        return_value=RUNNER.ProcessResult(
+                            0,
+                            output,
+                            len(output),
+                            "EXITED",
+                        ),
+                    ),
+                ):
+                    self.assert_formal_error(
+                        "FORMAL_JAVA_IDENTITY",
+                        RUNNER.validate_java,
+                        str(java),
+                        pins=pins,
+                        private_root=root / "private",
+                    )
+
+    def test_missing_and_duplicate_required_java_identity_properties_are_rejected(
+        self,
+    ) -> None:
+        pins, _payload = _tiny_pins()
+        complete = self._java_output()
+        cases = (
+            (
+                complete.replace(b"    java.vendor = Eclipse Adoptium\n", b""),
+                "FORMAL_JAVA_PROPERTY:java.vendor",
+            ),
+            (
+                complete.replace(b"    java.runtime.version = 21.0.11+10-LTS\n", b""),
+                "FORMAL_JAVA_PROPERTY:java.runtime.version",
+            ),
+            (
+                complete.replace(b"    os.arch = amd64\n", b""),
+                "FORMAL_JAVA_PROPERTY:os.arch",
+            ),
+            (
+                complete + b"java.vendor = Eclipse Adoptium\n",
+                "FORMAL_JAVA_PROPERTY:java.vendor",
+            ),
+            (
+                complete + b"java.runtime.version = 21.0.11+10-LTS\n",
+                "FORMAL_JAVA_PROPERTY:java.runtime.version",
+            ),
+            (
+                complete + b"os.arch = amd64\n",
+                "FORMAL_JAVA_PROPERTY:os.arch",
+            ),
+        )
+        with tempfile.TemporaryDirectory(prefix="haldir-formal-java-") as directory:
+            root = Path(directory)
+            java = self._java_file(root)
+            for output, code in cases:
+                with (
+                    self.subTest(code=code, output=output),
+                    mock.patch.object(
+                        RUNNER,
+                        "_run_bounded",
+                        return_value=RUNNER.ProcessResult(
+                            0,
+                            output,
+                            len(output),
+                            "EXITED",
+                        ),
+                    ),
+                ):
+                    self.assert_formal_error(
+                        code,
+                        RUNNER.validate_java,
+                        str(java),
+                        pins=pins,
+                        private_root=root / "private",
+                    )
 
     def test_java_nonzero_timeout_and_output_limit_are_rejected(self) -> None:
         pins, _payload = _tiny_pins()
@@ -1164,14 +1516,14 @@ class JavaTests(RunnerTestCase):
 
     def test_duplicate_optional_java_identity_property_is_rejected(self) -> None:
         pins, _payload = _tiny_pins()
-        output = self._java_output() + b"java.vendor = Other Vendor\n"
+        output = self._java_output() + b"java.vm.name = Other VM\n"
         result = RUNNER.ProcessResult(0, output, len(output), "EXITED")
         with tempfile.TemporaryDirectory(prefix="haldir-formal-java-") as directory:
             root = Path(directory)
             java = self._java_file(root)
             with mock.patch.object(RUNNER, "_run_bounded", return_value=result):
                 self.assert_formal_error(
-                    "FORMAL_JAVA_PROPERTY:java.vendor",
+                    "FORMAL_JAVA_PROPERTY:java.vm.name",
                     RUNNER.validate_java,
                     str(java),
                     pins=pins,
@@ -1357,7 +1709,7 @@ class TlcTests(RunnerTestCase):
         tools = root / "tools"
         tools.mkdir()
         _write(tools / "run_formal.py", b"test runner material\n")
-        _write(tools / "pins.toml", b"schema_version = 1\n")
+        _write(tools / "pins.toml", PinPolicyTests._valid_document())
         formal = root / "formal"
         formal.mkdir()
         _write(formal / "HaldirAuthority.tla", b"---- MODULE HaldirAuthority ----\n")
@@ -1374,9 +1726,10 @@ class TlcTests(RunnerTestCase):
             "inode": metadata.st_ino,
             "modified_ns": metadata.st_mtime_ns,
             "specification_version": "21",
-            "vendor": "Test Vendor",
-            "runtime_version": "21-test",
+            "vendor": "Eclipse Adoptium",
+            "runtime_version": "21.0.11+10-LTS",
             "vm_name": "Test VM",
+            "architecture": "amd64",
             "properties_output_sha256": "0" * 64,
         }
         identity = RUNNER.JavaIdentity(
@@ -1489,6 +1842,7 @@ class TlcTests(RunnerTestCase):
             runtime_file = log.parent / "formal-runtime.json"
             persisted = json.loads(runtime_file.read_text())
             self.assertEqual(runtime, persisted)
+            self.assertEqual(runtime["schema"], "HALDIR_FORMAL_RUNTIME_V2")
             self.assertEqual(log.read_bytes(), output)
             self.assertEqual(runtime["result"], "PASS")
             self.assertEqual(runtime["tlc"]["success_marker_count"], 1)
@@ -1498,10 +1852,11 @@ class TlcTests(RunnerTestCase):
                 hashlib.sha256(output).hexdigest(),
             )
             self.assertEqual(runtime["tlc"]["log_path"], "out/tlc.log")
+            self.assertEqual(runtime["java"]["architecture"], "amd64")
             materials = {item["path"]: item for item in runtime["materials"]}
             expected_materials = {
                 "tools/run_formal.py": b"test runner material\n",
-                "tools/pins.toml": b"schema_version = 1\n",
+                "tools/pins.toml": PinPolicyTests._valid_document(),
                 "formal/HaldirAuthority.cfg": b"SPECIFICATION Spec\n",
                 "formal/HaldirAuthority.tla": b"---- MODULE HaldirAuthority ----\n",
             }
@@ -1704,14 +2059,22 @@ class CliTests(unittest.TestCase):
         runner = tools / "run_formal.py"
         runner.write_bytes(RUNNER_PATH.read_bytes())
         runner.chmod(0o700)
-        pins = (
-            "schema_version = 1\n"
-            "[formal]\n"
-            f'tla_tools_version = "{RUNNER.ADMITTED_TLA_VERSION}"\n'
-            f'tla_tools_sha256 = "{RUNNER.ADMITTED_TLA_SHA256}"\n'
-        )
-        (tools / "pins.toml").write_text(pins)
+        (tools / "pins.toml").write_bytes(PinPolicyTests._valid_document())
         return runner
+
+    def test_local_runner_recipes_and_documentation_disable_bytecode(self) -> None:
+        expected = [
+            "python3 -I -B tools/run_formal.py",
+            "python3 -I -B tools/run_formal.py --offline",
+        ]
+        for path in (ROOT / "justfile", ROOT / "formal" / "README.md"):
+            with self.subTest(path=path.relative_to(ROOT)):
+                lines = [
+                    line.strip()
+                    for line in path.read_text().splitlines()
+                    if "tools/run_formal.py" in line
+                ]
+                self.assertEqual(lines, expected)
 
     def test_help_runs_under_isolated_mode_without_importing_siblings(self) -> None:
         completed = subprocess.run(
@@ -1793,9 +2156,10 @@ class CliTests(unittest.TestCase):
                 inode=metadata.st_ino,
                 modified_ns=metadata.st_mtime_ns,
                 specification_version="21",
-                vendor="Test",
-                runtime_version="21-test",
+                vendor="Eclipse Adoptium",
+                runtime_version="21.0.11+10-LTS",
                 vm_name="Test VM",
+                architecture="amd64",
                 properties_output_sha256="0" * 64,
             )
             observed: dict[str, object] = {}

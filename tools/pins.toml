@@ -1,7 +1,7 @@
 # Human-reviewable pin source of truth. `tools/verify-pins.py` enforces these.
 # A branch name or short SHA is never an acceptable pin.
 
-schema_version = 1
+schema_version = 3
 
 [toolchain]
 rust_channel = "1.96.0"
@@ -97,7 +97,21 @@ binary_bytes = 8844624
 binary_sha256 = "b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a"
 
 [formal]
-# Exact release asset used by the formal workflow. The workflow verifies this
-# digest before executing the jar; moving `latest` URLs are forbidden.
+# Exact runtime and release assets used by the formal workflow. Both downloads
+# are bounded and verified before use; moving `latest` URLs are forbidden.
 tla_tools_version = "1.7.4"
+tla_tools_bytes = 2274532
 tla_tools_sha256 = "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
+java_distribution = "temurin"
+java_release_tag = "jdk-21.0.11+10"
+java_archive_package = "jre"
+java_archive_architecture = "x64"
+java_archive_name = "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+java_archive_root = "jdk-21.0.11+10-jre"
+java_archive_url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+java_archive_bytes = 52099793
+java_archive_sha256 = "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb"
+java_runtime_vendor = "Eclipse Adoptium"
+java_runtime_version = "21.0.11+10-LTS"
+java_specification_version = "21"
+java_runtime_architecture = "amd64"

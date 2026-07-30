@@ -4,6 +4,11 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: formal-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -20,47 +25,325 @@ jobs:
     timeout-minutes: 30
     env:
       TLA_TOOLS_VERSION: "1.7.4"
+      TLA_TOOLS_BYTES: 2274532
       TLA_TOOLS_SHA256: "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
+      JAVA_DISTRIBUTION: temurin
+      JAVA_RELEASE_TAG: jdk-21.0.11+10
+      JAVA_ARCHIVE_PACKAGE: jre
+      JAVA_ARCHIVE_ARCHITECTURE: x64
+      JAVA_ARCHIVE_NAME: OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz
+      JAVA_ARCHIVE_ROOT: jdk-21.0.11+10-jre
+      JAVA_ARCHIVE_URL: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz
+      JAVA_ARCHIVE_BYTES: 52099793
+      JAVA_ARCHIVE_SHA256: "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb"
+      JAVA_RUNTIME_VENDOR: Eclipse Adoptium
+      JAVA_RUNTIME_VERSION: 21.0.11+10-LTS
+      JAVA_SPECIFICATION_VERSION: "21"
+      JAVA_RUNTIME_ARCHITECTURE: amd64
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Set up JRE
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
-        with:
-          distribution: temurin
-          java-version: "21"
+      - name: Fetch and install pinned Temurin JRE
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        run: |
+          umask 077
+          [[ "$JAVA_DISTRIBUTION" == temurin ]]
+          [[ "$JAVA_ARCHIVE_PACKAGE" == jre ]]
+          [[ "$JAVA_ARCHIVE_ARCHITECTURE" == x64 ]]
+          JAVA_STAGE="$(/usr/bin/mktemp \
+            --directory "${RUNNER_TEMP}/haldir-temurin-jre.XXXXXXXX")"
+          JAVA_ARCHIVE="${JAVA_STAGE}/${JAVA_ARCHIVE_NAME}"
+          JAVA_MEMBERS="${JAVA_STAGE}/members.txt"
+          JAVA_MEMBER_TYPES="${JAVA_STAGE}/member-types.txt"
+          JAVA_LEGAL_LINKS="${JAVA_STAGE}/legal-links.txt"
+          JAVA_SORTED_LEGAL_LINKS="${JAVA_STAGE}/legal-links.sorted"
+          JAVA_LEGAL_LINKS_SHA256="e623b66f52db07699c4723e448b1a34531097e6c38ee63630da3dcd81729d576"
+          JAVA_LEGAL_LINKS_BYTES=13095
+          JAVA_LEGAL_LINK_COUNT=145
+          JAVA_REGULAR_FILE_COUNT=112
+          JAVA_DIRECTORY_COUNT=63
+          JAVA_HOME="${JAVA_STAGE}/runtime"
+          /usr/bin/chmod 0700 "$JAVA_STAGE"
+          /usr/bin/curl \
+            --disable \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --proto '=https' \
+            --proto-redir '=https' \
+            --tlsv1.2 \
+            --retry 3 \
+            --retry-all-errors \
+            --connect-timeout 30 \
+            --max-time 300 \
+            --max-redirs 5 \
+            --max-filesize "$JAVA_ARCHIVE_BYTES" \
+            --output "$JAVA_ARCHIVE" \
+            "$JAVA_ARCHIVE_URL"
+          /usr/bin/test -f "$JAVA_ARCHIVE"
+          /usr/bin/test ! -L "$JAVA_ARCHIVE"
+          [[ "$(/usr/bin/stat --format=%s "$JAVA_ARCHIVE")" == \
+            "$JAVA_ARCHIVE_BYTES" ]]
+          printf '%s  %s\n' "$JAVA_ARCHIVE_SHA256" "$JAVA_ARCHIVE" \
+            | /usr/bin/sha256sum --check --strict
+          /usr/bin/chmod 0400 "$JAVA_ARCHIVE"
+          /usr/bin/env -u GZIP -u TAR_OPTIONS LC_ALL=C /usr/bin/tar \
+            --gzip \
+            --list \
+            --file "$JAVA_ARCHIVE" \
+            --quoting-style=escape \
+            > "$JAVA_MEMBERS"
+          /usr/bin/env -u GZIP -u TAR_OPTIONS LC_ALL=C /usr/bin/tar \
+            --gzip \
+            --list \
+            --verbose \
+            --file "$JAVA_ARCHIVE" \
+            --quoting-style=escape \
+            > "$JAVA_MEMBER_TYPES"
+          /usr/bin/test -s "$JAVA_MEMBERS"
+          /usr/bin/test -s "$JAVA_MEMBER_TYPES"
+          declare -A SEEN_MEMBERS=()
+          MEMBER_COUNT=0
+          while IFS= read -r MEMBER || [[ -n "$MEMBER" ]]
+          do
+            [[ -n "$MEMBER" ]]
+            NORMALIZED="${MEMBER%/}"
+            if [[ "$NORMALIZED" == "$JAVA_ARCHIVE_ROOT" ]]
+            then
+              :
+            elif [[ "$NORMALIZED" == "$JAVA_ARCHIVE_ROOT/"* ]]
+            then
+              RELATIVE="${NORMALIZED#"$JAVA_ARCHIVE_ROOT/"}"
+              IFS='/' read -r -a COMPONENTS <<< "$RELATIVE"
+              for COMPONENT in "${COMPONENTS[@]}"
+              do
+                [[ "$COMPONENT" =~ ^[A-Za-z0-9._+@-]+$ ]]
+                [[ "$COMPONENT" != "." ]]
+                [[ "$COMPONENT" != ".." ]]
+              done
+              case "${COMPONENTS[0]}" in
+                NOTICE|bin|conf|legal|lib|release) ;;
+                *) exit 1 ;;
+              esac
+            else
+              exit 1
+            fi
+            [[ -z "${SEEN_MEMBERS[$NORMALIZED]+present}" ]]
+            SEEN_MEMBERS["$NORMALIZED"]=1
+            ((MEMBER_COUNT += 1))
+          done < "$JAVA_MEMBERS"
+          [[ "$MEMBER_COUNT" -gt 0 ]]
+          [[ -n "${SEEN_MEMBERS[$JAVA_ARCHIVE_ROOT]+present}" ]]
+          TYPE_COUNT=0
+          LINK_COUNT=0
+          REGULAR_COUNT=0
+          DIRECTORY_COUNT=0
+          while IFS= read -r RECORD || [[ -n "$RECORD" ]]
+          do
+            [[ -n "$RECORD" ]]
+            case "${RECORD:0:1}" in
+              -) ((REGULAR_COUNT += 1)) ;;
+              d) ((DIRECTORY_COUNT += 1)) ;;
+              l)
+                LINK_PREFIX="${RECORD% -> *}"
+                LINK_PATH="${LINK_PREFIX##* }"
+                LINK_TARGET="${RECORD##* -> }"
+                [[ "$LINK_PREFIX" != "$RECORD" ]]
+                [[ "$LINK_TARGET" != "$RECORD" ]]
+                [[ "$RECORD" == *" $LINK_PATH -> $LINK_TARGET" ]]
+                [[ "$LINK_PATH" == "$JAVA_ARCHIVE_ROOT/legal/"* ]]
+                LINK_RELATIVE="${LINK_PATH#"$JAVA_ARCHIVE_ROOT/legal/"}"
+                IFS='/' read -r LINK_MODULE LINK_NAME LINK_EXTRA \
+                  <<< "$LINK_RELATIVE"
+                [[ "$LINK_MODULE" =~ ^[A-Za-z0-9._+@-]+$ ]]
+                [[ "$LINK_MODULE" != "." ]]
+                [[ "$LINK_MODULE" != ".." ]]
+                [[ -n "$LINK_NAME" ]]
+                [[ -z "$LINK_EXTRA" ]]
+                case "$LINK_NAME" in
+                  ADDITIONAL_LICENSE_INFO|ASSEMBLY_EXCEPTION|LICENSE)
+                    [[ "$LINK_TARGET" == "../java.base/$LINK_NAME" ]]
+                    ;;
+                  cldr.md)
+                    [[ "$LINK_MODULE" == jdk.localedata ]]
+                    [[ "$LINK_TARGET" == ../java.base/cldr.md ]]
+                    ;;
+                  *) exit 1 ;;
+                esac
+                printf '%s -> %s\n' "$LINK_PATH" "$LINK_TARGET" \
+                  >> "$JAVA_LEGAL_LINKS"
+                ((LINK_COUNT += 1))
+                ;;
+              *) exit 1 ;;
+            esac
+            ((TYPE_COUNT += 1))
+          done < "$JAVA_MEMBER_TYPES"
+          [[ "$TYPE_COUNT" -eq "$MEMBER_COUNT" ]]
+          [[ "$LINK_COUNT" -eq "$JAVA_LEGAL_LINK_COUNT" ]]
+          [[ "$REGULAR_COUNT" -eq "$JAVA_REGULAR_FILE_COUNT" ]]
+          [[ "$DIRECTORY_COUNT" -eq "$JAVA_DIRECTORY_COUNT" ]]
+          /usr/bin/test -f "$JAVA_LEGAL_LINKS"
+          /usr/bin/test ! -L "$JAVA_LEGAL_LINKS"
+          LC_ALL=C /usr/bin/sort "$JAVA_LEGAL_LINKS" \
+            > "$JAVA_SORTED_LEGAL_LINKS"
+          /usr/bin/test -f "$JAVA_SORTED_LEGAL_LINKS"
+          /usr/bin/test ! -L "$JAVA_SORTED_LEGAL_LINKS"
+          [[ "$(/usr/bin/stat --format=%s "$JAVA_SORTED_LEGAL_LINKS")" == \
+            "$JAVA_LEGAL_LINKS_BYTES" ]]
+          printf '%s  %s\n' \
+            "$JAVA_LEGAL_LINKS_SHA256" "$JAVA_SORTED_LEGAL_LINKS" \
+            | /usr/bin/sha256sum --check --strict
+          /usr/bin/mkdir -m 0700 "$JAVA_HOME"
+          /usr/bin/env -u GZIP -u TAR_OPTIONS LC_ALL=C /usr/bin/tar \
+            --extract \
+            --gzip \
+            --file "$JAVA_ARCHIVE" \
+            --directory "$JAVA_HOME" \
+            --strip-components=1 \
+            --exclude="${JAVA_ARCHIVE_ROOT}/legal" \
+            --exclude="${JAVA_ARCHIVE_ROOT}/legal/*" \
+            --no-same-owner \
+            --no-same-permissions \
+            --delay-directory-restore
+          /usr/bin/test -d "$JAVA_HOME"
+          /usr/bin/test ! -L "$JAVA_HOME"
+          /usr/bin/test ! -e "$JAVA_HOME/legal"
+          /usr/bin/test ! -L "$JAVA_HOME/legal"
+          [[ -z "$(/usr/bin/find "$JAVA_HOME" -xdev -type l -print -quit)" ]]
+          [[ -z "$(/usr/bin/find "$JAVA_HOME" -xdev \
+            ! -type f ! -type d -print -quit)" ]]
+          /usr/bin/find "$JAVA_HOME" -xdev -type d \
+            -exec /usr/bin/chmod 0700 {} +
+          /usr/bin/find "$JAVA_HOME" -xdev -type f -perm /0111 \
+            -exec /usr/bin/chmod 0700 {} +
+          /usr/bin/find "$JAVA_HOME" -xdev -type f ! -perm /0111 \
+            -exec /usr/bin/chmod 0600 {} +
+          /usr/bin/test -f "$JAVA_HOME/bin/java"
+          /usr/bin/test ! -L "$JAVA_HOME/bin/java"
+          /usr/bin/chmod 0700 "$JAVA_HOME/bin/java"
+          /usr/bin/test -x "$JAVA_HOME/bin/java"
+          [[ "$(/usr/bin/stat --format=%a "$JAVA_HOME/bin/java")" == 700 ]]
+          printf 'JAVA_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+          printf '%s\n' "$JAVA_HOME/bin" >> "$GITHUB_PATH"
+      - name: Verify exact Temurin runtime identity
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        run: |
+          umask 077
+          JAVA_PROPERTIES="$(/usr/bin/mktemp \
+            "${RUNNER_TEMP}/haldir-java-runtime.XXXXXXXX.properties")"
+          /usr/bin/test -f "$JAVA_PROPERTIES"
+          /usr/bin/test ! -L "$JAVA_PROPERTIES"
+          /usr/bin/env \
+            -u JAVA_TOOL_OPTIONS \
+            -u _JAVA_OPTIONS \
+            -u JDK_JAVA_OPTIONS \
+            LC_ALL=C \
+            "${JAVA_HOME}/bin/java" \
+            -XshowSettings:properties \
+            -version \
+            > "$JAVA_PROPERTIES" 2>&1
+          /usr/bin/test -s "$JAVA_PROPERTIES"
+          /usr/bin/test -f "$JAVA_PROPERTIES"
+          /usr/bin/test ! -L "$JAVA_PROPERTIES"
+          assert_property() {
+            local key="$1"
+            local expected="$2"
+            /usr/bin/awk -v key="$key" -v expected="$expected" '
+              {
+                line = $0
+                sub(/^[[:space:]]+/, "", line)
+                prefix = key " = "
+                remainder = substr(line, length(key) + 1)
+                if (index(line, key) == 1 &&
+                    remainder ~ /^[[:space:]]*=/) {
+                  count += 1
+                  if (line == prefix expected) {
+                    matches += 1
+                  }
+                }
+              }
+              END {
+                if (count != 1 || matches != 1) {
+                  exit 1
+                }
+              }
+            ' "$JAVA_PROPERTIES"
+          }
+          assert_property java.vendor "$JAVA_RUNTIME_VENDOR"
+          assert_property java.runtime.version "$JAVA_RUNTIME_VERSION"
+          assert_property java.specification.version "$JAVA_SPECIFICATION_VERSION"
+          assert_property os.arch "$JAVA_RUNTIME_ARCHITECTURE"
       - name: Fetch pinned TLA+ tools
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          curl --fail --silent --show-error --location --retry 3 \
-            --output tla2tools.jar \
+          TLA_TOOLS_PATH="${RUNNER_TEMP}/tla2tools-${TLA_TOOLS_VERSION}.jar"
+          /usr/bin/curl \
+            --disable \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --proto '=https' \
+            --proto-redir '=https' \
+            --tlsv1.2 \
+            --retry 3 \
+            --retry-all-errors \
+            --connect-timeout 30 \
+            --max-time 300 \
+            --max-redirs 5 \
+            --max-filesize "$TLA_TOOLS_BYTES" \
+            --output "$TLA_TOOLS_PATH" \
             "https://github.com/tlaplus/tlaplus/releases/download/v${TLA_TOOLS_VERSION}/tla2tools.jar"
-          echo "${TLA_TOOLS_SHA256}  tla2tools.jar" | sha256sum --check --strict
+          /usr/bin/test -f "$TLA_TOOLS_PATH"
+          /usr/bin/test ! -L "$TLA_TOOLS_PATH"
+          [[ "$(/usr/bin/stat --format=%s "$TLA_TOOLS_PATH")" == \
+            "$TLA_TOOLS_BYTES" ]]
+          printf '%s  %s\n' "$TLA_TOOLS_SHA256" "$TLA_TOOLS_PATH" \
+            | /usr/bin/sha256sum --check --strict
+          /usr/bin/chmod go-w "$TLA_TOOLS_PATH"
+          printf 'TLA_TOOLS_PATH=%s\n' "$TLA_TOOLS_PATH" >> "$GITHUB_ENV"
       - name: Model-check HaldirAuthority
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          java -XX:+UseParallelGC -cp tla2tools.jar tlc2.TLC \
+          /usr/bin/env \
+            -u JAVA_TOOL_OPTIONS \
+            -u _JAVA_OPTIONS \
+            -u JDK_JAVA_OPTIONS \
+            LC_ALL=C \
+            "${JAVA_HOME}/bin/java" \
+            -XX:+UseParallelGC \
+            -cp "$TLA_TOOLS_PATH" tlc2.TLC \
             -workers auto \
             -config formal/HaldirAuthority.cfg \
-            formal/HaldirAuthority.tla | tee tlc.log
-          grep -q "Model checking completed. No error has been found." tlc.log
-      - name: Emit canonical epoch-16 formal result
+            formal/HaldirAuthority.tla \
+            | /usr/bin/tee tlc.log
+          /usr/bin/grep -Fq \
+            "Model checking completed. No error has been found." \
+            tlc.log
+      # Pull requests execute TLC and retain its diagnostic log, but only
+      # trusted push/dispatch events emit and upload the canonical result.
+      - name: Emit canonical epoch-17 formal result
+        if: github.event_name != 'pull_request'
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 tools/release/framework_recovery_fr_0015_result.py \
+          python3 -I -B tools/release/framework_recovery_fr_0016_result.py \
             --workflow formal \
-            --output "epoch-16-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "epoch-17-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-16-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "epoch-17-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-16 formal result
+      - name: Upload canonical epoch-17 formal result
+        if: github.event_name != 'pull_request'
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-16-formal-result-attempt-${{ github.run_attempt }}.json
+          path: epoch-17-formal-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -100,7 +383,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-formal-result/epoch-16-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-formal-result/epoch-17-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-formal-result -mindepth 1 -maxdepth 1 \
@@ -112,4 +395,4 @@ jobs:
       - name: Attest exact formal result
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
-          subject-path: attested-formal-result/epoch-16-formal-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-formal-result/epoch-17-formal-result-attempt-${{ github.run_attempt }}.json

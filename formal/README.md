@@ -46,21 +46,34 @@ just formal-offline
 just formal-runner-test
 
 # Equivalent direct commands when `just` is unavailable.
-python3 -I tools/run_formal.py
-python3 -I tools/run_formal.py --offline
+python3 -I -B tools/run_formal.py
+python3 -I -B tools/run_formal.py --offline
 python3 -I -B tools/test_run_formal.py
 ```
 
-Both commands require a Java 21 runtime accepted by the runner; its vendor,
-runtime version, executable identity, and specification version are measured in
-the runtime record, while this local milestone admits the specification version
-rather than one vendor-specific patch build. The TLC log is written beneath
-`target/formal/`. A successful local run is evidence for that
-local invocation only; it is not a GitHub-hosted result or attestation. Conversely,
-historical hosted results do not prove the current checkout until a hosted run
-binds that exact commit and workflow. The recipes remain separate from `just ci`
-because Java availability and formal-tool caching are distinct from the canonical
-platform-independent P0 gate.
+Both runner modes require an installed Eclipse Temurin 21.0.11+10 runtime whose
+properties report vendor `Eclipse Adoptium`, runtime version
+`21.0.11+10-LTS`, and specification version `21`. Hosted CI independently
+acquires the schema-v3-pinned Linux x64 JRE archive
+`OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz`, then verifies its exact
+52,099,793-byte size and SHA-256 digest before execution.
+
+The hosted `java_archive_architecture = "x64"` and
+`java_runtime_architecture = "amd64"` fields describe that archive and hosted
+runtime; they do not require local evidence to run on x86-64. The local runner
+separately admits Temurin's observed `aarch64`, `amd64`, and `x86_64` `os.arch`
+values, so the same exact runtime is usable on Apple Silicon. Its observed
+architecture, vendor, runtime and specification versions, properties-output
+digest, and executable identity are measured in the
+`HALDIR_FORMAL_RUNTIME_V2` runtime record. That record also binds the complete
+hosted provenance field set through the recorded digest of `tools/pins.toml`.
+
+The TLC log is written beneath `target/formal/`. A successful local run is
+evidence for that local invocation only; it is not a GitHub-hosted result or
+attestation. Conversely, historical hosted results do not prove the current
+checkout until a hosted run binds that exact commit and workflow. The recipes
+remain separate from `just ci` because Java availability and formal-tool caching
+are distinct from the canonical platform-independent P0 gate.
 
 The runner executes private verified snapshots of the model, configuration, and
 jar; its canonical runtime record binds those inputs, the runner and pin files,

@@ -1,0 +1,1259 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "framework_epoch": 17,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "state": "PENDING_QUALIFICATION",
+    "tag_authorized": false
+  },
+  "core_diff": {
+    "base": "ec207cbdba36f15a410206fd01e76a54ffd29ac0",
+    "patch_bytes": 634744,
+    "patch_lines": 16625,
+    "patch_sha256": "5b32e6b41b6ca5d5555a429dfee18e4122450a45ed7f792cefed6897cf2f9cea",
+    "paths": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/formal.yml",
+      "tools/verify-ci-pins.py",
+      "tools/verify-pins.py",
+      "tools/pins.toml",
+      "tools/pinned_cargo_deny.py",
+      "tools/test_pinned_cargo_deny.py",
+      "tools/run_formal.py",
+      "tools/test_run_formal.py",
+      "tools/release/current-audit-gate.sh",
+      "tools/release/framework_recovery_fr_0016.py",
+      "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "tools/release/framework_recovery_fr_0016_capture.py",
+      "tools/release/framework_recovery_fr_0016_result.py",
+      "tools/release/verify-framework-recovery-fr-0016.py",
+      "tools/release/test_verify_framework_recovery_fr_0016.py"
+    ],
+    "target": "SIGNED_COMMIT_CONTAINING_THIS_PLAN"
+  },
+  "core_records": [
+    {
+      "bytes": 19637,
+      "git_mode": "100644",
+      "git_object_id": "0298e5dbfcee0996cad683a04dafde734839605f",
+      "git_object_type": "blob",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "6d73fc19604d950e7e02f1c1434332b5cd9415c5064fdb3e1f44208c881b7b98"
+    },
+    {
+      "bytes": 16546,
+      "git_mode": "100644",
+      "git_object_id": "b93f855eba8b6646550f7928d8bb8a99f4d0f8aa",
+      "git_object_type": "blob",
+      "path": ".github/workflows/formal.yml",
+      "sha256": "6418e4abb9899d78feb4b1f8bb539af5d24532d2e5ffc6fb7707950b8d084932"
+    },
+    {
+      "bytes": 50348,
+      "git_mode": "100755",
+      "git_object_id": "6e1476651c6b18564ac964cb31b80a1ce9222ba9",
+      "git_object_type": "blob",
+      "path": "tools/verify-ci-pins.py",
+      "sha256": "841e3cd0dbc0595c68394b804c598d364065c4c9d3555589849e4905f328a58e"
+    },
+    {
+      "bytes": 15356,
+      "git_mode": "100644",
+      "git_object_id": "5a456d2c1fd56629e0bf2db5f318ca620acab58d",
+      "git_object_type": "blob",
+      "path": "tools/verify-pins.py",
+      "sha256": "c1621eeedb10a4585c826e088519878b41245dda372b70b77da7ce0e5add51b8"
+    },
+    {
+      "bytes": 5150,
+      "git_mode": "100644",
+      "git_object_id": "73c7e35ea071fc77fe85d299f6af70ad7f6baa9b",
+      "git_object_type": "blob",
+      "path": "tools/pins.toml",
+      "sha256": "b3cff5846bb5dd42ba5a233a41e3c90330d2fcb689a8ae7681de3e6458e05250"
+    },
+    {
+      "bytes": 51291,
+      "git_mode": "100644",
+      "git_object_id": "d444cc7560a81122e102ab851ff9f83eb074293b",
+      "git_object_type": "blob",
+      "path": "tools/pinned_cargo_deny.py",
+      "sha256": "df6f79404627904d7b97a727eb02c36696306506c6772d7cdec865da0e49b8fe"
+    },
+    {
+      "bytes": 79669,
+      "git_mode": "100644",
+      "git_object_id": "5364cac3b4c4f640d7e837475e995bac85ff8972",
+      "git_object_type": "blob",
+      "path": "tools/test_pinned_cargo_deny.py",
+      "sha256": "5677354cbe84e101a5a1cd0c693cecc82b4613b973b31098760d586580065889"
+    },
+    {
+      "bytes": 56688,
+      "git_mode": "100755",
+      "git_object_id": "e53f7b706a995d79062549c27d690eb819966212",
+      "git_object_type": "blob",
+      "path": "tools/run_formal.py",
+      "sha256": "546d0fc4041840ee63c7aefffce21e0b51403b448a02b4133a77fc3ed32d6d94"
+    },
+    {
+      "bytes": 89541,
+      "git_mode": "100644",
+      "git_object_id": "abe966aa6272bdd4a4cbd3a09a573752ee295b9d",
+      "git_object_type": "blob",
+      "path": "tools/test_run_formal.py",
+      "sha256": "70209d68beb3953e2e015a6293c2c6d8baded188d928b1fef1cc88fd9b8d404f"
+    },
+    {
+      "bytes": 3403,
+      "git_mode": "100755",
+      "git_object_id": "39a59192d51a5a4b195da4e30705e9905128607d",
+      "git_object_type": "blob",
+      "path": "tools/release/current-audit-gate.sh",
+      "sha256": "c99794bd5d07e1bcbaf25adeac37a671fbbc567caf9c3d58bb0df590bce9b0cd"
+    },
+    {
+      "bytes": 41207,
+      "git_mode": "100644",
+      "git_object_id": "0fe4293999345b025509578f1bbb17dc4de7d6d1",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0016.py",
+      "sha256": "671055f432684807f687dca1fa1e9b9431a9bb68e23464a04534586087b47067"
+    },
+    {
+      "bytes": 5748,
+      "git_mode": "100644",
+      "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+      "git_object_type": "blob",
+      "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+    },
+    {
+      "bytes": 76159,
+      "git_mode": "100755",
+      "git_object_id": "b9e6aa9361327d508531c2c55ae8b29ee369fa9f",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0016_capture.py",
+      "sha256": "a4d5a6fe263f3297eb21048378813f729bb4a1a9c284c5c8b31669ed91f37e01"
+    },
+    {
+      "bytes": 10770,
+      "git_mode": "100755",
+      "git_object_id": "c7f1b40625b39d1ee55f2f07b3b103421edcb4df",
+      "git_object_type": "blob",
+      "path": "tools/release/framework_recovery_fr_0016_result.py",
+      "sha256": "d2e8d3fc4b3435e2dbbaa2c22927d484424af4a11f462df1d0658d0c716bec8e"
+    },
+    {
+      "bytes": 168543,
+      "git_mode": "100755",
+      "git_object_id": "8ab7d99712544042615ccc3145a935064a97f282",
+      "git_object_type": "blob",
+      "path": "tools/release/verify-framework-recovery-fr-0016.py",
+      "sha256": "ebac98b7ce5bddb8133d0e1976fea3b8cfc4b63ec780beb306ed4f9956bf7e23"
+    },
+    {
+      "bytes": 168458,
+      "git_mode": "100644",
+      "git_object_id": "76631287275cfa11ecdab247c8463abe731ab6d6",
+      "git_object_type": "blob",
+      "path": "tools/release/test_verify_framework_recovery_fr_0016.py",
+      "sha256": "cfbc19edbfb36c60c326768729bf62ccff1e049b1b53943c5b1816429edee4b4"
+    }
+  ],
+  "correction": {
+    "automated_paid_model_reviews": {
+      "authority_conferred": false,
+      "normative": false,
+      "reason": "NO_INDEPENDENTLY_ATTESTED_PROVIDER_PROVENANCE",
+      "required": false
+    },
+    "bounded_subprocess_identity": "WAITID_WNOWAIT_PROVEN_PRE_REAP_SIGNALING_NO_POST_REAP_PID_OR_PGID_SIGNALING",
+    "bounded_subprocess_pipes": "PIPES_CLOSED_AND_LEADER_REAPED_ON_SUCCESS_TIMEOUT_BOUND_AND_ERROR",
+    "branch_control_get": {
+      "omitted_update_parameter_reconstructed": false,
+      "repository_identity": "EXACT_NONFORK_IDENTITY_WITH_ABSENT_PARENT_AND_SOURCE",
+      "ruleset_history_and_version_required": true,
+      "ruleset_update_rule": {
+        "type": "update"
+      }
+    },
+    "branch_protection_policy": {
+      "capture_method": "GET_ONLY",
+      "endpoint": "repos/sepahead/haldir/branches/main/protection",
+      "expected_policy": {
+        "allow_deletions": false,
+        "allow_force_pushes": false,
+        "allow_fork_syncing": false,
+        "block_creations": false,
+        "enforce_admins": true,
+        "lock_branch": false,
+        "required_conversation_resolution": false,
+        "required_linear_history": true,
+        "required_pull_request_reviews": null,
+        "required_signatures": {
+          "enabled": true
+        },
+        "required_status_checks": {
+          "checks": [
+            {
+              "app_id": 15368,
+              "context": "build-test"
+            },
+            {
+              "app_id": 15368,
+              "context": "clean-build"
+            },
+            {
+              "app_id": 15368,
+              "context": "feature-matrix"
+            },
+            {
+              "app_id": 15368,
+              "context": "interop"
+            },
+            {
+              "app_id": 15368,
+              "context": "macos-compile"
+            },
+            {
+              "app_id": 15368,
+              "context": "supply-chain"
+            },
+            {
+              "app_id": 15368,
+              "context": "tlc-model-check"
+            }
+          ],
+          "strict": true
+        },
+        "restrictions": null
+      },
+      "get_materializes_contexts_and_checks": true,
+      "mutation_performed": false
+    },
+    "data_record_modes": "REGULAR_100644_ONLY",
+    "ecosystem_pin_contract": {
+      "cargo_deny_direct_execution": {
+        "action_uses": 0,
+        "maximum_staleness_days": 90,
+        "mode": "SAFE_BOUNDED_EXTRACT_EXACT_GIT_TREE_DIRECT_BINARY_FROZEN_NETWORK_ISOLATED",
+        "rustsec_archive_bytes": 441027,
+        "rustsec_archive_sha256": "ab968b67150079bc386d098311cdab98e23745d555b3018837c91f3ae847967a",
+        "rustsec_archive_url": "https://codeload.github.com/RustSec/advisory-db/tar.gz/7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+        "rustsec_commit": "7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+        "rustsec_committed_at": "2026-07-29T08:17:10-07:00",
+        "rustsec_repository_url": "https://github.com/RustSec/advisory-db",
+        "rustsec_tree": "2d3ab21e05f8b06ad2e232f92894b5e247d817ce",
+        "state": "INHERITED_FROM_SIGNED_FR_0015_BOUNDARY",
+        "version": "0.20.2"
+      },
+      "formal_java_runtime_acquisition": {
+        "archive_bytes": 52099793,
+        "archive_sha256": "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb",
+        "archive_url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz",
+        "mode": "DIRECT_EXACT_ARCHIVE",
+        "runtime_properties_verified": true,
+        "safe_extraction": true,
+        "third_party_resolver_action_uses": 0
+      },
+      "fr0016_change_reason": "CLOSE_PR_CONCURRENCY_FORMAL_RUNTIME_AND_HOSTED_POLICY_GAPS",
+      "github_cli_security_advisory": "GHSA-8cg3-r6g9-fpg2",
+      "inherited_immutable_action_baseline": [
+        {
+          "commit": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "name": "actions/setup-python",
+          "version": "v7.0.0"
+        },
+        {
+          "commit": "508db95dd578ae2727ebd6217d5ba78e4fbda05d",
+          "name": "actions/attest",
+          "version": "v4.2.1"
+        }
+      ]
+    },
+    "formal_pin_contract": {
+      "closed_keys_and_exact_json_types": true,
+      "exact": {
+        "java_archive_architecture": "x64",
+        "java_archive_bytes": 52099793,
+        "java_archive_name": "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz",
+        "java_archive_package": "jre",
+        "java_archive_root": "jdk-21.0.11+10-jre",
+        "java_archive_sha256": "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb",
+        "java_archive_url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz",
+        "java_distribution": "temurin",
+        "java_release_tag": "jdk-21.0.11+10",
+        "java_runtime_architecture": "amd64",
+        "java_runtime_vendor": "Eclipse Adoptium",
+        "java_runtime_version": "21.0.11+10-LTS",
+        "java_specification_version": "21",
+        "tla_tools_bytes": 2274532,
+        "tla_tools_sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+        "tla_tools_version": "1.7.4"
+      },
+      "schema_version": 3,
+      "top_level_formal_key_count": 16
+    },
+    "formal_toolchain": {
+      "direct_java_execution": true,
+      "java_runtime_archive": {
+        "archive_architecture": "x64",
+        "archive_name": "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz",
+        "archive_root": "jdk-21.0.11+10-jre",
+        "bytes": 52099793,
+        "distribution": "temurin",
+        "download": {
+          "connect_timeout_seconds": 30,
+          "curl_configuration_files_disabled": true,
+          "exact_bytes_verified": true,
+          "https_only": true,
+          "maximum_bytes": 52099793,
+          "maximum_redirects": 5,
+          "maximum_time_seconds": 300,
+          "minimum_tls": "1.2",
+          "redirect_https_only": true,
+          "retry_all_errors": true,
+          "retry_count": 3,
+          "sha256_verified_before_extraction": true
+        },
+        "package": "jre",
+        "release_tag": "jdk-21.0.11+10",
+        "runtime_property_checks": {
+          "environment_override_variables_unset": [
+            "JAVA_TOOL_OPTIONS",
+            "_JAVA_OPTIONS",
+            "JDK_JAVA_OPTIONS"
+          ],
+          "exact": {
+            "java.runtime.version": "21.0.11+10-LTS",
+            "java.specification.version": "21",
+            "java.vendor": "Eclipse Adoptium",
+            "os.arch": "amd64"
+          },
+          "exactly_one_value_per_property": true
+        },
+        "safe_extraction": {
+          "allowed_member_types": [
+            "DIRECTORY",
+            "REGULAR_FILE",
+            "REVIEWED_LEGAL_SYMLINK"
+          ],
+          "archive_member_count": 320,
+          "archive_owner_preserved": false,
+          "archive_permissions_preserved": false,
+          "directory_count": 63,
+          "directory_mode": "0700",
+          "duplicate_members_rejected": true,
+          "exact_single_root": "jdk-21.0.11+10-jre",
+          "executable_file_mode": "0700",
+          "fresh_private_staging_directory": true,
+          "java_executable_mode": "0700",
+          "java_executable_regular_non_symlink": true,
+          "legal_subtree_excluded_from_extraction": true,
+          "member_path_components_allowlisted": true,
+          "non_executable_file_mode": "0600",
+          "post_extract_special_files_rejected": true,
+          "post_extract_symlinks_rejected": true,
+          "post_extract_tree_types_revalidated": true,
+          "regular_file_count": 112,
+          "reviewed_legal_symlinks": {
+            "canonical_sorted_manifest_bytes": 13095,
+            "canonical_sorted_manifest_sha256": "e623b66f52db07699c4723e448b1a34531097e6c38ee63630da3dcd81729d576",
+            "count": 145,
+            "path_and_target_grammar_verified": true
+          },
+          "strip_components": 1,
+          "top_level_members_allowlisted": [
+            "NOTICE",
+            "bin",
+            "conf",
+            "legal",
+            "lib",
+            "release"
+          ],
+          "unreviewed_links_and_special_files_rejected": true
+        },
+        "sha256": "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb",
+        "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+      },
+      "pins": {
+        "formal": {
+          "java_archive_architecture": "x64",
+          "java_archive_bytes": 52099793,
+          "java_archive_name": "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz",
+          "java_archive_package": "jre",
+          "java_archive_root": "jdk-21.0.11+10-jre",
+          "java_archive_sha256": "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb",
+          "java_archive_url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz",
+          "java_distribution": "temurin",
+          "java_release_tag": "jdk-21.0.11+10",
+          "java_runtime_architecture": "amd64",
+          "java_runtime_vendor": "Eclipse Adoptium",
+          "java_runtime_version": "21.0.11+10-LTS",
+          "java_specification_version": "21",
+          "tla_tools_bytes": 2274532,
+          "tla_tools_sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+          "tla_tools_version": "1.7.4"
+        },
+        "schema_version": 3
+      },
+      "pipeline_producer_failure_preserved": true,
+      "tla_tools_download": {
+        "connect_timeout_seconds": 30,
+        "curl_configuration_files_disabled": true,
+        "exact_bytes_verified": true,
+        "https_only": true,
+        "maximum_bytes": 2274532,
+        "maximum_redirects": 5,
+        "maximum_time_seconds": 300,
+        "minimum_tls": "1.2",
+        "redirect_https_only": true,
+        "retry_all_errors": true,
+        "retry_count": 3,
+        "sha256_verified_before_execution": true
+      },
+      "workflow_command": "/usr/bin/env -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u JDK_JAVA_OPTIONS LC_ALL=C \"${JAVA_HOME}/bin/java\" -XX:+UseParallelGC -cp \"$TLA_TOOLS_PATH\" tlc2.TLC -workers auto -config formal/HaldirAuthority.cfg formal/HaldirAuthority.tla",
+      "workflow_shell": "/bin/bash --noprofile --norc -euo pipefail {0}"
+    },
+    "hosted_result_transport": {
+      "authority_conferred": false,
+      "governance_epoch": 17,
+      "protocol": "HALDIR_EPOCH_17_HOSTED_RESULT_V1",
+      "state": "EPOCH_17_PROVENANCE_FORMAT"
+    },
+    "hosted_settings_capture": {
+      "capture_method": "GET_ONLY",
+      "cryptographic_proof": false,
+      "durable_external_state_proof": false,
+      "expected_policy": {
+        "actions_permissions": {
+          "allowed_actions": "selected",
+          "enabled": true,
+          "selected_actions_url": "https://api.github.com/repositories/1292802592/actions/permissions/selected-actions",
+          "sha_pinning_required": true
+        },
+        "dependabot_security_updates": {
+          "enabled": true,
+          "paused": false
+        },
+        "fork_pull_request_contributor_approval": {
+          "approval_policy": "first_time_contributors"
+        },
+        "private_vulnerability_reporting": {
+          "enabled": true
+        },
+        "repository_security_and_analysis": {
+          "dependabot_security_updates": {
+            "status": "enabled"
+          },
+          "secret_scanning": {
+            "status": "enabled"
+          },
+          "secret_scanning_non_provider_patterns": {
+            "status": "disabled"
+          },
+          "secret_scanning_push_protection": {
+            "status": "enabled"
+          },
+          "secret_scanning_validity_checks": {
+            "status": "disabled"
+          }
+        },
+        "selected_actions": {
+          "github_owned_allowed": true,
+          "patterns_allowed": [],
+          "verified_allowed": false
+        },
+        "vulnerability_alerts": {
+          "enabled": true,
+          "http_status": 204
+        },
+        "workflow_permissions": {
+          "can_approve_pull_request_reviews": false,
+          "default_workflow_permissions": "read"
+        }
+      },
+      "history_scope": {
+        "activation_commit_self_observed": false,
+        "durable_historical_transition_proof": false,
+        "observation_scope": "QUALIFICATION_COMMIT_ONLY",
+        "settings_transition_time_claimed": false
+      },
+      "mutation_performed": false,
+      "observed_commit": "SIGNED_FR_0016_QUALIFICATION_COMMIT",
+      "observed_ref": "refs/heads/main",
+      "ref_stable_during_capture": true,
+      "transport": "GITHUB_API_OVER_TLS"
+    },
+    "json_numeric_identity": "SCHEMA_INTEGER_FIELDS_REQUIRE_EXACT_JSON_INTEGER_BOOLEAN_AND_FLOAT_REJECTED",
+    "local_formal_runtime": {
+      "exact_java_runtime_version": "21.0.11+10-LTS",
+      "exact_java_vendor": "Eclipse Adoptium",
+      "hosted_archive_architecture_not_imposed_locally": true,
+      "observed_architectures": [
+        "aarch64",
+        "amd64",
+        "x86_64"
+      ],
+      "recovery_evidence_consumer": false,
+      "schema": "HALDIR_FORMAL_RUNTIME_V2",
+      "universal_amd64_runtime_claimed": false,
+      "verified_tla_asset": {
+        "tla_tools_bytes": 2274532,
+        "tla_tools_sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+        "tla_tools_version": "1.7.4"
+      }
+    },
+    "main_concurrency": {
+      "cancel_in_progress": "${{ github.ref != 'refs/heads/main' }}",
+      "ci_group": "ci-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}",
+      "formal_group": "formal-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}",
+      "main_cancel_in_progress": false,
+      "main_run_coalescing": false,
+      "main_run_group_includes_unique_run_id": true,
+      "non_main_cancel_in_progress": true
+    },
+    "normative_qualification_evidence": [
+      "SIGNED_FR_0015_ACTIVE_BOUNDARY_AND_LINEAR_SUCCESSORS",
+      "FR_0016_R_TEMPORARY_PR_TWO_PARENT_MERGE_ALL_REQUIRED_CHECKS",
+      "FR_0016_R_MAIN_CI_RESULT_AND_GITHUB_OIDC_ATTESTATION",
+      "FR_0016_R_MAIN_FORMAL_RESULT_AND_GITHUB_OIDC_ATTESTATION",
+      "FR_0016_R_EXACT_LOCAL_VALIDATION",
+      "SIGNED_SOURCE_AUTHORITY"
+    ],
+    "offline_verifier_tool": {
+      "linux_amd64_archive": "https://github.com/cli/cli/releases/download/v2.96.0/gh_2.96.0_linux_amd64.tar.gz",
+      "linux_amd64_archive_bytes": 14652560,
+      "linux_amd64_archive_sha256": "83d5c2ccad5498f58bf6368acb1ab32588cf43ab3a4b1c301bf36328b1c8bd60",
+      "linux_amd64_binary_bytes": 40722594,
+      "linux_amd64_binary_sha256": "56b8bbbb27b066ecb33dbef9a256dc9d1314adaeff0908a752feba6c34053b40",
+      "linux_install": "DIGEST_VERIFIED_ARCHIVE_NO_CURL_TO_SHELL",
+      "local_binary_admission": "EXACT_PLATFORM_BINARY_SIZE_AND_SHA256",
+      "macos_arm64_archive": "https://github.com/cli/cli/releases/download/v2.96.0/gh_2.96.0_macOS_arm64.zip",
+      "macos_arm64_archive_bytes": 13950131,
+      "macos_arm64_archive_sha256": "f23a0c37d963aacc3bed703ccbd59b41c5ca22101fab7f00eb2b7cad23aba463",
+      "macos_arm64_binary_bytes": 38817216,
+      "macos_arm64_binary_sha256": "b1d6c442fde99ca27c04e1e74d624895abe37785f4a3e9e9b684bf7586ce4bc8",
+      "name": "gh",
+      "version": "2.96.0"
+    },
+    "oidc_job_isolation": "NO_CHECKOUT_NO_REPOSITORY_CODE_CANONICAL_MAIN_PUSH_ONLY",
+    "pull_request_mode": {
+      "association_capture_phase": "REQUIRED_RUNS_COMPLETE_WHILE_PULL_REQUEST_OPEN",
+      "base_commit": "ec207cbdba36f15a410206fd01e76a54ffd29ac0",
+      "base_ref": "main",
+      "checkout": "GITHUB_DEFAULT_TWO_PARENT_SYNTHETIC_MERGE",
+      "epoch_17_recovery_primitive_suite_skipped": false,
+      "event": "pull_request",
+      "event_contract": {
+        "checkout_sha": "PULL_REQUEST_SYNTHETIC_MERGE_COMMIT",
+        "run_head_sha": "PULL_REQUEST_HEAD_COMMIT",
+        "workflow_checkout_ref_override": false
+      },
+      "final_capture_phase": "AFTER_PULL_REQUEST_CLOSED_UNMERGED",
+      "final_disposition": "CLOSED_UNMERGED",
+      "formal_runner_suite_skipped": false,
+      "full_main_gate_replayed": false,
+      "head_commit": "SIGNED_FR_0016_REPAIR_COMMIT",
+      "pinned_cargo_deny_suite_skipped": false,
+      "required_successful_job_count": 7,
+      "required_successful_jobs": [
+        "build-test",
+        "clean-build",
+        "feature-matrix",
+        "interop",
+        "macos-compile",
+        "supply-chain",
+        "tlc-model-check"
+      ],
+      "run_to_pull_request_binding": "EXACT_ACTIONS_RUN_REST_PULL_REQUEST_ASSOCIATION",
+      "runtime_checkout_sha_independently_attested": false,
+      "seven_required_pre_accept_jobs_skipped": false,
+      "signed_linear_current_audit_gate_skipped": true,
+      "signed_linear_gate_replacement_commands": [
+        "python3 -I -B -W error tools/release/test_verify_framework_recovery_fr_0016.py",
+        "python3 -I -B -W error tools/test_pinned_cargo_deny.py",
+        "python3 -I -B -W error tools/test_run_formal.py"
+      ],
+      "synthetic_merge_parent_order": [
+        "ec207cbdba36f15a410206fd01e76a54ffd29ac0",
+        "SIGNED_FR_0016_REPAIR_COMMIT"
+      ],
+      "temporary": true,
+      "trusted_event_only_surfaces_skipped": [
+        "SIGNED_LINEAR_CURRENT_AUDIT_GATE",
+        "PINNED_GITHUB_CLI_INSTALL",
+        "ISOLATED_TASK_RUNNER_IMAGE_PRELOAD",
+        "EPOCH_17_RESULT_EMIT_AND_UPLOAD",
+        "OIDC_ATTESTATION"
+      ]
+    },
+    "run_attempt_chronology": {
+      "all_job_bounds": "ORIGINAL_RUN_LIFETIME",
+      "attempt_created_and_started_bounds": "ORIGINAL_RUN_LIFETIME_AND_ATTEMPT_COMPLETION",
+      "attempt_created_vs_started_order_assumed": false,
+      "critical_current_attempt_bounds": "ATTEMPT_STARTED_AT_THROUGH_ATTEMPT_UPDATED_AT",
+      "ordinary_attempt_jobs": "EXACT_CANONICAL_EQUALITY"
+    },
+    "trusted_root_bootstrap": {
+      "bytes": 5748,
+      "evidence_selected_root_allowed": false,
+      "path": "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+    },
+    "workflow_yaml_pin_scanner": "USES_SAFE_SIMPLE_KEY_SUBSET_NO_COMPLEX_OR_FLOW_MAPPING_KEYS",
+    "worktree_modes": "GIT_EXECUTABLE_PARITY_AND_NO_GROUP_OR_WORLD_WRITE"
+  },
+  "defects": [
+    {
+      "authority_produced": false,
+      "id": "FR0016-D01",
+      "prior_state": "PULL_REQUEST_MERGE_RESULT_STRUCTURALLY_REJECTED",
+      "summary": "The epoch-16 signed-linear current-audit gate rejects GitHub's two-parent synthetic pull-request merge commit, so the seven protected pre-accept checks cannot all run against the merge result."
+    },
+    {
+      "id": "FR0016-D02",
+      "prior_state": "MAIN_RUN_CANCELLATION_OR_COALESCING_POSSIBLE",
+      "required_state": "EVERY_MAIN_RUN_UNIQUE_AND_NONCANCELLABLE",
+      "summary": "Workflow concurrency uses cancel-in-progress for main, allowing a later run to cancel or coalesce a canonical main evidence-producing run."
+    },
+    {
+      "id": "FR0016-D03",
+      "prior_state": "FORMAL_RUNTIME_PROVENANCE_AND_PRODUCER_STATUS_NOT_FULLY_CLOSED",
+      "required_state": "EXACT_RUNTIME_ARCHIVE_SAFE_EXTRACTION_IDENTITY_AND_PIPELINE",
+      "summary": "The formal workflow delegates Java acquisition to resolver inputs instead of binding exact Temurin archive bytes and runtime properties, omits the TLA+ byte length, uses a weaker download envelope, and pipes Java through tee without an explicit pipefail shell contract."
+    },
+    {
+      "id": "FR0016-D04",
+      "prior_state": "FORMAL_PIN_AND_LOCAL_RUNTIME_CONTRACT_INCOMPLETE",
+      "required_state": "SCHEMA_V3_AND_FORMAL_RUNTIME_V2",
+      "summary": "The pin source and local formal runner lack one closed schema that binds the exact hosted Java archive and installed runtime properties, verified TLA+ asset, observed local Java runtime identity, and portable local architecture vocabulary."
+    }
+  ],
+  "detached_signature": {
+    "format": "ssh",
+    "key_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU",
+    "namespace": "haldir-framework-recovery-fr-0016-plan-v1",
+    "principal": "sepmhn@gmail.com",
+    "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgO4qH37X6p2Ns7ow/80cP9qLcm2\n6awo+LPYoHHeVDAsgAAAApaGFsZGlyLWZyYW1ld29yay1yZWNvdmVyeS1mci0wMDE2LXBs\nYW4tdjEAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAKAvi23uPhg6CmP\nPfIEMhpnZK/uXnQ+B6mUoaNDh6C1KbrtPW7ej0edRahiPdL1NVRDSyeeMNzvRkJ9aqX5j8\nDg==\n-----END SSH SIGNATURE-----\n"
+  },
+  "legacy_boundary": {
+    "activation_commit": "18b4a605844b39f43193d35f487a3272f7800e87",
+    "activation_tree": "a283dae6d938433d1bf6e16e94aff42feab858f6",
+    "commit": "ec207cbdba36f15a410206fd01e76a54ffd29ac0",
+    "earlier_recovery_python_executed": false,
+    "fr_0010_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-local.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-response.json"
+    ],
+    "fr_0011_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-local.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-response.json"
+    ],
+    "fr_0012_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-local.json"
+    ],
+    "fr_0013_forbidden_completion_paths": [
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0013-activation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-result.json"
+    ],
+    "fr_0015_activation_namespace": "haldir-framework-recovery-fr-0015-activation-v1",
+    "fr_0015_plan_namespace": "haldir-framework-recovery-fr-0015-plan-v1",
+    "fr_0015_qualification_namespace": "haldir-framework-recovery-fr-0015-qualification-v1",
+    "fr_0015_state": "ACTIVE",
+    "fr_0015_successor_verifier_executed": false,
+    "fr_0015_successor_verifier_state": "RETIRED_AT_FR_0016_REPAIR",
+    "historical_recovery_tool_paths": [
+      "tools/release/framework_recovery_fr_0010.py",
+      "tools/release/framework_recovery_fr_0010_capture.py",
+      "tools/release/framework_recovery_fr_0010_result.py",
+      "tools/release/framework_recovery_fr_0011.py",
+      "tools/release/framework_recovery_fr_0011_capture.py",
+      "tools/release/framework_recovery_fr_0011_result.py",
+      "tools/release/framework_recovery_fr_0012.py",
+      "tools/release/framework_recovery_fr_0012_capture.py",
+      "tools/release/framework_recovery_fr_0012_result.py",
+      "tools/release/framework_recovery_fr_0013.py",
+      "tools/release/framework_recovery_fr_0013_capture.py",
+      "tools/release/framework_recovery_fr_0013_result.py",
+      "tools/release/framework_recovery_fr_0014.py",
+      "tools/release/framework_recovery_fr_0014_capture.py",
+      "tools/release/framework_recovery_fr_0014_result.py",
+      "tools/release/framework_recovery_fr_0015.py",
+      "tools/release/framework_recovery_fr_0015_capture.py",
+      "tools/release/framework_recovery_fr_0015_result.py",
+      "tools/release/test_verify_framework_recovery_fr_0010.py",
+      "tools/release/test_verify_framework_recovery_fr_0011.py",
+      "tools/release/test_verify_framework_recovery_fr_0012.py",
+      "tools/release/test_verify_framework_recovery_fr_0013.py",
+      "tools/release/test_verify_framework_recovery_fr_0014.py",
+      "tools/release/test_verify_framework_recovery_fr_0015.py",
+      "tools/release/verify-framework-recovery-fr-0010.py",
+      "tools/release/verify-framework-recovery-fr-0011.py",
+      "tools/release/verify-framework-recovery-fr-0012.py",
+      "tools/release/verify-framework-recovery-fr-0013.py",
+      "tools/release/verify-framework-recovery-fr-0014.py",
+      "tools/release/verify-framework-recovery-fr-0015.py"
+    ],
+    "parent": "d441316189acad8fd2063d523399021684a2d0ca",
+    "qualification_commit": "60f43a3afdbad84050fc424a43ffd6b9602ac200",
+    "qualification_tree": "0928b0d049f4ae2e62f55934a29a880b4b213b39",
+    "records": {
+      "release/0.9.0/allowed-signers": {
+        "bytes": 98,
+        "git_mode": "100644",
+        "git_object_id": "7e563049b65dc6761e76b7d0c96c1cc10bd5c0dc",
+        "sha256": "88eddddf1b3a6d0176acf2ec88b1d3c120453e2658651c49b82d41057caa78ed"
+      },
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-activation.json": {
+        "bytes": 23584,
+        "git_mode": "100644",
+        "git_object_id": "aab4f15a7e5e41f3dc32f10603572c3c5e5744ba",
+        "sha256": "f60ceef439488a18de8969c1668fa147e617aa4224fe0030da344c9fc75b40c2"
+      },
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-plan.json": {
+        "bytes": 48560,
+        "git_mode": "100644",
+        "git_object_id": "74b0ba739488ee1842dbff5feb280e8b2247f91e",
+        "sha256": "e9f406d9e15b38fbe03305a78708f33231959f6c7f3c59b2e3b60bbbc16a7af7"
+      },
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-qualification.json": {
+        "bytes": 20524,
+        "git_mode": "100644",
+        "git_object_id": "7ba1eefcc2c11e1eecb6172cf745ff370bf3e91c",
+        "sha256": "d696753aeb936fb1cab9efc2bb4f35346220adcaa334edbd372786207a38a15a"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-attestation.json": {
+        "bytes": 10296,
+        "git_mode": "100644",
+        "git_object_id": "8b4d0b27eaf443e87bd3c7faac62600d27f13466",
+        "sha256": "32c7ace76d1de1cc0110009627a7d818402af6de386597a0f46a1eb897799d4d"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-capture.json": {
+        "bytes": 65576,
+        "git_mode": "100644",
+        "git_object_id": "32f5b9dcb58b39978be3e33df8d9080de2fb559d",
+        "sha256": "f99ba232fcf668b7524fdb8413891791a85def6cd5098c37b4eeb4941307f3f7"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-result.json": {
+        "bytes": 5340,
+        "git_mode": "100644",
+        "git_object_id": "2b9bc29c02118443262da46d295a79a5a8bf6c69",
+        "sha256": "cdefebc8853b997d7a7413c03f72893a6614768f504df227023f4da3719df54b"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-attestation.json": {
+        "bytes": 10137,
+        "git_mode": "100644",
+        "git_object_id": "f7594da50802f3d9a606949510e24a88f982e7e1",
+        "sha256": "c8cacc48fd8e0b71c12d43388eb7774d2fe6b232296281822c611bbb9a9608ac"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-capture.json": {
+        "bytes": 32350,
+        "git_mode": "100644",
+        "git_object_id": "d357e5a2660c4d77dd29601cae24ad63ffeab4cc",
+        "sha256": "f5fb14935b3eebd98692e53a006a338d2cdc667a6a0c93eb635212f684cf9138"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-result.json": {
+        "bytes": 3069,
+        "git_mode": "100644",
+        "git_object_id": "af94766cb37e647c76c9baeae8db2c71ef333149",
+        "sha256": "166a5b133840da251834dfa8a42611ef966d55ae75b041e4c571ff429d3d6bda"
+      },
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-local.json": {
+        "bytes": 5324,
+        "git_mode": "100644",
+        "git_object_id": "a5cd8b52eecaf6773b5caaac5dd1dd1a9e2532fd",
+        "sha256": "3394616b6ad21cad2292e61b65c5f3eaa0ad658489828c93c551680168eb023e"
+      },
+      "tools/release/framework_recovery_fr_0015.py": {
+        "bytes": 33932,
+        "git_mode": "100644",
+        "git_object_id": "144d7745bfa5001da68783a1bc9048229802152b",
+        "sha256": "6f1936aba9c8d88f90474cb47c1d9ac3e39eae21566e4dcb3eac6796af51278e"
+      },
+      "tools/release/framework_recovery_fr_0015_capture.py": {
+        "bytes": 38697,
+        "git_mode": "100755",
+        "git_object_id": "446f3d2b6158f3f6c6bcef86248af36b50ac3fc4",
+        "sha256": "c097f7515a6d7726ebc2addcca3855bf11e3de3e9101ddd53a5f605c0144daa2"
+      },
+      "tools/release/framework_recovery_fr_0015_result.py": {
+        "bytes": 10455,
+        "git_mode": "100755",
+        "git_object_id": "cb4fdc83e0163519fb688c7ee9163cbffd5eb342",
+        "sha256": "42bcc3488049fbd0bf43db94eb8f5a1c1504bb58df29507c91682137624f90fe"
+      },
+      "tools/release/sigstore-public-good-trusted-root.jsonl": {
+        "bytes": 5748,
+        "git_mode": "100644",
+        "git_object_id": "7fa44c8fde4afb1dc889c4284245b1dbcf30525d",
+        "sha256": "3c2cc7f357dc064ec527fdcd78da6e9245c21a381e1abaa0f2b62b186bcac1a1"
+      },
+      "tools/release/test_verify_framework_recovery_fr_0015.py": {
+        "bytes": 122349,
+        "git_mode": "100644",
+        "git_object_id": "888978acdae4b06da4641ff0c19ec536f9421707",
+        "sha256": "cde629277f9eb2f7b18efff218477c8722cefd22dbee4dffe4d04552bec0b707"
+      },
+      "tools/release/verify-framework-recovery-fr-0015.py": {
+        "bytes": 128807,
+        "git_mode": "100755",
+        "git_object_id": "244338c6be7f14017032bbd3db25bce55fbc58a5",
+        "sha256": "04c1cb3569315a1c38d393fa83804b98a04236f950e6345b1769caa8c1e774fb"
+      }
+    },
+    "repair_commit": "c06465d5ac9f6413067ce9ff79e135f3c6ba898e",
+    "repair_parent": "e98924aa5dfd36169febf9a47aa7a15b44548e31",
+    "repair_subject": "release: establish epoch-16 audit trust root",
+    "repair_tree": "6b88759e6b0787cb801c4cb3bcf2abe23bf9404b",
+    "signed_successor_chain": [
+      {
+        "commit": "fd349e51eff9f3900f0fcf225dd0a0a70e1fbe41",
+        "parent": "18b4a605844b39f43193d35f487a3272f7800e87",
+        "subject": "docs: align supply-chain status with epoch 16",
+        "tree": "2ef181040211ba3cc0d63e20073974908beadfb1"
+      },
+      {
+        "commit": "2790882d0f4daf52b38856317f920a5fccac1db0",
+        "parent": "fd349e51eff9f3900f0fcf225dd0a0a70e1fbe41",
+        "subject": "policy: make action-history accounting exact",
+        "tree": "27a5afe95f628291a8781c07b0148f45340bf693"
+      },
+      {
+        "commit": "7996d7d0a2928b0ef2ff4ab34f510ea287917ac7",
+        "parent": "2790882d0f4daf52b38856317f920a5fccac1db0",
+        "subject": "docs: align audit and security guidance",
+        "tree": "c200815c0e771b5676191ae01c9743b6a91bd515"
+      },
+      {
+        "commit": "6d89da8fbb382b08533f48e495bfa4bfc6010cbb",
+        "parent": "7996d7d0a2928b0ef2ff4ab34f510ea287917ac7",
+        "subject": "build: remove duplicate local audit pass",
+        "tree": "89b572085549f317bbff649c4c206dce4b39e8b4"
+      },
+      {
+        "commit": "f41cbb6373f82f123ce65903bb539a66b0976015",
+        "parent": "6d89da8fbb382b08533f48e495bfa4bfc6010cbb",
+        "subject": "formal: add verified local model runner",
+        "tree": "d53a1503a241723268a7f558e7b0a6d6f32c69ea"
+      },
+      {
+        "commit": "42e14e274437340a81c6b379a505de6aaeb72e40",
+        "parent": "f41cbb6373f82f123ce65903bb539a66b0976015",
+        "subject": "state: prevent output epoch reactivation",
+        "tree": "2985fa634abc4ef189598a408758c81375951247"
+      },
+      {
+        "commit": "ea0dc9690fb9e4ceeced24a754b3bf081aa0de5b",
+        "parent": "42e14e274437340a81c6b379a505de6aaeb72e40",
+        "subject": "contracts: validate decision receipt semantics",
+        "tree": "02355cd872c4e54fdb3927e1cc9c16dcc765fd1c"
+      },
+      {
+        "commit": "065c0e9425fca485f77cb60b9099fc2405977273",
+        "parent": "ea0dc9690fb9e4ceeced24a754b3bf081aa0de5b",
+        "subject": "contracts: enforce exact v1.0 schema versions",
+        "tree": "1759aabfcb821005410c5b9d3ef6d35113006f88"
+      },
+      {
+        "commit": "6649567e9669743fe515b71282efb142143f8405",
+        "parent": "065c0e9425fca485f77cb60b9099fc2405977273",
+        "subject": "gate: make CLI introspection truthful",
+        "tree": "f3979932352560daefaf429b580d580137593756"
+      },
+      {
+        "commit": "d441316189acad8fd2063d523399021684a2d0ca",
+        "parent": "6649567e9669743fe515b71282efb142143f8405",
+        "subject": "errors: standardize durable evidence contracts",
+        "tree": "b7a00fa58b8353f0d03780b5946bea8fa43bbcb0"
+      },
+      {
+        "commit": "ec207cbdba36f15a410206fd01e76a54ffd29ac0",
+        "parent": "d441316189acad8fd2063d523399021684a2d0ca",
+        "subject": "plant: make runtime transitions fail closed",
+        "tree": "1b7e4b32576fab770aeaee0770335af50544149c"
+      }
+    ],
+    "state": "HISTORICAL_SIGNED_FR_0015_ACTIVE_BOUNDARY",
+    "subject": "plant: make runtime transitions fail closed",
+    "tree": "1b7e4b32576fab770aeaee0770335af50544149c"
+  },
+  "limitations": [
+    "GitHub OIDC proves the isolated attestation workflow identity; the producer result remains a statement from repository code.",
+    "The epoch-17 artifact syntax is an evidence transport only and confers no release authority.",
+    "The temporary pull-request record binds the repair head, GitHub's two-parent synthetic merge object, the signed workflow's default checkout configuration, and successful required jobs. GitHub's run API reports the pull-request head commit rather than the synthetic merge commit, so the checkout-SHA conclusion relies on the signed workflow plus GitHub pull_request event semantics; no independent runtime attestation of the checked-out SHA is claimed.",
+    "cargo-deny and RustSec acquisition still require network availability, but exact size and SHA-256 identities are checked before either input is installed or executed.",
+    "The hosted Temurin and TLA+ acquisitions require network availability. Exact byte lengths and SHA-256 identities prove equality to the reviewed archives, not an independently reproduced upstream Java build.",
+    "The pinned Temurin archive is the hosted Linux x64 input only. Local formal evidence separately records an admitted runtime architecture and does not claim byte identity with that hosted archive.",
+    "The hosted extraction validates the reviewed archive's legal symlink manifest and excludes the complete legal subtree before runtime use. It proves evaluator execution, not a complete Java redistribution artifact.",
+    "The dependency-policy execution is frozen and network-isolated; the pinned RustSec snapshot is rejected after its finite 90-day staleness window and requires an intentional signed refresh.",
+    "Branch-protection and hosted-settings API evidence are TLS-observed snapshots of mutable external state, not durable cryptographic proof.",
+    "Epoch 17 performs no branch-control or hosted-settings mutation. Activation captures the existing state at the qualification commit through bounded GET requests and proves neither when the settings transitioned nor that they remained unchanged before or after the observation.",
+    "Activation necessarily binds qualification-main hosted proof; the activation commit cannot contain hosted proof of itself.",
+    "Offline successor verification proves signature, ancestry, and protected-path scope, but cannot prove mutable hosted settings.",
+    "Bounded subprocess cleanup terminates descendants that remain in the child process group. A hostile descendant that successfully creates a new session or double-forks outside that group can escape this local process-tree boundary. No host-resource containment or availability guarantee is claimed.",
+    "The owner/admin can mutate external settings; owner-account or GitHub control-plane compromise is outside this local guarantee.",
+    "This bridge grants no release, deployment, publication, tag, archive, DOI, or GitHub Release authority."
+  ],
+  "post_activation_contract": {
+    "future_framework_recovery_epoch": "REQUIRES_INTENTIONAL_SIGNED_GATE_AND_TRUST_ROOT_REPLACEMENT",
+    "main_update_ruleset": {
+      "enforcement": "active",
+      "layers_with_classic_branch_protection": true,
+      "name": "haldir-main-writer-allowlist",
+      "observed_get_rule": {
+        "type": "update"
+      },
+      "omitted_update_parameter_reconstructed": false,
+      "scope": "refs/heads/main",
+      "sole_bypass_actor": {
+        "actor_id": 10104569,
+        "actor_type": "User",
+        "bypass_mode": "always"
+      }
+    },
+    "model": "SIGNED_LINEAR_SCOPED_MILESTONES",
+    "post_main_attestation_jobs": [
+      "attest-ci-audit-result",
+      "attest-formal-audit-result"
+    ],
+    "recovery_namespace_match": "UNICODE_CASEFOLD_PREFIX",
+    "recovery_namespace_prefixes_immutable": [
+      "release/0.9.0/current-head/closures/framework-recovery/",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-"
+    ],
+    "required_pre_accept_checks": [
+      {
+        "app_id": 15368,
+        "context": "build-test"
+      },
+      {
+        "app_id": 15368,
+        "context": "clean-build"
+      },
+      {
+        "app_id": 15368,
+        "context": "feature-matrix"
+      },
+      {
+        "app_id": 15368,
+        "context": "interop"
+      },
+      {
+        "app_id": 15368,
+        "context": "macos-compile"
+      },
+      {
+        "app_id": 15368,
+        "context": "supply-chain"
+      },
+      {
+        "app_id": 15368,
+        "context": "tlc-model-check"
+      }
+    ],
+    "threat_model": "TRUSTED_SOURCE_AUTHORITY_AND_OWNER_ACCOUNT",
+    "trust_root_paths_immutable": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/formal.yml",
+      "release/0.9.0/allowed-signers",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0010-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0011-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0012-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0013-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-plan.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0015-qualification.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0016-activation.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0016-plan.json",
+      "release/0.9.0/current-head/closures/framework-recovery/FR-0016-qualification.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0010-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-ci.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal-logs.zip",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-c5-formal.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0011-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0012-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0013-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0015-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-branch-protection.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-hosted-settings.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-ci-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-ci-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-ci-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-formal-attestation.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-formal-capture.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-formal-result.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-local.json",
+      "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-pull-request.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0010-implementation-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-design-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-capture.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-provider-response.json",
+      "release/0.9.0/current-head/reviews/framework-recovery-fr-0011-implementation-response.json",
+      "tools/pinned_cargo_deny.py",
+      "tools/pins.toml",
+      "tools/release/current-audit-gate.sh",
+      "tools/release/framework_recovery_fr_0010.py",
+      "tools/release/framework_recovery_fr_0010_capture.py",
+      "tools/release/framework_recovery_fr_0010_result.py",
+      "tools/release/framework_recovery_fr_0011.py",
+      "tools/release/framework_recovery_fr_0011_capture.py",
+      "tools/release/framework_recovery_fr_0011_result.py",
+      "tools/release/framework_recovery_fr_0012.py",
+      "tools/release/framework_recovery_fr_0012_capture.py",
+      "tools/release/framework_recovery_fr_0012_result.py",
+      "tools/release/framework_recovery_fr_0013.py",
+      "tools/release/framework_recovery_fr_0013_capture.py",
+      "tools/release/framework_recovery_fr_0013_result.py",
+      "tools/release/framework_recovery_fr_0014.py",
+      "tools/release/framework_recovery_fr_0014_capture.py",
+      "tools/release/framework_recovery_fr_0014_result.py",
+      "tools/release/framework_recovery_fr_0015.py",
+      "tools/release/framework_recovery_fr_0015_capture.py",
+      "tools/release/framework_recovery_fr_0015_result.py",
+      "tools/release/framework_recovery_fr_0016.py",
+      "tools/release/framework_recovery_fr_0016_capture.py",
+      "tools/release/framework_recovery_fr_0016_result.py",
+      "tools/release/sigstore-public-good-trusted-root.jsonl",
+      "tools/release/test_verify_current_audit_fr_0009.py",
+      "tools/release/test_verify_framework_recovery_fr_0010.py",
+      "tools/release/test_verify_framework_recovery_fr_0011.py",
+      "tools/release/test_verify_framework_recovery_fr_0012.py",
+      "tools/release/test_verify_framework_recovery_fr_0013.py",
+      "tools/release/test_verify_framework_recovery_fr_0014.py",
+      "tools/release/test_verify_framework_recovery_fr_0015.py",
+      "tools/release/test_verify_framework_recovery_fr_0016.py",
+      "tools/release/verify-current-audit.py",
+      "tools/release/verify-framework-recovery-fr-0010.py",
+      "tools/release/verify-framework-recovery-fr-0011.py",
+      "tools/release/verify-framework-recovery-fr-0012.py",
+      "tools/release/verify-framework-recovery-fr-0013.py",
+      "tools/release/verify-framework-recovery-fr-0014.py",
+      "tools/release/verify-framework-recovery-fr-0015.py",
+      "tools/release/verify-framework-recovery-fr-0016.py",
+      "tools/run_formal.py",
+      "tools/test_pinned_cargo_deny.py",
+      "tools/test_run_formal.py",
+      "tools/verify-ci-pins.py",
+      "tools/verify-pins.py"
+    ],
+    "writer_adversarial_immutability_claimed": false
+  },
+  "protocol_parent": {
+    "commit": "ec207cbdba36f15a410206fd01e76a54ffd29ac0",
+    "tree": "1b7e4b32576fab770aeaee0770335af50544149c"
+  },
+  "recovery_id": "FR-0016",
+  "release_target": "0.9.0",
+  "repair_identity": {
+    "commit": "SIGNED_COMMIT_CONTAINING_THIS_PLAN",
+    "required_parent": "ec207cbdba36f15a410206fd01e76a54ffd29ac0",
+    "subject": "release: establish epoch-17 audit trust root"
+  },
+  "repair_scope": {
+    ".github/workflows/ci.yml": "M",
+    ".github/workflows/formal.yml": "M",
+    "formal/README.md": "M",
+    "justfile": "M",
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0016-plan.json": "A",
+    "tools/pinned_cargo_deny.py": "M",
+    "tools/pins.toml": "M",
+    "tools/release/current-audit-gate.sh": "M",
+    "tools/release/framework_recovery_fr_0016.py": "A",
+    "tools/release/framework_recovery_fr_0016_capture.py": "A",
+    "tools/release/framework_recovery_fr_0016_result.py": "A",
+    "tools/release/test_verify_framework_recovery_fr_0016.py": "A",
+    "tools/release/verify-framework-recovery-fr-0016.py": "A",
+    "tools/run_formal.py": "M",
+    "tools/test_pinned_cargo_deny.py": "M",
+    "tools/test_run_formal.py": "M",
+    "tools/verify-ci-pins.py": "M",
+    "tools/verify-pins.py": "M"
+  },
+  "schema_version": "1.0.0",
+  "stage_contract": {
+    "activation": {
+      "data_only": true,
+      "namespace": "haldir-framework-recovery-fr-0016-activation-v1",
+      "state_after": "ACTIVE",
+      "statuses": {
+        "release/0.9.0/current-head/closures/framework-recovery/FR-0016-activation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-branch-protection.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-hosted-settings.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-ci-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-ci-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-ci-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-formal-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-formal-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-q-formal-result.json": "A"
+      },
+      "subject": "release: activate epoch-17 audit trust root"
+    },
+    "ordinary_successor_before_activation": "REJECT",
+    "qualification": {
+      "data_only": true,
+      "namespace": "haldir-framework-recovery-fr-0016-qualification-v1",
+      "state_after": "QUALIFIED_PENDING_ACTIVATION",
+      "statuses": {
+        "release/0.9.0/current-head/closures/framework-recovery/FR-0016-qualification.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-ci-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-ci-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-ci-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-formal-attestation.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-formal-capture.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-formal-result.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-local.json": "A",
+        "release/0.9.0/current-head/evidence/framework-recovery-fr-0016-r-pull-request.json": "A"
+      },
+      "subject": "release: qualify epoch-17 audit trust root"
+    },
+    "repair": {
+      "state_after": "PENDING_QUALIFICATION",
+      "subject": "release: establish epoch-17 audit trust root"
+    }
+  }
+}

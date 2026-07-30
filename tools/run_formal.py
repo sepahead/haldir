@@ -2,9 +2,9 @@
 """Run Haldir's bounded TLA+ model with verified tools and bounded resources.
 
 The runner deliberately has no package dependencies.  It accepts only the
-repository's closed TLA+ release identity, validates every cached or downloaded
-byte, checks the Java specification version, invokes TLC without a shell, and
-publishes a bounded raw log plus a canonical runtime record.
+repository's closed TLA+ release and Java runtime identities, validates every
+cached or downloaded byte, invokes TLC without a shell, and publishes a bounded
+raw log plus a canonical runtime record.
 
 Online mode may populate the verified cache.  ``--offline`` performs no network
 operation and fails closed unless a valid cache entry already exists.
@@ -52,8 +52,26 @@ from typing import BinaryIO, NamedTuple, NoReturn
 ADMITTED_TLA_VERSION = "1.7.4"
 ADMITTED_TLA_SHA256 = "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
 ADMITTED_TLA_BYTES = 2_274_532
+ADMITTED_JAVA_DISTRIBUTION = "temurin"
+ADMITTED_JAVA_RELEASE_TAG = "jdk-21.0.11+10"
+ADMITTED_JAVA_ARCHIVE_PACKAGE = "jre"
+ADMITTED_JAVA_ARCHIVE_ARCHITECTURE = "x64"
+ADMITTED_JAVA_ARCHIVE_NAME = "OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+ADMITTED_JAVA_ARCHIVE_ROOT = "jdk-21.0.11+10-jre"
+ADMITTED_JAVA_ARCHIVE_URL = (
+    "https://github.com/adoptium/temurin21-binaries/releases/download/"
+    "jdk-21.0.11%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.11_10.tar.gz"
+)
+ADMITTED_JAVA_ARCHIVE_BYTES = 52_099_793
+ADMITTED_JAVA_ARCHIVE_SHA256 = (
+    "e5038aae3ca9ff670bc696496b0728dbd23d280026bad30291cb919221ecfdcb"
+)
+ADMITTED_JAVA_RUNTIME_VENDOR = "Eclipse Adoptium"
+ADMITTED_JAVA_RUNTIME_VERSION = "21.0.11+10-LTS"
 ADMITTED_JAVA_SPECIFICATION_VERSION = "21"
-TLA_ASSET_HARD_CAP = 8 * 1024 * 1024
+ADMITTED_HOSTED_JAVA_RUNTIME_ARCHITECTURE = "amd64"
+ADMITTED_LOCAL_JAVA_RUNTIME_ARCHITECTURES = frozenset({"aarch64", "amd64", "x86_64"})
+TLA_ASSET_HARD_CAP = 4_000_000
 PINS_FILE_CAP = 64 * 1024
 JAVA_OUTPUT_CAP = 64 * 1024
 TLC_OUTPUT_CAP = 16 * 1024 * 1024
@@ -65,9 +83,14 @@ DOWNLOAD_ATTEMPTS = 3
 MAX_REDIRECTS = 5
 MAX_JAVA_EXECUTABLE_BYTES = 512 * 1024 * 1024
 SUCCESS_MARKER = b"Model checking completed. No error has been found."
-RUNTIME_SCHEMA = "HALDIR_FORMAL_RUNTIME_V1"
+RUNTIME_SCHEMA = "HALDIR_FORMAL_RUNTIME_V2"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+JAVA_RELEASE_TAG = re.compile(
+    r"^jdk-[1-9][0-9]*\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    r"\+[1-9][0-9]*$"
+)
+JAVA_SPECIFICATION_VERSION = re.compile(r"^[1-9][0-9]*$")
 JAVA_PROPERTY = re.compile(rb"^[ \t]*([A-Za-z0-9_.-]+)[ \t]*=[ \t]*(.*?)[ \t]*$")
 ALLOWED_DOWNLOAD_HOSTS = frozenset(
     {
@@ -91,7 +114,19 @@ class FormalPins(NamedTuple):
     version: str
     sha256: str
     size: int
+    java_distribution: str
+    java_release_tag: str
+    java_archive_package: str
+    java_archive_architecture: str
+    java_archive_name: str
+    java_archive_root: str
+    java_archive_url: str
+    java_archive_bytes: int
+    java_archive_sha256: str
+    java_runtime_vendor: str
+    java_runtime_version: str
     java_specification_version: str
+    java_runtime_architecture: str
 
 
 class ProcessResult(NamedTuple):
@@ -113,9 +148,10 @@ class JavaIdentity(NamedTuple):
     inode: int
     modified_ns: int
     specification_version: str
-    vendor: str | None
-    runtime_version: str | None
+    vendor: str
+    runtime_version: str
     vm_name: str | None
+    architecture: str
     properties_output_sha256: str
 
 
@@ -233,7 +269,7 @@ def _require_unchanged_material(
 
 
 def load_pins(repository: Path) -> FormalPins:
-    """Load and close the current schema-v1 formal pin table."""
+    """Load and close the current schema-v3 formal pin table."""
 
     payload = _read_regular_file(
         repository / "tools" / "pins.toml",
@@ -251,34 +287,109 @@ def load_pins(repository: Path) -> FormalPins:
         or type(document.get("schema_version")) is not int
     ):
         _fail("FORMAL_PINS_SCHEMA")
-    if document["schema_version"] != 1:
+    if document["schema_version"] != 3:
         _fail("FORMAL_PINS_SCHEMA")
     formal = document.get("formal")
     if not isinstance(formal, dict) or set(formal) != {
         "tla_tools_version",
+        "tla_tools_bytes",
         "tla_tools_sha256",
+        "java_distribution",
+        "java_release_tag",
+        "java_archive_package",
+        "java_archive_architecture",
+        "java_archive_name",
+        "java_archive_root",
+        "java_archive_url",
+        "java_archive_bytes",
+        "java_archive_sha256",
+        "java_runtime_vendor",
+        "java_runtime_version",
+        "java_specification_version",
+        "java_runtime_architecture",
     }:
         _fail("FORMAL_PINS_FIELDS")
     version = formal["tla_tools_version"]
+    size = formal["tla_tools_bytes"]
     digest = formal["tla_tools_sha256"]
+    java_distribution = formal["java_distribution"]
+    java_release_tag = formal["java_release_tag"]
+    java_archive_package = formal["java_archive_package"]
+    java_archive_architecture = formal["java_archive_architecture"]
+    java_archive_name = formal["java_archive_name"]
+    java_archive_root = formal["java_archive_root"]
+    java_archive_url = formal["java_archive_url"]
+    java_archive_bytes = formal["java_archive_bytes"]
+    java_archive_sha256 = formal["java_archive_sha256"]
+    java_runtime_vendor = formal["java_runtime_vendor"]
+    java_runtime_version = formal["java_runtime_version"]
+    java_specification_version = formal["java_specification_version"]
+    java_runtime_architecture = formal["java_runtime_architecture"]
     if (
         type(version) is not str
         or SEMVER.fullmatch(version) is None
+        or not _type_int(size)
+        or not 0 < size <= TLA_ASSET_HARD_CAP
         or type(digest) is not str
         or HEX64.fullmatch(digest) is None
+        or type(java_distribution) is not str
+        or type(java_release_tag) is not str
+        or JAVA_RELEASE_TAG.fullmatch(java_release_tag) is None
+        or type(java_archive_package) is not str
+        or type(java_archive_architecture) is not str
+        or type(java_archive_name) is not str
+        or type(java_archive_root) is not str
+        or type(java_archive_url) is not str
+        or not _type_int(java_archive_bytes)
+        or java_archive_bytes <= 0
+        or type(java_archive_sha256) is not str
+        or HEX64.fullmatch(java_archive_sha256) is None
+        or type(java_runtime_vendor) is not str
+        or type(java_runtime_version) is not str
+        or type(java_specification_version) is not str
+        or JAVA_SPECIFICATION_VERSION.fullmatch(java_specification_version) is None
+        or type(java_runtime_architecture) is not str
     ):
         _fail("FORMAL_PINS_TYPES")
     if (
         version != ADMITTED_TLA_VERSION
+        or size != ADMITTED_TLA_BYTES
         or not hmac.compare_digest(digest, ADMITTED_TLA_SHA256)
-        or ADMITTED_TLA_BYTES > TLA_ASSET_HARD_CAP
+        or java_distribution != ADMITTED_JAVA_DISTRIBUTION
+        or java_release_tag != ADMITTED_JAVA_RELEASE_TAG
+        or java_archive_package != ADMITTED_JAVA_ARCHIVE_PACKAGE
+        or java_archive_architecture != ADMITTED_JAVA_ARCHIVE_ARCHITECTURE
+        or java_archive_name != ADMITTED_JAVA_ARCHIVE_NAME
+        or java_archive_root != ADMITTED_JAVA_ARCHIVE_ROOT
+        or java_archive_url != ADMITTED_JAVA_ARCHIVE_URL
+        or java_archive_bytes != ADMITTED_JAVA_ARCHIVE_BYTES
+        or not hmac.compare_digest(
+            java_archive_sha256,
+            ADMITTED_JAVA_ARCHIVE_SHA256,
+        )
+        or java_runtime_vendor != ADMITTED_JAVA_RUNTIME_VENDOR
+        or java_runtime_version != ADMITTED_JAVA_RUNTIME_VERSION
+        or java_specification_version != ADMITTED_JAVA_SPECIFICATION_VERSION
+        or java_runtime_architecture != ADMITTED_HOSTED_JAVA_RUNTIME_ARCHITECTURE
     ):
         _fail("FORMAL_PINS_UNADMITTED")
     return FormalPins(
         version=version,
         sha256=digest,
-        size=ADMITTED_TLA_BYTES,
-        java_specification_version=ADMITTED_JAVA_SPECIFICATION_VERSION,
+        size=size,
+        java_distribution=java_distribution,
+        java_release_tag=java_release_tag,
+        java_archive_package=java_archive_package,
+        java_archive_architecture=java_archive_architecture,
+        java_archive_name=java_archive_name,
+        java_archive_root=java_archive_root,
+        java_archive_url=java_archive_url,
+        java_archive_bytes=java_archive_bytes,
+        java_archive_sha256=java_archive_sha256,
+        java_runtime_vendor=java_runtime_vendor,
+        java_runtime_version=java_runtime_version,
+        java_specification_version=java_specification_version,
+        java_runtime_architecture=java_runtime_architecture,
     )
 
 
@@ -1064,13 +1175,23 @@ def _optional_single_property(
     return values[0]
 
 
+def _required_single_property(
+    properties: Mapping[str, list[str]],
+    name: str,
+) -> str:
+    value = _optional_single_property(properties, name)
+    if value is None:
+        _fail("FORMAL_JAVA_PROPERTY:" + name)
+    return value
+
+
 def validate_java(
     value: str | None,
     *,
     pins: FormalPins,
     private_root: Path,
 ) -> tuple[JavaIdentity, dict[str, str]]:
-    """Resolve and execute Java, accepting only the pinned specification version."""
+    """Resolve and execute Java, accepting only the pinned runtime identity."""
 
     java = _resolve_java(value)
     metadata = _java_stat(java)
@@ -1091,6 +1212,19 @@ def validate_java(
     specifications = properties.get("java.specification.version")
     if specifications != [pins.java_specification_version]:
         _fail("FORMAL_JAVA_VERSION")
+    vendor = _required_single_property(properties, "java.vendor")
+    runtime_version = _required_single_property(properties, "java.runtime.version")
+    architecture = _required_single_property(properties, "os.arch")
+    # The hosted archive identity and hosted runtime architecture are provenance
+    # for CI, closed by load_pins and bound through the recorded pins-file
+    # digest.  Local os.arch is admitted separately because an exact Temurin
+    # release reports platform-specific architecture names.
+    if (
+        vendor != pins.java_runtime_vendor
+        or runtime_version != pins.java_runtime_version
+        or architecture not in ADMITTED_LOCAL_JAVA_RUNTIME_ARCHITECTURES
+    ):
+        _fail("FORMAL_JAVA_IDENTITY")
     identity = JavaIdentity(
         executable=java,
         executable_bytes=executable_bytes,
@@ -1099,9 +1233,10 @@ def validate_java(
         inode=metadata.st_ino,
         modified_ns=metadata.st_mtime_ns,
         specification_version=specifications[0],
-        vendor=_optional_single_property(properties, "java.vendor"),
-        runtime_version=_optional_single_property(properties, "java.runtime.version"),
+        vendor=vendor,
+        runtime_version=runtime_version,
         vm_name=_optional_single_property(properties, "java.vm.name"),
+        architecture=architecture,
         properties_output_sha256=hashlib.sha256(result.output).hexdigest(),
     )
     _require_java_unchanged(identity)
@@ -1436,6 +1571,7 @@ def run_tlc(
             else (post_error.code if post_error is not None else None)
         ),
         "java": {
+            "architecture": java_identity.architecture,
             "device": java_identity.device,
             "executable_bytes": java_identity.executable_bytes,
             "executable_sha256": java_identity.executable_sha256,
