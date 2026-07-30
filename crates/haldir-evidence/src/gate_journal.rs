@@ -17,11 +17,10 @@ use crate::publication::{PublicationReductionError, PublicationStageReducer};
 use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use haldir_contracts::cbor::{CanonicalMessage, Limits, from_canonical_bytes};
 use haldir_contracts::digest::{DigestDomain, DigestV1};
+use haldir_contracts::error::DecodeError;
 use haldir_contracts::ids::{DecisionId, GateBootId, GateId};
 use haldir_contracts::publication::PublicationStageEventV1;
-use haldir_contracts::receipt::{
-    DecisionOutcomeV1, DecisionReasonCodeV1, DecisionReceiptV1, PublishStageV1,
-};
+use haldir_contracts::receipt::{DecisionOutcomeV1, DecisionReceiptV1};
 use haldir_crypto::{
     ExpectedContext, KeyClass, KeyRole, RevocationSnapshot, TrustStore, VerifyingKey,
     content_type_for, sign_message, verify_sign1_dispatched,
@@ -43,7 +42,9 @@ pub enum GateJournalVerificationError {
     /// The protected content type, signature, or canonical typed payload failed.
     InvalidEnvelope,
     /// A signed receipt contradicted the current Gate outcome/reason/stage/output
-    /// profile or regressed its local decision time.
+    /// profile or regressed its local decision time. Semantic validation
+    /// precedes claimed Gate/boot comparisons, so this class wins when a receipt
+    /// contains both a semantic contradiction and an identity mismatch.
     ReceiptSemanticInvalid,
     /// The record and footer used different Gate application key IDs.
     RecordSignerMismatch,
@@ -1069,8 +1070,8 @@ impl GateJournalVerifier {
     /// payload never selects its own type.
     ///
     /// # Errors
-    /// Returns on envelope bounds, segment trust, signature/type/canonical
-    /// failure, signer drift, or Gate/boot substitution.
+    /// Returns on envelope bounds, segment trust, signature/type/canonical or
+    /// receipt-semantic failure, signer drift, or Gate/boot substitution.
     pub fn verify_record(
         &self,
         identity: &SegmentIdentity,
@@ -1122,14 +1123,20 @@ impl GateJournalVerifier {
             GateRecordKind::DecisionReceipt => {
                 let receipt =
                     from_canonical_bytes::<DecisionReceiptV1>(verified.payload, Limits::DEFAULT)
-                        .map_err(|_| GateJournalVerificationError::InvalidEnvelope)?;
+                        .map_err(|error| match error {
+                            DecodeError::SemanticInvalid { code }
+                                if code == DecisionReceiptV1::SEMANTIC_ERROR_CODE =>
+                            {
+                                GateJournalVerificationError::ReceiptSemanticInvalid
+                            }
+                            _ => GateJournalVerificationError::InvalidEnvelope,
+                        })?;
                 if receipt.gate_id != self.gate_id {
                     return Err(GateJournalVerificationError::RecordGateMismatch);
                 }
                 if receipt.gate_boot_id != identity.gate_boot_id {
                     return Err(GateJournalVerificationError::RecordBootMismatch);
                 }
-                validate_receipt_profile(&receipt)?;
                 VerifiedGateValue::DecisionReceipt(Box::new(receipt))
             }
             GateRecordKind::PublicationStage => {
@@ -1251,51 +1258,6 @@ impl GateJournalVerifier {
     }
 }
 
-fn validate_receipt_profile(
-    receipt: &DecisionReceiptV1,
-) -> Result<(), GateJournalVerificationError> {
-    if receipt.received_mono_ns > receipt.decided_mono_ns
-        || receipt.reason_codes.as_slice().len() != 1
-    {
-        return Err(GateJournalVerificationError::ReceiptSemanticInvalid);
-    }
-    let reason = receipt
-        .reason_codes
-        .as_slice()
-        .first()
-        .copied()
-        .ok_or(GateJournalVerificationError::ReceiptSemanticInvalid)?;
-    let no_output = receipt.effective_validity_ms.is_none()
-        && receipt.gate_output_stream.is_none()
-        && receipt.output_frame_digest.is_none()
-        && receipt.transformation_relation.is_none();
-    let valid = match receipt.decision {
-        DecisionOutcomeV1::Allow => {
-            receipt.publish_stage == PublishStageV1::OutputPrepared
-                && reason == DecisionReasonCodeV1::AllowPrepared
-                && receipt.effective_validity_ms.is_some_and(|value| value > 0)
-                && receipt.gate_output_stream.is_some()
-                && receipt.output_frame_digest.is_some()
-                && receipt.transformation_relation.is_some()
-        }
-        DecisionOutcomeV1::Deny => {
-            receipt.publish_stage == PublishStageV1::DecidedDeny
-                && reason.is_hard_deny()
-                && !reason.is_error()
-                && no_output
-        }
-        DecisionOutcomeV1::Error => {
-            receipt.publish_stage == PublishStageV1::DecidedError && reason.is_error() && no_output
-        }
-        _ => false,
-    };
-    if valid {
-        Ok(())
-    } else {
-        Err(GateJournalVerificationError::ReceiptSemanticInvalid)
-    }
-}
-
 impl JournalVerifier for GateJournalVerifier {
     fn resolve_signer(
         &self,
@@ -1328,7 +1290,9 @@ mod tests {
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::digest::{DigestDomain, DigestV1};
     use haldir_contracts::ids::{DecisionId, GateOutputEpoch, KeyId, OutputSeq, VehicleId};
-    use haldir_contracts::receipt::TransformationRelationV1;
+    use haldir_contracts::receipt::{
+        DecisionReasonCodeV1, PublishStageV1, TransformationRelationV1,
+    };
     use haldir_contracts::scalar::{AsciiId, BoundedVec, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpStreamPositionV1};
     use haldir_crypto::{KeyRecord, SigningKey, sign_message};
@@ -1700,6 +1664,22 @@ mod tests {
                 .verify_record(&identity, &sign_receipt(&wrong_boot, 3))
                 .err(),
             Some(GateJournalVerificationError::RecordBootMismatch)
+        );
+        let mut wrong_gate_and_semantics = wrong_gate;
+        wrong_gate_and_semantics.output_frame_digest = None;
+        assert_eq!(
+            verifier
+                .verify_record(&identity, &sign_receipt(&wrong_gate_and_semantics, 3))
+                .err(),
+            Some(GateJournalVerificationError::ReceiptSemanticInvalid)
+        );
+        let mut wrong_boot_and_semantics = wrong_boot;
+        wrong_boot_and_semantics.output_frame_digest = None;
+        assert_eq!(
+            verifier
+                .verify_record(&identity, &sign_receipt(&wrong_boot_and_semantics, 3))
+                .err(),
+            Some(GateJournalVerificationError::ReceiptSemanticInvalid)
         );
         let unknown_kind = sign_message(&prepared, "haldir.unknown", 1, &kid(3), &key(3));
         assert_eq!(

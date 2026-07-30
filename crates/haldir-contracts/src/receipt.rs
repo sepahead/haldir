@@ -6,6 +6,7 @@
 //! receipt.
 
 use crate::digest::DigestV1;
+use crate::error::DecodeError;
 use crate::ids::{
     ControllerId, DecisionId, GateBootId, GateId, MissionId, MissionLeaseId, VehicleId,
 };
@@ -25,7 +26,9 @@ tagged_enum! {
 
 tagged_enum! {
     /// Stable machine reason codes for a decision. Allow codes are positive
-    /// outcomes; `Deny*` are refusals; `Error*` are internal faults.
+    /// outcomes; `Deny*` are refusals; `Error*` are internal faults. The closed
+    /// vocabulary retains historical/future allow tags, but the v1 receipt
+    /// profile accepts only `AllowPrepared` for an `Allow` decision.
     pub enum DecisionReasonCodeV1 {
         AllowPublished = 1 => "ALLOW_PUBLISHED",
         AllowNotPublishedOverload = 2 => "ALLOW_NOT_PUBLISHED_OVERLOAD",
@@ -76,18 +79,76 @@ tagged_enum! {
     }
 }
 
+#[derive(Clone, Copy)]
+enum DecisionReasonClass {
+    Allow,
+    Deny,
+    Error,
+}
+
 impl DecisionReasonCodeV1 {
+    const fn class(self) -> DecisionReasonClass {
+        match self {
+            Self::AllowPublished
+            | Self::AllowNotPublishedOverload
+            | Self::AllowPolicy
+            | Self::AllowPrepared => DecisionReasonClass::Allow,
+            Self::DenyOversize
+            | Self::DenyOverload
+            | Self::DenyMalformed
+            | Self::DenyWrongActualKey
+            | Self::DenySignatureInvalid
+            | Self::DenyNonCanonical
+            | Self::DenyWrongRole
+            | Self::DenyKeyRevoked
+            | Self::DenyGateBootMismatch
+            | Self::DenySessionStale
+            | Self::DenyScopeMismatch
+            | Self::DenyLeaseAbsent
+            | Self::DenyLeaseExpired
+            | Self::DenyLeaseRevoked
+            | Self::DenyAdmissionRevoked
+            | Self::DenyAdmissionMismatch
+            | Self::DenyBackendMismatch
+            | Self::DenyIntentReplay
+            | Self::DenyRetiredEpoch
+            | Self::DenySourceUnknown
+            | Self::DenySourceStale
+            | Self::DenyStateUnavailable
+            | Self::DenyStateStale
+            | Self::DenyActionShape
+            | Self::DenyCommandRange
+            | Self::DenyNormBound
+            | Self::DenySlew
+            | Self::DenyDutyLimit
+            | Self::DenyPhaseRule
+            | Self::DenyGeofence
+            | Self::DenyUncertainty
+            | Self::DenyValidityTooShort
+            | Self::DenyPolicyDiagnostic
+            | Self::DenyNoPublicationAuthority
+            | Self::DenyArithmeticOverflow
+            | Self::DenyRateLimit
+            | Self::DenyTotalIntents
+            | Self::DenyStateProducer
+            | Self::DenyAdmissionLevel => DecisionReasonClass::Deny,
+            Self::ErrorInternalFault
+            | Self::ErrorNamespaceExhausted
+            | Self::ErrorStateTransition => DecisionReasonClass::Error,
+        }
+    }
+
     /// Whether this reason is a hard deny that must take precedence over permits
     /// and be retained first when the bounded reason vector overflows (H6/P4).
     #[must_use]
     pub const fn is_hard_deny(self) -> bool {
-        !matches!(
-            self,
-            Self::AllowPublished
-                | Self::AllowNotPublishedOverload
-                | Self::AllowPolicy
-                | Self::AllowPrepared
-        )
+        !matches!(self.class(), DecisionReasonClass::Allow)
+    }
+
+    /// Whether this reason denotes a policy or authorization `DENY`.
+    #[must_use]
+    pub const fn is_deny(self) -> bool {
+        matches!(self.class(), DecisionReasonClass::Deny)
     }
 
     /// Whether this reason denotes an internal ERROR (inability to decide) rather
@@ -95,10 +156,7 @@ impl DecisionReasonCodeV1 {
     /// operationally (H-H10).
     #[must_use]
     pub const fn is_error(self) -> bool {
-        matches!(
-            self,
-            Self::ErrorInternalFault | Self::ErrorNamespaceExhausted | Self::ErrorStateTransition
-        )
+        matches!(self.class(), DecisionReasonClass::Error)
     }
 }
 
@@ -137,7 +195,10 @@ tagged_enum! {
 
 canonical_struct! {
     /// A signed decision receipt (spec §DecisionReceiptV1). Optional fields are
-    /// absent (not null) when a decision short-circuits early.
+    /// absent (not null) when a decision short-circuits early. An allowed
+    /// receipt stops at `OutputPrepared`; later publication and recovery
+    /// observations are separate [`crate::publication::PublicationStageEventV1`]
+    /// records.
     pub struct DecisionReceiptV1 kind "haldir.decision_receipt" {
         req 2 decision_id: DecisionId,
         req 3 gate_id: GateId,
@@ -168,4 +229,61 @@ canonical_struct! {
     }
 }
 
-impl crate::cbor::Validate for DecisionReceiptV1 {}
+impl DecisionReceiptV1 {
+    /// Stable semantic-error class shared by generic contract decoding and
+    /// Gate-journal verification.
+    pub const SEMANTIC_ERROR_CODE: &'static str = "DECISION_RECEIPT_SEMANTIC_INVALID";
+
+    fn semantic_error() -> DecodeError {
+        DecodeError::SemanticInvalid {
+            code: Self::SEMANTIC_ERROR_CODE,
+        }
+    }
+
+    fn has_no_output(&self) -> bool {
+        self.effective_validity_ms.is_none()
+            && self.gate_output_stream.is_none()
+            && self.output_frame_digest.is_none()
+            && self.transformation_relation.is_none()
+    }
+
+    fn has_complete_output(&self) -> bool {
+        self.effective_validity_ms.is_some_and(|value| value > 0)
+            && self.gate_output_stream.is_some()
+            && self.output_frame_digest.is_some()
+            && self.transformation_relation.is_some()
+    }
+}
+
+impl crate::cbor::Validate for DecisionReceiptV1 {
+    fn validate(&self) -> Result<(), DecodeError> {
+        if self.received_mono_ns > self.decided_mono_ns {
+            return Err(Self::semantic_error());
+        }
+        let &[reason] = self.reason_codes.as_slice() else {
+            return Err(Self::semantic_error());
+        };
+        let valid = match self.decision {
+            DecisionOutcomeV1::Allow => {
+                reason == DecisionReasonCodeV1::AllowPrepared
+                    && self.publish_stage == PublishStageV1::OutputPrepared
+                    && self.has_complete_output()
+            }
+            DecisionOutcomeV1::Deny => {
+                reason.is_deny()
+                    && self.publish_stage == PublishStageV1::DecidedDeny
+                    && self.has_no_output()
+            }
+            DecisionOutcomeV1::Error => {
+                reason.is_error()
+                    && self.publish_stage == PublishStageV1::DecidedError
+                    && self.has_no_output()
+            }
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err(Self::semantic_error())
+        }
+    }
+}

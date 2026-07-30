@@ -43,6 +43,12 @@ use haldir_contracts::ids::KeyId;
 
 /// Canonically encode and COSE-sign a Haldir message under `kid`, binding the
 /// message kind and major version into the content-type and external AAD.
+///
+/// This byte-level primitive deliberately does not call [`Validate`]. That
+/// permits signing negative conformance vectors and preserves the distinction
+/// between construction and verification. Acceptance paths must pair signature
+/// verification with a validating canonical decoder; [`verify_and_decode`]
+/// provides that combined boundary.
 #[must_use]
 pub fn sign_message<T: CanonicalValue>(
     msg: &T,
@@ -86,13 +92,21 @@ mod tests {
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
     use haldir_contracts::digest::{DigestDomain, DigestV1};
+    use haldir_contracts::error::DecodeError;
     use haldir_contracts::ids::{
-        AdmissionId, ControllerId, ControllerInstanceId, GateBootId, GateId, IntentEpoch,
-        IntentSeq, MissionId, MissionLeaseId, SourceSeq, VehicleId,
+        AdmissionId, ControllerId, ControllerInstanceId, DecisionId, GateBootId, GateId,
+        GateOutputEpoch, IntentEpoch, IntentSeq, MissionId, MissionLeaseId, OutputSeq, SourceSeq,
+        VehicleId,
     };
     use haldir_contracts::intent::HaldirIntentV1;
+    use haldir_contracts::receipt::{
+        DecisionOutcomeV1, DecisionReasonCodeV1, DecisionReceiptV1, PublishStageV1,
+        TransformationRelationV1,
+    };
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, BoundedVec, CanonicalUuidV4String};
-    use haldir_contracts::session::{HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1};
+    use haldir_contracts::session::{
+        HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1,
+    };
 
     const KIND: &str = "haldir.intent";
     const MAJOR: u16 = 1;
@@ -160,6 +174,43 @@ mod tests {
         }
     }
 
+    fn receipt() -> DecisionReceiptV1 {
+        DecisionReceiptV1 {
+            decision_id: DecisionId::new([3; 16]),
+            gate_id: GateId::new("gate-1").unwrap(),
+            gate_boot_id: GateBootId::new([9; 16]),
+            vehicle_id: VehicleId::new("uav-1").unwrap(),
+            mission_id: None,
+            ncp_session: NcpSessionIdentityV1 {
+                session_id: AsciiId::new("sess-1").unwrap(),
+                generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+            },
+            received_key_digest: dig(10),
+            raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, b"intent"),
+            payload_digest: None,
+            semantic_intent_digest: None,
+            controller_id: None,
+            controller_intent_position: None,
+            mission_lease_id: None,
+            admission_digest: None,
+            source: None,
+            state_snapshot_digest: None,
+            policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
+            decision: DecisionOutcomeV1::Allow,
+            reason_codes: BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPrepared]).unwrap(),
+            effective_validity_ms: Some(10),
+            gate_output_stream: Some(NcpStreamPositionV1 {
+                epoch: GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([2; 16])),
+                seq: OutputSeq::new(NonZeroU64::new(1).unwrap()),
+            }),
+            output_frame_digest: Some(DigestV1::compute(DigestDomain::OutputFrame, b"frame")),
+            transformation_relation: Some(TransformationRelationV1::FixedPointToNcpFloatV1),
+            received_mono_ns: 10,
+            decided_mono_ns: 11,
+            publish_stage: PublishStageV1::OutputPrepared,
+        }
+    }
+
     fn ctx() -> ExpectedContext<'static> {
         ExpectedContext {
             kind: KIND,
@@ -169,10 +220,50 @@ mod tests {
         }
     }
 
+    fn receipt_ctx() -> ExpectedContext<'static> {
+        ExpectedContext {
+            kind: DecisionReceiptV1::KIND,
+            schema_major: DecisionReceiptV1::SCHEMA_MAJOR,
+            required_role: KeyRole::GateApplication,
+            assurance_profile: true,
+        }
+    }
+
     fn trust_with(k: &KeyId, sk: &SigningKey, role: KeyRole, class: KeyClass) -> TrustStore {
         let mut t = TrustStore::new();
         t.insert(record(k, sk, role, class)).unwrap();
         t
+    }
+
+    fn verify_receipt(
+        receipt: &DecisionReceiptV1,
+    ) -> Result<(DecisionReceiptV1, KeyId, Option<String>), CryptoError> {
+        let k = kid(7);
+        let sk = signer(7);
+        let trust = trust_with(&k, &sk, KeyRole::GateApplication, KeyClass::Assurance);
+        let envelope = sign_message(
+            receipt,
+            DecisionReceiptV1::KIND,
+            DecisionReceiptV1::SCHEMA_MAJOR,
+            &k,
+            &sk,
+        );
+        verify_and_decode(
+            &envelope,
+            &receipt_ctx(),
+            &trust,
+            &RevocationSnapshot::new(),
+            Limits::DEFAULT,
+        )
+    }
+
+    fn assert_receipt_semantic_rejected(receipt: &DecisionReceiptV1) {
+        assert_eq!(
+            verify_receipt(receipt).err(),
+            Some(CryptoError::Payload(DecodeError::SemanticInvalid {
+                code: DecisionReceiptV1::SEMANTIC_ERROR_CODE,
+            }))
+        );
     }
 
     #[test]
@@ -192,6 +283,93 @@ mod tests {
         assert_eq!(decoded, intent());
         assert_eq!(signer_kid, k);
         assert_eq!(subject, Some("survey-v1".to_owned()));
+    }
+
+    #[test]
+    fn signed_prepared_receipt_verifies_and_decodes() {
+        let original = receipt();
+        let (decoded, _, _) = verify_receipt(&original).unwrap();
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn signed_deny_and_error_receipts_verify_and_decode() {
+        for (decision, reason, stage) in [
+            (
+                DecisionOutcomeV1::Deny,
+                DecisionReasonCodeV1::DenyMalformed,
+                PublishStageV1::DecidedDeny,
+            ),
+            (
+                DecisionOutcomeV1::Error,
+                DecisionReasonCodeV1::ErrorInternalFault,
+                PublishStageV1::DecidedError,
+            ),
+        ] {
+            let mut original = receipt();
+            original.decision = decision;
+            original.reason_codes = BoundedVec::from_vec(vec![reason]).unwrap();
+            original.effective_validity_ms = None;
+            original.gate_output_stream = None;
+            original.output_frame_digest = None;
+            original.transformation_relation = None;
+            original.publish_stage = stage;
+
+            let (decoded, _, _) = verify_receipt(&original).unwrap();
+            assert_eq!(decoded, original);
+        }
+    }
+
+    #[test]
+    fn signed_receipt_rejects_later_publication_reason() {
+        let mut invalid = receipt();
+        invalid.reason_codes =
+            BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPublished]).unwrap();
+        assert_receipt_semantic_rejected(&invalid);
+    }
+
+    #[test]
+    fn signed_receipt_rejects_later_publication_stage() {
+        let mut invalid = receipt();
+        invalid.publish_stage = PublishStageV1::PublishReturnedOk;
+        assert_receipt_semantic_rejected(&invalid);
+    }
+
+    #[test]
+    fn signed_receipt_rejects_outcome_reason_mismatch() {
+        let mut invalid = receipt();
+        invalid.decision = DecisionOutcomeV1::Deny;
+        invalid.publish_stage = PublishStageV1::DecidedDeny;
+        invalid.effective_validity_ms = None;
+        invalid.gate_output_stream = None;
+        invalid.output_frame_digest = None;
+        invalid.transformation_relation = None;
+        assert_receipt_semantic_rejected(&invalid);
+    }
+
+    #[test]
+    fn signed_receipt_rejects_incomplete_output_binding() {
+        let mut invalid = receipt();
+        invalid.output_frame_digest = None;
+        assert_receipt_semantic_rejected(&invalid);
+    }
+
+    #[test]
+    fn signed_receipt_rejects_multiple_reasons() {
+        let mut invalid = receipt();
+        invalid.reason_codes = BoundedVec::from_vec(vec![
+            DecisionReasonCodeV1::AllowPrepared,
+            DecisionReasonCodeV1::AllowPolicy,
+        ])
+        .unwrap();
+        assert_receipt_semantic_rejected(&invalid);
+    }
+
+    #[test]
+    fn signed_receipt_rejects_time_regression() {
+        let mut invalid = receipt();
+        invalid.received_mono_ns = invalid.decided_mono_ns + 1;
+        assert_receipt_semantic_rejected(&invalid);
     }
 
     #[test]

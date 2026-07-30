@@ -211,7 +211,7 @@ fn receipt() -> DecisionReceiptV1 {
         state_snapshot_digest: Some(dig(14)),
         policy_snapshot_digest: dig(1),
         decision: DecisionOutcomeV1::Allow,
-        reason_codes: BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPublished]).unwrap(),
+        reason_codes: BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPrepared]).unwrap(),
         effective_validity_ms: Some(280),
         gate_output_stream: Some(NcpStreamPositionV1 {
             epoch: GateOutputEpoch::new(uuid(5)),
@@ -221,7 +221,7 @@ fn receipt() -> DecisionReceiptV1 {
         transformation_relation: Some(TransformationRelationV1::FixedPointToNcpFloatV1),
         received_mono_ns: 1000,
         decided_mono_ns: 1200,
-        publish_stage: PublishStageV1::PublishReturnedOk,
+        publish_stage: PublishStageV1::OutputPrepared,
     }
 }
 
