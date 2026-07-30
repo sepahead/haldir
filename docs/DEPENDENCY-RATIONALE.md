@@ -29,15 +29,32 @@ the full immutable commit in both manifest and lockfile.
 The Zenoh 1.9 TLS graph adds reviewed BSD-2-Clause, ISC, Zlib, MPL-2.0, and
 CDLA-Permissive-2.0 licenses; `deny.toml` remains default-deny and admits exactly
 the current reviewed lockfile set. It also names three exact transitive RustSec
-exceptions forced by Zenoh 1.9.0: `RUSTSEC-2026-0041` is in LZ4 block
-decompression compiled only by the disabled `transport_compression` feature,
-while `RUSTSEC-2024-0436` (`paste`) and `RUSTSEC-2025-0134`
-(`rustls-pemfile`) are maintenance notices rather than reported vulnerabilities.
-The exceptions must be removed when the pinned Zenoh baseline permits fixed
-transitives; `cargo deny --all-features check` still rejects every new advisory.
-`tools/verify-pins.py` also inspects the resolved all-feature Cargo graph so a
-second dependency cannot silently feature-unify Zenoh compression or another
-transport back on while the LZ4 exception exists.
+exceptions forced by Zenoh 1.9.0.
+
+Zenoh 1.9.0 unconditionally depends on affected `lz4_flex` 0.10.0, so
+`RUSTSEC-2026-0041` and the corresponding GitHub alert are valid and must remain
+open. The default Haldir graph does not include Zenoh. The all-feature live
+client graph compiles `lz4_flex`, but compiles out Zenoh's sole affected
+block-decompression call site because `transport_compression` is absent.
+`tools/verify-pins.py` inspects the resolved all-feature graph and rejects any
+compression feature or non-TLS Zenoh transport, preventing another dependency
+from silently making that network-fed path reachable. Enabling compression is
+forbidden until a reviewed Zenoh baseline selects a fixed LZ4 implementation.
+The exception is a temporary, scoped risk acceptance, not a false positive.
+
+The pinned stock router image is a separate boundary: upstream `zenohd` defaults
+include `transport_compression`, and no image build-feature attestation proves
+that the pinned image excludes it. Treat its affected decoder as likely compiled
+in but dormant. The retained effective configuration disables unicast and
+multicast compression, making the path unreachable under that exact profile,
+but configuration is not source-level remediation. A future trust-root
+replacement must explicitly render and verify both flags as false instead of
+relying on Zenoh 1.9 defaults.
+
+`RUSTSEC-2024-0436` (`paste`) and `RUSTSEC-2025-0134` (`rustls-pemfile`) are
+maintenance notices rather than reported vulnerabilities. The exceptions must
+be removed when the pinned Zenoh baseline permits fixed transitives;
+`cargo deny --all-features check` still rejects every new advisory.
 
 ## Supply-chain tooling boundary
 
