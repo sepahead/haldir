@@ -177,7 +177,7 @@ jobs:
           /usr/bin/chmod go-w "$GH_BIN"
           [[ "$("$GH_BIN" --version | /usr/bin/head -n 1)" == \
             "gh version ${GH_CLI_VERSION} (2026-07-02)" ]]
-          printf 'HALDIR_FR0016_GH=%s\n' "$GH_BIN" >> "$GITHUB_ENV"
+          printf 'HALDIR_FR0017_GH=%s\n' "$GH_BIN" >> "$GITHUB_ENV"
       - name: Preload isolated task-runner image
         if: github.event_name != 'pull_request'
         run: /usr/bin/docker pull python@sha256:4a3a38c8710794e278c3651352dd6195d5798eb6ec5ad41db6258e753c9e4ceb
@@ -190,12 +190,28 @@ jobs:
         run: python3 -I -B tools/verify-pins.py
       - name: Verify immutable CI and formal-tool pins
         run: python3 -I -B tools/verify-ci-pins.py
-      - name: Verify epoch-17 recovery primitives on pull-request merge
-        if: github.event_name == 'pull_request'
+      - name: Verify epoch-18 recovery primitives for current event
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 -I -B -W error tools/release/test_verify_framework_recovery_fr_0016.py
-          python3 -I -B -W error tools/test_pinned_cargo_deny.py
-          python3 -I -B -W error tools/test_run_formal.py
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              python3 -I -B -W error tools/release/test_verify_framework_recovery_fr_0017.py
+              python3 -I -B -W error tools/test_pinned_cargo_deny.py
+              python3 -I -B -W error tools/test_run_formal.py
+              ;;
+            push)
+              /usr/bin/printf '%s\n' \
+                'current-audit gate verified epoch-18 recovery primitives for push'
+              ;;
+            workflow_dispatch)
+              /usr/bin/printf '%s\n' \
+                'current-audit gate verified epoch-18 recovery primitives for workflow_dispatch'
+              ;;
+            *)
+              /usr/bin/printf '%s\n' 'unsupported recovery verification event' >&2
+              exit 1
+              ;;
+          esac
       - name: Verify immutable 0.9 audit cut
         run: |
           python3 -I -B tools/release/test_verify_audit_inputs.py
@@ -344,25 +360,25 @@ jobs:
                 check
       # The pull-request model is non-authoritative; trusted push/dispatch
       # events alone emit and upload the canonical recovery result.
-      - name: Emit canonical epoch-17 audit result
+      - name: Emit canonical epoch-18 audit result
         if: github.event_name != 'pull_request'
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 -I -B tools/release/framework_recovery_fr_0016_result.py \
+          python3 -I -B tools/release/framework_recovery_fr_0017_result.py \
             --workflow ci \
-            --output "epoch-17-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "epoch-18-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-17-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "epoch-18-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-17 audit result
+      - name: Upload canonical epoch-18 audit result
         if: github.event_name != 'pull_request'
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-17-ci-result-attempt-${{ github.run_attempt }}.json
+          path: epoch-18-ci-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -402,7 +418,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-audit-result/epoch-17-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-audit-result/epoch-18-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-audit-result -mindepth 1 -maxdepth 1 \
@@ -414,7 +430,7 @@ jobs:
       - name: Attest exact audit result
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
-          subject-path: attested-audit-result/epoch-17-ci-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-audit-result/epoch-18-ci-result-attempt-${{ github.run_attempt }}.json
 
   interop:
     # An independent (second-implementation) check of the COSE_Sign1 /

@@ -655,13 +655,13 @@ class WorkflowPinContractTests(unittest.TestCase):
             [],
         )
 
-    def test_github_cli_environment_interface_is_epoch_17(self) -> None:
-        canonical = "HALDIR_FR0016_GH"
+    def test_github_cli_environment_interface_is_epoch_18(self) -> None:
+        canonical = "HALDIR_FR0017_GH"
         mutations = (
-            self.ci.replace(canonical, "HALDIR_FR0015_GH", 1),
+            self.ci.replace(canonical, "HALDIR_FR9999_GH", 1),
             self.ci.replace(
                 f"          printf '{canonical}=%s\\n'",
-                "          printf 'HALDIR_FR0015_GH=%s\\n' \"$GH_BIN\""
+                "          printf 'HALDIR_FR9999_GH=%s\\n' \"$GH_BIN\""
                 ' >> "$GITHUB_ENV"\n'
                 f"          printf '{canonical}=%s\\n'",
                 1,
@@ -681,43 +681,275 @@ class WorkflowPinContractTests(unittest.TestCase):
                     problems,
                 )
 
-    def test_pr_recovery_step_has_exact_hermetic_commands(self) -> None:
+    def test_recovery_dispatcher_is_exact_and_event_closed(self) -> None:
+        self.assertEqual(
+            (
+                CI_POLICY.RECOVERY_DISPATCH_STEP_STATUS,
+                CI_POLICY.RECOVERY_DISPATCH_STEP_CONCLUSION,
+                CI_POLICY.RECOVERY_DISPATCH_STEP_CARDINALITY,
+            ),
+            ("completed", "success", 1),
+        )
+        supply_chain = CI_POLICY._job_block(
+            self.ci,
+            "supply-chain",
+            label="ci",
+        )
+        dispatcher = CI_POLICY._step_block(
+            supply_chain,
+            CI_POLICY.RECOVERY_DISPATCH_STEP_NAME,
+            label="ci:supply-chain",
+        )
+
+        def mutate(old: str, new: str) -> str:
+            self.assertEqual(dispatcher.count(old), 1, old)
+            changed = dispatcher.replace(old, new, 1)
+            self.assertNotEqual(changed, dispatcher)
+            return self.ci.replace(dispatcher, changed, 1)
+
         mutations = (
-            self.ci.replace(
+            mutate(
+                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
+                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n"
                 "        if: github.event_name == 'pull_request'\n",
-                "        if: github.event_name != 'pull_request'\n",
-                1,
             ),
-            self.ci.replace(
-                "python3 -I -B -W error "
-                "tools/release/test_verify_framework_recovery_fr_0016.py",
-                "python3 -I -B tools/release/test_verify_framework_recovery_fr_0016.py",
-                1,
+            mutate(
+                f"        shell: {CI_POLICY.RECOVERY_DISPATCH_SHELL}\n",
+                "        shell: /bin/bash --noprofile --norc -eu {0}\n",
             ),
-            self.ci.replace(
-                "          python3 -I -B -W error tools/test_pinned_cargo_deny.py\n",
+            mutate(
+                '          case "$GITHUB_EVENT_NAME" in\n',
+                '          case "$GITHUB_EVENT" in\n',
+            ),
+            mutate(
+                CI_POLICY.PR_RECOVERY_COMMANDS[0],
+                CI_POLICY.PR_RECOVERY_COMMANDS[0].replace("-W error ", ""),
+            ),
+            mutate(
+                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[1]}\n",
                 "",
-                1,
             ),
-            self.ci.replace(
-                "          python3 -I -B -W error tools/test_run_formal.py\n",
+            mutate(
+                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[2]}\n",
                 "",
+            ),
+            mutate(
+                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[2]}\n",
+                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[2]}\n"
+                "              python3 -I -B tools/verify-ci-pins.py\n",
+            ),
+            mutate(
+                "            pull_request)\n",
+                "            pull_request|push)\n",
+            ),
+            mutate(
+                "            push)\n",
+                "            push|schedule)\n",
+            ),
+            mutate(
+                "            workflow_dispatch)\n",
+                "            workflow_dispatch|schedule)\n",
+            ),
+            mutate(
+                f"'{CI_POLICY.RECOVERY_DISPATCH_PUSH_MESSAGE}'\n",
+                "'unverified push'\n",
+            ),
+            mutate(
+                f"'{CI_POLICY.RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE}'\n",
+                "'unverified workflow dispatch'\n",
+            ),
+            mutate(
+                "            *)\n"
+                "              /usr/bin/printf '%s\\n' "
+                f"'{CI_POLICY.RECOVERY_DISPATCH_DIAGNOSTIC}' >&2\n",
+                "            schedule)\n"
+                "              /usr/bin/printf '%s\\n' "
+                f"'{CI_POLICY.RECOVERY_DISPATCH_DIAGNOSTIC}' >&2\n",
+            ),
+            mutate(
+                "              exit 1\n"
+                "              ;;\n"
+                "          esac\n",
+                "              exit 0\n"
+                "              ;;\n"
+                "          esac\n",
+            ),
+            mutate(
+                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
+                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n"
+                "        continue-on-error: true\n",
+            ),
+            mutate(
+                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
+                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n"
+                "        env:\n"
+                "          GITHUB_EVENT_NAME: pull_request\n",
+            ),
+            self.ci.replace(
+                "  supply-chain:\n",
+                "  supply-chain:\n"
+                "    env:\n"
+                "      GITHUB_EVENT_NAME: push\n",
                 1,
             ),
             self.ci.replace(
-                "          python3 -I -B -W error tools/test_run_formal.py\n",
-                "          python3 -I -B -W error tools/test_run_formal.py\n"
-                "          python3 -I -B tools/verify-ci-pins.py\n",
+                "permissions:\n  contents: read\n",
+                "env:\n"
+                "  GITHUB_EVENT_NAME: workflow_dispatch\n\n"
+                "permissions:\n"
+                "  contents: read\n",
                 1,
+            ),
+            self.ci.replace(dispatcher, dispatcher + dispatcher, 1),
+            mutate(
+                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
+                "      - name: Unreviewed recovery dispatcher\n",
             ),
         )
         for index, mutation in enumerate(mutations):
             with self.subTest(mutation=index):
+                self.assertNotEqual(mutation, self.ci)
                 problems = CI_POLICY.verify_pr_recovery_step(
                     mutation,
                     label="ci",
                 )
                 self.assertTrue(problems)
+
+    def test_recovery_dispatcher_observes_trusted_and_unknown_events(self) -> None:
+        supply_chain = CI_POLICY._job_block(
+            self.ci,
+            "supply-chain",
+            label="ci",
+        )
+        dispatcher = CI_POLICY._step_block(
+            supply_chain,
+            CI_POLICY.RECOVERY_DISPATCH_STEP_NAME,
+            label="ci:supply-chain",
+        )
+        _prefix, separator, body = dispatcher.partition("        run: |\n")
+        self.assertTrue(separator)
+        lines = body.splitlines(keepends=True)
+        self.assertTrue(lines)
+        self.assertTrue(all(line.startswith("          ") for line in lines))
+        script = "".join(line[10:] for line in lines)
+
+        with tempfile.TemporaryDirectory(
+            prefix="haldir-recovery-dispatch-",
+        ) as directory:
+            temporary = Path(directory)
+            argv_log = temporary / "argv.log"
+            python_stub = temporary / "python3"
+            python_stub.write_text(
+                "#!/bin/sh\n"
+                "set -eu\n"
+                ': "${HALDIR_DISPATCH_ARGV_LOG:?}"\n'
+                "/usr/bin/printf '%s:%s\\n' \"$#\" \"$*\" "
+                '>> "$HALDIR_DISPATCH_ARGV_LOG"\n',
+                encoding="utf-8",
+            )
+            python_stub.chmod(0o700)
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "--noprofile",
+                    "--norc",
+                    "-euo",
+                    "pipefail",
+                    "-c",
+                    script,
+                ),
+                cwd=ROOT,
+                env={
+                    "GITHUB_EVENT_NAME": "pull_request",
+                    "HALDIR_DISPATCH_ARGV_LOG": str(argv_log),
+                    "LC_ALL": "C",
+                    "PATH": f"{temporary}:/usr/bin:/bin",
+                },
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(completed.stdout, "")
+            self.assertEqual(completed.stderr, "")
+            recorded_argv = argv_log.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            recorded_argv,
+            [
+                "5:" + command.removeprefix("python3 ")
+                for command in CI_POLICY.PR_RECOVERY_COMMANDS
+            ],
+        )
+
+        expected = {
+            "push": CI_POLICY.RECOVERY_DISPATCH_PUSH_MESSAGE,
+            "workflow_dispatch": (
+                CI_POLICY.RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE
+            ),
+        }
+        for event, message in expected.items():
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "--noprofile",
+                    "--norc",
+                    "-euo",
+                    "pipefail",
+                    "-c",
+                    script,
+                ),
+                cwd=ROOT,
+                env={
+                    "GITHUB_EVENT_NAME": event,
+                    "LC_ALL": "C",
+                    "PATH": "/usr/bin:/bin",
+                },
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            with self.subTest(event=event):
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(completed.stdout, message + "\n")
+                self.assertEqual(completed.stderr, "")
+
+        for event in ("schedule", "", None):
+            environment = {
+                "LC_ALL": "C",
+                "PATH": "/usr/bin:/bin",
+            }
+            if event is not None:
+                environment["GITHUB_EVENT_NAME"] = event
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "--noprofile",
+                    "--norc",
+                    "-euo",
+                    "pipefail",
+                    "-c",
+                    script,
+                ),
+                cwd=ROOT,
+                env=environment,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            with self.subTest(event=event):
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertEqual(completed.stdout, "")
+                if event is not None:
+                    self.assertEqual(
+                        completed.stderr,
+                        CI_POLICY.RECOVERY_DISPATCH_DIAGNOSTIC + "\n",
+                    )
 
     def test_workflow_python_entrypoints_require_exact_isolation(self) -> None:
         mutations = (
@@ -830,23 +1062,26 @@ class WorkflowPinContractTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("verify-secure-zenoh: OK", completed.stdout)
 
-    def test_ci_result_identity_is_epoch_17_and_fr_0016(self) -> None:
-        mutation = self.ci.replace(
-            "framework_recovery_fr_0016_result.py",
-            "framework_recovery_fr_0015_result.py",
-            1,
-        )
-        problems = CI_POLICY.verify_supply_chain_job(
-            mutation,
-            label="ci",
-        )
-        self.assertTrue(
-            any(
-                "framework_recovery_fr_0016_result.py" in problem
-                for problem in problems
+    def test_ci_result_identity_is_epoch_18_and_fr_0017(self) -> None:
+        mutations = (
+            self.ci.replace(
+                "framework_recovery_fr_0017_result.py",
+                "framework_recovery_fr_9999_result.py",
+                1,
             ),
-            problems,
+            self.ci.replace(
+                "epoch-18-ci-result-attempt-",
+                "epoch-99-ci-result-attempt-",
+                1,
+            ),
         )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index):
+                problems = CI_POLICY.verify_supply_chain_job(
+                    mutation,
+                    label="ci",
+                )
+                self.assertTrue(problems)
 
     def test_main_runs_cannot_be_cancelled_or_coalesced(self) -> None:
         mutations = (
@@ -1119,14 +1354,14 @@ class WorkflowPinContractTests(unittest.TestCase):
         )
         canonical = CI_POLICY._step_block(
             job,
-            "Upload canonical epoch-17 formal result",
+            "Upload canonical epoch-18 formal result",
             label="formal:tlc-model-check",
         )
         self.assertIn("        if: always()\n", diagnostic)
         self.assertNotIn("github.event_name != 'pull_request'", diagnostic)
         self.assertTrue(
             canonical.startswith(
-                "      - name: Upload canonical epoch-17 formal result\n"
+                "      - name: Upload canonical epoch-18 formal result\n"
                 "        if: github.event_name != 'pull_request'\n"
             )
         )

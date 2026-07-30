@@ -325,25 +325,25 @@ jobs:
             tlc.log
       # Pull requests execute TLC and retain its diagnostic log, but only
       # trusted push/dispatch events emit and upload the canonical result.
-      - name: Emit canonical epoch-17 formal result
+      - name: Emit canonical epoch-18 formal result
         if: github.event_name != 'pull_request'
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 -I -B tools/release/framework_recovery_fr_0016_result.py \
+          python3 -I -B tools/release/framework_recovery_fr_0017_result.py \
             --workflow formal \
-            --output "epoch-17-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "epoch-18-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-17-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "epoch-18-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-17 formal result
+      - name: Upload canonical epoch-18 formal result
         if: github.event_name != 'pull_request'
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-17-formal-result-attempt-${{ github.run_attempt }}.json
+          path: epoch-18-formal-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -383,7 +383,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-formal-result/epoch-17-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-formal-result/epoch-18-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-formal-result -mindepth 1 -maxdepth 1 \
@@ -395,4 +395,4 @@ jobs:
       - name: Attest exact formal result
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
-          subject-path: attested-formal-result/epoch-17-formal-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-formal-result/epoch-18-formal-result-attempt-${{ github.run_attempt }}.json

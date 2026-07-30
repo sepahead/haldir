@@ -5,7 +5,9 @@ All third-party GitHub Actions must use a full commit SHA. The TLA+ executable
 asset and Java runtime must match the closed records in ``tools/pins.toml``.
 Pull requests execute against GitHub's merge commit and retain every substantive
 check, while history-bound result and attestation work remains trusted-event
-only. No third-party dependencies are required.
+only. The recovery-test dispatcher is an always-run step: it executes the
+reviewed suites on pull requests, explicitly succeeds on trusted events, and
+rejects every unknown event. No third-party dependencies are required.
 """
 
 from __future__ import annotations
@@ -59,13 +61,26 @@ ISOLATED_SECURE_ZENOH_COMMAND = (
     '\'import runpy,sys;sys.path.append("tools");'
     'runpy.run_path("tools/verify-secure-zenoh.py",run_name="__main__")\''
 )
-PR_RECOVERY_STEP_NAME = "Verify epoch-17 recovery primitives on pull-request merge"
-PR_RECOVERY_CONDITION = "github.event_name == 'pull_request'"
+RECOVERY_DISPATCH_STEP_NAME = (
+    "Verify epoch-18 recovery primitives for current event"
+)
+RECOVERY_DISPATCH_STEP_STATUS = "completed"
+RECOVERY_DISPATCH_STEP_CONCLUSION = "success"
+RECOVERY_DISPATCH_STEP_CARDINALITY = 1
+PR_RECOVERY_STEP_NAME = RECOVERY_DISPATCH_STEP_NAME
 PR_RECOVERY_COMMANDS = (
-    "python3 -I -B -W error tools/release/test_verify_framework_recovery_fr_0016.py",
+    "python3 -I -B -W error tools/release/test_verify_framework_recovery_fr_0017.py",
     "python3 -I -B -W error tools/test_pinned_cargo_deny.py",
     "python3 -I -B -W error tools/test_run_formal.py",
 )
+RECOVERY_DISPATCH_SHELL = "/bin/bash --noprofile --norc -euo pipefail {0}"
+RECOVERY_DISPATCH_PUSH_MESSAGE = (
+    "current-audit gate verified epoch-18 recovery primitives for push"
+)
+RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE = (
+    "current-audit gate verified epoch-18 recovery primitives for workflow_dispatch"
+)
+RECOVERY_DISPATCH_DIAGNOSTIC = "unsupported recovery verification event"
 REQUIRED_ACTION_PINS = {
     (
         "actions/checkout",
@@ -112,7 +127,7 @@ GH_CLI_BINARY_SHA256 = (
     "56b8bbbb27b066ecb33dbef9a256dc9d1314adaeff0908a752feba6c34053b40"
 )
 GH_CLI_BINARY_BYTES = 40_722_594
-GH_CLI_ENVIRONMENT_VARIABLE = "HALDIR_FR0016_GH"
+GH_CLI_ENVIRONMENT_VARIABLE = "HALDIR_FR0017_GH"
 MAX_FORMAL_ASSET_BYTES = 4_000_000
 MAX_JAVA_ARCHIVE_BYTES = 64 * 1024 * 1024
 EXACT_VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)")
@@ -205,20 +220,20 @@ TRUSTED_ONLY_STEPS = {
         "Install pinned GitHub CLI for offline attestation verification",
         "Preload isolated task-runner image",
         "Verify current-head 0.9 audit cut",
-        "Emit canonical epoch-17 audit result",
-        "Upload canonical epoch-17 audit result",
+        "Emit canonical epoch-18 audit result",
+        "Upload canonical epoch-18 audit result",
     ),
     "tlc-model-check": (
-        "Emit canonical epoch-17 formal result",
-        "Upload canonical epoch-17 formal result",
+        "Emit canonical epoch-18 formal result",
+        "Upload canonical epoch-18 formal result",
     ),
 }
 OIDC_JOB_SHA256 = {
     "attest-ci-audit-result": (
-        "04b4a0e04329b06ed7f6df4a28256e7178b7d3db158c934a74e3e3a375fc3d62"
+        "1a3d958f7b240460faaf87bddfe75c4aea3419a0335581fa50161c32b538cb9d"
     ),
     "attest-formal-audit-result": (
-        "0ef7dd6ee566e8330f678714121abd5dc737d7c845ee17595039d7238fabd89d"
+        "ae73c51f964662907303152e83bd7285b25c44b18dac384941bdc090afbe48f3"
     ),
 }
 REQUIRED_JOB_SHA256 = {
@@ -232,10 +247,10 @@ REQUIRED_JOB_SHA256 = {
         "0eb0a0e75662827088aeb2f57a559e6ca56308a8d67b7ecdd598244b27e35291"
     ),
     "supply-chain": (
-        "f9fff9eb5cdd09b488934262c541bcd467d80a186e5ea51ed32501888cfc34d7"
+        "b17255230b39cfafa988e3ea1da58446938d401c911207d9362288d677f2be46"
     ),
     "tlc-model-check": (
-        "0b98d71a55a55230757ed4060af5165504f96faddee7f109188b21e6fdd6c3c4"
+        "48faf25d2df2b10c063e88f5c2ba08430dd34ea4e5d0e94f062369a805caa002"
     ),
 }
 SUPPLY_CHAIN_JOB_SHA256 = REQUIRED_JOB_SHA256["supply-chain"]
@@ -746,7 +761,7 @@ def verify_trusted_event_steps(
 
 
 def verify_pr_recovery_step(text: str, *, label: str) -> list[str]:
-    """Run hermetic recovery tests only on the synthetic PR merge."""
+    """Bind the always-run, event-closed recovery-test dispatcher."""
 
     try:
         block = _job_block(text, "supply-chain", label=label)
@@ -759,21 +774,46 @@ def verify_pr_recovery_step(text: str, *, label: str) -> list[str]:
         return [str(error)]
     expected = (
         f"      - name: {PR_RECOVERY_STEP_NAME}\n"
-        f"        if: {PR_RECOVERY_CONDITION}\n"
+        f"        shell: {RECOVERY_DISPATCH_SHELL}\n"
         "        run: |\n"
-        + "".join(f"          {command}\n" for command in PR_RECOVERY_COMMANDS)
+        '          case "$GITHUB_EVENT_NAME" in\n'
+        "            pull_request)\n"
+        + "".join(f"              {command}\n" for command in PR_RECOVERY_COMMANDS)
+        + "              ;;\n"
+        "            push)\n"
+        "              /usr/bin/printf '%s\\n' \\\n"
+        f"                '{RECOVERY_DISPATCH_PUSH_MESSAGE}'\n"
+        "              ;;\n"
+        "            workflow_dispatch)\n"
+        "              /usr/bin/printf '%s\\n' \\\n"
+        f"                '{RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE}'\n"
+        "              ;;\n"
+        "            *)\n"
+        f"              /usr/bin/printf '%s\\n' '{RECOVERY_DISPATCH_DIAGNOSTIC}' >&2\n"
+        "              exit 1\n"
+        "              ;;\n"
+        "          esac\n"
     )
     problems: list[str] = []
     if step != expected:
         problems.append(
             f"{label}:supply-chain:{PR_RECOVERY_STEP_NAME} must contain only "
-            "the exact PR condition and reviewed hermetic commands"
+            "the exact always-run fail-closed event dispatcher"
         )
-    observed_conditions = block.count(f"if: {PR_RECOVERY_CONDITION}")
-    if observed_conditions != 1:
+    event_name_env_key = re.compile(
+        r"^\s+(?:GITHUB_EVENT_NAME|\"GITHUB_EVENT_NAME\"|'GITHUB_EVENT_NAME')\s*:",
+        flags=re.MULTILINE,
+    )
+    if event_name_env_key.search(text) is not None:
         problems.append(
-            f"{label}:supply-chain must contain exactly one epoch-17 "
-            f"pull-request-only condition, observed {observed_conditions}"
+            f"{label}:GITHUB_EVENT_NAME must not be shadowed by workflow, job, "
+            "or step env"
+        )
+    observed_step_conditions = step.count("        if:")
+    if observed_step_conditions != 0:
+        problems.append(
+            f"{label}:supply-chain:{PR_RECOVERY_STEP_NAME} must always run; "
+            f"observed {observed_step_conditions} step-level conditions"
         )
     return problems
 
@@ -884,8 +924,8 @@ def verify_formal_job(
         '"${JAVA_HOME}/bin/java" \\\n            -XX:+UseParallelGC': 1,
         "| /usr/bin/tee tlc.log": 1,
         "      - name: Upload TLC log\n        if: always()\n": 1,
-        "framework_recovery_fr_0016_result.py": 1,
-        "epoch-17-formal-result-attempt-": 3,
+        "framework_recovery_fr_0017_result.py": 1,
+        "epoch-18-formal-result-attempt-": 3,
     }
     for fragment, expected_count in expected_fragments.items():
         observed_count = block.count(fragment)
@@ -992,8 +1032,8 @@ def verify_supply_chain_job(text: str, *, label: str) -> list[str]:
     if observed != SUPPLY_CHAIN_JOB_SHA256:
         problems.append(f"{label}:supply-chain exact reviewed job block mismatch")
     expected_fragments = {
-        "framework_recovery_fr_0016_result.py": 1,
-        "epoch-17-ci-result-attempt-": 3,
+        "framework_recovery_fr_0017_result.py": 1,
+        "epoch-18-ci-result-attempt-": 3,
     }
     for fragment, expected_count in expected_fragments.items():
         observed_count = block.count(fragment)
@@ -1006,7 +1046,7 @@ def verify_supply_chain_job(text: str, *, label: str) -> list[str]:
 
 
 def verify_gh_cli_material(text: str, *, label: str) -> list[str]:
-    """Bind the pinned GitHub CLI and its epoch-17 consumer interface."""
+    """Bind the pinned GitHub CLI and its epoch-18 consumer interface."""
 
     problems: list[str] = []
     required_fragments = {

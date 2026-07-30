@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Epoch-17 current-head gate. The signed FR-0015 active boundary and all
+# Epoch-18 current-head gate. The signed FR-0016 repair boundary and all
 # earlier recovery boundaries are frozen; none of their Python verifiers
 # execute on successors.
 set -euo pipefail
@@ -93,13 +93,13 @@ export PATH="${PYTHON3%/*}:${CARGO%/*}:/usr/bin:/bin"
 }
 
 "$PYTHON3" -I -B -W error \
-  tools/release/test_verify_framework_recovery_fr_0016.py
+  tools/release/test_verify_framework_recovery_fr_0017.py
 "$PYTHON3" -I -B -W error tools/test_pinned_cargo_deny.py
 "$PYTHON3" -I -B -W error tools/test_run_formal.py
 "$PYTHON3" -I -B -W error tools/verify-pins.py
 "$PYTHON3" -I -B -W error tools/verify-ci-pins.py
 "$PYTHON3" -I -B -W error \
-  tools/release/verify-framework-recovery-fr-0016.py
+  tools/release/verify-framework-recovery-fr-0017.py
 
 parent_count="$("$GIT" show -s --format=%P HEAD | /usr/bin/wc -w)"
 [[ "$parent_count" -eq 1 ]] || {
@@ -109,4 +109,4 @@ parent_count="$("$GIT" show -s --format=%P HEAD | /usr/bin/wc -w)"
 "$GIT" -c core.hooksPath=/dev/null diff --check HEAD^ HEAD
 
 printf '%s\n' \
-  'current-audit-gate: OK (epoch 17; signed linear scope; release NO_GO)'
+  'current-audit-gate: OK (epoch 18; signed linear scope; release NO_GO)'
