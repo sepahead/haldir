@@ -8,12 +8,37 @@
 use haldir_contracts::ids::{GateOutputEpoch, OutputSeq};
 use std::num::NonZeroU64;
 
-/// An output-stream allocation failure.
+/// An output-stream allocation or epoch-rotation failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum OutputStreamError {
-    /// The sequence space is exhausted (would overflow `u64`).
+    /// The sequence space or bounded retired-epoch capacity is exhausted.
     Exhausted,
+    /// The requested epoch is already the active epoch.
+    EpochAlreadyActive,
+    /// The requested epoch has been retired and cannot be reactivated.
+    RetiredEpoch,
 }
+
+impl OutputStreamError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Exhausted => "OUTPUT_STREAM_EXHAUSTED",
+            Self::EpochAlreadyActive => "OUTPUT_STREAM_EPOCH_ALREADY_ACTIVE",
+            Self::RetiredEpoch => "OUTPUT_STREAM_RETIRED_EPOCH",
+        }
+    }
+}
+
+impl std::fmt::Display for OutputStreamError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl std::error::Error for OutputStreamError {}
 
 /// Gate-owned output stream position allocator.
 #[derive(Debug, Clone)]
@@ -65,8 +90,17 @@ impl GateOutputStreamState {
     /// one and restarting the sequence at one. A retired epoch is never revived.
     ///
     /// # Errors
-    /// Returns [`OutputStreamError::Exhausted`] if the retired-epoch set is full.
+    /// Returns [`OutputStreamError::EpochAlreadyActive`] if `new_epoch` is
+    /// already active, [`OutputStreamError::RetiredEpoch`] if it was previously
+    /// retired, or [`OutputStreamError::Exhausted`] if the retired-epoch set is
+    /// full.
     pub fn rotate_epoch(&mut self, new_epoch: GateOutputEpoch) -> Result<(), OutputStreamError> {
+        if new_epoch == self.epoch {
+            return Err(OutputStreamError::EpochAlreadyActive);
+        }
+        if self.retired_epochs.contains(&new_epoch) {
+            return Err(OutputStreamError::RetiredEpoch);
+        }
         if self.retired_epochs.len() >= self.max_retired {
             return Err(OutputStreamError::Exhausted);
         }
@@ -92,6 +126,23 @@ mod tests {
         GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([n; 16]))
     }
 
+    fn assert_state_unchanged(state: &GateOutputStreamState, before: &GateOutputStreamState) {
+        assert_eq!(
+            (
+                state.epoch,
+                state.next_seq,
+                state.retired_epochs.as_slice(),
+                state.max_retired,
+            ),
+            (
+                before.epoch,
+                before.next_seq,
+                before.retired_epochs.as_slice(),
+                before.max_retired,
+            )
+        );
+    }
+
     #[test]
     fn allocates_strictly_increasing_from_one_and_never_reuses() {
         let mut s = GateOutputStreamState::new(epoch(1), 8);
@@ -114,5 +165,55 @@ mod tests {
         assert!(s.is_retired(&old));
         assert_eq!(s.allocate().unwrap().get(), 1, "sequence restarts at one");
         assert_ne!(s.current_epoch(), old);
+    }
+
+    #[test]
+    fn rotate_rejects_active_epoch_without_mutating_stream_position() {
+        let active = epoch(1);
+        let mut s = GateOutputStreamState::new(active, 8);
+        let _ = s.allocate().unwrap();
+        let before = s.clone();
+
+        assert_eq!(
+            s.rotate_epoch(active),
+            Err(OutputStreamError::EpochAlreadyActive)
+        );
+        assert_state_unchanged(&s, &before);
+    }
+
+    #[test]
+    fn rotate_rejects_retired_epoch_without_reactivating_or_reusing_position() {
+        let retired = epoch(1);
+        let active = epoch(2);
+        let mut s = GateOutputStreamState::new(retired, 1);
+        s.rotate_epoch(active).unwrap();
+        let _ = s.allocate().unwrap();
+        let before = s.clone();
+
+        assert_eq!(
+            s.rotate_epoch(retired),
+            Err(OutputStreamError::RetiredEpoch)
+        );
+        assert_state_unchanged(&s, &before);
+        assert_eq!(s.allocate().unwrap().get(), 2);
+    }
+
+    #[test]
+    fn output_stream_errors_have_stable_codes_and_standard_error_display() {
+        for (error, expected) in [
+            (OutputStreamError::Exhausted, "OUTPUT_STREAM_EXHAUSTED"),
+            (
+                OutputStreamError::EpochAlreadyActive,
+                "OUTPUT_STREAM_EPOCH_ALREADY_ACTIVE",
+            ),
+            (
+                OutputStreamError::RetiredEpoch,
+                "OUTPUT_STREAM_RETIRED_EPOCH",
+            ),
+        ] {
+            assert_eq!(error.as_str(), expected);
+            assert_eq!(error.to_string(), expected);
+            let _: &dyn std::error::Error = &error;
+        }
     }
 }
