@@ -67,14 +67,18 @@ class AuthorityModelVerificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "authority-model.json"
             path.write_bytes(b"{" + b" " * VERIFY.MAX_MODEL_BYTES + b"}")
-            with self.assertRaisesRegex(VERIFY.AuthorityModelError, "AUTHORITY_RESOURCE_BOUND"):
+            with self.assertRaisesRegex(
+                VERIFY.AuthorityModelError, "AUTHORITY_RESOURCE_BOUND"
+            ):
                 VERIFY.verify(path, self.repo)
 
     def test_malformed_model_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "authority-model.json"
             path.write_bytes(b'{"schema_version":')
-            with self.assertRaisesRegex(VERIFY.AuthorityModelError, "AUTHORITY_JSON_INVALID"):
+            with self.assertRaisesRegex(
+                VERIFY.AuthorityModelError, "AUTHORITY_JSON_INVALID"
+            ):
                 VERIFY.verify(path, self.repo)
 
     def test_regression_hold_cannot_be_added_to_decision_outcomes(self) -> None:
@@ -91,7 +95,9 @@ class AuthorityModelVerificationTests(unittest.TestCase):
     def test_negative_missing_non_gate_denial_is_rejected(self) -> None:
         result = copy.deepcopy(self.result)
         missing = "final-denied-observer"
-        result["attempts"] = [item for item in result["attempts"] if item["case_id"] != missing]
+        result["attempts"] = [
+            item for item in result["attempts"] if item["case_id"] != missing
+        ]
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_json(result, directory, "result.json")
             with self.assertRaisesRegex(
@@ -128,6 +134,35 @@ class AuthorityModelVerificationTests(unittest.TestCase):
                 "AUTHORITY_DOCUMENT_DIGEST_MISMATCH",
             ):
                 VERIFY.verify(path, self.repo)
+
+    def test_regression_gate_pipeline_requires_retained_validated_policy(self) -> None:
+        actor_path = self.repo / "crates/haldir-gate/src/actor.rs"
+        actor_source = actor_path.read_text(encoding="utf-8")
+        mutations = (
+            (
+                "decide_validated(&PolicyInput",
+                "decide(&PolicyInput",
+            ),
+            (
+                "policy: &self.policy",
+                "policy: &untrusted_policy",
+            ),
+        )
+        pipeline_start = actor_source.index("fn decide_intent_inner")
+        for original, replacement in mutations:
+            with self.subTest(removed_contract=original):
+                contract_start = actor_source.index(original, pipeline_start)
+                contract_end = contract_start + len(original)
+                mutated = (
+                    actor_source[:contract_start]
+                    + replacement
+                    + actor_source[contract_end:]
+                )
+                with self.assertRaisesRegex(
+                    VERIFY.AuthorityModelError,
+                    "AUTHORITY_RUST_GATE_PIPELINE_DRIFT",
+                ):
+                    VERIFY._verify_gate_pipeline_source(mutated)
 
 
 if __name__ == "__main__":

@@ -76,6 +76,19 @@ EXPECTED_LENSES = {
     "documentation_and_operator_usability",
     "ecosystem_composition_and_governance",
 }
+GATE_PIPELINE_ORDERED_MARKERS = (
+    "let decision = decide_validated(&PolicyInput",
+    "policy: &self.policy",
+    "let effective_validity_ms = match decision.effective_validity_ms()",
+    "if self.revision.get() != captured_rev",
+    "if !self.publication.authorizes_acl_only_publication()",
+    "let out_seq = match self.output_stream.allocate()",
+    "let build_input = GateCommandBuildInputV1",
+    "action: intent.action",
+    "let frame = match self.adapter.build_command(&build_input)",
+    ".validate_exact_command(&frame, &build_input)",
+    "receipt.decision = DecisionOutcomeV1::Allow",
+)
 
 
 class AuthorityModelError(ValueError):
@@ -131,6 +144,13 @@ def _rust_block(source: str, marker: str) -> str:
     raise AuthorityModelError(f"AUTHORITY_RUST_BLOCK_UNTERMINATED:{marker}")
 
 
+def _verify_gate_pipeline_source(actor_source: str) -> None:
+    pipeline = _rust_block(actor_source, "fn decide_intent_inner")
+    positions = [pipeline.find(marker) for marker in GATE_PIPELINE_ORDERED_MARKERS]
+    if any(position < 0 for position in positions) or positions != sorted(positions):
+        raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
+
+
 def _verify_document(model: dict[str, Any], repo: Path) -> None:
     record = model.get("normative_document")
     if not isinstance(record, dict) or set(record) != {"path", "sha256"}:
@@ -138,7 +158,9 @@ def _verify_document(model: dict[str, Any], repo: Path) -> None:
     if record.get("path") != "docs/release/0.9.0/AUTHORITY-CONTRACT.md":
         raise AuthorityModelError("AUTHORITY_DOCUMENT_PATH_INVALID")
     expected = _require_hex(record.get("sha256"), HEX64, "normative_document.sha256")
-    payload = _read_bounded(repo / record["path"], MAX_DOCUMENT_BYTES, "normative_document")
+    payload = _read_bounded(
+        repo / record["path"], MAX_DOCUMENT_BYTES, "normative_document"
+    )
     if _sha256(payload) != expected:
         raise AuthorityModelError("AUTHORITY_DOCUMENT_DIGEST_MISMATCH")
     try:
@@ -253,7 +275,10 @@ def _verify_profile(model: dict[str, Any], profile_path: Path) -> None:
     if deployment.get("profile_id") != claimed["profile_id"]:
         raise AuthorityModelError("AUTHORITY_PROFILE_ID_MISMATCH")
     routes = deployment.get("routes")
-    if not isinstance(routes, dict) or routes.get("final_command") != claimed["protected_route"]:
+    if (
+        not isinstance(routes, dict)
+        or routes.get("final_command") != claimed["protected_route"]
+    ):
         raise AuthorityModelError("AUTHORITY_PROFILE_ROUTE_MISMATCH")
     principals = deployment.get("principals")
     if not isinstance(principals, dict) or set(principals) != EXPECTED_PRINCIPALS:
@@ -261,7 +286,9 @@ def _verify_profile(model: dict[str, Any], profile_path: Path) -> None:
 
     final_publishers: list[str] = []
     for principal_id, principal in principals.items():
-        if not isinstance(principal, dict) or not isinstance(principal.get("publish"), list):
+        if not isinstance(principal, dict) or not isinstance(
+            principal.get("publish"), list
+        ):
             raise AuthorityModelError("AUTHORITY_PROFILE_PRINCIPAL_INVALID")
         if "final_command" in principal["publish"]:
             final_publishers.append(principal_id)
@@ -320,7 +347,8 @@ def _verify_live_evidence(model: dict[str, Any], result_path: Path) -> None:
             or attempt.get("operation") != "put"
             or attempt.get("route") != route
             or attempt.get("local_put_ok") is not True
-            or set(attempt.get("expected_receivers", [])) != {"observer", "robot-crebain"}
+            or set(attempt.get("expected_receivers", []))
+            != {"observer", "robot-crebain"}
         ):
             raise AuthorityModelError("AUTHORITY_EVIDENCE_GATE_POSITIVE_INVALID")
     denied_ids = result.get("denied_case_ids")
@@ -351,7 +379,10 @@ def _verify_live_evidence(model: dict[str, Any], result_path: Path) -> None:
             observed.setdefault(case_id, set()).add(receiver)
     if any(case_id in observed for case_id in denial_cases):
         raise AuthorityModelError("AUTHORITY_EVIDENCE_DENIED_DELIVERED")
-    if any(observed.get(case_id) != {"observer", "robot-crebain"} for case_id in positive_cases):
+    if any(
+        observed.get(case_id) != {"observer", "robot-crebain"}
+        for case_id in positive_cases
+    ):
         raise AuthorityModelError("AUTHORITY_EVIDENCE_POSITIVE_OBSERVATIONS_INVALID")
 
 
@@ -388,7 +419,9 @@ def _verify_rust_contracts(model: dict[str, Any], repo: Path) -> None:
         repo / sources["decision_contract"], MAX_PROFILE_BYTES, "decision_contract"
     ).decode("utf-8")
     decision_block = _rust_block(decision_source, "pub enum DecisionOutcomeV1")
-    outcomes = re.findall(r'^\s*\w+\s*=\s*\d+\s*=>\s*"([A-Z_]+)"', decision_block, re.MULTILINE)
+    outcomes = re.findall(
+        r'^\s*\w+\s*=\s*\d+\s*=>\s*"([A-Z_]+)"', decision_block, re.MULTILINE
+    )
     if outcomes != model["decision_action_separation"]["decision_outcomes"]:
         raise AuthorityModelError("AUTHORITY_RUST_DECISION_DRIFT")
 
@@ -397,7 +430,9 @@ def _verify_rust_contracts(model: dict[str, Any], repo: Path) -> None:
     ).decode("utf-8")
     action_block = _rust_block(action_source, "pub enum RequestedActionV1")
     actions = re.findall(r"^\s{4}([A-Z][A-Za-z0-9]+)\s*\{", action_block, re.MULTILINE)
-    normalized_actions = [re.sub(r"(?<!^)(?=[A-Z])", "_", action).upper() for action in actions]
+    normalized_actions = [
+        re.sub(r"(?<!^)(?=[A-Z])", "_", action).upper() for action in actions
+    ]
     if normalized_actions != model["decision_action_separation"]["plant_actions"]:
         raise AuthorityModelError("AUTHORITY_RUST_ACTION_DRIFT")
 
@@ -417,27 +452,16 @@ def _verify_rust_contracts(model: dict[str, Any], repo: Path) -> None:
         raise AuthorityModelError("AUTHORITY_RUST_GATE_ROLE_DRIFT")
 
     actor_source = _read_bounded(
-        repo / sources["gate_decision_pipeline"], MAX_EVIDENCE_BYTES, "gate_decision_pipeline"
+        repo / sources["gate_decision_pipeline"],
+        MAX_EVIDENCE_BYTES,
+        "gate_decision_pipeline",
     ).decode("utf-8")
-    pipeline = _rust_block(actor_source, "fn decide_intent_inner")
-    ordered_markers = (
-        "let decision = decide(&PolicyInput",
-        "let effective_validity_ms = match decision.effective_validity_ms()",
-        "if self.revision.get() != captured_rev",
-        "if !self.publication.authorizes_acl_only_publication()",
-        "let out_seq = match self.output_stream.allocate()",
-        "let build_input = GateCommandBuildInputV1",
-        "action: intent.action",
-        "let frame = match self.adapter.build_command(&build_input)",
-        ".validate_exact_command(&frame, &build_input)",
-        "receipt.decision = DecisionOutcomeV1::Allow",
-    )
-    positions = [pipeline.find(marker) for marker in ordered_markers]
-    if any(position < 0 for position in positions) or positions != sorted(positions):
-        raise AuthorityModelError("AUTHORITY_RUST_GATE_PIPELINE_DRIFT")
+    _verify_gate_pipeline_source(actor_source)
 
     runtime_tests = _read_bounded(
-        repo / sources["runtime_semantics_tests"], MAX_LOG_BYTES, "runtime_semantics_tests"
+        repo / sources["runtime_semantics_tests"],
+        MAX_LOG_BYTES,
+        "runtime_semantics_tests",
     ).decode("utf-8")
     semantic_test = _rust_block(
         runtime_tests,
@@ -498,11 +522,14 @@ def _verify_log(repo: Path, record: Any, commit: str, marker: bytes) -> None:
     if record.get("compression") != "gzip" or record.get("gzip_timestamp") != 0:
         raise AuthorityModelError("AUTHORITY_VERIFICATION_LOG_COMPRESSION_INVALID")
     payload = _read_bounded_gzip(repo / record["path"])
-    if len(payload) != record["uncompressed_bytes"] or len(payload.splitlines()) != record[
-        "uncompressed_lines"
-    ]:
+    if (
+        len(payload) != record["uncompressed_bytes"]
+        or len(payload.splitlines()) != record["uncompressed_lines"]
+    ):
         raise AuthorityModelError("AUTHORITY_VERIFICATION_LOG_SIZE_MISMATCH")
-    expected = _require_hex(record["uncompressed_sha256"], HEX64, "verification.log.sha256")
+    expected = _require_hex(
+        record["uncompressed_sha256"], HEX64, "verification.log.sha256"
+    )
     if _sha256(payload) != expected:
         raise AuthorityModelError("AUTHORITY_VERIFICATION_LOG_DIGEST_MISMATCH")
     if commit.encode("ascii") not in payload or marker not in payload:
@@ -529,7 +556,9 @@ def _verify_task_closure(repo: Path, task: dict[str, Any]) -> None:
     tree = _require_hex(implementation.get("tree"), HEX40, "t001.tree")
     if _git(repo, "rev-parse", f"{commit}^{{tree}}").decode().strip() != tree:
         raise AuthorityModelError("AUTHORITY_T001_TREE_MISMATCH")
-    if b"gpgsig -----BEGIN SSH SIGNATURE-----" not in _git(repo, "cat-file", "commit", commit):
+    if b"gpgsig -----BEGIN SSH SIGNATURE-----" not in _git(
+        repo, "cat-file", "commit", commit
+    ):
         raise AuthorityModelError("AUTHORITY_T001_COMMIT_UNSIGNED")
     for name, marker in (
         ("github_ci", b"verify-authority-model: OK"),
@@ -561,7 +590,9 @@ def _verify_requirements(requirements_path: Path, repo: Path) -> None:
     if not isinstance(tasks, list):
         raise AuthorityModelError("AUTHORITY_REQUIREMENTS_TASKS_INVALID")
     by_id = {
-        task.get("id"): task for task in tasks if isinstance(task, dict) and isinstance(task.get("id"), str)
+        task.get("id"): task
+        for task in tasks
+        if isinstance(task, dict) and isinstance(task.get("id"), str)
     }
     t000 = by_id.get("T000")
     t001 = by_id.get("T001")
@@ -594,11 +625,17 @@ def _verify_requirements(requirements_path: Path, repo: Path) -> None:
     if (
         not isinstance(review, dict)
         or set(review) != EXPECTED_LENSES
-        or any(not isinstance(value, str) or not value.strip() for value in review.values())
+        or any(
+            not isinstance(value, str) or not value.strip() for value in review.values()
+        )
     ):
         raise AuthorityModelError("AUTHORITY_REQUIREMENT_REVIEW_INVALID")
     risks = t001.get("residual_risks")
-    if not isinstance(risks, list) or not risks or any(not isinstance(risk, str) for risk in risks):
+    if (
+        not isinstance(risks, list)
+        or not risks
+        or any(not isinstance(risk, str) for risk in risks)
+    ):
         raise AuthorityModelError("AUTHORITY_REQUIREMENT_RISKS_INVALID")
     if t001["status"] == "verified":
         _verify_task_closure(repo, t001)
