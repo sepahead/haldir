@@ -70,6 +70,12 @@ says they mean.
 - **Assurance profile implemented here:** `assurance-reference-v1` — one vehicle, one
   controller, one Gate, one **deterministic reference plant**, `Hold` + local-NED velocity,
   no live network, no neural runtime, no physical hardware.
+- **Current NCP provider boundary (checked 2026-08-01):** NCP repository HEAD is the
+  unreleased and release-blocked `1.0.0-rc.1` candidate, with wire `1.0` and compact
+  `CONTRACT_HASH` `163acc57d8a62b66`. The latest immutable NCP release remains `v0.8.0`
+  and uses a different wire. Haldir's native-1.0 migration and independent qualification
+  are **NOT RUN** and are not dependency-ready. This note changes no runtime, pin, task,
+  phase, or claim status.
 - **NCP baseline pinned:** tag `v0.8.0`, commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`,
   wire `0.8`, contract hash `d1b50a2d8a265276`; the optional `real-ncp`
   conformance adapter compiles that exact revision and replays its frozen corpus. Gate template

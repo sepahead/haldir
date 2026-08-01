@@ -68,6 +68,19 @@ limitations inside `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
 | 21 — first experimental release | Partial | Protected CI directly installs exact verified cargo-deny assets, reconstructs the bounded pinned RustSec snapshot, primes locked inputs online, and performs the final audit frozen and network-isolated. Acquisition availability, SBOM, end-to-end provenance, signed tag, reproducible release artifacts, and release evidence remain open (`CL-PRODUCTION-01`). |
 | 22 — future NCP authority increments | Not started / upstream-triggered | NCP v0.8.0 still defers plant authority, publisher binding, and apply/stop acknowledgements. |
 
+## NCP provider boundary update (2026-08-01)
+
+NCP repository HEAD is now the unreleased and release-blocked `1.0.0-rc.1`
+candidate. Its wire is `1.0`, and its compact `CONTRACT_HASH` is
+`163acc57d8a62b66`. The latest immutable NCP release remains `v0.8.0`, which
+uses a different wire.
+
+Haldir remains pinned to the immutable v0.8 baseline. Native Haldir 1.0
+migration and independent qualification are **NOT RUN** and are not
+dependency-ready in the NCP ecosystem task ledger. This status update does
+not advance a task, phase, gate, or claim and does not change Haldir's pin or
+runtime. The dated historical audit cut below remains unchanged.
+
 ## Ecosystem re-check (2026-07-13)
 
 - NCP `v0.8.0` remains the latest immutable release and the Haldir pin remains correct:

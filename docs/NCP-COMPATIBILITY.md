@@ -3,6 +3,17 @@
 Haldir's stable contracts contain semantic Haldir fields, not NCP-generated
 structs. Only `haldir-ncp08` is aware of NCP wire semantics.
 
+## Current provider boundary (checked 2026-08-01)
+
+NCP repository HEAD is the unreleased and release-blocked `1.0.0-rc.1` candidate.
+Its wire is `1.0`, and its compact `CONTRACT_HASH` is `163acc57d8a62b66`. The latest
+immutable NCP release remains `v0.8.0`, which uses a different wire.
+
+Haldir remains on the exact immutable v0.8 baseline below. Native Haldir 1.0 migration
+and independent qualification are **NOT RUN** and are not dependency-ready in the
+NCP ecosystem task ledger. This provider-status note changes no dependency, runtime
+behavior, task status, phase status, or claim evidence.
+
 ## Pinned baseline (exact commit)
 
 | Field | Value |
