@@ -18,7 +18,7 @@ artifacts are bound to their source and requirement identity through
 [`audit-inputs.json`](audit-inputs.json) and the current-head requirement ledger;
 raw logs do not make independent identity claims.
 
-## Active epoch-16 audit gate
+## Active epoch-18 audit gate
 
 The canonical operator entry point is:
 
@@ -36,22 +36,24 @@ gate, is:
 
 The gate requires CPython `3.14.6`, a `rustup`-managed Cargo `1.96.0`,
 `/usr/bin/git`, and the exact GitHub CLI `2.96.0` executable identity pinned by
-`tools/release/verify-framework-recovery-fr-0015.py`. The pinned GitHub CLI
+`tools/release/verify-framework-recovery-fr-0017.py`. The pinned GitHub CLI
 artifacts support Linux amd64 and macOS arm64. On macOS, an exact executable at
-a nonstandard path may be selected with `HALDIR_FR0015_GH`; on Linux that
+a nonstandard path may be selected with `HALDIR_FR0017_GH`; on Linux that
 variable is reserved for the CI runner's pinned extraction path. Tool
 acquisition is outside the gate and may require network access; verification of
 the retained Sigstore bundles is forced offline once the exact executable and
 bundled trust root are present.
 
-A pass verifies the frozen FR-0014 boundary, the exact FR-0015 repair,
-qualification, and activation sequence, commit signatures and linear
-first-parent ancestry, immutable trust-root paths, source and CI pins, retained
-hosted-result attestations, and the protected-path scope of later milestones.
-It also requires the checked-out `HEAD` to have exactly one parent and checks
-the immediate commit diff for whitespace errors.
+A pass directly verifies the signed FR-0015 active boundary, the intervening
+signed linear milestones, and the signed but unqualified FR-0016 repair
+boundary. It then verifies the exact FR-0017 repair, qualification, and
+activation sequence; commit signatures and linear first-parent ancestry; source
+and CI pins; retained hosted-result attestations; and that checked
+post-activation successors do not change a protected path. It requires the
+checked-out `HEAD` to have exactly one parent and checks the immediate commit
+diff for whitespace errors.
 
-That result is intentionally narrow. Epoch 16 does not execute the retired task
+That result is intentionally narrow. Epoch 18 does not execute the retired task
 verifiers, semantically qualify the implementation in an ordinary successor,
 prove mutable GitHub settings at the current head, or grant release,
 publication, deployment, tag, archive, DOI, or GitHub Release authority. The
@@ -68,7 +70,7 @@ formal-run evidence, and the bounded resource profile.
 `tools/release/verify-current-audit.py`, its legacy test suite, and
 `tools/release/current-audit-resource-profile.py` are retained historical
 programs. They are not the active operator entry point and are deliberately
-inert at epoch 16. Historical resource-profile reproduction must write only to
+inert at epoch 18. Historical resource-profile reproduction must write only to
 untracked scratch space, such as `target/`; it must never replace
 `evidence/ch-t000-resource-profile.json` or any other retained evidence file.
 
@@ -85,19 +87,19 @@ semantically honest.
 That retired framework ran registered programs in a digest-pinned, read-only,
 network-disabled Linux container over an isolated exact Git clone. Its
 clean-Linux reproduction and container-containment statements describe the
-historical CH-T000 protocol only. The epoch-16 bridge instead executes directly
+historical CH-T000 protocol only. The epoch-18 bridge instead executes directly
 on the host with a sanitized environment, pinned executable identities, bounded
 subprocess time and output, and protected-worktree checks. It claims no general
 host-resource containment.
 
 The historical task, review, revocation, and active-claim records remain
-evidence of those earlier transitions. They do not establish that epoch-16
+evidence of those earlier transitions. They do not establish that epoch-18
 ordinary successors follow the retired lifecycle or have passed its registered
 verifiers.
 
-## Epoch-16 trust and recovery boundary
+## Epoch-18 trust and recovery boundary
 
-Epoch 16 accepts only signed, linear, scoped milestones after activation.
+Epoch 18 accepts only signed, linear, scoped milestones after activation.
 Protected workflow, signer, recovery, gate, pin, and attestation paths cannot be
 changed by an ordinary successor. A necessary change requires a separately
 reviewed, intentional signed gate and trust-root replacement protocol.
