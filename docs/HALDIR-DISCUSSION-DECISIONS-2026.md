@@ -552,7 +552,7 @@ SpiNNaker2 was the flexible second choice because:
 
 - its NIR adapter maps IF/LIF/CuBa-LIF, linear/affine, convolution, flattening, and pooling primitives;
 - conversion configuration exposes timestep, connection delay, reset method, input model, weight scaling, and percentile choices, all useful in a Watchword compilation receipt;
-- official documentation describes bidirectional low-latency spike streaming for closed-loop control. See the [streaming tutorials](https://spinnaker2.gitlab.io/py-spinnaker2/tutorials/streaming/introduction.html);
+- official documentation describes bidirectional low-latency spike streaming for closed-loop control. See the [streaming tutorial](https://spinnaker2.gitlab.io/py-spinnaker2/tutorials/deep_dive/07_streaming.html);
 - a Brian2 backend can prepare and debug networks without executing physical hardware;
 - single-chip and SpiNNcloud targets share a related programming model.
 
@@ -1089,7 +1089,7 @@ This is impactful open-source cybersecurity engineering even if the research hyp
 - [Xylo family architecture and constraints](https://rockpool.ai/devices/xylo-overview.html)
 - [SynSense current developer resources](https://www.synsense.ai/developer/)
 - [SpiNNaker2 NIR guide](https://spinnaker2.gitlab.io/py-spinnaker2/user_guide/qs-nir.html)
-- [SpiNNaker2 real-time streaming guide](https://spinnaker2.gitlab.io/py-spinnaker2/tutorials/streaming/introduction.html)
+- [SpiNNaker2 data-streaming guide](https://spinnaker2.gitlab.io/py-spinnaker2/user_guide/data-streaming.html)
 - [SpiNNaker2 installation/access limitations](https://spinnaker2.gitlab.io/py-spinnaker2/)
 - [EBRAINS neuromorphic hardware access](https://wiki.ebrains.eu/bin/view/Collabs/neuromorphic/Getting%20access/)
 - [Lava archive notice](https://github.com/lava-nc/lava)
