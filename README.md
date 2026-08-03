@@ -273,8 +273,35 @@ Use one newly provisioned fixture per campaign. Generator output remains outside
 until the independent verifier passes and a separate, reviewed promotion places it at
 `evidence/12-live-gate-dev-smoke`; neither command changes claim status by itself.
 
-`just ci` (or the equivalent cargo/python commands in `.github/workflows/ci.yml`) is the
-canonical gate.
+The inventory checks are explicit focused local gates. They are not part of
+`just ci` or the hosted workflow because both command sets are protected by the
+active recovery boundary. Do not treat either result as inventory evidence.
+Run the hermetic inventory-tool tests, synthetic privacy-closure regressions,
+and diagram drift check with these exact commands:
+
+```bash
+python3 -I -B -W error tools/test_ecosystem_source_inventory.py
+python3 -I -B -W error tools/ecosystem_source_inventory.py diagram \
+  --output docs/assets/ecosystem-source-inventory.svg --check
+```
+
+The maintained
+[source-inventory assurance diagram](docs/assets/ecosystem-source-inventory.svg) shows the
+required public/private separation, staged privacy closure, and NO_GO authority boundary.
+These focused checks do not capture GitHub state, advance a task, or authorize a release.
+After the final public products and audit receipt are retained, verify their
+exact bytes with:
+
+```bash
+python3 -I -B -W error tools/ecosystem_source_inventory.py check \
+  --root evidence/source-review
+```
+
+This command does not require or load owner-local private files. It verifies the public
+products and the committed private-evidence commitment only; it does not perform the
+owner-local `verify-seal` gate or establish owner approval. Inventory
+verification in the canonical local and hosted gates remains **NOT RUN** until
+a separately reviewed recovery and workflow-policy change adds these commands.
 
 ## License
 

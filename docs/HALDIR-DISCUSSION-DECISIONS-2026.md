@@ -71,7 +71,7 @@ The project-selection request established the following constraints:
 2. Add five skeptical lenses from Claude Code Fable 5 at maximum effort.
 3. Exclude PID work because Galadriel was already considered complete for selection purposes.
 4. Choose one non-PID project with high cybersecurity impact.
-5. Prefer a project that fits Crebain, NCP, Engram/Paper2Brain, and the broader `sepahead` ecosystem.
+5. Prefer a project that fits Crebain, NCP, Engram owner-local controller source, and the broader `sepahead` ecosystem.
 6. Investigate neuromorphic hardware and Engram–Crebain integration without forcing a hardware story.
 7. Explain every proposal in detail: what it entails, why it was chosen, how to implement it, how to validate it, and when to stop.
 8. Evaluate whether the selected project is significant enough to form part of a PhD.
@@ -118,9 +118,11 @@ The inspected Crebain revision was `08ccafe5392465ea179406665ae936dd561aef6f`, p
 
 Therefore the first honest path is a deterministic plant or Gazebo integration. PX4-SITL is a later integration gate, not a current capability.
 
-### Engram / Paper2Brain
+### Engram owner-local controller source
 
-The local `engram` checkout corresponds to the `sepahead/Paper2Brain` repository. The inspected committed revision was `12833c7eae49a69095001bb74bf307a86c9012b5`, plus local neurocontrol work.
+The local `engram` checkout corresponds to an owner-local repository whose
+identity and URL are withheld. The inspected committed revision was
+`12833c7eae49a69095001bb74bf307a86c9012b5`, plus local neurocontrol work.
 
 Engram already provided real value:
 
@@ -679,7 +681,7 @@ There is no compile-time cycle:
 - Haldir depends on released/pinned NCP APIs.
 - Engram may optionally depend on a small released Haldir client/contracts package.
 - Crebain consumes a standard NCP command and does not need a Haldir dependency.
-- Haldir imports no Engram/Paper2Brain or Crebain internals.
+- Haldir imports no Engram owner-local controller source or Crebain internals.
 - Border-Muster pins released revisions of all components.
 
 ### Ownership by repository
@@ -688,7 +690,7 @@ There is no compile-time cycle:
 | --- | --- | --- |
 | NCP | Normative wire messages, standard keys, generic validation, QoS, Zenoh transport, sequence/TTL/action-buffer primitives, generic physical-safety components. | Haldir mission leases, controller admissions, decision receipts, or a Haldir-only role topology in the normative command frame. |
 | Haldir | Signed intents, leases, replay/epoch semantics, admission records, policy, deterministic mission predicates, Gate, evidence, Haldir ACL profile, conformance corpus, range. | Neural controller generation, ROS/MAVROS mapping, vendor neural SDK execution, or mutable copies of NCP internals. |
-| Engram / Paper2Brain | Controller generation; proposed ownership and production of `ControllerBundleManifestV1`; NEST/NIR/backend execution; codecs; validation fixtures; optional Haldir intent client. | Mission-policy decisions, guardian/final-command key, Haldir admission-profile ownership, or self-approval of an admission record. |
+| Engram owner-local controller source | Controller generation; proposed ownership and production of `ControllerBundleManifestV1`; NEST/NIR/backend execution; codecs; validation fixtures; optional Haldir intent client. | Mission-policy decisions, guardian/final-command key, Haldir admission-profile ownership, or self-approval of an admission record. |
 | Crebain | NCP-to-action mapping, `CommandPlant`, 50 Hz action loop, native ROS/MAVROS/Gazebo transport, lifecycle, accepted/applied evidence. | Haldir policy evaluation, controller-artifact approval, or a private Haldir-only final command format. |
 
 ### NCP coupling
@@ -893,7 +895,7 @@ A Haldir release publishes a compatibility matrix with exact NCP, Zenoh, NEST, N
 
 - NCP tag and commit;
 - Haldir commit;
-- Engram/Paper2Brain commit;
+- Engram owner-local controller source commit;
 - Crebain commit;
 - NEST, NIR, Zenoh, policy engine, container, and backend-adapter versions;
 - scenario and analysis versions.
@@ -1079,7 +1081,7 @@ This is impactful open-source cybersecurity engineering even if the research hyp
 - [Detailed Haldir project audit](HALDIR-PROJECT-AUDIT-2026.md)
 - [NCP security model at the inspected revision](https://github.com/sepahead/NCP/blob/e3e5da4de96e8b291b3c582bd31cf41afbfad3cc/SECURITY.md)
 - [Crebain NCP bridge handoff at the inspected revision](https://github.com/sepahead/crebain/blob/08ccafe5392465ea179406665ae936dd561aef6f/docs/NCP_BRIDGE_HANDOFF.md)
-- [Engram/Paper2Brain neurocontrol backends at the inspected revision](https://github.com/sepahead/Paper2Brain/blob/12833c7eae49a69095001bb74bf307a86c9012b5/backend/neurocontrol/backends.py) — requires `sepahead` access
+- Engram owner-local controller backends at the inspected revision — owner-local source; exact repository identity and URL are withheld.
 - [Neuromorphic Intermediate Representation](https://www.nature.com/articles/s41467-024-52259-9)
 - [NIR documentation and supported frameworks](https://neuroir.org/docs/)
 - [Rockpool 3.1.0 changelog](https://rockpool.ai/advanced/CHANGELOG.html)

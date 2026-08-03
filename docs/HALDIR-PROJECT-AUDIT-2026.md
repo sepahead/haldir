@@ -52,7 +52,7 @@ This assessment was made on 2026-07-11 against the following repository revision
 | Repository | Revision inspected | What the evidence establishes |
 | --- | --- | --- |
 | NCP | `e3e5da4de96e8b291b3c582bd31cf41afbfad3cc` | NCP 0.7.1 has typed validation, units, command TTL/sequence logic, per-verb RPC keys, `SafetyGovernor`, Zenoh transport, ACL examples, and a delivery-based security verifier. No live mTLS/ACL result is committed at this revision. It does not provide message-level application signatures or a neural artifact identity. |
-| Engram / Paper2Brain | `12833c7eae49a69095001bb74bf307a86c9012b5` plus local work | The registered neurocontrol backends are `mock` and `nest`. The NEST example is real spiking computation, but its current `NetworkRef` and backend setup are not a complete portable controller description, and its plant loop is local. |
+| Engram owner-local controller source | `12833c7eae49a69095001bb74bf307a86c9012b5` plus local work | The registered neurocontrol backends are `mock` and `nest`. The NEST example is real spiking computation, but its current `NetworkRef` and backend setup are not a complete portable controller description, and its plant loop is local. |
 | Crebain | `08ccafe5392465ea179406665ae936dd561aef6f` plus local docs | The NCP library path and 50 Hz `CommandPlant` exist, but NCP is off by default, the Tauri commands are not registered into a live product action loop, and no live MAVROS/PX4 callback completes the path. Direct ROS/MAVROS control paths also exist. |
 | Haldir | parent of this document | The repository is currently a project/design repository. No Gate implementation or latency, bypass, or failure evidence exists yet. |
 
@@ -1381,7 +1381,7 @@ If the result becomes only a Cedar proxy with a NEST demo and signed logs, it re
 
 ### Local ecosystem evidence
 
-The `Paper2Brain` permalinks below require `sepahead` GitHub access; an anonymous reader may receive a 404 even though the commit-pinned paths are valid for authorized collaborators.
+The owner-local source references below require authorized access. Exact repository identity and URLs are withheld.
 
 - [NCP security model at the inspected revision](https://github.com/sepahead/NCP/blob/e3e5da4de96e8b291b3c582bd31cf41afbfad3cc/SECURITY.md)
 - [NCP known-limitations and fixed-defect ledger](https://github.com/sepahead/NCP/blob/e3e5da4de96e8b291b3c582bd31cf41afbfad3cc/KNOWN_LIMITATIONS.md)
@@ -1389,10 +1389,10 @@ The `Paper2Brain` permalinks below require `sepahead` GitHub access; an anonymou
 - [NCP Zenoh transport primitives](https://github.com/sepahead/NCP/blob/e3e5da4de96e8b291b3c582bd31cf41afbfad3cc/ncp-zenoh/src/lib.rs)
 - [Crebain NCP bridge handoff at the inspected revision](https://github.com/sepahead/crebain/blob/08ccafe5392465ea179406665ae936dd561aef6f/docs/NCP_BRIDGE_HANDOFF.md)
 - [Crebain NCP module](https://github.com/sepahead/crebain/blob/08ccafe5392465ea179406665ae936dd561aef6f/src-tauri/src/ncp/mod.rs)
-- [Engram neurocontrol session reference](https://github.com/sepahead/Paper2Brain/blob/12833c7eae49a69095001bb74bf307a86c9012b5/backend/neurocontrol/session.py)
-- [Engram registered neurocontrol backends](https://github.com/sepahead/Paper2Brain/blob/12833c7eae49a69095001bb74bf307a86c9012b5/backend/neurocontrol/backends.py)
-- [Engram NEST multi-UAV example](https://github.com/sepahead/Paper2Brain/blob/12833c7eae49a69095001bb74bf307a86c9012b5/backend/neurocontrol/examples/multi_uav_nest_ncp.py)
-- [Engram artifact integrity store](https://github.com/sepahead/Paper2Brain/blob/12833c7eae49a69095001bb74bf307a86c9012b5/backend/api/artifact_store.py)
+- Engram neurocontrol session reference — owner-local commit-pinned source; exact URL withheld.
+- Engram registered neurocontrol backends — owner-local commit-pinned source; exact URL withheld.
+- Engram NEST multi-UAV example — owner-local commit-pinned source; exact URL withheld.
+- Engram artifact integrity store — owner-local commit-pinned source; exact URL withheld.
 
 ### Primary related work
 

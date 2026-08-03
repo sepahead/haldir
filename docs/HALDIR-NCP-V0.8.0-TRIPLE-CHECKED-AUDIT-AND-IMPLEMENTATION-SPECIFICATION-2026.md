@@ -265,31 +265,36 @@ Required sequence:
 6. keep any v0.7 adapter in an isolated crate/process and label it migration-only;
 7. declare ecosystem v0.8 compatibility only after every participating deployment manifest, lockfile, and live conformance test is recorded.
 
-### Required organization inventory commands
+### Required organization inventory workflow
 
-Use a clean audit worktree and an authenticated GitHub CLI session only when needed for private owner-visible repositories. Do not place tokens in repository files or logs.
+The raw GitHub CLI commands from the initial audit are obsolete. They did not
+provide the bounded capture, staged privacy closure, or receipt binding that the
+current inventory requires. Do not reconstruct those commands from this
+historical specification.
+
+Use `tools/ecosystem_source_inventory.py` for capture, decision templates,
+rendering, sealing, and verification. The tool keeps public and owner-local
+lanes separate. Owner-local inputs must remain ignored files with mode `0600`;
+their exact paths and repository identities are intentionally absent from this
+public document. The generated diagram at
+`docs/assets/ecosystem-source-inventory.svg` shows the complete flow and its
+authority boundary.
+
+Run these network-free public checks after the retained outputs exist:
 
 ```bash
-set -euo pipefail
-export SEPAHEAD_OWNER="sepahead"
-export SEPAHEAD_ROOT="${SEPAHEAD_ROOT:-$HOME/Development/sepahead-github}"
-export HALDIR_ROOT="$SEPAHEAD_ROOT/haldir"
-mkdir -p "$HALDIR_ROOT/evidence/source-review"
-
-# Public and authenticated-owner-visible inventory. Remove private fields before
-# publishing the ledger if the resulting document is public.
-gh api --paginate "/users/${SEPAHEAD_OWNER}/repos?per_page=100&type=owner&sort=full_name" \
-  --jq '.[] | {name,full_name,html_url,default_branch,archived,fork,private,visibility,updated_at,pushed_at,language,license:(.license.spdx_id // null)}' \
-  > "$HALDIR_ROOT/evidence/source-review/public-repositories.jsonl"
-
-gh api --paginate "/user/repos?per_page=100&affiliation=owner&sort=full_name" \
-  --jq '.[] | select(.owner.login == env.SEPAHEAD_OWNER) | {name,full_name,html_url,default_branch,archived,fork,private,visibility,updated_at,pushed_at,language,license:(.license.spdx_id // null)}' \
-  > "$HALDIR_ROOT/evidence/source-review/owner-visible-repositories.private.jsonl"
-
-chmod 600 "$HALDIR_ROOT/evidence/source-review/owner-visible-repositories.private.jsonl"
+just source-inventory-test
+python3 -I -B -W error tools/ecosystem_source_inventory.py check \
+  --root evidence/source-review
 ```
 
-Create `evidence/source-review/repository-classification.csv` with at least:
+The public check verifies the committed private commitment only. It does not
+replace the owner-local `verify-seal` operation, authenticate a reviewer, prove
+owner approval, complete an integration, or grant release authority. See
+`evidence/source-review/source-ledger.md` for the retained evidence boundary and
+the current result.
+
+The generated `evidence/source-review/repository-classification.csv` contains at least:
 
 ```text
 repository,exact_head,default_branch,archived,fork,visibility,first_party,
@@ -6795,7 +6800,7 @@ evidence/source-review/
 ├── ncp-documentation-drift.md
 ├── web-cache-race.md
 ├── public-source-ledger.csv
-├── local-private-source-ledger.private.csv
+├── [owner-local ignored ledger; exact path withheld]
 ├── command-log.jsonl
 └── claim-traceability.csv
 ```

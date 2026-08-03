@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" role="img" aria-labelledby="diagram-title diagram-desc">
+  <title id="diagram-title">Haldir ecosystem source-inventory assurance flow</title>
+  <desc id="diagram-desc">Required workflow for the fixed production closure profile. The diagram distinguishes conditional capture completion, automated factual review, owner approval that is not established, and receipt-derived seal states; it does not itself assert that a current capture or seal passed. A tracked ignore preflight precedes bounded REST GET capture. Public and owner-local lanes remain separate. Reviewed final classifications and a separately reviewed automated supersession source feed draft rendering. Neither review authenticates a person or proves owner approval. Deterministic public outputs, the current tool source, and the exact generated diagram are staged as non-executable regular files. A stable stage-zero index scan rejects private identifiers, private component copies, and representation variants of detailed private telemetry, then binds a canonical index manifest. The audit is excluded from its own manifest, written last, staged exactly, and verified again. Public checking remains commitment-only; owner-local verify-seal requires the final staged audit. Every authority field remains false and release status remains NO_GO.</desc>
+  <defs>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071426"/>
+      <stop offset="1" stop-color="#10233d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#020617" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10Z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10Z" fill="#fbbf24"/>
+    </marker>
+    <style>
+      .title{font:700 34px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#f8fafc}.subtitle{font:500 16px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#b8c8dc}.stateLine{font:700 13px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#f8fafc;letter-spacing:.3px}.chip{fill:#142a46;stroke:#35506f;stroke-width:1}.chipText{font:650 12px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#cbd5e1;letter-spacing:.35px}.box{filter:url(#shadow);stroke-width:2}.capture{fill:#102f48;stroke:#38bdf8}.public{fill:#0d3441;stroke:#22d3ee}.private{fill:#3a2612;stroke:#fbbf24}.review{fill:#14352f;stroke:#34d399}.stage{fill:#24244c;stroke:#a78bfa}.scan{fill:#222b3d;stroke:#94a3b8}.audit{fill:#38233f;stroke:#e879f9}.guard{fill:#421f29;stroke:#fb7185}.boxTitle{font:700 18px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#f8fafc}.body{font:500 13.5px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#d9e4f0}.mono{font:600 12.5px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#bae6fd}.privateText{fill:#fde68a}.warningText{fill:#fecdd3}.muted{fill:#9fb1c7}.label{font:700 12px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:1.25px}.flow{fill:none;stroke:#38bdf8;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow-cyan);stroke-dasharray:9 7;animation:dash 2.8s linear infinite}.privateFlow{stroke:#fbbf24;marker-end:url(#arrow-amber)}.boundary{fill:none;stroke:#fbbf24;stroke-width:2;stroke-dasharray:8 8}.motion{fill:#e0f2fe;stroke:#0284c7;stroke-width:2}.motion.privateDot{fill:#fef3c7;stroke:#d97706}@keyframes dash{to{stroke-dashoffset:-32}}@media (prefers-reduced-motion:reduce){.flow{animation:none;stroke-dasharray:none}.motion{display:none}}
+    </style>
+  </defs>
+  <rect width="1600" height="1100" rx="28" fill="url(#canvas)"/>
+  <text class="title" x="800" y="48" text-anchor="middle">Ecosystem source-inventory assurance flow</text>
+  <text class="subtitle" x="800" y="75" text-anchor="middle">Fixed closure profile • 174 public + 43 private = 217 owner-visible • REST 2026-03-10 • authority remains NO_GO</text>
+  <text class="stateLine" x="800" y="99" text-anchor="middle">CAPTURE COMPLETE only with exact tool binding • AUTOMATED FACTUAL REVIEW • OWNER APPROVAL NOT ESTABLISHED • SEAL STATE FROM RECEIPT</text>
+
+  <g aria-label="Twelve review lenses">
+    <rect class="chip" x="50" y="106" width="118" height="30" rx="15"/><text class="chipText" x="109" y="126" text-anchor="middle">AUTHORITY</text>
+    <rect class="chip" x="177" y="106" width="118" height="30" rx="15"/><text class="chipText" x="236" y="126" text-anchor="middle">PRIVACY</text>
+    <rect class="chip" x="304" y="106" width="118" height="30" rx="15"/><text class="chipText" x="363" y="126" text-anchor="middle">PROVENANCE</text>
+    <rect class="chip" x="431" y="106" width="118" height="30" rx="15"/><text class="chipText" x="490" y="126" text-anchor="middle">TOCTOU</text>
+    <rect class="chip" x="558" y="106" width="118" height="30" rx="15"/><text class="chipText" x="617" y="126" text-anchor="middle">RATE BUDGET</text>
+    <rect class="chip" x="685" y="106" width="118" height="30" rx="15"/><text class="chipText" x="744" y="126" text-anchor="middle">FACT REVIEW</text>
+    <rect class="chip" x="812" y="106" width="118" height="30" rx="15"/><text class="chipText" x="871" y="126" text-anchor="middle">SUPERSESSION</text>
+    <rect class="chip" x="939" y="106" width="118" height="30" rx="15"/><text class="chipText" x="998" y="126" text-anchor="middle">GIT SEMANTICS</text>
+    <rect class="chip" x="1066" y="106" width="118" height="30" rx="15"/><text class="chipText" x="1125" y="126" text-anchor="middle">PROCESS EXIT</text>
+    <rect class="chip" x="1193" y="106" width="118" height="30" rx="15"/><text class="chipText" x="1252" y="126" text-anchor="middle">ACCESSIBILITY</text>
+    <rect class="chip" x="1320" y="106" width="118" height="30" rx="15"/><text class="chipText" x="1379" y="126" text-anchor="middle">REPRODUCIBLE</text>
+    <rect class="chip" x="1447" y="106" width="103" height="30" rx="15"/><text class="chipText" x="1499" y="126" text-anchor="middle">NO_GO</text>
+  </g>
+
+  <g aria-label="Capture preflight">
+    <rect class="box capture" x="50" y="185" width="300" height="285" rx="18"/>
+    <text class="label" x="75" y="216" fill="#7dd3fc">01 • BEFORE NETWORK OR WRITE</text>
+    <text class="boxTitle" x="75" y="247">Private-write preflight</text>
+    <text class="body" x="75" y="276"><tspan x="75" dy="0">• exact private basenames and common root</tspan><tspan x="75" dy="23">• tracked ignore provenance; staged = worktree</tspan><tspan x="75" dy="23">• index flag H; targets ignored and untracked</tspan><tspan x="75" dy="23">• repeat after each private write phase</tspan></text>
+    <line x1="75" y1="378" x2="325" y2="378" stroke="#31516c"/>
+    <text class="body muted" x="75" y="404"><tspan x="75">Production orchestration closes the gh signal</tspan><tspan x="75" dy="21">guard before the Git postflight begins.</tspan></text>
+  </g>
+
+  <g aria-label="Bounded REST capture">
+    <rect class="box capture" x="390" y="185" width="300" height="285" rx="18"/>
+    <text class="label" x="415" y="216" fill="#7dd3fc">02 • BOUNDED OBSERVATION</text>
+    <text class="boxTitle" x="415" y="247">Pinned gh • requested GET</text>
+    <text class="body" x="415" y="276"><tspan x="415">• four ordered owner/viewer identity rates</tspan><tspan x="415" dy="23">• two stable snapshots per visibility scope</tspan><tspan x="415" dy="23">• exact default-branch commit or EMPTY state</tspan><tspan x="415" dy="23">• page, retry, response, and reserve bounds</tspan><tspan x="415" dy="23">• queued work rejected; groups reaped</tspan></text>
+    <text class="mono" x="415" y="420">GET argv ≠ independent network proof</text>
+    <text class="mono" x="415" y="445">COMPLETE iff metadata binds this tool</text>
+  </g>
+
+  <path id="capture-flow" class="flow" d="M350 327H390"/>
+  <circle class="motion" cx="350" cy="327" r="5"><animateMotion dur="2.8s" repeatCount="indefinite" path="M0 0H40"/></circle>
+
+  <g aria-label="Separated evidence lanes">
+    <rect class="box public" x="730" y="170" width="350" height="150" rx="18"/>
+    <text class="label" x="755" y="201" fill="#67e8f9">PUBLIC LANE</text>
+    <text class="boxTitle" x="755" y="232">Redacted retained evidence</text>
+    <text class="body" x="755" y="255"><tspan x="755">repository-heads.jsonl • capture metadata</tspan><tspan x="755" dy="19">redacted command log</tspan><tspan x="755" dy="19">no rate, page, or request detail</tspan><tspan x="755" dy="19">four public supersession blobs</tspan></text>
+
+    <rect class="boundary" x="716" y="332" width="378" height="186" rx="22"/>
+    <rect class="box private" x="730" y="344" width="350" height="166" rx="18"/>
+    <text class="label privateText" x="755" y="375">OWNER-LOCAL • MODE 0600</text>
+    <text class="boxTitle" x="755" y="405">Four private components</text>
+    <text class="body privateText" x="755" y="434"><tspan x="755">owner-visible JSONL • private decisions</tspan><tspan x="755" dy="20">private classification CSV • detailed telemetry</tspan><tspan x="755" dy="20">owner-local ledger commitment</tspan><tspan x="755" dy="20">exact bytes stable through closure</tspan></text>
+  </g>
+
+  <path class="flow" d="M690 275H730"/>
+  <path class="flow privateFlow" d="M690 380H730"/>
+
+  <g aria-label="Automated factual review and owner-approval boundary">
+    <rect class="box review" x="1120" y="185" width="430" height="331" rx="18"/>
+    <text class="label" x="1145" y="216" fill="#6ee7b7">03 • AUTOMATED FACTUAL REVIEW</text>
+    <text class="boxTitle" x="1145" y="247">REVIEWED • FINAL_FOR_INVENTORY</text>
+    <text class="body" x="1145" y="276"><tspan x="1145">Every classification field and the supersession</tspan><tspan x="1145" dy="22">boundary bind explicit source observations.</tspan></text>
+    <rect x="1145" y="323" width="380" height="118" rx="12" fill="#0b2823" stroke="#34d399"/>
+    <text class="label" x="1163" y="348" fill="#6ee7b7">SOURCE-BOUND ATTESTATION</text>
+    <text class="body" x="1163" y="374"><tspan x="1163">Captured observations + maintained source set;</tspan><tspan x="1163" dy="21">no unobserved content or completed integration.</tspan><tspan x="1163" dy="21">Status text does not authenticate a reviewer.</tspan></text>
+    <text class="label warningText" x="1145" y="476">OWNER APPROVAL • NOT ESTABLISHED</text>
+    <text class="body muted" x="1145" y="500">Path-free prose; mixed or contradictory states fail closed.</text>
+  </g>
+
+  <path class="flow" d="M1080 245H1120"/>
+  <path class="flow privateFlow" d="M1080 426H1100V390H1120"/>
+
+  <g aria-label="Draft render">
+    <rect class="box review" x="50" y="580" width="280" height="195" rx="18"/>
+    <text class="label" x="75" y="611" fill="#6ee7b7">04 • RENDER DRAFT</text>
+    <text class="boxTitle" x="75" y="642">Deterministic views</text>
+    <text class="body" x="75" y="671"><tspan x="75">public JSON + CSV</tspan><tspan x="75" dy="22">private CSV remains owner-local</tspan><tspan x="75" dy="22">public/private identifier scan</tspan><tspan x="75" dy="22">audit is not written yet</tspan></text>
+  </g>
+
+  <g aria-label="Required staged inputs">
+    <rect class="box stage" x="370" y="565" width="310" height="225" rx="18"/>
+    <text class="label" x="395" y="596" fill="#c4b5fd">05 • STAGE EXACT BYTES</text>
+    <text class="boxTitle" x="395" y="627">Required regular mode 100644</text>
+    <text class="body" x="395" y="655"><tspan x="395">captured inputs + reviewed decisions</tspan><tspan x="395" dy="22">generated public JSON and CSV</tspan><tspan x="395" dy="22">four public supersession blobs</tspan><tspan x="395" dy="22">current tool + exact generated SVG</tspan><tspan x="395" dy="22">no missing, alternate, or special modes</tspan></text>
+  </g>
+
+  <g aria-label="Stable index privacy scan">
+    <rect class="box scan" x="710" y="535" width="400" height="285" rx="18"/>
+    <text class="label" x="735" y="566" fill="#cbd5e1">06 • TWO STABLE INDEX OBSERVATIONS</text>
+    <text class="boxTitle" x="735" y="597">Whole stage-zero regular-blob scan</text>
+    <text class="body" x="735" y="626"><tspan x="735">lazy fetch + replace objects disabled</tspan><tspan x="735" dy="22">names • URLs • repository IDs • branches</tspan><tspan x="735" dy="22">OIDs + prefixes • paths • component bytes</tspan><tspan x="735" dy="22">quoted/diff telemetry forms + supersets</tspan><tspan x="735" dy="22">private inputs + index state checked twice</tspan></text>
+    <rect x="735" y="750" width="350" height="52" rx="9" fill="#111827" stroke="#64748b"/>
+    <text class="mono" x="750" y="771"><tspan x="750">manifest: mode | path | bytes | git_oid</tspan><tspan x="750" dy="19">| independently computed blob_sha256</tspan></text>
+  </g>
+
+  <g aria-label="Audit written and staged last">
+    <rect class="box audit" x="1150" y="565" width="400" height="225" rx="18"/>
+    <text class="label" x="1175" y="596" fill="#f0abfc">07 • AUDIT LAST</text>
+    <text class="boxTitle" x="1175" y="627">Receipt-derived seal state</text>
+    <text class="body" x="1175" y="656"><tspan x="1175">audit excluded from manifest/count/blob scan</tspan><tspan x="1175" dy="22">PRE_AUDIT_SEAL_READY before audit write</tspan><tspan x="1175" dy="22">audit then staged as exact mode-100644 blob</tspan><tspan x="1175" dy="22">AUDIT_STAGED_FINAL only after repeated checks</tspan></text>
+  </g>
+
+  <path class="flow" d="M1335 516V525H190V580"/>
+  <path id="seal-flow" class="flow" d="M330 677H370M680 677H710M1110 677H1150"/>
+  <circle class="motion" cx="330" cy="677" r="5"><animateMotion dur="4.2s" repeatCount="indefinite" path="M0 0H820"/></circle>
+
+  <g aria-label="Verification scopes">
+    <rect class="box public" x="170" y="850" width="520" height="105" rx="18"/>
+    <text class="label" x="195" y="880" fill="#67e8f9">PUBLIC CHECK</text>
+    <text class="boxTitle" x="195" y="909">COMMITMENT_ONLY_NOT_VERIFIED</text>
+    <text class="body" x="195" y="935">Regenerates public bytes; cannot inspect absent private evidence.</text>
+
+    <rect class="box private" x="910" y="850" width="520" height="105" rx="18"/>
+    <text class="label privateText" x="935" y="880">OWNER-LOCAL VERIFY-SEAL</text>
+    <text class="boxTitle" x="935" y="909">AUDIT_STAGED_FINAL required</text>
+    <text class="body privateText" x="935" y="935">Recomputes commitments, privacy scan, manifest, and exact audit stage.</text>
+  </g>
+  <path class="flow" d="M1290 790V830H430V850"/>
+  <path class="flow privateFlow" d="M1410 790V830H1170V850"/>
+
+  <g aria-label="Trusted computing base and authority boundary">
+    <rect class="box guard" x="50" y="995" width="1500" height="70" rx="18"/>
+    <text class="boxTitle" x="75" y="1024">LOCAL TCB</text>
+    <text class="body" x="190" y="1024">pinned gh bytes • Git executable/index • Python runtime/stdlib • OS process, signal, clock, filesystem, and permissions</text>
+    <text class="boxTitle" x="75" y="1050" fill="#fecdd3">AUTHORITY</text>
+    <text class="body" x="190" y="1050" fill="#fecdd3">all authority fields false • inventory-only evidence • no integration qualification • no publication, deployment, tag, archive, DOI, or release • NO_GO</text>
+  </g>
+</svg>

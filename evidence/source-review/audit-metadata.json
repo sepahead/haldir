@@ -1,0 +1,250 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "tag_authorized": false,
+    "task_state_advanced": false
+  },
+  "capture": {
+    "closure_profile": {
+      "expected_owner_account_id": 10104569,
+      "expected_owner_node_id": "MDQ6VXNlcjEwMTA0NTY5",
+      "expected_owner_visible_repositories": 217,
+      "expected_private_repositories": 43,
+      "expected_public_repositories": 174,
+      "issue_scope": "Haldir Issue 2 bounded ecosystem source-inventory closure",
+      "owner": "sepahead",
+      "profile_id": "haldir.issue-2-ecosystem-source-closure",
+      "profile_version": "1.0.0",
+      "source_scope": "Credential-visible GitHub owner repositories via REST API 2026-03-10"
+    },
+    "completed_at_utc": "2026-08-02T23:41:00.741943Z",
+    "credential_binding": {
+      "competing_token_environment_removed": true,
+      "identity_reverified_after_capture": true,
+      "method": "ONE_PINNED_GH_TOKEN_IN_MEMORY_AND_GH_TOKEN_ENVIRONMENT",
+      "token_material_recorded": false
+    },
+    "executable_binding": {
+      "bytes": 38265282,
+      "method": "PRIVATE_READ_ONLY_DIRECTORY_EXACT_COPY_WITH_OPEN_FD_EXEC_BOUNDARY_CHECK",
+      "mode": "0500",
+      "sha256": "798882434e7f6ae5846194191263ecc59d56bc201f13f016270f44cb4f34499e"
+    },
+    "expected_repository_counts": {
+      "private": 43,
+      "public": 174
+    },
+    "gh_environment_binding": {
+      "ambient_debug_and_force_tty_removed": true,
+      "api_ambient_allowlist": [],
+      "api_config": "PRIVATE_EMPTY_CONFIG_DIRECTORY",
+      "auth_ambient_allowlist": [
+        "APPDATA",
+        "GH_CONFIG_DIR",
+        "HOME",
+        "LOCALAPPDATA",
+        "PATH",
+        "TMPDIR",
+        "XDG_CONFIG_HOME"
+      ],
+      "auth_path": "ABSOLUTE_NON_GROUP_WORLD_WRITABLE_DIRECTORIES",
+      "extension_update_notifier_disabled": true,
+      "prompt_disabled": true,
+      "telemetry_disabled": true,
+      "update_notifier_disabled": true
+    },
+    "identity_observation_sha256": "fc74cc1bd08ee8bd5b9d1223615dc35f0389d8c323fd97b8b6ca65322671b7b4",
+    "inventory_script": {
+      "bytes": 278426,
+      "classification": "PUBLIC_TOOL_SOURCE",
+      "label": "ecosystem_source_inventory.py",
+      "sha256": "7239e8b963d113acd4073ccc7680c7b26ee8ded4dd361e89d0c833f97f4b1da6"
+    },
+    "invocation_sha256": "270fbb6fe5512a0e341b22ced7243c243e916c60698369097eb6d4bc17e35611",
+    "maximum_get_attempts": 3,
+    "maximum_head_workers": 8,
+    "maximum_pages": 10,
+    "minimum_rate_reserve": 100,
+    "output_labels": {
+      "capture_metadata": "capture-metadata.json",
+      "command_log": "command-log.jsonl",
+      "owner_visible": "owner-visible-repositories.private.jsonl",
+      "private_telemetry": "capture-command-telemetry.private.json",
+      "public_heads": "repository-heads.jsonl"
+    },
+    "owner": {
+      "account_id": 10104569,
+      "login": "sepahead",
+      "node_id": "MDQ6VXNlcjEwMTA0NTY5"
+    },
+    "python_runtime": {
+      "implementation": "CPython",
+      "version": "3.14.6"
+    },
+    "request_timeout_seconds": 60,
+    "stable_tool_results_across_two_passes": true,
+    "started_at_utc": "2026-08-02T23:38:42.276043Z",
+    "tool": {
+      "bytes": 38265282,
+      "name": "gh",
+      "sha256": "798882434e7f6ae5846194191263ecc59d56bc201f13f016270f44cb4f34499e",
+      "version": "gh version 2.95.0 (2026-06-17)"
+    },
+    "tool_api_request_contract": {
+      "api_host_argument": "github.com",
+      "http_method_arguments": [
+        "GET"
+      ],
+      "mutation_argument_issued": false,
+      "tool_semantics_independently_verified": false
+    }
+  },
+  "command_log": {
+    "bytes": 2489,
+    "classification": "PUBLIC_REDACTED",
+    "label": "command-log.jsonl",
+    "sha256": "f2d4a34deb16a2f0990957f0af987231715738fb1f0605b8fa6d6cdcc54847a9"
+  },
+  "limitations": [
+    "Commit OIDs are immutable object identities; default branches and GitHub metadata remain mutable after the capture interval.",
+    "The pinned gh executable is local trusted computing base. Its digest proves byte identity, but local evidence does not independently prove its implementation, TLS use, remote origin, GET-only behavior, or absence of mutations.",
+    "Viewer-owner identity equality does not prove that the credential can see every private repository; the inventory covers the credential-visible set, and expected repository counts are operator assertions, not authentication-scope proof.",
+    "Fork-parent identity is not retained; supply-chain review cannot infer ancestry from the fork flag.",
+    "The tracked receipt binds each owner-local private component by label, classification, byte count, and SHA-256, and binds the private repository count; public checking cannot inspect absent private bytes.",
+    "Private-path validation enforces exact basenames, a common evidence root, mode 0600, regular non-symlink files, and one link. Owner-local closure also requires ignore provenance from a tracked ignore file, an untracked private path, and staged/worktree equality for the ignore source; these local checks do not prove remote or historical absence.",
+    "Production capture, private decision-template, and draft render operations require tracked, staged-equal ignore provenance and untracked private target paths before and after each owner-local write phase. The synthetic test profile bypasses this production preflight only inside isolated fixtures.",
+    "The production orchestration token and exact GhClient type check prevent accidental direct production capture calls. They are cooperative same-process checks, not a security boundary against Python code that can inspect or mutate module state.",
+    "On signal, the shutdown latch rejects queued command work and active process groups are killed and reaped. A worker already admitted at signal arrival can enter process creation before cleanup; the evidence does not claim zero transient post-signal process creation.",
+    "The public commitment-only check cannot test cross-lane private-identifier absence; owner-local render and owner-local verification with the mode-0600 private inputs perform that check.",
+    "Owner-local cross-lane verification requires two byte-identical stage-zero Git index observations around the regular-blob scan and repeats private ignore, worktree, and untracked checks. This is a bounded stability check, not an atomic index lock. It rejects tracked symlinks and non-regular entries, but does not inspect Git history, arbitrary encodings, or external publication channels.",
+    "Whole-index verification rejects exact owner-local component bytes and bounded representation variants of all detailed private telemetry subobjects in tracked blobs, including embedded JSON, JSON strings, Markdown blockquotes, and diff additions or deletions. This structural check does not prove that every partial, transformed, or semantically equivalent private-derived value is absent.",
+    "The local Git executable and current index are trusted inputs to owner-local closure. The receipt binds the audit-excluded staged manifest by mode, path, size, Git object identifier, and an independently computed blob SHA-256. The final audit payload is checked separately and must be staged last. These checks do not independently verify Git implementation semantics or history.",
+    "The Python runtime and standard library, and the local operating-system process, signal, clock, filesystem, and permission semantics, are trusted inputs. A recorded Python implementation and version identify the observed runtime but do not independently prove those semantics.",
+    "Whole-index matching subtracts tokens present in public records and excludes common or short branch names and shared classification enums from unstructured matching to avoid false positives. It checks short private-only names, branches, and unique commit prefixes in a finite grammar of repository identity fields and paths; branch, ref, and SHA fields and paths; Git clone, submodule, remote, fetch, and -C forms; and head, commit, object, OID, and rev-parse forms. Entity children such as repository owners and issues reset repository-identity context. A shared or bare ambiguous token without a listed context is not treated as a private leak.",
+    "Exact decision status, attestation text, reviewer text, dates, and source digests do not authenticate reviewer identity or independently prove that a person performed the review. Owner approval of the exact final bytes remains separate evidence.",
+    "Repository classification does not establish runtime integration, security qualification, release readiness, or semantic correctness."
+  ],
+  "private_evidence": {
+    "commitment_sha256": "bc9d57ca03ba3f16c04eb222952bc345a12defdc4f2f8469812036bd15f1109e",
+    "components": [
+      {
+        "bytes": 100058,
+        "classification": "OWNER_LOCAL_PRIVATE_MODE_0600",
+        "label": "owner-visible-repositories.private.jsonl",
+        "sha256": "8d98555fb499dd188d9ecb1668f4168abf6d86241d65cef10ab9a68256a0c755"
+      },
+      {
+        "bytes": 53282,
+        "classification": "OWNER_LOCAL_PRIVATE_MODE_0600",
+        "label": "repository-classification-decisions.private.json",
+        "sha256": "992c52519c181e804d1f395f5511595cc2b5729a03eb78fa357e1a368430ea43"
+      },
+      {
+        "bytes": 34712,
+        "classification": "OWNER_LOCAL_PRIVATE_MODE_0600",
+        "label": "local-private-source-ledger.private.csv",
+        "sha256": "0c540937c0db76d1109129858295e6c1056531576a0370f8e1557d40d85c4398"
+      },
+      {
+        "bytes": 7490,
+        "classification": "OWNER_LOCAL_PRIVATE_MODE_0600",
+        "label": "capture-command-telemetry.private.json",
+        "sha256": "65b29681d09cdb43aeb82e07f84d4ab5259c55bbdffe7c260c1511ebe09aa189"
+      }
+    ],
+    "cross_lane_scan": {
+      "result": "PASS",
+      "scan_configuration_sha256": "533bbcf5012a6127f58c3cc72bc776d21ce7aa8e0059fcb91fb5aa789b2249ab",
+      "sealed_index_sha256": "f086f2417bc06403bc90b38150d84d14f6deda4000fd2fc921c05928813dee3a",
+      "tracked_bytes": 23624838,
+      "tracked_files": 568
+    },
+    "public_check_scope": "COMMITMENT_ONLY",
+    "repositories": 43,
+    "unresolved": 0
+  },
+  "products": {
+    "repository_classification_csv": {
+      "bytes": 139081,
+      "classification": "PUBLIC_GENERATED",
+      "label": "repository-classification.csv",
+      "sha256": "8f7d15997992263d01ec96acb1e45537aaf2db0a6a8fecfbbc0fc32f6c65fd32"
+    },
+    "repository_classification_json": {
+      "bytes": 303382,
+      "classification": "PUBLIC_GENERATED",
+      "label": "repository-classification.json",
+      "sha256": "3fb7ab69230a3898ac989ef39da4195b67fe06e8ab568b82b92749726898058f"
+    }
+  },
+  "public_evidence": {
+    "repositories": 174,
+    "sources": {
+      "capture_metadata": {
+        "bytes": 9865,
+        "classification": "PUBLIC_REDACTED",
+        "label": "capture-metadata.json",
+        "sha256": "231d1da36640177d7d732b8830165c865883e7bbda6e9bf141b2a6be8ee11d17"
+      },
+      "command_log": {
+        "bytes": 2489,
+        "classification": "PUBLIC_REDACTED",
+        "label": "command-log.jsonl",
+        "sha256": "f2d4a34deb16a2f0990957f0af987231715738fb1f0605b8fa6d6cdcc54847a9"
+      },
+      "public_decisions": {
+        "bytes": 213156,
+        "classification": "PUBLIC_AUTHORED_SOURCE",
+        "label": "repository-classification-decisions.json",
+        "sha256": "5afeae50cd77136fda13a11432f8fe14ef7e6496c246e0b5e1f898ef84b54c51"
+      },
+      "repository_heads": {
+        "bytes": 80029,
+        "classification": "PUBLIC_CAPTURED_SOURCE",
+        "label": "repository-heads.jsonl",
+        "sha256": "ceda987c0e5d1c79c9240a8e2b97dcaca81480d75eeb267b711f19d0ce20907e"
+      },
+      "supersession_audit": {
+        "bytes": 5517,
+        "classification": "PUBLIC_AUTHORED_SOURCE",
+        "label": "supersession-audit.json",
+        "sha256": "ce3a25d6171162b7d1faa97c2f86c5b00caabcd551ccb950b4c29a0853ee6455"
+      }
+    },
+    "supersession_sources": [
+      {
+        "bytes": 20938,
+        "classification": "PUBLIC_SUPERSESSION_BOUND_SOURCE",
+        "label": "docs/ROADMAP-STATUS.md",
+        "sha256": "d87d157fc3e340a9c281ff3962675e9300b5b5dfc7f9df915c74cab265819332"
+      },
+      {
+        "bytes": 360310,
+        "classification": "PUBLIC_SUPERSESSION_BOUND_SOURCE",
+        "label": "docs/HALDIR-NCP-V0.8.0-TRIPLE-CHECKED-AUDIT-AND-IMPLEMENTATION-SPECIFICATION-2026.md",
+        "sha256": "0c751075617e56ddf73b8594f812a12c35d703a4511a78db6e908a0eb2f8f0a9"
+      },
+      {
+        "bytes": 4917,
+        "classification": "PUBLIC_SUPERSESSION_BOUND_SOURCE",
+        "label": "evidence/source-review/source-ledger.md",
+        "sha256": "947843d0e56e48c7c740596bf5295e269b904d1213183abec56fca74336c5983"
+      },
+      {
+        "bytes": 80029,
+        "classification": "PUBLIC_SUPERSESSION_BOUND_SOURCE",
+        "label": "evidence/source-review/repository-heads.jsonl",
+        "sha256": "ceda987c0e5d1c79c9240a8e2b97dcaca81480d75eeb267b711f19d0ce20907e"
+      }
+    ],
+    "unresolved": 0
+  },
+  "schema_id": "haldir.ecosystem-source-audit.v1",
+  "schema_version": "1.0.0"
+}

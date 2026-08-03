@@ -39,12 +39,19 @@ Those stronger properties remain explicitly unproven or out of scope under
 limitations inside `CL-LIVE-TRANSPORT-01`, `CL-BACKEND-01`, `CL-TIMING-01`, and
 `CL-PRODUCTION-01`.
 
+The Issue #2 workflow now defines bounded public and owner-local inventory lanes,
+source-bound classification decisions, automated factual supersession review, staged
+privacy closure, and separate public versus owner-local verification. Exact retained
+artifacts control the run state. Automated factual review does not authenticate a
+reviewer or establish owner approval, and an inventory seal grants no integration,
+phase, publication, or release authority.
+
 ## Phase ledger
 
 | Normative phase | Status | Current evidence or missing gate |
 | --- | --- | --- |
-| -1 — design correction | Partial | The NCP 0.7.1 mechanics carry a supersession notice and repository-wide tracking issues now exist, but the full source-fact inventory is absent. |
-| 0 — sources, claims, assurance profile | Partial | P0 pins, profiles, limitations, and claim ledger exist; the organization-wide machine-readable inventory does not. |
+| -1 — design correction | Partial | The bounded supersession and source-inventory workflow preserves dated history and current-observation boundaries. A retained inventory seal can close only Issue #2's inventory scope; the independent phase reviewer exit remains incomplete. |
+| 0 — sources, claims, assurance profile | Partial | P0 pins, profiles, limitations, and claim ledger exist. The bounded workflow can retain machine-readable public inventory plus a private-evidence commitment, but owner approval, independent reviewer authentication, and the broader claim/assurance exit remain unproven. |
 | 1 — workspace and reproducible CI | Partial | Workspace gates are green and third-party/tool pins are now mechanically checked; release provenance and cross-platform remote evidence remain release work. |
 | 2 — canonical contracts and malformed corpus | Done (P0) | Strict deterministic CBOR, golden vectors, structural limits, and hostile parser tests (`CL-CBOR-01`). |
 | 3 — signatures, roles, trust | Done (P0) | COSE/Ed25519, domain binding, trust conflict handling, role/subject enforcement (`CL-COSE-01`, `CL-TRUST-01`, `CL-IDENTITY-01`). |

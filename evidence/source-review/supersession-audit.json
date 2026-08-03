@@ -1,0 +1,127 @@
+{
+  "authority": {
+    "archive_authorized": false,
+    "deployment_authorized": false,
+    "doi_authorized": false,
+    "github_release_authorized": false,
+    "overall_release_status": "NO_GO",
+    "publication_authorized": false,
+    "release_authorized": false,
+    "tag_authorized": false,
+    "task_state_advanced": false
+  },
+  "decisions": [
+    {
+      "disposition": "RETAIN_AS_HISTORY",
+      "id": "SA-001",
+      "must_not_imply": [
+        "that the listed branch heads remain current",
+        "that a later head migrated or qualified a runtime"
+      ],
+      "reason": "The table records what the audit observed at that time. Later branch heads do not make the historical observation false.",
+      "subject": "The public baseline observed on 2026-07-12"
+    },
+    {
+      "disposition": "RETAIN_IMMUTABLE_V0_8_BASELINE",
+      "id": "SA-002",
+      "must_not_imply": [
+        "native Haldir wire-1.0 migration",
+        "NCP 1.0 publication",
+        "consumer or role qualification"
+      ],
+      "reason": "Haldir remains pinned to NCP v0.8.0. NCP repository HEAD is an unreleased and release-blocked wire-1.0 candidate.",
+      "subject": "The Haldir NCP runtime baseline"
+    },
+    {
+      "disposition": "SUPERSEDE_ONLY_CURRENT_HEAD_OBSERVATIONS",
+      "id": "SA-003",
+      "must_not_imply": [
+        "continuous branch monitoring",
+        "that the observed commit was installed or executed",
+        "that copied protocol files prove migration"
+      ],
+      "reason": "Each retained 40-hex commit OID is immutable. The default-branch ref that selected it is mutable, so the observation is bounded by the capture interval in audit-metadata.json.",
+      "subject": "Default-branch head records"
+    },
+    {
+      "disposition": "KEEP_STORAGE_CLASSES_SEPARATE",
+      "id": "SA-004",
+      "must_not_imply": [
+        "that a public placeholder describes a private implementation",
+        "that a public commitment makes private evidence independently reproducible"
+      ],
+      "reason": "Public history may identify public repositories. Owner-visible private identities, URLs, branches, heads, paths, and classifications remain only in owner-local mode-0600 files.",
+      "subject": "Public and owner-visible repository evidence"
+    },
+    {
+      "disposition": "REMAIN_PARTIAL",
+      "id": "SA-005",
+      "must_not_imply": [
+        "phase completion",
+        "integration qualification",
+        "release authorization"
+      ],
+      "reason": "A future completed, reviewed, and sealed inventory would remove only the missing-inventory reason. Separate review, source, claim, and assurance exit gates would remain.",
+      "subject": "Roadmap phases -1 and 0"
+    },
+    {
+      "disposition": "INVENTORY_ONLY",
+      "id": "SA-006",
+      "must_not_imply": [
+        "CH-T003 completion",
+        "a release GO decision",
+        "security, safety, interoperability, or deployment certification"
+      ],
+      "reason": "Issue 2 can record bounded inventory completion only after the exact capture, review, and final seal exist. Any later closure would not modify the retired CH-T003 lifecycle, active claims, requirements, or release authority.",
+      "subject": "Issue 2 closure authority"
+    }
+  ],
+  "owner_approval_established": false,
+  "prepared_at": "2026-08-02",
+  "prepared_by": "Codex automated draft",
+  "review_attestation": "Automated factual review compared every supersession disposition and non-implication boundary with the declared source set. This is not human or owner approval, and reviewer identity is not independently authenticated.",
+  "review_date": "2026-08-03",
+  "review_kind": "AUTOMATED_FACTUAL_REVIEW",
+  "review_status": "REVIEWED",
+  "reviewer": "Codex automated factual review",
+  "reviewer_identity_authenticated": false,
+  "schema_id": "haldir.ecosystem-source-supersession-audit.v1",
+  "schema_version": "1.0.0",
+  "scope": "Account source-inventory history and current-observation boundary",
+  "sources": [
+    {
+      "id": "CURRENT_NCP_BOUNDARY",
+      "path": "docs/ROADMAP-STATUS.md",
+      "status": "CURRENT_MAINTAINED_STATUS"
+    },
+    {
+      "id": "HISTORICAL_2026_07_12",
+      "path": "docs/HALDIR-NCP-V0.8.0-TRIPLE-CHECKED-AUDIT-AND-IMPLEMENTATION-SPECIFICATION-2026.md",
+      "status": "DATED_HISTORICAL_OBSERVATION"
+    },
+    {
+      "id": "OWNER_LOCAL_PRIVATE_LEDGER",
+      "path": "evidence/source-review/local-private-source-ledger.private.csv",
+      "status": "OWNER_LOCAL_MODE_0600_EVIDENCE"
+    },
+    {
+      "id": "P0_SOURCE_LEDGER",
+      "path": "evidence/source-review/source-ledger.md",
+      "status": "P0_BASELINE_WITH_CURRENT_BOUNDARY"
+    },
+    {
+      "id": "PUBLIC_REPOSITORY_HEADS",
+      "path": "evidence/source-review/repository-heads.jsonl",
+      "status": "RETAINED_PUBLIC_OBSERVATION"
+    }
+  ],
+  "unresolved": [
+    "Automated factual review is not human or owner approval; owner approval and authenticated reviewer identity are not established.",
+    "A final staged seal, if later retained, would prove only the bounded inventory closure and would grant no release or integration authority.",
+    "Native NCP 1.0 migrations and role qualifications remain separate work.",
+    "Owner-local private evidence is not independently reproducible from the public repository.",
+    "Mutable GitHub state can advance after the retained capture interval.",
+    "Phase -1 and Phase 0 reviewer exit gates remain incomplete.",
+    "The Haldir 0.9.0 release decision remains NO_GO."
+  ]
+}
