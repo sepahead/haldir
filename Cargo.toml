@@ -66,6 +66,11 @@ tokio = { version = "1", default-features = false, features = ["sync"] }
 # off by default; TLS is the only compiled link and compression stays disabled.
 zenoh = { version = "=1.9.0", default-features = false, features = ["transport_tls"] }
 
+[patch.crates-io]
+# Narrow reviewed security backport for Zenoh 1.9.0. The full immutable revision
+# is inline, and Cargo.lock resolves the same Git object.
+zenoh-transport = { git = "https://github.com/sepahead/zenoh-transport-lz4-backport", rev = "6b93b15d0795748b7f76c72eae07f1cda517e762" }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 # `missing_docs` hardening is deferred to the release-hardening pass; see docs/LIMITATIONS.md.

@@ -5,12 +5,10 @@
 [advisories]
 version = 2
 yanked = "deny"
+# Safe-code soundness defects in transitives are relevant to the all-feature
+# client graph even when the affected crate is outside this workspace.
+unsound = "all"
 ignore = [
-  # Zenoh 1.9.0 declares lz4_flex 0.10.0 unconditionally, but the affected
-  # block-decompression calls are compiled only by `transport_compression`.
-  # Haldir enables only `transport_tls`, enforced by verify-pins.py. Remove this
-  # exact exception when the pinned Zenoh baseline permits a fixed lz4_flex.
-  "RUSTSEC-2026-0041",
   # Unmaintained proc-macro pulled through zenoh-keyexpr; this is not a reported
   # vulnerability and Zenoh 1.9.0 offers no fixed transitive selection.
   "RUSTSEC-2024-0436",
@@ -56,7 +54,10 @@ unknown-registry = "deny"
 unknown-git = "deny"
 required-git-spec = "rev"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# One exact upstream source is admitted for the always-on NCP key builder and
-# the off-by-default conformance adapter. The manifest/lock revision is
-# independently checked by verify-pins.py.
-allow-git = ["https://github.com/sepahead/NCP"]
+# Two exact sources are admitted: NCP for the key builder/conformance adapter,
+# and the narrow Zenoh transport security backport. Each manifest dependency
+# requires a full revision, and Cargo.lock resolves the selected Git object.
+allow-git = [
+  "https://github.com/sepahead/NCP",
+  "https://github.com/sepahead/zenoh-transport-lz4-backport",
+]

@@ -20,28 +20,50 @@ not a routine bump.
 | `hmac` | 0.12.1 | RustCrypto HMAC with constant-time `verify_slice`, paired with the existing SHA-256 0.10 stack for separately keyed authenticated durable snapshots. Version 0.13 targets the newer digest/SHA-2 generation, so 0.12.1 avoids duplicating the cryptographic hash stack. | `haldir-durable` |
 | `tokio` | 1 (locked) | Bounded MPSC handoff from Zenoh's callback into the future single-owner Gate runtime. The workspace dependency has default features disabled and enables `sync`; the separate `live-gate-dev-smoke` feature adds only `rt` so its one-shot example can drive bind/shutdown. | `haldir-transport-zenoh` `live-zenoh`; forwarded by `haldir-gate` `live-zenoh`; `haldir-gate` `live-gate-dev-smoke` |
 | `zenoh` | exactly 1.9.0 | Pinned NCP-v0.8 transport baseline for the off-by-default strict mTLS client, exact-route subscriber, and typed final-command publisher. Default features are disabled and `transport_tls` is the sole admitted transport feature; plaintext, discovery, listeners, shared memory, compression, and generic publication are excluded by configuration/API/profile checks. Gate's identically named feature consumes only the typed publisher/result boundary. | `haldir-transport-zenoh` `live-zenoh`; forwarded by `haldir-gate` `live-zenoh` |
+| `zenoh-transport` | exactly 1.9.0 at `6b93b15d…` | Immutable narrow backport of the published Zenoh transport crate. It changes no upstream Rust source. It pins the affected block decompressor to the fixed release and raises only the package metadata floor required by that dependency. The workspace patch and lockfile bind the full Git revision. | Transitive through `zenoh` when `haldir-transport-zenoh/live-zenoh` is selected |
+| `lz4_flex` | exactly 0.11.6 | Fixed block-compression dependency selected by the reviewed Zenoh transport backport for `RUSTSEC-2026-0041`. Haldir still compiles compression out; the fixed selection removes the vulnerable package from the locked client graph instead of treating feature exclusion as remediation. | Transitive through the patched `zenoh-transport` package |
+| `event-listener` | exactly 5.4.2 | Fixed event listener selected for Zenoh synchronization after `RUSTSEC-2026-0221` reported that safe code could move a non-`Send` tag between threads through affected `StackSlot` versions. | Transitive through `zenoh-sync` |
 
 The transitive `unicode-ident` build dependency uses the OSI-approved
 `Unicode-3.0` data license in addition to MIT/Apache-2.0; `deny.toml` admits that
-license explicitly. Git sources remain denied by default, with only the exact NCP
-repository allowed and `rev` required; `tools/verify-pins.py` separately enforces
-the full immutable commit in both manifest and lockfile.
+license explicitly. Git sources remain denied by default. Only the exact NCP and
+Zenoh transport backport repositories are allowed, and `rev` is required. The
+workspace manifest pins the backport by its full 40-hex revision, and the
+lockfile resolves the same Git object.
+
+Epoch 18 protects `tools/verify-pins.py` after activation. This ordinary
+dependency remediation does not modify that verifier and does not claim a new
+trust root. Its existing checks continue to bind the NCP pin and TLS-only Zenoh
+feature selection. A future intentional trust-root replacement can add the
+backport's cross-file identity to that protected verifier.
 
 The Zenoh 1.9 TLS graph adds reviewed BSD-2-Clause, ISC, Zlib, MPL-2.0, and
 CDLA-Permissive-2.0 licenses; `deny.toml` remains default-deny and admits exactly
-the current reviewed lockfile set. It also names three exact transitive RustSec
-exceptions forced by Zenoh 1.9.0.
+the current reviewed lockfile set. It retains two exact transitive maintenance
+notices forced by Zenoh 1.9.0.
 
-Zenoh 1.9.0 unconditionally depends on affected `lz4_flex` 0.10.0, so
-`RUSTSEC-2026-0041` and the corresponding GitHub alert are valid and must remain
-open. The default Haldir graph does not include Zenoh. The all-feature live
-client graph compiles `lz4_flex`, but compiles out Zenoh's sole affected
-block-decompression call site because `transport_compression` is absent.
-`tools/verify-pins.py` inspects the resolved all-feature graph and rejects any
-compression feature or non-TLS Zenoh transport, preventing another dependency
-from silently making that network-fed path reachable. Enabling compression is
-forbidden until a reviewed Zenoh baseline selects a fixed LZ4 implementation.
-The exception is a temporary, scoped risk acceptance, not a false positive.
+Zenoh 1.9.0 declares the affected `lz4_flex` 0.10.0 release. Haldir replaces only
+its `zenoh-transport 1.9.0` package with the reviewed commit at `6b93b15d…`.
+That commit selects `lz4_flex 0.11.6`, which fixes `RUSTSEC-2026-0041`, and the
+Haldir lock contains no 0.10 package. The default Haldir graph still excludes
+Zenoh. The all-feature client graph still excludes `transport_compression`.
+Locked Cargo commands bind the selected Git object and checksums. Cargo-deny
+rejects unadmitted Git sources or a Git dependency without `rev`, and the
+protected source-pin verifier rejects every Zenoh transport feature except TLS.
+
+The same refreshed graph previously selected `event-listener 5.4.1`, which is
+affected by the safe-code soundness defect in `RUSTSEC-2026-0221`. The lock now
+selects patched 5.4.2 and no 5.4.1 package. `deny.toml` sets `unsound = "all"` so
+informational soundness advisories are evaluated across transitives instead of
+only workspace packages.
+
+The backport's two commits have GitHub-verified SSH signatures. Its exact-head
+hosted run `30927734598` passed metadata, provenance, formatting, lint, malformed
+decompression, Zenoh batch, and TLS-selected checks. These are review inputs.
+Cargo verifies the exact Git object selected by the full revision, but it does
+not verify the SSH signature. GitHub availability, TLS, runner images, Rustup,
+and registry acquisition remain external supply-chain surfaces. Replace the
+backport with a qualified immutable upstream release when one contains the fix.
 
 The pinned stock router image is a separate boundary: upstream `zenohd` defaults
 include `transport_compression`, and no image build-feature attestation proves
@@ -54,8 +76,11 @@ relying on Zenoh 1.9 defaults.
 
 `RUSTSEC-2024-0436` (`paste`) and `RUSTSEC-2025-0134` (`rustls-pemfile`) are
 maintenance notices rather than reported vulnerabilities. The exceptions must
-be removed when the pinned Zenoh baseline permits fixed transitives;
-`cargo deny --all-features check` still rejects every new advisory.
+be removed when the pinned Zenoh baseline permits fixed transitives.
+`cargo deny --all-features check` rejects advisory matches present in the pinned
+RustSec snapshot. A current-database audit is a separate review input for
+advisories published after that immutable snapshot; it is not epoch-18 release
+authority.
 
 ## Supply-chain tooling boundary
 
@@ -95,20 +120,19 @@ and the pinned router launch re-disables the daemon's forced loader after config
 load, but the transitive code remains in the binary graph until Zenoh provides a
 plugin-free client feature.
 
-## Automated update proposals
+## Automated dependency policy
 
-`.github/dependabot.yml` keeps Dependabot security-update pull requests enabled
-while disabling routine Cargo version-update pull requests. GitHub Actions
-version updates are grouped into at most one monthly proposal after a 14-day
-cooldown. This is discovery automation only: a bot pull request has no merge,
-release, deployment, or audit authority. There is no auto-approval or auto-merge
-path, no Dependabot registry credential, and no reason to expose an Actions
-secret to dependency-update code.
+`.github/dependabot.yml` disables routine Cargo and GitHub Actions version-update
+pull requests. Repository vulnerability alerts remain enabled. Automatic
+Dependabot security-fix pull-request creation is separately disabled, so a
+maintainer must reproduce each accepted remediation as a reviewed exact-pin
+change. There is no auto-approval or auto-merge path, no Dependabot registry
+credential, and no reason to expose an Actions secret to dependency-update code.
 
-GitHub runs the update-generation jobs on Actions runners even when repository
-or organization Actions policy would otherwise disable them. That
-GitHub-managed exception creates proposals only; it grants no merge, release,
-deployment, or audit authority.
+If GitHub runs an update-generation job, it uses an Actions runner even when
+repository or organization Actions policy would otherwise disable ordinary
+workflows. That GitHub-managed exception can create a proposal only; it grants
+no merge, release, deployment, or audit authority.
 
 Do not merge a Dependabot commit directly. When the accepted paths are not
 epoch-18 protected, reproduce the reviewed diff in a single-parent maintainer
@@ -117,11 +141,11 @@ post-activation commit with another identity or signature. A proposal touching a
 protected path instead requires an intentional signed gate and trust-root
 replacement.
 
-Cargo proposals are lockfile-only and may include transitive crates. A maintainer
-must review the upstream source, changelog, resolved graph, licenses, and
-advisories, then require every protected check. Manifest constraints and exact
-NCP, Zenoh, rustix, Rust toolchain, downloaded-tool, RustSec, TLA+/Java, GitHub
-CLI, container-image, and policy pins remain coordinated manual changes.
+For a deliberate Cargo update, a maintainer must review the upstream source,
+changelog, resolved graph, licenses, and advisories, then require every protected
+check. Manifest constraints and exact NCP, Zenoh, rustix, Rust toolchain,
+downloaded-tool, RustSec, TLA+/Java, GitHub CLI, container-image, and policy pins
+remain coordinated manual changes.
 
 `Cargo.lock` legitimately contains parallel incompatible `getrandom` 0.2, 0.3,
 and 0.4 lines. A hosted Cargo updater reproducibly tried to replace the 0.2 line
@@ -129,24 +153,26 @@ with the already-present 0.4 line, produced no lockfile change, and failed the
 whole update job. Incompatible-line migrations require a reviewed manifest
 change or an update to the parent crate that owns the requirement. Routine
 Cargo version proposals stay disabled; maintainers can still perform deliberate
-signed lockfile updates, and Dependabot security updates remain enabled.
+signed lockfile updates. Vulnerability alerts remain enabled; automatic
+security-fix pull-request creation does not.
 
-Actions proposals must retain a full 40-hex commit SHA and its same-line release
-comment. Reviewers must authenticate the upstream repository, tag, and commit,
-then deliberately update the exact pin constants, tests, and protected job
-hashes. The workflows and their pin-verification boundary are epoch-18 protected,
-so an accepted Actions update cannot land as an ordinary successor: it requires
-the intentional signed recovery process and a new gate/trust root. A proposal
-that initially fails `tools/verify-ci-pins.py` is a review prompt, not permission
-to relax that verifier. Pull-request workflows must keep read-only permissions
-and `persist-credentials: false`; OIDC attesters remain limited to pushes on
-`main`, and dependency code must never be moved to `pull_request_target`.
+A deliberate Actions update must retain a full 40-hex commit SHA and its
+same-line release comment. Reviewers must authenticate the upstream repository,
+tag, and commit, then deliberately update the exact pin constants, tests, and
+protected job hashes. The workflows and their pin-verification boundary are
+epoch-18 protected, so an accepted Actions update cannot land as an ordinary
+successor: it requires the intentional signed recovery process and a new
+gate/trust root. A candidate that initially fails `tools/verify-ci-pins.py` is a
+review prompt, not permission to relax that verifier. Pull-request workflows
+must keep read-only permissions and `persist-credentials: false`; OIDC attesters
+remain limited to pushes on `main`, and dependency code must never be moved to
+`pull_request_target`.
 
-Dependabot alerts do not cover vulnerable Actions pinned by SHA. A grouped,
-monthly update proposal and independent upstream-advisory monitoring are
-therefore complementary; neither proves that a proposed commit is safe. The
-one-open-PR limit applies only to version updates, so it does not delay
-security-update pull requests.
+Dependabot alerts do not cover vulnerable Actions pinned by SHA. Independent
+upstream-advisory monitoring is therefore required; an alert or advisory does
+not prove that a candidate commit is safe. The zero open-PR limits apply only to
+version updates. They do not disable vulnerability alerts. Automatic
+security-fix pull-request creation is disabled by a separate repository setting.
 
 ## Deliberately absent
 
