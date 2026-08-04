@@ -1,46 +1,148 @@
 # Partial Information Decomposition across the ecosystem — security & communication
 
+> **Status — design survey with a current component boundary (2026-08-04).**
+> Crebain main commit `d7f3006bfac17a8157d22c6a54a23d00c733851c`
+> implements a component-tested, exact-opt-in `PidObservation` producer with two
+> bounded evidence routes. The reviewed operator-controlled Galadriel PR #43 head,
+> `bd2dc86ec9616dc59c6a243735d71792eb494f6d`, implements the strict consumer,
+> registry/lifecycle admission, operational receiver, and baseline processing. It
+> pins `pid-core` 1.0.0 commit
+> `1cd2424f7967e1752dcc8e53859e8fdad3566f51`. That PR remains operator-only.
+> A reciprocal current pin, final cross-repository qualification, live-router
+> mTLS/ACL evidence, and recorded-stream calibration are **NOT CLAIMED**. The
+> scheduler, stream-shedding policy, UI, and automatic down-weight remain proposals.
+> The NCP
+> analysis is pinned to immutable release `v0.8.0`. Repository HEAD for NCP is the
+> unreleased and release-blocked `1.0.0-rc.1` candidate on a different wire; a native
+> 1.0 Haldir integration and role qualification are **NOT RUN**. The `BulkBlock` codec
+> is usable for local or offline data, but the wire-0.8 `BulkObservation` transport
+> envelope is reserved and must not be published. The earlier pid-core 0.9.0 review
+> commit `2557f929ed1ba8c1307d62e2763fe79cc953f449` is historical analysis, not the
+> current Galadriel candidate pin. Every consumer must retain its resolved source and
+> package digest and revalidate the selected APIs. pid-rs is not an NCP
+> peer and receives no NCP role receipt.
+
 ## Why PID here
 
-Partial Information Decomposition (PID) takes the mutual information that two or more sources carry about a target and splits it into operationally distinct atoms: **redundant** information (present in either source alone — the corroborating overlap), **unique** information (carried by exactly one source and no other), and **synergistic** information (present only in the *joint* observation, invisible to any source in isolation). The canonical synergy example is a parity relation `Z = X ⊕ Y`: `X` and `Y` are pairwise independent of `Z`, yet together they determine it completely. This is not a statistical curiosity. It is the exact shape of two engineering problems this ecosystem faces every day — a bearing-only sensor and a range-only sensor that jointly localize a target neither can fix alone (synergy you must not split), and a covert channel deliberately built to be pairwise-decorrelated so first-order monitors see nothing (synergy that is the attacker's fingerprint).
+Partial Information Decomposition (PID) takes the mutual information that two or more sources carry about a target and splits it into measure-dependent atoms: **redundant** information, **unique** information, and **synergistic** information available only from a joint observation. The canonical synergy example is a parity relation `Z = X ⊕ Y`: `X` and `Y` are each independent of `Z`, yet together they determine it. Two engineering hypotheses have that possible shape: bearing and range can be jointly necessary for a declared localization target, and a covert channel can distribute a relation across at least three observed fields while preserving selected marginals and pairs. Neither example establishes a PID atom without a specified joint distribution, target, measure, and retained experiment.
 
-The ecosystem is unusually well-positioned to exploit this because it owns *both* ends of the pipeline. On one side, **manwe** and **crebain** provide a real multimodal fuser — SRP/GCC-PHAT acoustic DOA, N-view triangulation, radar range, and a Kalman/EKF/UKF/IMM tracker whose per-measurement innovation `y = z − Hx̂` and covariance `S` are the natural per-modality feature and the natural value-of-information statistic simultaneously. On the other side, **pid-rs** (`pid-core` v0.4.0) is a bit-reproducible PID library: continuous `I^sx` estimators (Ehrlich-KSG), discrete Williams–Beer `I_min` and signed SxPID, target-free O-information/co-information screens, and — critically — a battery of validity gates. The **NCP** bus makes the whole thing observable for free: its pub/sub Observation plane lets a monitor attach read-only, and its `seq`-echo design lets a split-plane observer join a `CommandFrame` to its driving `SensorFrame` by identity rather than arrival time.
+The ecosystem owns useful components on both sides of this pipeline. Manwe and
+Crebain provide multimodal fusion components. Crebain now emits bounded
+Galadriel sidecar evidence: scalar NIS and optional raw innovation from each
+applied sequential filter update, plus an optional attested
+`consistency_projection` from one frozen pre-association prior. The reviewed
+Galadriel PR consumes and assembles that evidence and uses matching projections
+for its signed-Pearson-correlation baseline. pid-rs provides estimator, invariant,
+adjustment, and diagnostic-resampling APIs at the exact candidate pin above.
+Frozen NCP wire 0.8 separately correlates a `CommandFrame` with its driving
+`SensorFrame` because `CommandFrame.source` copies the complete
+`SensorFrame.stream`; such consumers join on `(source.epoch, source.seq)`, not
+bare sequence or arrival time. The Galadriel sidecar is a project-owned extension,
+not a normative NCP `SensorFrame` or `ObservationFrame`.
 
-The discipline that makes any of this trustworthy is inherited from prisoma. Continuous `I^sx` is a *functional of the distribution* seen only through a finite-sample kNN estimator with real failure modes, so every continuous result must pass Experiment 0 (`exp0 --strict-gate`, GO only certified in the analytic Gaussian band at **d=1, n=4000**) and the geometry gate before its atoms mean anything. High-dimensional embeddings are a documented **NO-GO** (r̄≈28.6, v̄≈−26.6 at d=64) — the gate working, not a bug. `calibrated_posterior=false` is the standing posture: no atom is interpreted on real data pre-gate, and continuous `I^sx` atoms are never pooled with discrete `I_min` atoms. Above all we apply one rule everywhere: **would a cheaper statistic do?** PID earns its complexity only where a marginal correlation, a scalar conditional MI, or an activation-norm OOD monitor provably cannot see the thing that matters. Several ideas below survive because the answer is no; others are demoted to the sliver where PID is irreducible.
+The discipline inherited from Prisoma is narrower than the original survey
+stated. `exp0 --strict-gate` validates analytic mutual-information recovery in
+one built-in Gaussian experiment; it does not accept consumer data, adjudicate an
+atom measure, or validate `pid3_isx`. The pid-rs documentation marks atom-measure
+selection `not_adjudicated` and the atom-estimator path `blocked`. Full
+`pid3_isx` is a mixed-dimensional research reproduction behind explicit opt-ins
+and has no consistency result. Therefore no continuous atom in this survey has a
+GO gate. Treat those outputs as incomplete research diagnostics with
+`calibrated_posterior=false`. Categorical `discrete_sxpid*` implements empirical
+shared-exclusions $I^{sx}_\cap$; the legacy Williams–Beer `I_min` comparator is
+the separate `imin_pid*` API. Quantization changes the observed variables, and
+`I_min` also changes the redundancy measure, so none of these results can be
+pooled with a continuous estimate. Each candidate must define a distribution and
+endpoint, use callable rejection checks on the actual data, and beat explicit
+cheaper baselines in retained evidence.
 
 ---
 
 ## A. Security applications
 
-The flagship security system is **Galadriel's Mirror** (see `docs/galadriels-mirror.md` and its ten `mirror-lenses/`), the electronic-warfare PID monitor that watches redundancy/synergy structure between command and sensor streams. The applications here are its siblings and specializations; we do not duplicate the Mirror, we place the other security uses around it.
+The flagship proposal is **Galadriel's Mirror** (see
+`docs/galadriels-mirror.md` and its embedded ten-lens appendix), an electronic-
+warfare study of cross-sensor/per-modality consistency projections. Crebain and
+the reviewed Galadriel PR implement component producer, consumer, and baseline
+paths; they do not constitute a qualified deployment. Command-to-sensor
+correlation belongs to the separate B3 study. The applications below are related
+proposals; none records a deployed monitor.
 
 ### A1. Synergy Sniffer — covert exfiltration across telemetry fields that should be independent
 
-**Mechanism.** Sources `X₁…Xₙ` are a panel of quantized telemetry fields the plant model says are marginally independent: low bits of position, confidence, inter-arrival time, a rarely-used metadata integer, per-modality innovation magnitude. There is **no target** — this is a structure screen. On clean telemetry, O-information and pairwise co-information sit near zero. A covert channel that parity-encodes exfil data into two fields drives the pair *synergy-dominated* (co-information flips negative) while leaving pairwise correlation at zero. The carrying signal is negative co-information; signed `discrete_sxpid3` net-synergy is a post-hoc characterizer, not the detector.
+**Mechanism.** Sources `X₁…Xₙ` are a panel of quantized telemetry fields the plant model says are marginally independent: low bits of position, confidence, inter-arrival time, a rarely-used metadata integer, and per-modality innovation magnitude. There is **no distinguished target**: this is a structure screen over at least three jointly observed fields. Two target-free variables cannot exhibit the claimed PID synergy; O-information is identically zero at arity two. The defined test is therefore a three-field relation such as `X₃ = X₁ ⊕ X₂`. Under that stated parity model, all three pairwise correlations can remain zero while three-variable co-information and O-information become synergy-dominated. A channel whose second carrier or payload target is unobserved remains invisible to this screen.
 
-**Ecosystem hook.** The NCP Observation plane's `BulkBlock` columnar codec (`ncp-core/src/bulk.rs`) already exposes self-describing f32/f64/i32/i64 columns of `times`/`values`/`senders` — a parse-free panel of exactly the fields to screen, read-only and off the hot loop.
+**Ecosystem hook.** Frozen NCP wire 0.8 includes a `BulkBlock` columnar codec (`ncp-core/src/bulk.rs`) for self-describing f32/f64/i32/i64 columns of `times`/`values`/`senders`. Use it only for a local ring or offline capture. The corresponding `BulkObservation` network envelope is reserved, is not implemented by every SDK, and must not be published as a transport frame.
 
-**Payoff.** Catches exfiltration that pairwise-correlation, compression-ratio, and scalar-MI monitors miss *by construction*, because a competent attacker decorrelated the marginals; synergy is the residual they cannot suppress without surrendering joint-encoding capacity. The whole path is discrete `I_min`/co-information — no kNN — so it sidesteps the continuous-estimator validity question entirely and needs no exp0 GO.
+**Potential payoff.** In the stated, fully observed three-field parity model, the screen can detect a dependence that pairwise correlation and scalar MI miss. That result does not transfer to two observed carriers, an unobserved payload target, a different distribution, or an adaptive higher-arity channel. The path uses discrete O-information/co-information — no kNN — so it avoids the continuous-estimator gate, but it still needs a finite-sample null and held-out validation.
 
-**Honest limits.** The load-bearing statistic is co-information/O-information, one of the cheapest multivariate tests — *not* the SxPID atom, and the "target-free SxPID" framing is false (`discrete_sxpid3` requires a target, forcing an unstated pseudo-target choice, so it is characterization only). The synergy-unique win is real but narrow: it needs ≥3 *jointly observed* fields bound by a full-entropy parity relation; a low-entropy or slowly-varying payload collapses to a pairwise-detectable signal (cheaper MI catches it), and a high-entropy payload whose parity partner is *unobserved* is invisible to any observed-variable synergy. Plug-in entropy is biased away from zero, so finite-N co-information is systematically positive on clean data — the two-`num_bins` robustness check catches binning artifacts but not sampling bias. And pid-rs applies **no** multiple-comparison correction, so the screen must be wrapped in a permutation null (shuffle one field to kill 3-way structure while preserving marginals) feeding BH-FDR, with arity capped at 2–3 fields.
+**Honest limits.** The load-bearing statistic is three-variable
+co-information/O-information, one of the cheaper multivariate tests — not an
+SxPID atom. `discrete_sxpid3` requires a selected target, so it is outside this
+target-free path. The candidate advantage is narrow: it needs at least three
+*jointly observed* fields bound by the declared dependence model. A low-entropy
+or slowly varying payload can collapse to a pairwise-detectable signal, and a
+payload whose required partner is unobserved is invisible. Finite-sample bias in
+the composite co-/O-information statistic has no universal direction; the null
+and two-bin-count sensitivity study must measure sampling and discretization
+artifacts rather than assume a bias sign. The pinned pid-core 1.0.0 candidate API
+exposes typed BH and BY adjustments behind a default-off experimental feature,
+but no screen applies them automatically. The consumer must predeclare the
+hypothesis family, enable and pin that API, justify BH's dependence assumptions
+or select BY, and retain the correction provenance.
 
-**MVP.** Select 4–6 independent numeric columns from a clean `BulkBlock` capture, `quantize_equal_width` at low `num_bins`, record baseline O-info/co-info bands; on live traffic flag any pair/triple whose co-information flips synergy-dominated under a permutation-null BH-FDR, re-run at two `num_bins` to reject binning artifacts, and characterize survivors with signed SxPID.
+**MVP.** Select 4–6 numeric columns from an offline `BulkBlock` capture and
+predeclare the screened three-field families. Fit the public
+`EqualWidthQuantizer`/`QuantizerConfig` on disjoint training or calibration rows,
+reuse those edges on evaluation rows, and record baseline
+O-information/co-information bands. The internal `quantize_equal_width` helper is
+not a public consumer API. Use a block, restricted, or other preregistered
+permutation null that preserves the exchangeability structure claimed for the
+temporal telemetry; an unrestricted one-field shuffle is invalid unless row
+exchangeability is established. Use pinned BH only if its dependence assumptions
+are justified; otherwise use pinned BY or a preregistered FWER procedure. Re-run
+at two bin counts and report survivors as exploratory dependence findings rather
+than exfiltration attribution. Live transport requires an explicit, reviewed
+extension and new evidence.
 
 ### A2. VLA policy-backdoor / trojan-trigger structural detector (prisoma)
 
-**Mechanism.** Sources `S₁ = V` (vision), `S₂ = L` (language/instruction), optionally `S₃ = D` (world-model/hidden-state); target `T = A` (action token / low-d action projection). A clean policy corroborates V and L redundantly before acting; a trojan installs a covert V→A pathway. The signal is `ΔUnq(V;A)` triggered-minus-clean corroborated by a drop in `R(V,L;A)`; for a world-model tamper the irreducible atom is `Syn(V,D;A)` (prisoma H7b) — synergy that lives only in the joint `(V,D)` and no marginal or pairwise statistic can see.
+**Mechanism.** Sources `S₁ = V` (vision), `S₂ = L` (language/instruction), optionally `S₃ = D` (world-model/hidden-state); target `T = A` (action token / low-d action projection). The hypothesis is that a clean policy corroborates V and L before acting, while a trojan creates a covert V→A path. Candidate signals are triggered-minus-clean `ΔUnq(V;A)` with a drop in `R(V,L;A)`, or `Syn(V,D;A)` for a preregistered world-model tamper. A chosen ≥3-body distribution can preserve the tested marginals and pairs while changing a joint term, but this must be demonstrated against explicit higher-order baselines rather than called irreducible in advance.
 
-**Ecosystem hook.** prisoma's `(V,L,D,A)` attack-surface reading; H3 matched-strength interventions as the perturbation-budget-matched adversarial map; **engram** stores clean per-episode atom profiles as the behavioral baseline the runtime departs from.
+**Ecosystem hook.** Prisoma's `(V,L,D,A)` attack-surface reading, current §2.4
+availability–use–effect distinction, and H4 frozen intervention tuple provide the
+proposed adversarial map. That H4 tuple binds the intervention construction and dose,
+availability-superiority and effect-equivalence margins, outcome, region rule, target
+weights, and engagement/support controls. It does not reuse the retired
+matched-strength intervention endpoint. A clean per-episode atom-profile artifact would be a future
+Prisoma-owned output. Current Engram evidence does not implement or store that
+baseline.
 
-**Payoff.** Detects a trigger-activated backdoor by its structural fingerprint *without knowing the trigger a priori*, where input-space anomaly detectors see no OOD input, and localizes the compromised modality by which atom shifted.
+**Potential payoff.** A future blinded study could test whether a structural
+shift ranks a trigger-affected modality when an input-space anomaly detector sees
+no OOD input. Current known-triggered rollouts neither establish trigger-agnostic
+detection nor localize compromise; an atom shift ranks statistical discordance,
+not its cause.
 
-**Honest limits.** Two hard problems. First, the estimator is **NO-GO** at raw VLA embedding scale, so the only legal path is PLS/PCA to d≤4 or discrete SxPID on quantized axes — but a stealthy trojan is engineered to be low-salience, and a variance-maximizing PCA will discard exactly the low-variance covert channel. The method is null by construction unless the MVP *first* proves the projection preserves an injected known covert channel. Second, the headline `ΔUnq(V;A)` has a cheaper twin: on triggered rollouts L is clean, so a covert V→A pathway is a rise in scalar conditional MI `I(V;A|L)`, which is low-dimensional and kNN-cheap. This should be re-scoped to a **≥3-body attribution / second-opinion** layer (where `Syn(V,D;A)` is genuinely irreducible), not a primary detector, and must beat STRIP/activation-clustering/spectral-signature scanners *and* the paired-ΔCMI baseline by a preregistered ΔAUROC ≥ 0.05 or be killed. Availability-vs-use (H2) is decisive: PID sees info available, a backdoor *uses* a pathway. The D-axis needs real VLA internals prisoma has not yet captured.
+**Honest limits.** Two hard problems remain. First, the raw VLA embedding has no passing estimator receipt. PLS/PCA or a discrete quantized path is a new estimand, not an automatic repair, and a variance-maximizing projection can discard a low-variance covert feature. The MVP must first show that the selected projection preserves a known injected signal and passes its own gates. Second, `ΔUnq(V;A)` has a cheaper comparator: triggered-minus-clean conditional MI `I(V;A|L)`. Re-scope PID to a ≥3-body attribution or second-opinion hypothesis and require it to beat STRIP, activation clustering, spectral signatures, and paired ΔCMI by the preregistered margin. Availability does not establish causal use, and the D-axis needs VLA internals that Prisoma has not captured.
 
-**MVP.** Offline, known-triggered vs clean rollouts; PLS-project V,L to d≤4, prove the projection preserves an injected covert channel, run geometry gate + `exp0 --strict-gate`, compute `ΔUnq(V;A)` and `ΔI(V;A|L)` with `block_bootstrap_paired` CIs excluding zero, require both to beat a STRIP baseline before any runtime monitor.
+**MVP.** Offline, compare known-triggered with clean rollouts. Select and preregister a projection, show that it preserves an injected signal, and run callable geometry and estimator checks on those exact features. `exp0 --strict-gate` cannot ingest them and does not validate atoms. Select a paired inference procedure with retained coverage evidence, and require the incomplete PID diagnostic to beat the preregistered STRIP and ΔCMI baselines before any runtime proposal.
 
 ### A3. Single-point-of-information map (dual-use offline reading)
 
-Not a standalone detector but a security by-product of the scheduler in B1. A modality with high `Unq(V;A)` / high Shannon-invariant vulnerability `v̄` is one whose spoof flips behavior with *no cross-modal corroboration* — a live single-point-of-failure map, computed offline over the same features the QoS scheduler uses, reusing prisoma's `(V,L,D,A)` attack-surface reading. The honest caveat is that a value-of-information scheduler is an **attack amplifier**: residual-undetectable false-data injection (Ueda & Kwon, 2408.10177) can inflate a spoofed channel's apparent unique info to seize scheduling priority and starve the honest corroborators that would expose it. PID measures info *available*, not *used*; the real remedy is per-plane Zenoh ACL + mTLS, not PID. This map is advisory attack-surface cartography, never an enforcement gate.
+Not a standalone detector but a proposed security by-product of the scheduler in
+B1. A per-modality leave-one-out loss
+`Δᵢ = I(T;S_all) - I(T;S_-i)`, or an independently admitted per-modality unique
+atom, is a candidate single-point-of-failure indicator under the declared
+distribution. `average_degree_of_vulnerability` returns one global panel scalar
+`v̄ = ΣᵢΔᵢ / I(T;S_all)` with typed defined/undefined status; it cannot localize a
+modality. A value-of-information scheduler can also amplify attack: a detector-
+aware input can inflate apparent value, seize priority, and starve corroborating
+inputs. PID measures information available, not causal use. Default-deny
+authorization and authenticated transport limit unauthorized injection, while
+sensor/model hardening and bounded scheduling policy address authorized or
+compromised inputs. This map is advisory attack-surface cartography, never an
+enforcement gate.
 
 ---
 
@@ -48,39 +150,68 @@ Not a standalone detector but a security by-product of the scheduler in B1. A mo
 
 ### B1. Value-of-information scheduling under a jammed link
 
-**Mechanism.** When the Zenoh link degrades to a few frames per tick, which modality do you transmit first? Sources `Sᵢ` are manwe's per-modality scalar features (DOA az/el, triangulated 3D point reduced to per-axis, crebain confidence, radar range); target `T` is the next-tick track state. The information-theoretically correct "what do I send next given what I already sent" quantity is **conditional MI** `I(Sᵢ;T | already-sent) = Unq + Syn` — a single greedy-CMI estimate (Krause–Guestrin near-optimal sequential sensor selection) that captures *both* the drop-the-redundant-high-MI case and the keep-the-synergistic-pair case in one shot, with lower variance than a Möbius difference of noisy kNN terms.
+**Mechanism.** A proposed stream-shedding host could score a candidate modality with conditional MI `I(Sᵢ;T | already-sent)`, where `T` is a declared next-step track target. In a two-source PID under a compatible measure, that conditional MI can decompose into a unique plus synergistic term; the identity is not a generic multi-source scheduling theorem. Greedy selection is near-optimal only under stated submodularity or conditional-independence assumptions. Without those assumptions it is a heuristic that must be compared with fixed priority and direct optimization.
 
-**Ecosystem hook.** NCP Action plane (express + RealTime + DROP) and Perception plane QoS scheduling under a jammed link; features from manwe's tracker whose Mahalanobis/NIS gate is simultaneously the VoI signal and the FDI-detection statistic.
+**Ecosystem hook.** Frozen NCP wire 0.8 provides per-stream plane and QoS choices, but it does not implement the required cross-stream budget scheduler. A future external host could consume bounded Manwe/Crebain features and emit a separate policy table.
 
-**Payoff.** Turns latest-only conflation into VoI-ranked semantic conflation, maximizing information delivered per surviving frame when bandwidth collapses.
+**Potential payoff.** A future scheduler could replace fixed-priority stream shedding with VoI-ranked semantic shedding and test whether it delivers more information per surviving frame when bandwidth collapses.
 
-**Honest limits.** The PID **unique atom is the wrong member of the family** for this job — it systematically under-counts synergistic modalities, which is why the naive version has to bolt on a "co-schedule the synergistic partner" guard; greedy CMI subsumes both cases and eats even the narrow redundant-modality case where the unique atom would have won. Worse, a *static offline* priority weight cannot see the per-frame VoI spike the pitch advertises (a maneuvering IMM innovation matters exactly when it is non-stationary), and the correct ranking is conditional on which sensors the jam left *alive* this episode — greedy CMI recomputes on surviving frames, a fixed lookup table is blind to the surviving set. And the scheduler is an attack amplifier (see A3). Candid baseline: raw NIS / innovation surprise already prioritizes maneuver frames well at O(1); CMI beats it only on the redundant-but-high-MI frames.
+**Honest limits.** The PID **unique atom is the wrong member of the family** for this job because it excludes value available only through synergy; the naive version therefore needs a separate partner guard. Greedy CMI conditions each selection on what is already scheduled and is the simpler candidate for redundant and synergistic value. A *static offline* priority weight also cannot represent a per-frame VoI change, and the correct ranking depends on which sensors remain available in the episode. The scheduler is an attack amplifier (see A3). Scalar NIS is an O(1)-per-innovation baseline. Whether greedy CMI improves the declared delivery endpoint over NIS or fixed priority is **NOT RUN**.
 
-**MVP.** On a two-modality track (DOA + radar range), log scalar features + next-tick state, rank transmission by greedy conditional-MI vs NIS-magnitude over a jamming trace; claim value only if CMI reorders on the redundant-but-high-MI frames with a CI clearing zero. Demote PID proper to the offline SPOF map of A3.
+**MVP.** On a two-modality track, compare greedy conditional MI with NIS magnitude and fixed priority on a retained jamming trace. State and test the conditional-independence or submodularity assumptions needed for a greedy guarantee; otherwise call it a heuristic. Claim value only under a separately calibrated paired comparison. Demote PID atoms to offline incomplete diagnostics.
 
 ### B2. Synergy-aware semantic conflation for the Perception plane
 
-**Mechanism.** Sources `Sᵢ` are per-modality scalar innovation features from crebain's fusion tap (range-residual from radar, bearing-residual from acoustic DOA, one per modality per track); target `T` is a *delayed* settled track-state increment (the fused estimate a few ticks later, so the target is not the same tick's fusion). The signal is the sign of `co_information_pairwise` (CI₂ = Red − Syn): positive ⇒ redundancy ⇒ droppable, negative ⇒ net synergy ⇒ the pair must ride together as an atomic co-conflation group. This is the one PID niche that is genuinely irreducible: no second-order statistic can see synergy, so per-stream MI would rank bearing-only and range-only as each low-value and shed one — catastrophic.
+**Mechanism.** Sources `Sᵢ` are matching attested common-frame
+`consistency_projection` values from the component-tested Crebain producer;
+sequential NIS and raw innovations must not be treated as though they share one
+prior. Target `T` is a delayed settled track-state increment, not the same-tick
+fused state. The candidate sign of `co_information_pairwise` is a research
+diagnostic under the selected measure. In a declared distribution, a joint target
+relation can be invisible to selected marginals and pairs. The proposal must
+demonstrate that regime and compare it with conditional MI, higher-order
+baselines, and fixed-priority grouping before any stream policy follows.
 
-**Ecosystem hook.** crebain's `PidObservation` `SyncSender` tap (a pure, hot-path-untouched addition to `update_track`), logging per-modality scalar innovations + delayed settled state to a `BulkBlock` ring on the Observation plane; policy computed by a read-only subscriber and applied as a slowly-refreshed co-conflation group table.
+**Ecosystem hook.** Crebain main contains the component-tested producer, and the reviewed Galadriel PR contains the strict consumer and baseline. The delayed target, offline co-conflation study, policy table, and stream-level shedding host do not exist as a qualified integration.
 
-**Payoff.** Under bandwidth collapse the QoS layer sheds streams that redundancy proves are corroborated (free bits) while never splitting a synergistic pair, preserving joint localizability. Secondary security payoff: a synergy atom that collapses when a stream is spoofed is a world-model-tamper signal.
+**Potential payoff.** Under bandwidth collapse, a future QoS layer could shed streams that evidence suggests are redundant while keeping a candidate synergistic pair together. A collapse in a synergy atom could also be a tamper-screening input. Neither result proves corroboration, spoofing, or source truth.
 
-**Honest limits.** The original KEEP_LAST(1) framing is **wrong** and is dropped: NCP addresses each modality as its own sub-key, so latest-only conflation keeps the newest frame of *each* key and only drops stale intra-stream frames — it never splits a synergistic pair. The failure mode this actually guards is **stream-level shedding under a bandwidth budget**, a QoS admission-control mechanism that does not exist in NCP today and must be built for this to have a host. Estimand tension: the canonical DOA+range synergy lives in the 2-D angle-radius→Cartesian transform, but the geometry gate forces scalar d=1 per-axis targets, and whether a scalar per-axis increment still exhibits that synergy must be re-argued, not assumed. Sample budget is tight: at 10 Hz, n=4000 is ~6.7 min of stationary dynamics, so a 2–5 s tactical window yields n_eff of order tens after block-subsampling — the offline study builds cleanly, the online policy is throttled to "insufficient evidence" often. Innovations are autocorrelated (maneuvers), mandating block-bootstrap CIs before any drop. Plain pairwise MI already handles the redundancy half; PID earns its keep *only* on the synergy sign.
+**Honest limits.** The original KEEP_LAST(1) framing is wrong and is dropped: NCP keeps the newest frame of each modality sub-key and does not perform cross-stream budget shedding. The missing host is an explicit stream-shedding policy. The DOA-plus-range hypothesis changes under scalar projection, and pid-rs has no validated atom gate for this path. `RowResampleScheme::Subsample` returns diagnostic quantiles, not confidence intervals. Before any drop policy, select an estimator-specific calibrated inference procedure and compare target redundancy against conditional-MI and declared higher-order baselines; pairwise MI is not generally equal to a target-redundancy atom.
 
-**MVP.** Add the `PidObservation` tap, log scalar innovations + delayed settled state for one multi-sensor track, offline-compute `co_information_pairwise` + `pid2_isx` with block-bootstrap CIs per modality pair, emit a redundant/unique/synergistic label per pair, and diff against what naive latest-only would have dropped — on a real stream-shedding mechanism, not KEEP_LAST(1).
+**MVP.** Use the existing producer and reviewed consumer components to capture
+matching attested consistency projections, add a declared delayed target, and
+compute co-information plus `pid2_isx` only as incomplete offline diagnostics.
+Treat generic resampling output as descriptive. Compare candidate grouping with
+fixed-priority and conditional-MI shedding under a separately calibrated
+inference procedure. Do not use KEEP_LAST(1) as the comparator.
 
 ### B3. Neuro-controller health — synergy/redundancy shift as degraded-mode telemetry (engram)
 
-**Mechanism.** Sources `S₁` = low-d readout of the perception-encoder population, `S₂` = low-d readout of the world-model/recurrent hidden state; target `T` = the actuator `CommandFrame`, joined to the neural readout via the `CommandFrame`→`SensorFrame` `seq` echo. The candidate signal is a shift in the redundant/unique/synergistic profile between nominal and degraded episodes — action becoming *uniquely* determined by one population (world-model bypass, or a population going dark under sensor loss).
+**Mechanism.** Sources `S₁` and `S₂` are declared low-dimensional readouts of
+the perception-encoder and world-model/recurrent populations. Target `T` is a
+preregistered scalar or low-dimensional action projection carried by the
+actuator `CommandFrame`, not the whole message object. For frozen NCP wire 0.8,
+join that command-side projection to the neural readout through the complete
+`CommandFrame.source` position, which copies the driving `SensorFrame.stream`.
+The candidate signal is a shift in the measure-dependent atom profile between
+nominal and degraded episodes, such as action becoming uniquely determined by
+one population. The direction remains a hypothesis.
 
-**Ecosystem hook.** The NCP `seq`-echo join is exactly the command↔neural coupling this needs and is the one genuinely strong, real part of the idea. As *telemetry* (integrated over whole episodes) it dodges the real-time sample-starvation that dooms online PID.
+**Ecosystem hook.** NCP wire 0.8 provides an epoch-scoped source-position join for command↔sensor correlation. Offline, whole-episode telemetry changes the sample and latency budget, but its estimator validity is still **NOT RUN**. NCP does not supply the neural readout or prove the proposed coupling useful.
 
-**Payoff.** A graceful-degradation signal: whether a controller is still doing full sensor+world-model fusion or has dropped to a degraded reflex, letting a collapsed-fusion agent be down-weighted in fleet fusion.
+**Potential payoff.** A future experiment could test whether the atom profile distinguishes full sensor-plus-world-model fusion from a degraded reflex. It must not drive fleet down-weighting without an independent, bounded authority and safety design.
 
-**Honest limits.** Kept as a *forward-looking* item, not a runnable MVP, for three reasons. (1) engram's current controllers are reflex arcs (Braitenberg; pose-error→Poisson→velocity); a distinct world-model population `S₂` does not exist yet, so the two-population MVP is not runnable today. (2) The health *direction* is probably backwards: prisoma's H2 says *redundancy* predicts ablation robustness, and a well-fused predict-then-correct controller is more plausibly redundancy-dominated (Kalman-like, additive) than synergistic, so "synergy collapse = degraded" may be inverted — track both atoms plus the CI₂ sign, do not assume. (3) The headline use (a scalar trust number for fleet down-weighting) is delivered more cheaply by an activation-norm / reconstruction-error OOD monitor; PID's *only* unique contribution is discriminating the failure mode, and the one PID-shaped case (bypass = action available from `S₁` alone) is exactly what availability-vs-use says PID cannot certify. High-d populations are NO-GO, so run discrete `sxpid2` on quantized ≤few-dim projections after a mandatory geometry gate, with the projection choice a standing confound.
+**Honest limits.** Kept as a *forward-looking* item, not a runnable MVP, for three reasons. (1) Engram's current controllers are reflex arcs (Braitenberg; pose-error→Poisson→velocity); a distinct world-model population `S₂` does not exist yet. (2) The health direction is unestablished: redundancy can predict ablation robustness in the cited Prisoma setting, so "synergy collapse = degraded" can be inverted. Track all declared atoms and the CI₂ sign; do not assign a direction before evidence. (3) An activation-norm or reconstruction-error OOD monitor is the mandatory cheaper baseline for a scalar health signal, and availability does not certify causal use. High-dimensional population features have no passing receipt here. Any low-dimensional projection or discrete `sxpid2` path must pass its own gates and treat projection choice as a confound.
 
-**MVP (deferred).** Log 1-D readouts of two populations + scalar action + `seq` over nominal vs sensor-masked episodes, `quantize_equal_width`, compute `discrete_sxpid2` Syn/Unq with a permutation null + block-bootstrap CI — but only once a world-model population exists to read.
+**MVP (deferred).** Log 1-D readouts of two populations, scalar action, and the
+complete driving source position over nominal versus sensor-masked episodes.
+After a world-model population exists, fit
+`EqualWidthQuantizer`/`QuantizerConfig` on disjoint training or calibration rows
+and reuse the fitted edges with `fitted_quantized_sxpid2` on evaluation rows.
+Alternatively, use an explicitly declared categorical encoding with
+`discrete_sxpid2`. Preregister the null and separately validate the inference
+procedure; generic resampling quantiles are diagnostic only. Never join on bare
+`seq`.
 
 ---
 
@@ -88,32 +219,68 @@ Not a standalone detector but a security by-product of the scheduler in B1. A mo
 
 | Application | PID measure | Sources → Target | Ecosystem hook | Sec / Comm | Cheaper baseline? |
 |---|---|---|---|---|---|
-| Galadriel's Mirror (flagship) | continuous `I^sx` Red/Syn, command↔sensor | command, sensor streams → track | NCP split-plane `seq` join | Security | See lens 04 — PID only for synergy |
-| A1 Synergy Sniffer | `o_information_discrete` + `co_information_pairwise` (SxPID as characterizer) | quantized telemetry panel → none (target-free) | `BulkBlock` columns | Security | **Yes** for lazy channel (gzip/MI); **no** for decorrelated channel |
-| A2 VLA backdoor detector | `Syn(V,D;A)` (≥3-body); `ΔUnq(V;A)` demoted | V, L, D → A | prisoma (V,L,D,A); engram baseline | Security | **Yes** — paired `ΔI(V;A\|L)` + STRIP for primary detection; PID only for `Syn(V,D;A)` |
-| A3 Single-point-of-info map | `Unq`, `v̄` (offline) | per-modality features → action | prisoma attack surface | Security | Advisory only; real remedy is ACL+mTLS |
-| B1 VoI jam scheduler | greedy `I(Sᵢ;T\|sent)` = Unq+Syn (CMI, not unique atom) | manwe scalar features → next-tick state | NCP Action/Perception QoS | Comm | **Yes** — NIS O(1) mostly; CMI only on redundant-high-MI frames |
-| B2 Synergy-aware conflation | `co_information_pairwise` (CI₂) + `pid2_isx` | crebain scalar innovations → delayed settled state | crebain `PidObservation` tap | Comm | **No** for synergy sign; yes for redundancy half (pairwise MI) |
-| B3 Neuro-controller health | `discrete_sxpid2` Syn/Unq (forward-looking) | two population readouts → CommandFrame | NCP `seq` echo; engram | Comm | **Yes** for scalar trust (OOD monitor); PID only for failure-mode ID |
+| Galadriel's Mirror | continuous `I^sx` Red/Syn as incomplete diagnostics | matching common-frame projections → LOO or predictive reference | component-tested Crebain producer + reviewed Galadriel PR consumer; qualification not claimed | Security | Galadriel implements NIS/CUSUM and signed-Pearson-correlation baselines; atom acceptance remains blocked |
+| A1 Synergy Sniffer | three-variable `o_information_discrete` + co-information | quantized telemetry triple → no distinguished target | offline `BulkBlock` columns | Security | Pairwise tests miss the stated three-field parity model; other regimes are unproven |
+| A2 VLA backdoor detector | `Syn(V,D;A)` (≥3-body); `ΔUnq(V;A)` demoted | V, L, D → A | Prisoma (V,L,D,A); future Prisoma-owned baseline artifact | Security | Paired `ΔI(V;A\|L)` plus STRIP are primary baselines; added PID value is **NOT RUN** |
+| A3 Single-point-of-info map | per-modality LOO loss or admitted `Unq`; `v̄` only as a global panel screen | per-modality features → action | Prisoma attack surface | Security | Advisory only; transport authorization and model/sensor hardening remain separate controls |
+| B1 VoI jam scheduler | greedy `I(Sᵢ;T\|sent)` heuristic | Manwe scalar features → next-tick state | proposed NCP stream-shedding host | Comm | NIS and fixed priority are mandatory; greedy guarantee needs stated submodularity/conditional-independence assumptions |
+| B2 Synergy-aware conflation | `co_information_pairwise` (CI₂) + `pid2_isx` | Crebain common-frame consistency projections → delayed settled state | Crebain `PidObservation` sidecar | Comm | Conditional MI and pairwise statistics are mandatory comparators; target-redundancy equivalence is not assumed |
+| B3 Neuro-controller health | `discrete_sxpid2` Syn/Unq (forward-looking) | two population readouts → declared action projection in `CommandFrame` | NCP epoch-scoped source position; Engram | Comm | OOD is the scalar-trust baseline; PID is only a failure-mode-identification candidate, value **NOT RUN** |
 
 ---
 
 ## Cross-cutting caveats
 
-**Estimator validity is the gate, not an afterthought.** Continuous `I^sx` is trustworthy only for i.i.d. samples in low ambient/intrinsic dimension away from near-determinism. Autocorrelation (every tracker innovation under maneuver) biases kNN — use subsample/block-bootstrap, never the naive with-replacement bootstrap. High-d embeddings are NO-GO; project to d≤4 or fall back to discrete PID, and prove the projection preserves the signal you are hunting. Radius collapse on quantized duplicates returns `NumericalInstability` (add seeded jitter), never a wrong finite value. Every continuous claim runs `exp0 --strict-gate` first (GO only at d=1, n=4000, Gaussian), and `calibrated_posterior=false` stands until it passes. Never pool continuous `I^sx` atoms with discrete `I_min` atoms — they are different measures. pid-rs supplies point estimates with *no* multiple-comparison correction, so any screen over many pairs/triples needs your own permutation null + BH-FDR.
+**Estimator validity is the gate, not an afterthought.** The reviewed
+`exp0 --strict-gate` validates analytic MI recovery in its built-in Gaussian
+case; it neither accepts consumer data nor validates atom measures or
+`pid3_isx`. Continuous atom outputs remain incomplete diagnostics. Temporal
+dependence and projection choice need callable checks on the exact data. Generic
+resampling spreads and percentiles are descriptive, not calibrated standard
+errors or confidence intervals. `Jitter` changes the estimand and is not generic
+tie repair; use it only for a declared Gaussian-noise model or a retained noise-
+scale sensitivity analysis. Categorical `discrete_sxpid*` preserves the shared-
+exclusions measure on changed, categorical variables; `fitted_quantized_sxpid*`
+requires quantizer edges learned on training/calibration rows and reused on
+evaluation rows. Williams–Beer `I_min` is the separate `imin_pid*` measure. Never
+pool any of these with a continuous estimate or with each other. The candidate
+pid-rs API provides experimental BH/BY adjustment functions but no automatic
+family selection. Each consumer must predeclare the family and dependence policy
+and retain provenance.
 
-**Earn your complexity.** The house rule is that every application must answer "would a marginal statistic do?" and survive it. Redundancy alone is a correlation/pairwise-MI problem — cheaper. Sequential value-of-information is a conditional-MI problem — cheaper than a Möbius difference of unique atoms. A scalar trust number is an OOD-monitor problem — cheaper than a decomposition. PID is irreducible in exactly two places: **synergy** (B2's co-conflation sign, A1's decorrelated channel, A2's `Syn(V,D;A)`), which no second-order statistic can see, and multi-body attribution as a second opinion. Everywhere else, PID is demoted or dropped.
+**Earn your complexity.** The house rule is that every application must answer
+"would a marginal or pairwise statistic do?" and survive the comparison.
+Pairwise correlation or MI is a mandatory comparator, but it is not generally
+equal to target-specific PID redundancy. Sequential value of information is a
+conditional-MI problem and is cheaper than a Möbius difference of unique atoms.
+A scalar trust number is an OOD-monitor problem and is cheaper than a
+decomposition. The candidate added value is restricted to a declared
+multi-variable synergy model (B2, A1, or A2) or multi-body discordance ranking as
+a second opinion. Each candidate still needs a defined observed-variable model
+and head-to-head evidence; none is irreducible across all distributions or
+deployments.
 
-**Adversary adaptivity.** A fixed-arity synergy screen is blind to a channel spread across more fields than the screened arity or run slower than the sampling window. A VoI scheduler is an attack amplifier: residual-undetectable FDI can inflate a spoofed channel's apparent value to seize priority. PID measures information *available*, not *causally used* — the gap attackers exploit — so PID is never the enforcement layer.
+**Adversary adaptivity.** A fixed-arity synergy screen is blind to a channel
+spread across more fields than the screened arity or run slower than the sampling
+window. A VoI scheduler is an attack amplifier: a detector-aware input can inflate
+a channel's apparent value and seize priority. If an adversary preserves the
+complete tested distribution, no statistic computed only from it has signal;
+whether that construction is feasible for a selected plant is a separate
+acceptance test. PID measures information *available*, not *causally used*, so it
+is never the enforcement layer.
 
-**Advisory, not enforced.** Every application here is a read-only Observation-plane monitor or an offline policy engine. None gates the control path. Real security remedies are cryptographic (per-plane Zenoh ACL + mTLS: sensor PUT→body, command PUT→commander); real safety remedies are the `mode`/`ttl_ms` governor. PID is instrumentation and cartography, advisory input to a human or a slow policy refresh — never a fail-closed enforcement gate on the hot loop.
+**Advisory, not enforced.** Crebain and the reviewed Galadriel PR implement component producer, consumer, baseline, registry, lifecycle, and receiver paths. They provide no command-authority path, current reciprocal qualification, live-router ACL/mTLS receipt, or recorded calibration. The scheduler and policy applications remain proposals. Frozen NCP wire 0.8's opt-in strict profile makes the authenticated robot/body the sole sensor publisher, the authenticated commander the sole command and observation publisher, and the observer read-only; its default quiet transport is unauthenticated. Security requires a principal-bound default-deny deployment plus sensor/model hardening. PID remains diagnostic instrumentation, never a fail-closed hot-loop gate.
 
 ---
 
 ## What we rejected and why
 
-- **Target-free SxPID as the covert-channel detector (A1 as originally pitched).** `discrete_sxpid3` requires a target; the truly target-free sufficient detector is O-information/co-information. We kept the idea but demoted SxPID to a post-hoc characterizer and made co-information the detector.
-- **The PID unique atom as the online jam-scheduler priority (B1 as pitched).** It under-counts synergy and forces a synergy bolt-on; greedy conditional MI dominates it on its own turf with lower variance. Rebuilt on CMI, PID retained only for the offline SPOF map.
-- **The KEEP_LAST(1) framing of semantic conflation (B2 as pitched).** False under NCP's per-modality sub-keying — latest-only never splits a synergistic pair. The idea survives only re-hosted on a stream-level shedding mechanism that must still be built.
-- **`ΔUnq(V;A)` as a primary trojan detector (A2 as pitched).** Dominated by scalar `ΔI(V;A|L)`; re-scoped to a ≥3-body attribution second opinion where `Syn(V,D;A)` is irreducible, contingent on a projection-preserves-covert-channel proof and the still-missing D-axis capture.
-- **Neuro-controller synergy-health as a shippable MVP (B3).** The world-model population it reads does not exist on today's reflex controllers, the health direction may be inverted (redundancy, not synergy, likely marks robustness), and its headline trust use is cheaper via an OOD monitor. Kept as a forward-looking telemetry item on the strength of the real `seq`-echo hook, not shipped.
+- **Target-free SxPID as the covert-channel detector (A1 as originally pitched).** `discrete_sxpid3` requires a selected target. It is removed from the target-free path. The retained proposal screens predeclared triples with O-information/co-information; it makes no claim for two observed variables or an unobserved payload target.
+- **The PID unique atom as the online jam-scheduler priority (B1 as pitched).** It excludes value available only through synergy and therefore needs a partner rule. Greedy conditional MI is the simpler candidate because it conditions on what is already scheduled; its performance advantage is **NOT RUN**. PID remains only in the proposed offline SPOF study.
+- **The KEEP_LAST(1) framing of semantic conflation (B2 as pitched).** NCP's
+  independent per-modality subkeys do not implement cross-stream budget shedding
+  or pair-atomic delivery. Asymmetric updates or loss can also leave the latest
+  values temporally misaligned. The idea survives only if re-hosted on an explicit
+  stream-level shedding and synchronization mechanism that must still be built.
+- **`ΔUnq(V;A)` as a primary trojan detector (A2 as pitched).** Paired scalar `ΔI(V;A|L)` and STRIP are the mandatory primary baselines. `Syn(V,D;A)` remains a ≥3-body attribution hypothesis contingent on a projection-preserves-signal result and the still-missing D-axis capture.
+- **Neuro-controller synergy-health as a shippable MVP (B3).** The world-model population it reads does not exist on today's reflex controllers, the health direction may be inverted (redundancy, not synergy, likely marks robustness), and its headline trust use is cheaper via an OOD monitor. Kept as a forward-looking telemetry item because frozen NCP wire 0.8 has a complete source-position correlation hook, not because the integration has shipped.

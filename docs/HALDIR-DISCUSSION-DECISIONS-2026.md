@@ -45,8 +45,8 @@ When the two documents differ, the later decisions here take precedence for proj
 | Should Lava be used? | No new dependency on Lava. | Lava is archived; use NIR plus independent backends instead of replacing one monolithic stack with another. |
 | Which physical platforms would be preferred if access later appears? | SynSense Xylo/Rockpool first for reproducible constrained deployment; SpiNNaker2 second for flexible real-time control, conditional on access. | Both remain optional validation targets, not committed deliverables. |
 | What should be used with no hardware access? | NEST + a bounded manifest/NIR adapter + Rockpool device mapping/validation + XyloSim + an independent open backend such as Norse or snnTorch. | Claims stop at simulator, validated hardware-constrained profile, and backend conformance. |
-| Should Haldir be its own repository? | Yes. | It is independently released, audited, keyed, and deployed; it imports no Engram or Crebain internals. |
-| How tightly should it couple to the ecosystem? | Loose in source code, tight in versioned contracts, strict in deployment. | Haldir pins NCP APIs, consumes Engram manifests/intents, and emits standard final NCP commands to Crebain. |
+| Should Haldir be its own repository? | Yes. | It is designed to have independent release, audit, key-custody, and deployment boundaries; it imports no Engram or Crebain internals. The current 0.9.0 program is `NO_GO`, and no live deployment evidence exists. |
+| How tightly should it couple to the ecosystem? | Loose in source code, tight in versioned contracts, strict in deployment. | Haldir depends on pinned, versioned contracts. Runtime Engram and Crebain integration remains unproven. |
 | Should hardware SDKs enter the Gate binary? | No. | Vendor-specific compilation/inspection lives in optional adapters or offline admission tools. |
 | Should a new integration repository be created now? | No. | Keep Border-Muster under Haldir initially; extract it only after it serves multiple independent controls. |
 
