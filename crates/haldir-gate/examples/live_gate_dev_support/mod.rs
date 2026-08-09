@@ -569,9 +569,12 @@ fn fixture_admission() -> SmokeResult<AdmissionRecordV1> {
 }
 
 fn fixture_template() -> SmokeResult<GateConfigTemplate> {
-    let gate_signer = SigningKey::from_seed(GATE_SIGNING_SEED);
-    let mission_signer = SigningKey::from_seed(MISSION_SIGNING_SEED);
-    let controller_signer = SigningKey::from_seed(CONTROLLER_SIGNING_SEED);
+    let gate_signer = SigningKey::from_seed(GATE_SIGNING_SEED)
+        .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
+    let mission_signer = SigningKey::from_seed(MISSION_SIGNING_SEED)
+        .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
+    let controller_signer = SigningKey::from_seed(CONTROLLER_SIGNING_SEED)
+        .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
     let gate_id = GateId::new(FIXTURE_GATE_ID)
         .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
     let mut trust = TrustStore::new();
@@ -817,7 +820,8 @@ fn build_activation(
         plant_mode: AsciiId::new("NOMINAL")
             .map_err(|_| SmokeError::after_durable("fixture-invariant"))?,
     };
-    let mission_signer = SigningKey::from_seed(MISSION_SIGNING_SEED);
+    let mission_signer = SigningKey::from_seed(MISSION_SIGNING_SEED)
+        .map_err(|_| SmokeError::after_durable("fixture-invariant"))?;
     let mission_kid =
         fixture_key_id(2).map_err(|_| SmokeError::after_durable("fixture-invariant"))?;
     let signed_lease = sign_message(

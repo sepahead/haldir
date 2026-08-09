@@ -116,7 +116,7 @@ mod tests {
     }
 
     fn signer(seed: u8) -> SigningKey {
-        SigningKey::from_seed([seed; 32])
+        SigningKey::from_seed([seed; 32]).expect("nonzero test seed")
     }
 
     fn dig(s: u8) -> DigestV1 {
@@ -630,6 +630,34 @@ mod tests {
             ))
             .is_ok()
         );
+    }
+
+    #[test]
+    fn duplicate_public_key_under_distinct_kid_is_rejected() {
+        let first_kid = kid(1);
+        let alias_kid = kid(2);
+        let shared_key = signer(1);
+        let mut trust = TrustStore::new();
+        trust
+            .insert(record(
+                &first_kid,
+                &shared_key,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            ))
+            .unwrap();
+
+        assert_eq!(
+            trust.insert(record(
+                &alias_kid,
+                &shared_key,
+                KeyRole::MissionAuthority,
+                KeyClass::Assurance,
+            )),
+            Err(TrustStoreError::ConflictingKeyMaterial)
+        );
+        assert_eq!(trust.len(), 1, "rejected alias must not mutate trust");
+        assert!(trust.resolve(&alias_kid).is_none());
     }
 
     #[test]

@@ -63,12 +63,22 @@ pub struct SigningKey {
 }
 
 impl SigningKey {
-    /// Construct from a 32-byte seed.
-    #[must_use]
-    pub fn from_seed(seed: [u8; 32]) -> Self {
-        Self {
-            seed: Zeroizing::new(seed),
+    /// Construct from a nonzero 32-byte seed.
+    ///
+    /// The all-zero value is not a valid seed in the selected Ed25519
+    /// implementation. Rejecting it here makes that dependency precondition an
+    /// invariant of `SigningKey`, so the otherwise infallible signing methods
+    /// cannot reach the dependency's panic path.
+    ///
+    /// # Errors
+    /// Returns [`CryptoError::BadKey`] when `seed` is all zeroes.
+    pub fn from_seed(seed: [u8; 32]) -> Result<Self, CryptoError> {
+        if seed.iter().all(|byte| *byte == 0) {
+            return Err(CryptoError::BadKey);
         }
+        Ok(Self {
+            seed: Zeroizing::new(seed),
+        })
     }
 
     fn keypair(&self) -> ed::KeyPair {
@@ -93,5 +103,27 @@ impl core::fmt::Debug for SigningKey {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Never print secret material.
         f.write_str("SigningKey(<redacted>)")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_seed_rejects_all_zero_seed_without_panicking() {
+        assert!(matches!(
+            SigningKey::from_seed([0; 32]),
+            Err(CryptoError::BadKey)
+        ));
+    }
+
+    #[test]
+    fn nonzero_seed_supports_signing_and_verification() {
+        let key = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let message = b"haldir-signing-key-invariant";
+        let signature = key.sign(message);
+
+        assert!(key.verifying_key().verify(message, &signature));
     }
 }

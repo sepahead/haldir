@@ -1236,7 +1236,7 @@ mod tests {
     fn template() -> GateConfigTemplate {
         let gate_id = GateId::new("gate-1").unwrap();
         let gate_signer_kid = KeyId::new(vec![3]).unwrap();
-        let gate_signer = SigningKey::from_seed([3; 32]);
+        let gate_signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let mut trust = TrustStore::new();
         trust
             .insert(KeyRecord {
@@ -1879,7 +1879,7 @@ mod tests {
         let first_boot = first.report().gate_boot_id;
         let receipt = prepared_receipt(first_boot);
         let signing_kid = KeyId::new(vec![3]).unwrap();
-        let signing_key = SigningKey::from_seed([3; 32]);
+        let signing_key = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let receipt_envelope = sign_message(
             &receipt,
             DecisionReceiptV1::KIND,

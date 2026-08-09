@@ -17,7 +17,7 @@ pub enum CryptoError {
     ContentTypeMismatch,
     /// The `kid` did not resolve to exactly one trusted key.
     KidUnknown,
-    /// A public key was structurally invalid.
+    /// Public or private key material was structurally invalid.
     BadKey,
     /// The resolved key's role did not match the required role.
     WrongRole,

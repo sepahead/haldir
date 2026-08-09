@@ -26,7 +26,7 @@ docs:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features --locked
 
 doc-test:
-    cargo test --workspace --doc --locked
+    cargo test --workspace --doc --all-features --locked
 
 build-no-default:
     cargo build --workspace --no-default-features --locked
@@ -56,6 +56,10 @@ formal-runner-test:
     python3 -I -B tools/test_run_formal.py
 
 fuzz-smoke:
+    # Bounded property-based parser smoke checks plus named malformed regressions.
+    # This is not a replacement for a time-bounded libFuzzer/sanitizer campaign.
+    cargo test -p haldir-contracts --locked -- decoder_never_panics_on_arbitrary_bytes
+    cargo test -p haldir-ncp08 --all-features --locked -- arbitrary_artifact_bytes_never_panic
     cargo test --workspace --locked -- malformed
 
 range-reference:

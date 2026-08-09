@@ -8,10 +8,17 @@ claim boundary.
 
 ## Authorities as capabilities (distinct key roles)
 
-`crates/haldir-crypto/src/role.rs` encodes the closed role set. No key signs more
-than one authority domain: `CONTROLLER_INTENT`, `MISSION_AUTHORITY`,
+`crates/haldir-crypto/src/role.rs` encodes the closed role set. Each trust record
+authorizes exactly one role, and the trust loader rejects reuse of byte-identical
+public-key encodings under distinct key identifiers. Deployments must provision a
+distinct cryptographic key for each authority domain: `CONTROLLER_INTENT`, `MISSION_AUTHORITY`,
 `ADMISSION_AUTHORITY`, `POLICY_AUTHORITY`, `REVOCATION_AUTHORITY`,
 `GATE_APPLICATION`, `CREBAIN_EVIDENCE`, `DEPLOYMENT_AUTHORITY`, `DEVELOPMENT_ONLY`.
+
+The pinned Ed25519 provider does not expose a prime-order/torsion-free public-key
+canonicalization API. The byte-identity guard therefore prevents ordinary key
+reuse but is not claimed to detect every cryptographically related alternate
+encoding; external provisioning review remains required.
 
 `DEPLOYMENT_AUTHORITY` now has a strict standalone package-verification boundary
 (`CL-DEPLOYMENT-PRIMITIVE-01`). A separately passed policy names the expected deployment authority,

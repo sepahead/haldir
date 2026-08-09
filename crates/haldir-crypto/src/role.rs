@@ -1,8 +1,9 @@
 //! Closed key-role and key-class enums.
 //!
-//! No key may sign more than one authority domain by default: an evidence key
-//! cannot mint a mission lease, a controller key cannot sign an admission, and
-//! the Gate output key cannot sign controller bundles.
+//! Each trust record authorizes one declared role for one key identifier: an
+//! evidence record cannot mint a mission lease, a controller record cannot sign
+//! an admission, and a Gate record cannot sign controller bundles. Deployments
+//! must provision distinct cryptographic keys for distinct authority domains.
 
 /// The closed set of application key roles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

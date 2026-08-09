@@ -106,7 +106,7 @@ fn signed_with(
     class: KeyClass,
     subject: Option<&str>,
 ) -> (Vec<u8>, TrustStore, KeyId) {
-    let signer = SigningKey::from_seed([seed; 32]);
+    let signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
     let key_id = key_id(seed);
     let mut trust = TrustStore::new();
     trust
@@ -346,7 +346,7 @@ fn separately_expected_authority_rejects_another_trusted_deployment_authority() 
         KeyClass::Assurance,
         Some("deployment-authority-b"),
     );
-    let expected_signer = SigningKey::from_seed([10; 32]);
+    let expected_signer = SigningKey::from_seed([10; 32]).expect("nonzero test seed");
     let expected_kid = key_id(10);
     trust
         .insert(trust_record(
@@ -418,7 +418,7 @@ fn wrong_role_subject_revocation_and_assurance_class_fail_closed() {
 
 #[test]
 fn valid_signature_over_an_unknown_payload_field_is_rejected() {
-    let signer = SigningKey::from_seed([31; 32]);
+    let signer = SigningKey::from_seed([31; 32]).expect("nonzero test seed");
     let key_id = key_id(31);
     let mut trust = TrustStore::new();
     trust

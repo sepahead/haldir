@@ -15,6 +15,10 @@ pub enum TrustStoreError {
     /// A different key record already exists for this `kid` (silent replacement
     /// would turn load order into authority — H-H03).
     ConflictingKid,
+    /// The same Ed25519 public-key encoding is already enrolled under another
+    /// `kid`. Rejecting exact aliases prevents an ordinary provisioning error
+    /// from crossing role, subject, or revocation boundaries.
+    ConflictingKeyMaterial,
 }
 
 /// One trusted application key record.
@@ -36,6 +40,7 @@ pub struct KeyRecord {
 #[derive(Debug, Clone, Default)]
 pub struct TrustStore {
     keys: BTreeMap<Vec<u8>, KeyRecord>,
+    key_owners: BTreeMap<[u8; 32], Vec<u8>>,
 }
 
 impl TrustStore {
@@ -44,22 +49,32 @@ impl TrustStore {
     pub fn new() -> Self {
         Self {
             keys: BTreeMap::new(),
+            key_owners: BTreeMap::new(),
         }
     }
 
-    /// Insert a key record, REJECTING a conflicting record for an existing `kid`
-    /// (H-H03). An exact idempotent re-insert of an identical record is allowed.
+    /// Insert a key record, rejecting both a conflicting record for an existing
+    /// `kid` and an alias that enrolls the same public-key bytes under a new
+    /// `kid` (H-H03). An exact idempotent re-insert is allowed.
     ///
     /// # Errors
     /// Returns [`TrustStoreError::ConflictingKid`] if a different record already
-    /// exists for this `kid`.
+    /// exists for this `kid`, or [`TrustStoreError::ConflictingKeyMaterial`] if
+    /// another `kid` already owns the supplied public key.
     pub fn insert(&mut self, record: KeyRecord) -> Result<(), TrustStoreError> {
         let key = record.kid.as_bytes().to_vec();
-        if let Some(existing) = self.keys.get(&key)
-            && !records_equal(existing, &record)
-        {
-            return Err(TrustStoreError::ConflictingKid);
+        if let Some(existing) = self.keys.get(&key) {
+            return if records_equal(existing, &record) {
+                Ok(())
+            } else {
+                Err(TrustStoreError::ConflictingKid)
+            };
         }
+        let public_key = record.verifying_key.to_bytes();
+        if self.key_owners.contains_key(&public_key) {
+            return Err(TrustStoreError::ConflictingKeyMaterial);
+        }
+        self.key_owners.insert(public_key, key.clone());
         self.keys.insert(key, record);
         Ok(())
     }
