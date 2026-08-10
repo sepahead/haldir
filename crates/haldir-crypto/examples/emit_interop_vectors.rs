@@ -107,11 +107,11 @@ fn vectors() -> Vec<Vector> {
     ]
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // A fixed seed makes the whole document reproducible byte-for-byte.
-    let sk = SigningKey::from_seed([7u8; 32]);
+    let sk = SigningKey::from_seed([7u8; 32])?;
     let pk_hex = hex(&sk.verifying_key().to_bytes());
-    let kid = KeyId::new(vec![0x01, 0x02, 0x03]).expect("kid");
+    let kid = KeyId::new(vec![0x01, 0x02, 0x03])?;
 
     let mut items: Vec<String> = Vec::new();
     for v in vectors() {
@@ -151,4 +151,5 @@ fn main() {
         ),
         items = items.join(",\n"),
     );
+    Ok(())
 }

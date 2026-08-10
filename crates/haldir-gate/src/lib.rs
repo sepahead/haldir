@@ -482,9 +482,9 @@ mod e2e {
 
     #[cfg(feature = "real-ncp")]
     fn setup_with_adapter(ncp_adapter: haldir_ncp08::SelectedNcpCommandAdapter) -> Fixture {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (mut cfg, rec, admission_digest) =
             gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
@@ -558,9 +558,9 @@ mod e2e {
     }
 
     fn valid_config(publication: PlantPublicationAuthorityStateV1) -> GateConfig {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         gate_config(publication, &ctrl_sk, &mission_sk, gate_sk).0
     }
 
@@ -636,7 +636,9 @@ mod e2e {
             .insert(KeyRecord {
                 kid: kid(3),
                 role,
-                verifying_key: SigningKey::from_seed([signing_seed; 32]).verifying_key(),
+                verifying_key: SigningKey::from_seed([signing_seed; 32])
+                    .expect("nonzero test seed")
+                    .verifying_key(),
                 subject: subject.map(str::to_owned),
                 class,
             })
@@ -710,9 +712,9 @@ mod e2e {
 
     #[test]
     fn recovered_actor_faults_when_term_commit_is_unavailable() {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let (mut cfg, rec, admission_digest) =
             gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
         let storage = GateMemoryStorage::default();
@@ -743,9 +745,9 @@ mod e2e {
 
     #[test]
     fn lease_validator_route_rejection_preserves_challenge_and_term_for_retry() {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (cfg, rec, admission_digest) =
             gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
@@ -781,9 +783,9 @@ mod e2e {
 
     #[test]
     fn gate_rejects_validly_signed_lease_with_nonzero_schema_minor() {
-        let controller_signer = SigningKey::from_seed([1; 32]);
-        let mission_signer = SigningKey::from_seed([2; 32]);
-        let gate_signer = SigningKey::from_seed([3; 32]);
+        let controller_signer = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_signer = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (cfg, record, admission_digest) = gate_config(
             acl_publication(),
@@ -830,9 +832,9 @@ mod e2e {
 
     #[test]
     fn active_actor_rejects_replacement_before_clock_term_or_challenge_mutation() {
-        let controller_signer = SigningKey::from_seed([1; 32]);
-        let mission_signer = SigningKey::from_seed([2; 32]);
-        let gate_signer = SigningKey::from_seed([3; 32]);
+        let controller_signer = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_signer = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let now = MonoInstant::from_nanos(1_000_000_000);
         let later = now.checked_add_ms(1).unwrap();
         let (cfg, record, admission_digest) = gate_config(
@@ -1018,9 +1020,9 @@ mod e2e {
     }
 
     fn setup_with_publication(publication: PlantPublicationAuthorityStateV1) -> Fixture {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (cfg, rec, admission_digest) = gate_config(publication, &ctrl_sk, &mission_sk, gate_sk);
         activate_fixture(cfg, rec, admission_digest, ctrl_sk, mission_sk, now)
@@ -1252,9 +1254,9 @@ mod e2e {
     fn unactivated_live_fixture_with_recovery_records(
         max_recovery_records: u64,
     ) -> UnactivatedLiveFixture {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (mut cfg, admission_record, admission_digest) =
             gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
@@ -1455,9 +1457,9 @@ mod e2e {
         expected_state: PublicationTraceState,
         expected_unknown_events: usize,
     ) -> RestartedCoordinatorFixture {
-        let ctrl_sk = SigningKey::from_seed([1; 32]);
-        let mission_sk = SigningKey::from_seed([2; 32]);
-        let gate_sk = SigningKey::from_seed([3; 32]);
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let (mut config, _, _) = gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
         config.gate_boot_id = GateBootId::new([10; 16]);
         config.output_epoch = GateOutputEpoch::new(uuid(6));
@@ -5431,7 +5433,9 @@ mod e2e {
         assert_eq!(out.outcome, DecisionOutcomeV1::Allow);
         assert!(!out.signed_receipt.is_empty());
 
-        let gate_vk = SigningKey::from_seed([3; 32]).verifying_key();
+        let gate_vk = SigningKey::from_seed([3; 32])
+            .expect("nonzero test seed")
+            .verifying_key();
         let mut trust = TrustStore::new();
         trust
             .insert(KeyRecord {

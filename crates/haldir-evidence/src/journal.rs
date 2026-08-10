@@ -1320,7 +1320,7 @@ mod tests {
     }
 
     fn identity() -> SegmentIdentity {
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         SegmentIdentity {
             gate_id: GateId::new("gate-1").unwrap(),
             gate_boot_id: GateBootId::new([9; 16]),
@@ -1364,7 +1364,7 @@ mod tests {
     fn append_close_and_verified_recovery_round_trip() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let mut segment = ActiveEvidenceSegment::create_new(&path, identity(), bounds()).unwrap();
         segment.append(b"signed-one").unwrap();
         segment.append(b"signed-two").unwrap();
@@ -1388,7 +1388,7 @@ mod tests {
     fn recovery_truncates_only_an_insufficient_final_record() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let mut segment = ActiveEvidenceSegment::create_new(&path, identity(), bounds()).unwrap();
         segment.append(b"one").unwrap();
         drop(segment);
@@ -1429,7 +1429,7 @@ mod tests {
     fn complete_record_corruption_is_never_truncated_as_a_tail() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let mut segment = ActiveEvidenceSegment::create_new(&path, identity(), bounds()).unwrap();
         segment.append(b"one").unwrap();
         segment.close(&signer_kid(), &signer).unwrap();
@@ -1449,8 +1449,8 @@ mod tests {
     fn completed_footer_requires_the_expected_signing_key() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
-        let wrong = SigningKey::from_seed([4; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+        let wrong = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
         ActiveEvidenceSegment::create_new(&path, identity(), bounds())
             .unwrap()
             .close(&signer_kid(), &signer)
@@ -1466,7 +1466,7 @@ mod tests {
     fn incomplete_footer_is_removed_and_can_be_recreated() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         ActiveEvidenceSegment::create_new(&path, identity(), bounds())
             .unwrap()
             .close(&signer_kid(), &signer)
@@ -1502,7 +1502,7 @@ mod tests {
     fn completed_footer_digest_tampering_is_rejected_even_with_a_fresh_crc() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         ActiveEvidenceSegment::create_new(&path, identity(), bounds())
             .unwrap()
             .close(&signer_kid(), &signer)
@@ -1526,7 +1526,7 @@ mod tests {
     fn completed_footer_signature_tampering_is_rejected_with_a_fresh_crc() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         ActiveEvidenceSegment::create_new(&path, identity(), bounds())
             .unwrap()
             .close(&signer_kid(), &signer)
@@ -1550,7 +1550,7 @@ mod tests {
     fn header_tampering_is_rejected() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         drop(ActiveEvidenceSegment::create_new(&path, identity(), bounds()).unwrap());
         let mut bytes = fs::read(&path).unwrap();
         bytes[20] ^= 1;
@@ -1566,7 +1566,7 @@ mod tests {
     fn recovery_rejects_identity_substitution() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         ActiveEvidenceSegment::create_new(&path, identity(), bounds()).unwrap();
         let mut other = identity();
         other.gate_boot_id = GateBootId::new([8; 16]);
@@ -1581,7 +1581,7 @@ mod tests {
     fn inspect_then_recover_supports_trust_resolution() {
         let directory = TestDirectory::new();
         let path = directory.0.join("segment");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         ActiveEvidenceSegment::create_new(&path, identity(), bounds()).unwrap();
 
         let inspected = ActiveEvidenceSegment::inspect_identity(&path, bounds()).unwrap();
@@ -1599,7 +1599,7 @@ mod tests {
         let directory = TestDirectory::new();
         let first_path = directory.0.join("segment-1");
         let second_path = directory.0.join("segment-2");
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let first = ActiveEvidenceSegment::create_new(&first_path, identity(), bounds())
             .unwrap()
             .close(&signer_kid(), &signer)
@@ -1637,8 +1637,8 @@ mod tests {
     #[test]
     fn close_rejects_a_kid_or_key_outside_the_header_binding() {
         let directory = TestDirectory::new();
-        let signer = SigningKey::from_seed([3; 32]);
-        let wrong_signer = SigningKey::from_seed([4; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+        let wrong_signer = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
         let wrong_kid = KeyId::new(vec![4]).unwrap();
 
         assert!(matches!(
@@ -1658,7 +1658,7 @@ mod tests {
     #[test]
     fn short_garbage_and_wrong_partial_versions_are_corruption_not_crash_tails() {
         let directory = TestDirectory::new();
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         for (name, tail, expected_error) in [
             ("garbage", vec![0x99; 5], JournalError::CorruptRecord),
             (
@@ -1736,7 +1736,7 @@ mod tests {
         let link = directory.0.join("segment");
         fs::write(&target, b"bytes").unwrap();
         symlink(target, &link).unwrap();
-        let signer = SigningKey::from_seed([3; 32]);
+        let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
 
         assert!(matches!(
             ActiveEvidenceSegment::recover(link, &identity(), bounds(), &signer.verifying_key(),),

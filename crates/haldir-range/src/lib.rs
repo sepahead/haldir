@@ -146,10 +146,10 @@ mod range {
         /// Build a fully-provisioned, ACTIVE scenario.
         #[must_use]
         pub fn new() -> Self {
-            let ctrl_sk = SigningKey::from_seed([1; 32]);
-            let mission_sk = SigningKey::from_seed([2; 32]);
-            let other_sk = SigningKey::from_seed([3; 32]);
-            let gate_sk = SigningKey::from_seed([4; 32]);
+            let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+            let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+            let other_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+            let gate_sk = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
             let now = MonoInstant::from_nanos(1_000_000_000);
 
             let mut trust = TrustStore::new();

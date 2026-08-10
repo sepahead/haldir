@@ -1452,7 +1452,7 @@ mod tests {
     }
 
     fn key(seed: u8) -> SigningKey {
-        SigningKey::from_seed([seed; 32])
+        SigningKey::from_seed([seed; 32]).expect("nonzero test seed")
     }
 
     static TEST_SIGNER: LazyLock<(KeyId, SigningKey)> = LazyLock::new(|| (kid(3), key(3)));

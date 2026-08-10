@@ -2408,7 +2408,7 @@ mod tests {
     static TEST_SIGNER: LazyLock<(KeyId, SigningKey)> = LazyLock::new(|| {
         (
             KeyId::new(vec![3, 0xab, 3]).unwrap(),
-            SigningKey::from_seed([3; 32]),
+            SigningKey::from_seed([3; 32]).expect("nonzero test seed"),
         )
     });
 
@@ -2418,7 +2418,9 @@ mod tests {
 
     fn verifier() -> TestVerifier {
         TestVerifier {
-            signer: SigningKey::from_seed([3; 32]).verifying_key(),
+            signer: SigningKey::from_seed([3; 32])
+                .expect("nonzero test seed")
+                .verifying_key(),
             kid: kid(),
             reject: None,
         }
@@ -2456,7 +2458,7 @@ mod tests {
     }
 
     fn exact_reservation_total_bytes(max_record_bytes: usize, record_count: usize) -> u64 {
-        let key = SigningKey::from_seed([3; 32]);
+        let key = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let current_header =
             ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key)).unwrap()
                 - ActiveEvidenceSegment::footer_bytes();
@@ -2632,7 +2634,7 @@ mod tests {
         let directory = TestDirectory::new();
         let (mut manager, _) = open(&directory.journal(), 1, limits(4, 4)).unwrap();
         let wrong_kid = kid();
-        let wrong_key = SigningKey::from_seed([4; 32]);
+        let wrong_key = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
         let wrong_signer = JournalSigner::new(&wrong_kid, &wrong_key);
         let record = b"not-written";
 
@@ -2666,7 +2668,7 @@ mod tests {
         let directory = TestDirectory::new();
         let (mut manager, _) = open(&directory.journal(), 1, limits(1, 3)).unwrap();
         manager.append(b"one", 1, &signer()).unwrap();
-        let wrong_key = SigningKey::from_seed([4; 32]);
+        let wrong_key = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
         let expected_kid = kid();
         let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
 
@@ -2815,7 +2817,7 @@ mod tests {
         let directory = TestDirectory::new();
         let (mut manager, _) = open(&directory.journal(), 1, limits(4, 2)).unwrap();
         let mut reservation = manager.reserve_append_capacity(1).unwrap();
-        let wrong_key = SigningKey::from_seed([4; 32]);
+        let wrong_key = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
         let expected_kid = kid();
         let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
 
@@ -2856,7 +2858,7 @@ mod tests {
         manager.append(b"one", 1, &signer()).unwrap();
         let path = journal.join(segment_file_name(NonZeroU64::new(1).unwrap()));
         let bytes_before = fs::metadata(&path).unwrap().len();
-        let wrong_key = SigningKey::from_seed([4; 32]);
+        let wrong_key = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
         let expected_kid = kid();
         let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
 
@@ -3135,7 +3137,7 @@ mod tests {
         let journal = directory.journal();
         fs::create_dir(&journal).unwrap();
         seed_lock(&journal);
-        let key = SigningKey::from_seed([3; 32]);
+        let key = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let identity = identity(1, [0; 32], 1, &key);
         ActiveEvidenceSegment::create_new(
             journal.join(segment_file_name(NonZeroU64::new(2).unwrap())),
@@ -3158,7 +3160,7 @@ mod tests {
         fs::create_dir(&journal).unwrap();
         fs::create_dir(&alternate).unwrap();
         seed_lock(&journal);
-        let key = SigningKey::from_seed([3; 32]);
+        let key = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let first = ActiveEvidenceSegment::create_new(
             journal.join(segment_file_name(NonZeroU64::new(1).unwrap())),
             identity(1, [0; 32], 1, &key),
@@ -3235,7 +3237,7 @@ mod tests {
     fn global_byte_cap_footer_completes_then_quiesces_without_deleting() {
         let directory = TestDirectory::new();
         let journal = directory.journal();
-        let key = SigningKey::from_seed([3; 32]);
+        let key = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let bounds = JournalBounds::new(4096, 4, 1024).unwrap();
         let maximum = ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key))
             .unwrap()
@@ -3244,7 +3246,7 @@ mod tests {
         let limits = JournalLimits::new(bounds, 4, u64::try_from(maximum).unwrap()).unwrap();
         let (mut manager, _) = open(&journal, 1, limits).unwrap();
         manager.append(b"one", 1, &signer()).unwrap();
-        let wrong_key = SigningKey::from_seed([4; 32]);
+        let wrong_key = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
         let expected_kid = kid();
         let wrong_signer = JournalSigner::new(&expected_kid, &wrong_key);
 
@@ -3275,7 +3277,7 @@ mod tests {
     #[test]
     fn permanent_record_error_is_classified_before_global_capacity() {
         let directory = TestDirectory::new();
-        let key = SigningKey::from_seed([3; 32]);
+        let key = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         let bounds = JournalBounds::new(4096, 4, 3).unwrap();
         let maximum = ActiveEvidenceSegment::minimum_complete_bytes(&identity(1, [0; 32], 1, &key))
             .unwrap()
@@ -3344,7 +3346,9 @@ mod tests {
                 path,
                 &identity,
                 limits(1, 3).segment,
-                &SigningKey::from_seed([3; 32]).verifying_key(),
+                &SigningKey::from_seed([3; 32])
+                    .expect("nonzero test seed")
+                    .verifying_key(),
             )
             .unwrap();
             let RecoveredEvidenceSegment::Completed(completed) = recovered else {
@@ -3402,7 +3406,9 @@ mod tests {
         drop(manager);
 
         let wrong = TestVerifier {
-            signer: SigningKey::from_seed([4; 32]).verifying_key(),
+            signer: SigningKey::from_seed([4; 32])
+                .expect("nonzero test seed")
+                .verifying_key(),
             kid: kid(),
             reject: None,
         };
@@ -3426,9 +3432,9 @@ mod tests {
         let directory = TestDirectory::new();
         let journal = directory.journal();
         let old_kid = KeyId::new(vec![3, 0xa1, 1]).unwrap();
-        let old_key = SigningKey::from_seed([0xa1; 32]);
+        let old_key = SigningKey::from_seed([0xa1; 32]).expect("nonzero test seed");
         let new_kid = KeyId::new(vec![3, 0xb2, 1]).unwrap();
-        let new_key = SigningKey::from_seed([0xb2; 32]);
+        let new_key = SigningKey::from_seed([0xb2; 32]).expect("nonzero test seed");
         let verifier = || RotatingVerifier {
             signers: vec![
                 (old_kid.clone(), old_key.verifying_key()),
