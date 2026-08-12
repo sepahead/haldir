@@ -1,0 +1,111 @@
+{
+  "authority": {
+    "deployment": false,
+    "publication": false,
+    "release": false,
+    "tag": false
+  },
+  "hosted_qualification": {
+    "ci": {
+      "conclusion": "success",
+      "event": "push",
+      "head_sha": "c949d47801af0fb9c9d459b84bf195906da75c8e",
+      "run_attempt": 1,
+      "run_id": 31593166839,
+      "url": "https://github.com/sepahead/haldir/actions/runs/31593166839",
+      "workflow": "ci"
+    },
+    "formal": {
+      "conclusion": "success",
+      "event": "push",
+      "head_sha": "c949d47801af0fb9c9d459b84bf195906da75c8e",
+      "run_attempt": 1,
+      "run_id": 31593166909,
+      "url": "https://github.com/sepahead/haldir/actions/runs/31593166909",
+      "workflow": "formal"
+    }
+  },
+  "limitations": [
+    "HOSTED_RESULTS_ARE_OWNER_OBSERVED_NOT_CRYPTOGRAPHICALLY_IMPORTED",
+    "HOSTED_SETTINGS_REMAIN_MUTABLE_EXTERNAL_STATE",
+    "HOSTED_COMMIT_METADATA_RULE_UNAVAILABLE_ON_USER_REPOSITORY",
+    "WEB_REBASE_BUTTON_REMAINS_A_HOSTED_DELIVERY_RISK",
+    "NO_INDEPENDENT_REVIEWER_AT_ACTIVATION",
+    "NO_RELEASE_OR_DEPLOYMENT_AUTHORITY"
+  ],
+  "observed_at_utc": "2026-08-12T11:49:09Z",
+  "protocol": "HALDIR_SIGNED_LINEAGE_RECOVERY_V1",
+  "recovery_commit": "c949d47801af0fb9c9d459b84bf195906da75c8e",
+  "recovery_id": "FR-0019",
+  "recovery_tree": "5db0b202bbd28bf9a08316782938d56c9abc95cb",
+  "repository_settings": {
+    "allow_deletions": false,
+    "allow_force_pushes": false,
+    "allow_merge_commit": false,
+    "allow_rebase_merge": true,
+    "allow_squash_merge": false,
+    "captured_at_utc": "2026-08-12T11:49:09Z",
+    "commit_metadata_identity_rule_available": false,
+    "enforce_admins": true,
+    "observation_is_mutable_external_state": true,
+    "repository_database_id": 1292802592,
+    "repository_owner_database_id": 10104569,
+    "repository_owner_type": "User",
+    "required_conversation_resolution": false,
+    "required_linear_history": true,
+    "required_pull_request_reviews": false,
+    "required_signatures": true,
+    "required_status_checks": [
+      {
+        "app_id": 15368,
+        "context": "build-test"
+      },
+      {
+        "app_id": 15368,
+        "context": "clean-build"
+      },
+      {
+        "app_id": 15368,
+        "context": "feature-matrix"
+      },
+      {
+        "app_id": 15368,
+        "context": "interop"
+      },
+      {
+        "app_id": 15368,
+        "context": "macos-compile"
+      },
+      {
+        "app_id": 15368,
+        "context": "supply-chain"
+      },
+      {
+        "app_id": 15368,
+        "context": "tlc-model-check"
+      }
+    ],
+    "strict_required_status_checks": true,
+    "writer_allowlist_ruleset_bypass_actor_id": 10104569,
+    "writer_allowlist_ruleset_bypass_actor_type": "User",
+    "writer_allowlist_ruleset_bypass_mode": "always",
+    "writer_allowlist_ruleset_current_user_can_bypass": "always",
+    "writer_allowlist_ruleset_enforcement": "active",
+    "writer_allowlist_ruleset_excluded_refs": [],
+    "writer_allowlist_ruleset_id": 19992457,
+    "writer_allowlist_ruleset_included_refs": [
+      "refs/heads/main"
+    ],
+    "writer_allowlist_ruleset_name": "haldir-main-writer-allowlist",
+    "writer_allowlist_ruleset_owner_bypass": true,
+    "writer_allowlist_ruleset_rules": [
+      "update"
+    ],
+    "writer_allowlist_ruleset_source": "sepahead/haldir",
+    "writer_allowlist_ruleset_source_type": "Repository",
+    "writer_allowlist_ruleset_target": "branch"
+  },
+  "schema_version": "1.0.0",
+  "stage": "ACTIVATION",
+  "state_after": "ACTIVE_NO_RELEASE_AUTHORITY"
+}
