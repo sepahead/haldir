@@ -40,3 +40,13 @@ claimed as its output. The T002 closure adds separately named T000/T001
 supplements whose `implementation.commit` is the historical signed closure
 target and whose `evidence_tool.commit` identifies the signed commit that first
 carried the tool and specification.
+
+If a previously verified requirement evolves, the ledger first returns it to
+`implemented` and reclassifies its unchanged supplement as
+`historical_generated_exact_commit_verification`. Offline reconciliation still
+verifies the old signed implementation/tool commits, exact artifact manifest,
+and hosted-run logs. It stops asserting only the superseded specification's
+`MUST_MATCH` relationship to the live worktree. This historical classification
+cannot close a task: a new exact-commit record and `verified` status are required
+for that. Silently weakening a current record or overwriting its evidence is not
+permitted.

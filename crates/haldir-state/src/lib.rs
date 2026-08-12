@@ -3,10 +3,9 @@
 //! process lifecycle, and the authorization-revision TOCTOU guard.
 //!
 //! The `model` tests encode the specification's safety invariants (Phase 6 /
-//! punch-list) as executable checks. A TLA+ model of the same invariants is
-//! authored under `formal/`; the model checker (TLC) is not run in this
-//! environment (see `docs/LIMITATIONS.md`), so these executable model tests are
-//! the CI-enforced encoding of those properties.
+//! punch-list) as executable Rust checks. A TLA+ model of related bounded
+//! invariants is authored under `formal/` and checked by the separate pinned
+//! formal lane; neither form of evidence substitutes for the other.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -29,7 +28,7 @@ pub mod mission;
 pub mod output_stream;
 pub mod replay;
 pub mod revision;
-pub mod session;
+pub mod source_replay;
 
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -41,7 +40,7 @@ pub use challenge::ChallengeTable;
 pub use clock::{SystemMonotonicClock, TestClock};
 pub use durable::{
     BootedDurableAntiRollbackStore, DeploymentBootedDurableAntiRollbackStore,
-    DurableAntiRollbackError, DurableAntiRollbackStore,
+    DurableAntiRollbackError, DurableAntiRollbackStore, DurableRevocationUpdate,
 };
 pub use fault::FaultLatch;
 pub use gate_process::{GateProcessMachine, InvalidTransition};
@@ -51,7 +50,7 @@ pub use mission::{
 pub use output_stream::{GateOutputStreamState, OutputStreamError};
 pub use replay::{ControllerReplayState, ReplayClass};
 pub use revision::RevisionCounter;
-pub use session::{SessionBindOutcome, SessionState};
+pub use source_replay::{SourceReplayClass, SourceStreamReplayState};
 
 #[cfg(test)]
 mod model {
@@ -66,9 +65,8 @@ mod model {
     use haldir_contracts::ids::*;
     use haldir_contracts::lease::MissionLeaseV1;
     use haldir_contracts::limits::MissionLeaseLimitsV1;
-    use haldir_contracts::scalar::{
-        AsciiId, BoundedAscii, BoundedSet, BoundedVec, CanonicalUuidV4String,
-    };
+    use haldir_contracts::receipt::DecisionReasonCodeV1;
+    use haldir_contracts::scalar::{AsciiId, BoundedAscii, BoundedSet, CanonicalUuidV4String};
     use haldir_contracts::session::NcpSessionIdentityV1;
     use haldir_core::snapshot::AdmittedControllerSnapshot;
     use haldir_core::time::MonoInstant;
@@ -126,9 +124,10 @@ mod model {
             ])
             .unwrap(),
             allowed_frames: BoundedSet::from_iter_checked([CoordinateFrameV1::LocalNed]).unwrap(),
-            allowed_source_keys: BoundedVec::from_vec(vec![
-                BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
-            ])
+            allowed_source_keys: BoundedSet::from_iter_checked([BoundedAscii::new(
+                "veh/uav-1/state/pose",
+            )
+            .unwrap()])
             .unwrap(),
             limits: MissionLeaseLimitsV1 {
                 max_output_validity_ms: NonZeroU32::new(500).unwrap(),
@@ -156,7 +155,7 @@ mod model {
             gate_output_epoch: out_epoch(epoch),
             policy_snapshot_digest: dig(1),
             controller: controller(),
-            local_cap_ms: 30_000,
+            local_cap_ms: NonZeroU32::new(30_000).unwrap(),
         }
     }
     fn now() -> MonoInstant {
@@ -233,9 +232,92 @@ mod model {
         let mut ar = AntiRollbackStore::new_empty();
         let snap =
             accept_lease(&lease(1, 1, 1, 10), &ctx(1, 1, 1), &mut ch, &mut ar, now()).unwrap();
-        assert_eq!(snap.lease_term, 10);
+        assert_eq!(snap.lease_term.get(), 10);
         assert_eq!(snap.remaining_ms(now()), 30_000);
+        let final_fractional_millisecond =
+            MonoInstant::from_nanos(snap.expires_at_mono.as_nanos() - 1);
+        assert_eq!(snap.remaining_ms(final_fractional_millisecond), 0);
+        assert!(!snap.is_expired_at(final_fractional_millisecond));
+        assert!(snap.is_expired_at(snap.expires_at_mono));
         assert!(!ch.is_pending(&ChallengeNonce::new([7; 32]), now()));
+    }
+
+    #[test]
+    fn lease_deadline_exact_counter_boundary_is_accepted() {
+        const LOCAL_CAP_MS: u64 = 30_000;
+        let exact_boundary_now = MonoInstant::from_nanos(u64::MAX - LOCAL_CAP_MS * 1_000_000);
+        let nonce = ChallengeNonce::new([7; 32]);
+        let mut challenges = ChallengeTable::for_session(sess(1), 4);
+        assert!(challenges.insert(nonce, MonoInstant::from_nanos(u64::MAX), exact_boundary_now,));
+        let mut term_store = ObservedTermStore::default();
+
+        let snapshot = accept_lease(
+            &lease(1, 1, 1, 10),
+            &ctx(1, 1, 1),
+            &mut challenges,
+            &mut term_store,
+            exact_boundary_now,
+        )
+        .unwrap();
+
+        assert_eq!(snapshot.expires_at_mono.as_nanos(), u64::MAX);
+        assert_eq!(term_store.lookup_calls.get(), 2);
+        assert_eq!(term_store.commit_calls, 1);
+        assert!(!challenges.is_pending(&nonce, exact_boundary_now));
+    }
+
+    #[test]
+    fn lease_deadline_overflow_spends_no_authority_state() {
+        const LOCAL_CAP_MS: u64 = 30_000;
+        let overflow_now = MonoInstant::from_nanos(u64::MAX - LOCAL_CAP_MS * 1_000_000 + 1);
+        let nonce = ChallengeNonce::new([7; 32]);
+        let mut challenges = ChallengeTable::for_session(sess(1), 4);
+        assert!(challenges.insert(nonce, MonoInstant::from_nanos(u64::MAX), overflow_now,));
+        let mut term_store = ObservedTermStore::default();
+
+        let error = accept_lease(
+            &lease(1, 1, 1, 10),
+            &ctx(1, 1, 1),
+            &mut challenges,
+            &mut term_store,
+            overflow_now,
+        )
+        .unwrap_err();
+
+        assert_eq!(error, LeaseAcceptError::DeadlineOverflow);
+        assert_eq!(
+            error.reason_code(),
+            DecisionReasonCodeV1::ErrorInternalFault
+        );
+        assert_eq!(term_store.lookup_calls.get(), 0);
+        assert_eq!(term_store.commit_calls, 0);
+        assert!(challenges.is_pending(&nonce, overflow_now));
+        assert_eq!(challenges.retained_len(), 1);
+    }
+
+    #[test]
+    fn invalid_lease_spends_no_authority_state() {
+        let nonce = ChallengeNonce::new([7; 32]);
+        let mut challenges = table_with_nonce();
+        let mut term_store = ObservedTermStore::default();
+        let mut unsupported = lease(1, 1, 1, 10);
+        unsupported.schema_minor = 1;
+
+        let error = accept_lease(
+            &unsupported,
+            &ctx(1, 1, 1),
+            &mut challenges,
+            &mut term_store,
+            now(),
+        )
+        .unwrap_err();
+
+        assert_eq!(error, LeaseAcceptError::InvalidLease);
+        assert_eq!(error.reason_code(), DecisionReasonCodeV1::DenyMalformed);
+        assert_eq!(term_store.lookup_calls.get(), 0);
+        assert_eq!(term_store.commit_calls, 0);
+        assert!(challenges.is_pending(&nonce, now()));
+        assert_eq!(challenges.retained_len(), 1);
     }
 
     #[test]
@@ -458,15 +540,27 @@ mod model {
     }
 
     #[test]
+    fn post_commit_challenge_disagreement_is_an_internal_fault_class() {
+        assert_eq!(
+            LeaseAcceptError::ChallengeCommitInvariant.reason_code(),
+            DecisionReasonCodeV1::ErrorInternalFault
+        );
+    }
+
+    #[test]
     fn deny_consumes_replay_but_produces_no_output() {
         let mut replay = ControllerReplayState::new(8);
         let output = GateOutputStreamState::new(out_epoch(1), 8);
         let ep = IntentEpoch::new([6; 16]);
         replay.commit_consume(ep, 1).unwrap();
-        assert_eq!(output.peek_next_seq(), 1, "no output allocated on deny");
+        assert_eq!(
+            output.peek_next_seq().map(OutputSeq::get),
+            Some(1),
+            "no output allocated on deny"
+        );
         assert_eq!(replay.consumed_count(), 1);
         assert!(replay.commit_consume(ep, 1).is_err());
-        assert_eq!(output.peek_next_seq(), 1);
+        assert_eq!(output.peek_next_seq().map(OutputSeq::get), Some(1));
     }
 
     #[test]
@@ -484,14 +578,5 @@ mod model {
         let captured = rev.get();
         assert_eq!(rev.bump(), Some(2));
         assert_ne!(rev.get(), captured);
-    }
-
-    #[test]
-    fn session_rebind_reports_generation_change() {
-        let mut s = SessionState::new();
-        assert_eq!(s.bind(sess(1)), SessionBindOutcome::NewBinding);
-        assert_eq!(s.bind(sess(1)), SessionBindOutcome::Unchanged);
-        assert_eq!(s.bind(sess(2)), SessionBindOutcome::GenerationChanged);
-        assert!(!s.matches(&sess(1)));
     }
 }

@@ -28,5 +28,6 @@ a signature for one message kind or schema major cannot be lifted to another.
 
 ## Evidence
 
-`haldir-contracts` cbor tests + hostile-parser fuzz-smoke (`CL-CBOR-01`);
+`haldir-contracts` canonical/malformed decoder tests plus bounded hostile-byte
+property tests (`just parser-property-smoke`, `CL-CBOR-01`);
 `haldir-crypto` cose tests (`CL-COSE-01`).

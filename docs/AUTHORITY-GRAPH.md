@@ -9,26 +9,43 @@ claim boundary.
 ## Authorities as capabilities (distinct key roles)
 
 `crates/haldir-crypto/src/role.rs` encodes the closed role set. Each trust record
-authorizes exactly one role, and the trust loader rejects reuse of byte-identical
-public-key encodings under distinct key identifiers. Deployments must provision a
-distinct cryptographic key for each authority domain: `CONTROLLER_INTENT`, `MISSION_AUTHORITY`,
-`ADMISSION_AUTHORITY`, `POLICY_AUTHORITY`, `REVOCATION_AUTHORITY`,
+authorizes exactly one role and carries one mandatory canonical subject of at
+most 64 ASCII bytes. Provisioning admits only the unique canonical encoding of
+a non-identity Ed25519 point in the prime-order subgroup, then rejects reuse of
+that public key under distinct key identifiers, including aliases that propose
+the same role but another subject or assurance class. Deployments must provision
+a distinct cryptographic key for each authority domain: `CONTROLLER_INTENT`, `MISSION_AUTHORITY`,
+`TRUST_AUTHORITY`, `ADMISSION_AUTHORITY`, `POLICY_AUTHORITY`, `REVOCATION_AUTHORITY`,
 `GATE_APPLICATION`, `CREBAIN_EVIDENCE`, `DEPLOYMENT_AUTHORITY`, `DEVELOPMENT_ONLY`.
+Package-bound startup treats the retained bootstrap store and the approved
+runtime store as lifecycle-separated authority namespaces: neither a `kid` nor
+public-key material may occur in both. That comparison happens before entropy,
+locks, storage, or anchor access. Rejecting even an identical record keeps the
+two independently governed revocation snapshots from creating ambiguous key
+lifecycle or reviving a key revoked at bootstrap.
 
-The pinned Ed25519 provider does not expose a prime-order/torsion-free public-key
-canonicalization API. The byte-identity guard therefore prevents ordinary key
-reuse but is not claimed to detect every cryptographically related alternate
-encoding; external provisioning review remains required.
+A logical subject may legitimately rotate to a new key identifier and distinct
+key material. The one-to-one invariant is between a key identifier and exact
+accepted public key, not between a long-lived logical subject and one key forever.
 
-`DEPLOYMENT_AUTHORITY` now has a strict standalone package-verification boundary
+`DEPLOYMENT_AUTHORITY` has a strict package-verification boundary
 (`CL-DEPLOYMENT-PRIMITIVE-01`). A separately passed policy names the expected deployment authority,
 Gate, realm, vehicle, class, runtime, and NCP-wire profile, and the verifier rejects any package
-mismatch. The standalone API cannot establish where its caller obtained that policy; future Gate
-glue must source it from bootstrap state rather than derive it from the package. This capability is
-not yet an input to the Gate command conjunction below. Its optional Linux/macOS artifact source begins
-from a caller-supplied open directory and proves bounded no-reopen byte capture, not authenticated
-root or credential custody; no startup path consumes the resolved artifact typestate or
-package-booted durable capability.
+mismatch. The API cannot establish where its caller obtained that policy. Package-bound Gate startup
+now consumes signed-role NCP and strict Gate-configuration proofs plus four separately verified,
+role-separated, public-key-distinct revision-scoped runtime-snapshot approvals. The approval keys and revocations are retained from the
+same bootstrap snapshots that verified the package, so no second trust root can be introduced
+between typestate stages. This proves cryptographic role/key separation, not separate organizations,
+operators, or administrative control. Startup derives and exact-matches the complete live authorization
+configuration plus runtime/store selections before effects, commits its
+verified revision/digest with the boot, and exact-matches the signed journal ID when the
+authenticated format-v2 journal is bound; unbound assurance startup is rejected. That capability is
+not yet a complete input to the command conjunction below because bootstrap/root provenance and
+journal binding/path are not mandatory and the other seven artifact roles, running executable,
+protected root, and credentials
+are not bound. The
+optional Linux/macOS artifact source begins from a caller-supplied open directory and proves bounded
+no-reopen byte capture, not authenticated root or credential custody.
 
 ## Effective permission to create a plant command (conjunction)
 
@@ -39,13 +56,17 @@ process ACTIVE and not fault-latched
   AND intent within ingress size limit
   AND COSE(Ed25519) verifies over exact bytes AND canonical re-encode equal
   AND signer kid resolves to exactly one CONTROLLER_INTENT key, not revoked
+  AND lease activation preflight already bound that kid/role/class/subject to
+      the admitted controller before spending term or challenge
   AND actual route == signed intent key == lease intent key
   AND signer kid == lease's controller_intent_signing_key_id
   AND gate id/boot, realm, vehicle, session pair, mission id, lease id/term match
   AND admission (id/digest/bundle/backend) matches the resolved admission
   AND lease remaining time > 0
   AND controller replay: fresh (classify), then commit-consume
-  AND trusted state present, same session, primary source correlates to cache
+  AND trusted state present, same session, and still within its age bound
+  AND that state was admitted through strict capture-time and source-position
+      progression (prior source epochs retained as non-evicting tombstones)
   AND deterministic native policy ALLOW with effective validity >= min useful
   AND authorization_revision unchanged since snapshot (TOCTOU re-check)
   AND plant-publication authority authorizes publication
@@ -67,13 +88,14 @@ output; from the replay-commit point on, the intent sequence is consumed.
 | Gate | the modeled final NCP command frame, decision receipts | leases/admissions/policy; another vehicle's command |
 | plant (Crebain, future) | accepted/applied evidence | controller intents, Gate decision claims |
 
-## Actuator-path disposition (P0)
+## Actuator-path disposition
 
-The reference plant has **exactly one** command ingress
+The modeled P0 reference plant has **exactly one** command ingress
 (`ReferencePlant::ingest`); nothing else changes commanded velocity (invariant
-A1/B15). In P0 there is no live transport, so there are no DDS/MAVROS/UI/native
-bypass routes to close — and correspondingly, **A1/A2 complete-mediation is not
-claimed** (it requires the live transport + bypass-inventory campaign; see
-`docs/THREAT-MODEL.md` and `docs/LIMITATIONS.md`). A real deployment MUST produce
-the machine-readable actuator-path disposition table and a live bypass campaign
-before any stronger mediation claim.
+A1/B15). The separate off-by-default Zenoh library path and retained ACL
+experiment do not enumerate or close DDS, MAVROS, UI, firmware, native-client,
+credential-reuse, or other physical actuator routes. Accordingly, **A1/A2
+complete mediation is not claimed**. A real deployment MUST produce the
+machine-readable actuator-path disposition table and a live bypass campaign
+before any stronger mediation claim; see the normative
+[threat model](release/0.9.0/THREAT-MODEL.md) and [limitations](LIMITATIONS.md).

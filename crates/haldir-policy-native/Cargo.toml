@@ -1,6 +1,6 @@
 [package]
 name = "haldir-policy-native"
-description = "Haldir Gate — haldir-policy-native"
+description = "Deterministic fixed-point native safety-policy evaluation for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

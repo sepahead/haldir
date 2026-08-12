@@ -28,7 +28,12 @@ tagged_enum! {
     /// Stable machine reason codes for a decision. Allow codes are positive
     /// outcomes; `Deny*` are refusals; `Error*` are internal faults. The closed
     /// vocabulary retains historical/future allow tags, but the v1 receipt
-    /// profile accepts only `AllowPrepared` for an `Allow` decision.
+    /// profile accepts only one `AllowPrepared` for an `Allow` decision. A deny
+    /// or error carries a nonempty, duplicate-free vector containing only its
+    /// own reason class. Dynamic policy denials distinguish measured
+    /// acceleration (`49`), continuous motion (`50`), and published-Hold dwell
+    /// (`51`), plant-mode authorization (`52`), and an NCP-unrepresentable
+    /// source position (`53`) from command slew/duty.
     pub enum DecisionReasonCodeV1 {
         AllowPublished = 1 => "ALLOW_PUBLISHED",
         AllowNotPublishedOverload = 2 => "ALLOW_NOT_PUBLISHED_OVERLOAD",
@@ -73,6 +78,11 @@ tagged_enum! {
         DenyTotalIntents = 46 => "DENY_TOTAL_INTENTS",
         DenyStateProducer = 47 => "DENY_STATE_PRODUCER",
         DenyAdmissionLevel = 48 => "DENY_ADMISSION_LEVEL",
+        DenyAcceleration = 49 => "DENY_ACCELERATION",
+        DenyContinuousMotion = 50 => "DENY_CONTINUOUS_MOTION",
+        DenyHoldDwell = 51 => "DENY_HOLD_DWELL",
+        DenyPlantMode = 52 => "DENY_PLANT_MODE",
+        DenySourceUnrepresentable = 53 => "DENY_SOURCE_UNREPRESENTABLE",
         ErrorInternalFault = 90 => "ERROR_INTERNAL_FAULT",
         ErrorNamespaceExhausted = 91 => "ERROR_NAMESPACE_EXHAUSTED",
         ErrorStateTransition = 92 => "ERROR_STATE_TRANSITION",
@@ -131,7 +141,12 @@ impl DecisionReasonCodeV1 {
             | Self::DenyRateLimit
             | Self::DenyTotalIntents
             | Self::DenyStateProducer
-            | Self::DenyAdmissionLevel => DecisionReasonClass::Deny,
+            | Self::DenyAdmissionLevel
+            | Self::DenyAcceleration
+            | Self::DenyContinuousMotion
+            | Self::DenyHoldDwell
+            | Self::DenyPlantMode
+            | Self::DenySourceUnrepresentable => DecisionReasonClass::Deny,
             Self::ErrorInternalFault
             | Self::ErrorNamespaceExhausted
             | Self::ErrorStateTransition => DecisionReasonClass::Error,
@@ -253,6 +268,28 @@ impl DecisionReceiptV1 {
             && self.output_frame_digest.is_some()
             && self.transformation_relation.is_some()
     }
+
+    fn has_no_intent_binding(&self) -> bool {
+        self.payload_digest.is_none()
+            && self.semantic_intent_digest.is_none()
+            && self.controller_id.is_none()
+            && self.controller_intent_position.is_none()
+            && self.mission_id.is_none()
+            && self.mission_lease_id.is_none()
+            && self.admission_digest.is_none()
+            && self.source.is_none()
+    }
+
+    fn has_complete_intent_binding(&self) -> bool {
+        self.payload_digest.is_some()
+            && self.semantic_intent_digest.is_some()
+            && self.controller_id.is_some()
+            && self.controller_intent_position.is_some()
+            && self.mission_id.is_some()
+            && self.mission_lease_id.is_some()
+            && self.admission_digest.is_some()
+            && self.source.is_some()
+    }
 }
 
 impl crate::cbor::Validate for DecisionReceiptV1 {
@@ -260,22 +297,35 @@ impl crate::cbor::Validate for DecisionReceiptV1 {
         if self.received_mono_ns > self.decided_mono_ns {
             return Err(Self::semantic_error());
         }
-        let &[reason] = self.reason_codes.as_slice() else {
+        let no_intent = self.has_no_intent_binding();
+        let complete_intent = self.has_complete_intent_binding();
+        if (self.state_snapshot_digest.is_some() || !no_intent) && !complete_intent {
             return Err(Self::semantic_error());
-        };
+        }
+        let reasons = self.reason_codes.as_slice();
+        if reasons.is_empty()
+            || reasons
+                .iter()
+                .enumerate()
+                .any(|(index, reason)| reasons.iter().take(index).any(|prior| prior == reason))
+        {
+            return Err(Self::semantic_error());
+        }
         let valid = match self.decision {
             DecisionOutcomeV1::Allow => {
-                reason == DecisionReasonCodeV1::AllowPrepared
+                reasons == [DecisionReasonCodeV1::AllowPrepared]
                     && self.publish_stage == PublishStageV1::OutputPrepared
+                    && complete_intent
+                    && self.state_snapshot_digest.is_some()
                     && self.has_complete_output()
             }
             DecisionOutcomeV1::Deny => {
-                reason.is_deny()
+                reasons.iter().all(|reason| reason.is_deny())
                     && self.publish_stage == PublishStageV1::DecidedDeny
                     && self.has_no_output()
             }
             DecisionOutcomeV1::Error => {
-                reason.is_error()
+                reasons.iter().all(|reason| reason.is_error())
                     && self.publish_stage == PublishStageV1::DecidedError
                     && self.has_no_output()
             }

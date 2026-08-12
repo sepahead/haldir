@@ -31,10 +31,10 @@ GATE_PIPELINE_FUNCTION_MARKER = "fn decide_intent_inner"
 # review event; region extraction alone cannot distinguish an impl item from
 # identical tokens embedded inside an inert macro invocation.
 EXPECTED_GATE_ACTOR_SOURCE_SHA256 = (
-    "388735d2cbe38f421cef31d9272c32f944c589a6ff8646ff5276b7e204c31853"
+    "8c2aac1d1b2e560705b13dd8a7ffa1d0d9f9b0c6e1cd86d7bdbc56bb822b31e1"
 )
 EXPECTED_GATE_PIPELINE_ITEM_SHA256 = (
-    "29473e1e91c016291e7d7821f5722c10b4908abeb66731e3ee8af767d078c48b"
+    "7a48d566c4e70aac17899dd0e3cd33c9d2214fe40426e595efb59bddff16c5af"
 )
 
 EXPECTED_TOP_LEVEL = {
@@ -100,11 +100,16 @@ GATE_PIPELINE_ORDERED_MARKERS = (
     "let effective_validity_ms = match decision.effective_validity_ms()",
     "if self.revision.get() != captured_rev",
     "if !self.publication.authorizes_acl_only_publication()",
-    "let out_seq = match self.output_stream.allocate()",
+    "let allocation = self.allocate_output_sequence()",
+    "let out_seq = match allocation",
+    "self.latch_fault(",
+    "return self.respond(&draft, R::ErrorNamespaceExhausted, now)",
     "let build_input = GateCommandBuildInputV1",
     "action: intent.action",
     "let frame = match self.adapter.build_command(&build_input)",
     ".validate_exact_command(&frame, &build_input)",
+    "let plant_command = match PlantCommand::from_exact_frame(decision_id, frame)",
+    "let output_frame_digest = plant_command.output_frame_digest()",
     "receipt.decision = DecisionOutcomeV1::Allow",
 )
 
@@ -677,7 +682,7 @@ def _verify_rust_contracts(model: dict[str, Any], repo: Path) -> None:
         for fragment in (
             "DecisionOutcomeV1::Allow",
             "PlantAction::Hold",
-            "command.action.velocity(), [0, 0, 0]",
+            "command.action().velocity(), [0, 0, 0]",
             "DecisionOutcomeV1::Deny",
             "DecisionOutcomeV1::Error",
             "!denied.has_prepared_publication()",

@@ -3,7 +3,7 @@
 use crate::error::DurableError;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -20,10 +20,22 @@ fn compute_tag(key: &[u8], bytes: &[u8]) -> Result<[u8; 32], DurableError> {
 pub struct StorageMacKey(Zeroizing<[u8; 32]>);
 
 impl StorageMacKey {
-    /// Construct from an independently provisioned 256-bit key.
-    #[must_use]
-    pub fn new(bytes: [u8; 32]) -> Self {
-        Self(Zeroizing::new(bytes))
+    /// Construct from an independently provisioned, nonzero 256-bit key.
+    ///
+    /// Rejecting the all-zero sentinel catches an otherwise catastrophic
+    /// provisioning error. It does not measure entropy or prove protected key
+    /// generation/custody. The retained key is wiped on drop; transient caller,
+    /// compiler, process, swap, and crash-dump copies remain outside that claim.
+    ///
+    /// # Errors
+    /// Returns [`DurableError::InvalidKey`] for the all-zero value.
+    pub fn new(mut bytes: [u8; 32]) -> Result<Self, DurableError> {
+        if bytes.iter().all(|byte| *byte == 0) {
+            return Err(DurableError::InvalidKey);
+        }
+        let retained = Zeroizing::new(bytes);
+        bytes.zeroize();
+        Ok(Self(retained))
     }
 
     pub(crate) fn tag(&self, bytes: &[u8]) -> Result<[u8; 32], DurableError> {
@@ -60,5 +72,20 @@ mod tests {
                 0x2e, 0x32, 0xcf, 0xf7,
             ]
         );
+    }
+
+    #[test]
+    fn storage_key_rejects_all_zero_provisioning_value() {
+        assert!(matches!(
+            StorageMacKey::new([0; 32]),
+            Err(DurableError::InvalidKey)
+        ));
+    }
+
+    #[test]
+    fn storage_key_debug_never_exposes_key_material() {
+        let key = StorageMacKey::new([7; 32]).expect("nonzero test key");
+
+        assert_eq!(format!("{key:?}"), "StorageMacKey(<redacted>)");
     }
 }

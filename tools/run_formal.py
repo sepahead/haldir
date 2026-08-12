@@ -269,7 +269,7 @@ def _require_unchanged_material(
 
 
 def load_pins(repository: Path) -> FormalPins:
-    """Load and close the current schema-v3 formal pin table."""
+    """Load and close the current schema-v4 formal pin table."""
 
     payload = _read_regular_file(
         repository / "tools" / "pins.toml",
@@ -287,7 +287,7 @@ def load_pins(repository: Path) -> FormalPins:
         or type(document.get("schema_version")) is not int
     ):
         _fail("FORMAL_PINS_SCHEMA")
-    if document["schema_version"] != 3:
+    if document["schema_version"] != 4:
         _fail("FORMAL_PINS_SCHEMA")
     formal = document.get("formal")
     if not isinstance(formal, dict) or set(formal) != {
@@ -943,7 +943,7 @@ def _run_bounded(
     sink: Callable[[bytes], None] | None = None,
     capture: bool,
 ) -> ProcessResult:
-    """Run one process group while bounding time, output, and descendants."""
+    """Run one process group while bounding its time and captured output."""
 
     if (
         not command

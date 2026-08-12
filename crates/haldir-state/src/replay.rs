@@ -8,7 +8,6 @@
 //! epoch always rejects; tombstone overflow quiesces rather than evicting.
 
 use haldir_contracts::ids::IntentEpoch;
-use std::collections::BTreeSet;
 
 /// The classification of an intent position against replay state (no mutation).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,7 +41,7 @@ impl ReplayClass {
 pub struct ControllerReplayState {
     active_epoch: Option<IntentEpoch>,
     last_seq: u64,
-    retired: BTreeSet<[u8; 16]>,
+    retired: Vec<[u8; 16]>,
     max_retired: usize,
     consumed_count: u64,
 }
@@ -54,7 +53,7 @@ impl ControllerReplayState {
         Self {
             active_epoch: None,
             last_seq: 0,
-            retired: BTreeSet::new(),
+            retired: Vec::new(),
             max_retired,
             consumed_count: 0,
         }
@@ -112,14 +111,20 @@ impl ControllerReplayState {
     /// A retired epoch can never become active again under this lease.
     ///
     /// # Errors
-    /// Returns [`ReplayClass::TombstoneFull`] if the tombstone set is full; the
-    /// caller must require a fresh lease rather than evicting an old epoch.
+    /// Returns [`ReplayClass::TombstoneFull`] if the tombstone set is logically
+    /// full or its bounded backing allocation cannot be reserved; the caller
+    /// must require a fresh lease rather than evicting an old epoch.
     pub fn retire_active(&mut self) -> Result<(), ReplayClass> {
         if let Some(active) = self.active_epoch {
             if self.retired.len() >= self.max_retired {
                 return Err(ReplayClass::TombstoneFull);
             }
-            self.retired.insert(*active.as_bytes());
+            // Reserve before changing the active watermark so allocation
+            // failure cannot reopen an epoch that was never tombstoned.
+            self.retired
+                .try_reserve(1)
+                .map_err(|_| ReplayClass::TombstoneFull)?;
+            self.retired.push(*active.as_bytes());
             self.active_epoch = None;
             self.last_seq = 0;
         }

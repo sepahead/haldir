@@ -9,17 +9,23 @@
 //! external non-rewindable witness.
 
 use core::{fmt, num::NonZeroU64};
-use haldir_contracts::ids::{GateBootId, GateId, KeyId};
+use haldir_contracts::ids::{GateBootId, GateId, JournalId, KeyId};
 use haldir_crypto::{SigningKey, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
-use std::fs::{self, File, OpenOptions, TryLockError};
+#[cfg(not(unix))]
+use std::fs::OpenOptions;
+use std::fs::{self, File, TryLockError};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[cfg(unix)]
-use std::os::unix::fs::OpenOptionsExt;
+use rustix::fs::{Mode, OFlags, open};
+#[cfg(unix)]
+use rustix::io::Errno;
+#[cfg(unix)]
+use std::os::unix::fs::DirBuilderExt;
 
 use crate::journal::{
     ActiveEvidenceSegment, CompletedSegment, JournalBounds, JournalError, OpenRecoveryStatus,
@@ -152,6 +158,8 @@ pub enum JournalManagerError {
     MultipleActive,
     /// A segment claimed another Gate identity.
     GateMismatch,
+    /// A segment claimed another logical journal identity.
+    JournalMismatch,
     /// An open recovered tail had no supplied matching historical signer.
     TailSignerUnavailable,
     /// The configured global journal limit has quiesced further appends.
@@ -211,6 +219,7 @@ impl JournalManagerError {
             Self::Fork => "EVIDENCE_JOURNAL_MANAGER_FORK",
             Self::MultipleActive => "EVIDENCE_JOURNAL_MANAGER_MULTIPLE_ACTIVE",
             Self::GateMismatch => "EVIDENCE_JOURNAL_MANAGER_GATE_MISMATCH",
+            Self::JournalMismatch => "EVIDENCE_JOURNAL_MANAGER_JOURNAL_MISMATCH",
             Self::TailSignerUnavailable => "EVIDENCE_JOURNAL_MANAGER_TAIL_SIGNER_UNAVAILABLE",
             Self::Quiesced => "EVIDENCE_JOURNAL_MANAGER_QUIESCED",
             Self::ReservationUnavailable => "EVIDENCE_JOURNAL_MANAGER_RESERVATION_UNAVAILABLE",
@@ -323,6 +332,7 @@ pub struct JournalReservation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JournalOpenOptions {
     gate_id: GateId,
+    journal_id: JournalId,
     gate_boot_id: GateBootId,
     created_mono_ns: u64,
     limits: JournalLimits,
@@ -333,12 +343,14 @@ impl JournalOpenOptions {
     #[must_use]
     pub const fn new(
         gate_id: GateId,
+        journal_id: JournalId,
         gate_boot_id: GateBootId,
         created_mono_ns: u64,
         limits: JournalLimits,
     ) -> Self {
         Self {
             gate_id,
+            journal_id,
             gate_boot_id,
             created_mono_ns,
             limits,
@@ -349,6 +361,12 @@ impl JournalOpenOptions {
     #[must_use]
     pub(crate) const fn gate_boot_id(&self) -> GateBootId {
         self.gate_boot_id
+    }
+
+    /// Logical journal selected by the higher-level fused adapter.
+    #[must_use]
+    pub(crate) const fn journal_id(&self) -> JournalId {
+        self.journal_id
     }
 
     /// Monotonic creation/observation time for the planned current segment.
@@ -537,6 +555,7 @@ pub struct EvidenceJournalManager<V> {
     signer_kid: KeyId,
     signer_public_key: [u8; 32],
     gate_id: GateId,
+    journal_id: JournalId,
     gate_boot_id: GateBootId,
     limits: JournalLimits,
     active: Option<ActiveEvidenceSegment>,
@@ -763,6 +782,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         } = behavior;
         let JournalOpenOptions {
             gate_id,
+            journal_id,
             gate_boot_id,
             created_mono_ns,
             limits,
@@ -770,6 +790,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
         if mode == OpenMode::ProvisionNew {
             let identity = SegmentIdentity {
                 gate_id: gate_id.clone(),
+                journal_id,
                 gate_boot_id,
                 segment_sequence: NonZeroU64::new(1)
                     .ok_or(JournalManagerError::SequenceExhausted)?,
@@ -826,6 +847,9 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             let identity = ActiveEvidenceSegment::inspect_identity(&entry.path, limits.segment)?;
             if identity.gate_id != gate_id {
                 return Err(JournalManagerError::GateMismatch);
+            }
+            if identity.journal_id != journal_id {
+                return Err(JournalManagerError::JournalMismatch);
             }
             let header_sequence = identity.segment_sequence.get();
             if !seen_sequences.insert(header_sequence) {
@@ -988,6 +1012,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             signer_kid: signer.kid.clone(),
             signer_public_key: signer.key.verifying_key().to_bytes(),
             gate_id,
+            journal_id,
             gate_boot_id,
             limits,
             active: None,
@@ -1741,6 +1766,7 @@ impl<V: JournalVerifier> EvidenceJournalManager<V> {
             .map_or([0; 32], CompletedSegment::segment_digest);
         let identity = SegmentIdentity {
             gate_id: self.gate_id.clone(),
+            journal_id: self.journal_id,
             gate_boot_id: self.gate_boot_id,
             segment_sequence: sequence,
             previous_completed_digest,
@@ -1990,7 +2016,7 @@ fn prepare_directory(path: PathBuf, mode: OpenMode) -> Result<PathBuf, JournalMa
         Err(error)
             if error.kind() == std::io::ErrorKind::NotFound && mode == OpenMode::ProvisionNew =>
         {
-            fs::create_dir(&path).map_err(|_| JournalManagerError::Storage)?;
+            create_private_directory(&path).map_err(|_| JournalManagerError::Storage)?;
             Ok(path)
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -2000,29 +2026,68 @@ fn prepare_directory(path: PathBuf, mode: OpenMode) -> Result<PathBuf, JournalMa
     }
 }
 
+#[cfg(unix)]
+fn create_private_directory(path: &Path) -> std::io::Result<()> {
+    fs::DirBuilder::new().mode(0o700).create(path)
+}
+
+#[cfg(not(unix))]
+fn create_private_directory(path: &Path) -> std::io::Result<()> {
+    fs::create_dir(path)
+}
+
 fn lock_directory(directory: &Path, mode: OpenMode) -> Result<File, JournalManagerError> {
     let path = directory.join(LOCK_FILE_NAME);
-    let mut options = OpenOptions::new();
-    options.read(true).write(true);
-    if mode == OpenMode::ProvisionNew {
-        options.create_new(true);
-    }
     #[cfg(unix)]
-    options.mode(0o600);
-    let file = match options.open(&path) {
-        Ok(file) => file,
-        Err(error)
-            if error.kind() == std::io::ErrorKind::AlreadyExists
-                && mode == OpenMode::ProvisionNew =>
-        {
-            return Err(JournalManagerError::AlreadyProvisioned);
+    let file = {
+        let create = if mode == OpenMode::ProvisionNew {
+            OFlags::CREATE | OFlags::EXCL
+        } else {
+            OFlags::empty()
+        };
+        match open(
+            &path,
+            OFlags::RDWR
+                | create
+                | OFlags::CLOEXEC
+                | OFlags::NOFOLLOW
+                | OFlags::NONBLOCK
+                | OFlags::NOCTTY,
+            Mode::RUSR | Mode::WUSR,
+        ) {
+            Ok(descriptor) => File::from(descriptor),
+            Err(Errno::EXIST) if mode == OpenMode::ProvisionNew => {
+                return Err(JournalManagerError::AlreadyProvisioned);
+            }
+            Err(Errno::NOENT) if mode == OpenMode::OpenExisting => {
+                return Err(JournalManagerError::Missing);
+            }
+            Err(_) => return Err(JournalManagerError::Storage),
         }
-        Err(error)
-            if error.kind() == std::io::ErrorKind::NotFound && mode == OpenMode::OpenExisting =>
-        {
-            return Err(JournalManagerError::Missing);
+    };
+    #[cfg(not(unix))]
+    let file = {
+        let mut options = OpenOptions::new();
+        options.read(true).write(true);
+        if mode == OpenMode::ProvisionNew {
+            options.create_new(true);
         }
-        Err(_) => return Err(JournalManagerError::Storage),
+        match options.open(&path) {
+            Ok(file) => file,
+            Err(error)
+                if error.kind() == std::io::ErrorKind::AlreadyExists
+                    && mode == OpenMode::ProvisionNew =>
+            {
+                return Err(JournalManagerError::AlreadyProvisioned);
+            }
+            Err(error)
+                if error.kind() == std::io::ErrorKind::NotFound
+                    && mode == OpenMode::OpenExisting =>
+            {
+                return Err(JournalManagerError::Missing);
+            }
+            Err(_) => return Err(JournalManagerError::Storage),
+        }
     };
     let path_metadata = fs::symlink_metadata(&path).map_err(|_| JournalManagerError::Storage)?;
     let opened_metadata = file.metadata().map_err(|_| JournalManagerError::Storage)?;
@@ -2095,9 +2160,20 @@ fn discover_segments(
 fn sync_directory(directory: &Path) -> Result<(), JournalManagerError> {
     #[cfg(unix)]
     {
-        File::open(directory)
-            .and_then(|file| file.sync_all())
-            .map_err(|_| JournalManagerError::Storage)
+        let file = File::from(
+            open(
+                directory,
+                OFlags::RDONLY
+                    | OFlags::DIRECTORY
+                    | OFlags::CLOEXEC
+                    | OFlags::NOFOLLOW
+                    | OFlags::NONBLOCK
+                    | OFlags::NOCTTY,
+                Mode::empty(),
+            )
+            .map_err(|_| JournalManagerError::Storage)?,
+        );
+        file.sync_all().map_err(|_| JournalManagerError::Storage)
     }
     #[cfg(not(unix))]
     {
@@ -2290,7 +2366,9 @@ fn map_commit_error(error: JournalError) -> JournalManagerError {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    use std::fs::OpenOptions;
     use std::io::Write;
+    use std::os::unix::fs::PermissionsExt;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::{Arc, LazyLock};
 
@@ -2430,6 +2508,10 @@ mod tests {
         GateId::new("gate-1").unwrap()
     }
 
+    fn journal_id() -> JournalId {
+        JournalId::new([7; 16]).unwrap()
+    }
+
     fn limits(max_records: u64, max_segments: usize) -> JournalLimits {
         JournalLimits::new(
             JournalBounds::new(4096, max_records, 1024).unwrap(),
@@ -2472,7 +2554,13 @@ mod tests {
     }
 
     fn options(boot: u8, limits: JournalLimits) -> JournalOpenOptions {
-        JournalOpenOptions::new(gate(), GateBootId::new([boot; 16]), u64::from(boot), limits)
+        JournalOpenOptions::new(
+            gate(),
+            journal_id(),
+            GateBootId::new([boot; 16]),
+            u64::from(boot),
+            limits,
+        )
     }
 
     fn open(
@@ -2558,6 +2646,51 @@ mod tests {
     }
 
     #[test]
+    fn existing_lock_rejects_a_fifo_without_waiting_for_a_writer() {
+        use std::sync::mpsc;
+        use std::thread;
+        use std::time::Duration;
+
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        fs::create_dir(&journal).unwrap();
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(journal.join(LOCK_FILE_NAME))
+                .status()
+                .unwrap()
+                .success()
+        );
+        let (sender, receiver) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            sender
+                .send(lock_directory(&journal, OpenMode::OpenExisting))
+                .unwrap();
+        });
+
+        let result = receiver
+            .recv_timeout(Duration::from_secs(2))
+            .expect("FIFO journal-lock open exceeded the nonblocking deadline");
+        worker.join().unwrap();
+
+        assert!(matches!(result, Err(JournalManagerError::Storage)));
+    }
+
+    #[test]
+    fn provision_new_requests_an_owner_only_journal_directory() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let (_manager, _recovery) = open(&journal, 1, limits(4, 4)).unwrap();
+
+        let mode = fs::metadata(&journal).unwrap().permissions().mode();
+        assert_eq!(
+            mode & 0o077,
+            0,
+            "journal directory exposed group/other bits"
+        );
+    }
+
+    #[test]
     fn unusable_genesis_capacity_is_rejected_before_directory_creation() {
         let directory = TestDirectory::new();
         let journal = directory.journal();
@@ -2627,6 +2760,46 @@ mod tests {
 
         assert!(matches!(second, Err(JournalManagerError::LockHeld)));
         drop(first);
+    }
+
+    #[test]
+    fn recovery_rejects_another_logical_journal_before_closing_or_extending_the_tail() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(4, 4);
+        let (first, _) = open(&journal, 1, journal_limits).unwrap();
+        drop(first);
+        let mismatched = JournalOpenOptions::new(
+            gate(),
+            JournalId::new([8; 16]).unwrap(),
+            GateBootId::new([2; 16]),
+            2,
+            journal_limits,
+        );
+
+        let error = match EvidenceJournalManager::open_existing(
+            &journal,
+            mismatched,
+            &signer(),
+            Some(&signer()),
+            verifier(),
+        ) {
+            Err(error) => error,
+            Ok(_) => panic!("another logical journal must not adopt retained history"),
+        };
+
+        assert_eq!(error, JournalManagerError::JournalMismatch);
+        assert!(
+            !journal
+                .join(segment_file_name(NonZeroU64::new(2).unwrap()))
+                .exists()
+        );
+        let retained = ActiveEvidenceSegment::inspect_identity(
+            journal.join(segment_file_name(NonZeroU64::new(1).unwrap())),
+            journal_limits.segment(),
+        )
+        .unwrap();
+        assert_eq!(retained.journal_id, journal_id());
     }
 
     #[test]
@@ -3056,7 +3229,7 @@ mod tests {
             .append(true)
             .open(&active_path)
             .unwrap()
-            .write_all(b"EVR1")
+            .write_all(b"EVR2")
             .unwrap();
 
         let (second, recovered) = open_with_recovered_records(
@@ -3507,6 +3680,7 @@ mod tests {
     ) -> SegmentIdentity {
         SegmentIdentity {
             gate_id: gate(),
+            journal_id: journal_id(),
             gate_boot_id: GateBootId::new([boot; 16]),
             segment_sequence: NonZeroU64::new(sequence).unwrap(),
             previous_completed_digest: previous,

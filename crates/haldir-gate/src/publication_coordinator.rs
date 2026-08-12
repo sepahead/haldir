@@ -12,13 +12,15 @@ use core::num::{NonZeroU32, NonZeroUsize};
 
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 #[cfg(feature = "live-zenoh")]
-use haldir_contracts::ids::{ChallengeNonce, ControllerId};
+use haldir_contracts::ids::ControllerId;
 use haldir_contracts::ids::{DecisionId, GateBootId, GateId, VehicleId};
 use haldir_contracts::publication::PublicationStageEventV1;
 #[cfg(feature = "live-zenoh")]
 use haldir_contracts::receipt::DecisionReasonCodeV1;
 use haldir_contracts::receipt::{DecisionOutcomeV1, PublishStageV1};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpStreamPositionV1};
+#[cfg(feature = "live-zenoh")]
+use haldir_contracts::status::GateProcessStateV1;
 #[cfg(feature = "live-zenoh")]
 use haldir_core::snapshot::TrustedStateSnapshotV1;
 use haldir_core::time::{MonoInstant, MonotonicClock};
@@ -44,7 +46,9 @@ use crate::actor::{
     ValidatedPublicationCall, VehicleActor,
 };
 #[cfg(feature = "live-zenoh")]
-use crate::actor::{GateError, LeaseEnvelopeValidationError};
+use crate::actor::{
+    GateChallengeIssueError, GateError, LeaseEnvelopeValidationError, SignedGateChallenge,
+};
 use crate::startup::JournalBoundRunningGate;
 #[cfg(feature = "live-zenoh")]
 use crate::startup::{GateRuntimeProfile, ValidatedDeclaredLiveZenohStartup};
@@ -123,6 +127,8 @@ pub(crate) enum CoordinatorFatal {
     Publication(PublicationError),
     InvalidPreparedReceipt,
     ClockRegression,
+    #[cfg(feature = "live-zenoh")]
+    ActorFaultLatched,
     RestartDiagnosticHorizonOverflow,
     #[cfg(feature = "live-zenoh")]
     RuntimeProfileMismatch {
@@ -138,6 +144,12 @@ pub(crate) enum CoordinatorFatal {
     DeclaredLiveStartupCapabilityUnavailable,
     #[cfg(feature = "live-zenoh")]
     InvalidFinalCommandRoute(HaldirKeyError),
+    #[cfg(feature = "live-zenoh")]
+    ChallengeDeadlineOverflow,
+    #[cfg(feature = "live-zenoh")]
+    InvalidGateChallenge,
+    #[cfg(feature = "live-zenoh")]
+    ChallengeRegistrationRejected,
 }
 
 /// Marker for the in-process reference lifecycle. Its private field prevents
@@ -176,10 +188,24 @@ impl ActiveIntentBinding {
 pub(crate) enum LiveIntentActivationFailure {
     Fatal(CoordinatorFatal),
     TrustedState(DecisionReasonCodeV1),
-    ChallengeRejected,
     IntentRouteMismatch,
     Lease(GateError),
     ActiveBindingUnavailable,
+}
+
+#[cfg(feature = "live-zenoh")]
+enum ActivationLeaseBindingError {
+    IntentRoute,
+    TrustedStateSource,
+}
+
+/// Outcome of one caller-supplied trusted-state update at the sealed coordinator.
+#[cfg(feature = "live-zenoh")]
+pub(crate) enum TrustedStateUpdateFailure {
+    /// Gate time or an actor invariant became terminal; destroy the coordinator.
+    Fatal(CoordinatorFatal),
+    /// The snapshot was rejected without changing trusted state or source replay state.
+    Rejected(DecisionReasonCodeV1),
 }
 
 /// A pre-decision refusal that returns the coordinator without actor, journal,
@@ -342,6 +368,28 @@ pub(crate) struct JournaledReturnedOk<C, P = InProcessReferencePublication> {
     output_permit: OutputCapacityPermit,
 }
 
+/// A locally sync-confirmed successful transport return whose receiver arrival
+/// and application interval remain unobserved.
+///
+/// No ready coordinator or publisher is returned: NCP v0.8 starts its TTL at
+/// plant-local arrival, and the current transport provides no bounded delivery
+/// delay or authenticated application acknowledgement.
+pub(crate) struct JournaledUnobservedReturnedOk {
+    decision: DecisionRecord,
+    terminal_envelope_digest: DigestV1,
+    output_permit: OutputCapacityPermit,
+}
+
+impl JournaledUnobservedReturnedOk {
+    pub(crate) fn into_parts(self) -> (DecisionRecord, DigestV1, OutputCapacityPermit) {
+        (
+            self.decision,
+            self.terminal_envelope_digest,
+            self.output_permit,
+        )
+    }
+}
+
 impl<C, P> JournaledReturnedOk<C, P> {
     pub(crate) fn into_parts(
         self,
@@ -386,6 +434,11 @@ impl JournaledReturnedError {
 /// actor boundary fails, the original publisher result remains available for diagnosis.
 #[cfg(any(test, feature = "live-zenoh"))]
 pub(crate) enum PublishOnceError<E> {
+    /// The local transport returned `Ok`, but receiver arrival/application is
+    /// unobserved, so live authority cannot safely continue.
+    ApplicationUnobserved {
+        journaled: Box<JournaledUnobservedReturnedOk>,
+    },
     PublisherReturned {
         source: E,
         journaled: Box<JournaledReturnedError>,
@@ -427,6 +480,7 @@ impl PublicationBinding {
             || receipt.decision != DecisionOutcomeV1::Allow
             || receipt.publish_stage != PublishStageV1::OutputPrepared
             || prepared.decision_id() != receipt.decision_id
+            || !prepared.receipt_binding_matches(receipt)
         {
             return Err(CoordinatorFatal::InvalidPreparedReceipt);
         }
@@ -541,14 +595,50 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
         &self.core.haldir_keys
     }
 
-    /// Prime the otherwise inactive startup actor with one caller-supplied state,
-    /// challenge, and signed lease while keeping the coordinator capability sealed.
-    /// The canonical intent route is checked after signature/admission validation
+    /// Consume the pre-activation coordinator and issue the one Gate-owned,
+    /// signed challenge that can authorize initial live lease activation.
+    pub(crate) fn issue_live_activation_challenge(
+        mut self,
+        ttl_ms: u32,
+    ) -> Result<(Self, SignedGateChallenge), CoordinatorFatal> {
+        let now = self.core.sample_now()?;
+        let expires_at = now
+            .checked_add_ms(u64::from(ttl_ms))
+            .ok_or(CoordinatorFatal::ChallengeDeadlineOverflow)?;
+        let nonce = self.core.profile._startup.activation_challenge_nonce();
+        let issued = self
+            .core
+            .bound
+            .gate
+            .actor
+            .issue_live_activation_challenge(nonce, expires_at, now)
+            .map_err(|error| match error {
+                GateChallengeIssueError::DeadlineOverflow => {
+                    CoordinatorFatal::ChallengeDeadlineOverflow
+                }
+                GateChallengeIssueError::ContractConstruction => {
+                    CoordinatorFatal::InvalidGateChallenge
+                }
+                GateChallengeIssueError::RegistrationRejected => {
+                    CoordinatorFatal::ChallengeRegistrationRejected
+                }
+                GateChallengeIssueError::SequenceExhausted
+                | GateChallengeIssueError::EntropyUnavailable => {
+                    CoordinatorFatal::InvalidGateChallenge
+                }
+            })?;
+        Ok((self, issued))
+    }
+
+    /// Prime the otherwise inactive startup actor with one caller-supplied state
+    /// and signed lease while keeping the coordinator capability sealed.
+    /// The state replay position is installed before the one-shot challenge or
+    /// durable lease term can be consumed. The canonical intent route and the
+    /// installed state's source are checked after signature/admission validation
     /// but before lease-term commit, challenge consumption, or activation.
     pub(crate) fn activate_live_intent(
         mut self,
         trusted_state: TrustedStateSnapshotV1,
-        challenge_nonce: ChallengeNonce,
         lease_envelope: &[u8],
     ) -> Result<(Self, ActiveIntentBinding), LiveIntentActivationFailure> {
         let now = self
@@ -557,21 +647,30 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
             .map_err(LiveIntentActivationFailure::Fatal)?;
 
         let actor = &mut self.core.bound.gate.actor;
+        let state_source_key = trusted_state.primary_source.source.source_key.clone();
+        // Installing state can reserve backing storage for a new source epoch.
+        // Do that fallible work before the lease term and challenge are spent.
+        // Activation is consuming and fail-stop, so a later lease rejection
+        // cannot expose this partially primed actor to a caller.
         actor
-            .validate_trusted_state(&trusted_state)
+            .set_trusted_state(trusted_state, now)
             .map_err(LiveIntentActivationFailure::TrustedState)?;
-        // Static activation verifies and consumes the supplied lease at this same
-        // sampled instant, so no caller-selected challenge lifetime is needed.
-        if !actor.register_challenge(challenge_nonce, now, now) {
-            return Err(LiveIntentActivationFailure::ChallengeRejected);
-        }
-
         let keys = &self.core.haldir_keys;
         actor
             .accept_lease_env_with_validator(lease_envelope, now, |lease| {
-                let expected = keys.intent(lease.controller_id.as_str()).map_err(|_| ())?;
+                let expected = keys
+                    .intent(lease.controller_id.as_str())
+                    .map_err(|_| ActivationLeaseBindingError::IntentRoute)?;
                 if lease.controller_intent_key.as_str() != expected {
-                    return Err(());
+                    return Err(ActivationLeaseBindingError::IntentRoute);
+                }
+                if !lease
+                    .allowed_source_keys
+                    .as_slice()
+                    .iter()
+                    .any(|key| key.as_str() == state_source_key.as_str())
+                {
+                    return Err(ActivationLeaseBindingError::TrustedStateSource);
                 }
                 Ok(())
             })
@@ -579,16 +678,16 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
                 LeaseEnvelopeValidationError::Gate(error) => {
                     LiveIntentActivationFailure::Lease(error)
                 }
-                LeaseEnvelopeValidationError::ValidatorRejected(()) => {
-                    LiveIntentActivationFailure::IntentRouteMismatch
-                }
+                LeaseEnvelopeValidationError::ValidatorRejected(
+                    ActivationLeaseBindingError::IntentRoute,
+                ) => LiveIntentActivationFailure::IntentRouteMismatch,
+                LeaseEnvelopeValidationError::ValidatorRejected(
+                    ActivationLeaseBindingError::TrustedStateSource,
+                ) => LiveIntentActivationFailure::TrustedState(
+                    DecisionReasonCodeV1::DenySourceUnknown,
+                ),
             })?;
 
-        // The same exclusive actor was prevalidated immediately above. A failure
-        // here is still fail-stop because lease authority has already committed.
-        actor
-            .set_trusted_state(trusted_state)
-            .map_err(LiveIntentActivationFailure::TrustedState)?;
         let intent_binding = actor
             .active_intent_binding()
             .map(|(controller_id, intent_route)| ActiveIntentBinding {
@@ -597,6 +696,34 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
             })
             .ok_or(LiveIntentActivationFailure::ActiveBindingUnavailable)?;
         Ok((self, intent_binding))
+    }
+
+    /// Sample Gate time and apply one state update without exposing the actor.
+    ///
+    /// A normal ingress rejection leaves the coordinator usable. Clock regression
+    /// or an actor-internal classify/commit disagreement is fail-stop because the
+    /// actor's retained authority state can no longer be trusted.
+    pub(crate) fn update_trusted_state(
+        &mut self,
+        trusted_state: TrustedStateSnapshotV1,
+    ) -> Result<(), TrustedStateUpdateFailure> {
+        let now = self
+            .core
+            .sample_now()
+            .map_err(TrustedStateUpdateFailure::Fatal)?;
+        let result = self
+            .core
+            .bound
+            .gate
+            .actor
+            .set_trusted_state(trusted_state, now)
+            .map_err(TrustedStateUpdateFailure::Rejected);
+        if self.core.bound.gate.actor.process_state() == GateProcessStateV1::FaultLatched {
+            return Err(TrustedStateUpdateFailure::Fatal(
+                CoordinatorFatal::ActorFaultLatched,
+            ));
+        }
+        result
     }
 }
 
@@ -658,6 +785,11 @@ impl<C: MonotonicClock, P> PublicationCoordinator<C, P> {
 
     pub(crate) const fn actor(&self) -> &VehicleActor {
         self.core.bound.actor()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn actor_mut_for_test(&mut self) -> &mut VehicleActor {
+        &mut self.core.bound.gate.actor
     }
 
     /// Reserve all journal stages and require an already-owned output-capacity
@@ -875,30 +1007,6 @@ impl<C: MonotonicClock, P> DurableCalledPublication<C, P> {
         self.core.haldir_keys.final_command()
     }
 
-    /// Exercise route rejection without constructing a live Zenoh session.
-    #[cfg(all(test, feature = "live-zenoh"))]
-    pub(crate) async fn publish_once_with_test_route<Publisher, F, Fut>(
-        self,
-        publisher: Publisher,
-        publisher_route: &str,
-        invoke: F,
-    ) -> Result<(JournaledReturnedOk<C, P>, Publisher), PublishOnceError<StrictPublisherCallError>>
-    where
-        F: FnOnce(&ExactNcpCommandFrame) -> Fut,
-        Fut: core::future::Future<Output = Result<(), SecureZenohError>>,
-    {
-        if !self.publisher_route_matches(publisher_route) {
-            return self.finish_publish_once(
-                publisher,
-                Err(StrictPublisherCallError::PublisherRouteMismatch),
-            );
-        }
-        let publisher_result = invoke(self.frame_for_test())
-            .await
-            .map_err(StrictPublisherCallError::Publisher);
-        self.finish_publish_once(publisher, publisher_result)
-    }
-
     /// Exercise the same ownership and terminal-ordering path without a live session.
     #[cfg(test)]
     pub(crate) async fn publish_once_with_test_future<Publisher, E, F, Fut>(
@@ -1039,29 +1147,141 @@ impl<C: MonotonicClock> DurableCalledPublication<C, DeclaredLiveZenohPublication
         self.called.frame()
     }
 
+    fn record_returned_ok_unobserved(
+        self,
+    ) -> Result<JournaledUnobservedReturnedOk, CoordinatorFatal> {
+        let Self {
+            mut core,
+            decision,
+            called,
+            mut reservation,
+            binding,
+            called_envelope_digest,
+            output_permit,
+            #[cfg(test)]
+            terminal_append_fault,
+        } = self;
+        let returned_at = core.sample_now()?;
+        let event = binding.event(
+            PublishStageV1::PublishReturnedOk,
+            called_envelope_digest,
+            returned_at,
+        );
+        let terminal_envelope_digest = sign_and_append_terminal_stage(
+            core.as_mut(),
+            &mut reservation,
+            &event,
+            returned_at,
+            #[cfg(test)]
+            terminal_append_fault,
+        )?;
+        let (actor, _) = live_parts_mut(&mut core.bound);
+        actor
+            .mark_live_publish_returned_ok_unobserved(*called, returned_at)
+            .map_err(CoordinatorFatal::Publication)?;
+        Ok(JournaledUnobservedReturnedOk {
+            decision,
+            terminal_envelope_digest,
+            output_permit,
+        })
+    }
+
+    fn finish_live_publish_once<Publisher, E>(
+        self,
+        publisher: Publisher,
+        publisher_result: Result<(), E>,
+    ) -> Result<core::convert::Infallible, PublishOnceError<E>> {
+        match publisher_result {
+            Ok(()) => match self.record_returned_ok_unobserved() {
+                Ok(journaled) => {
+                    drop(publisher);
+                    Err(PublishOnceError::ApplicationUnobserved {
+                        journaled: Box::new(journaled),
+                    })
+                }
+                Err(source) => {
+                    drop(publisher);
+                    Err(PublishOnceError::TerminalBoundaryFailed {
+                        publisher_error: None,
+                        source,
+                    })
+                }
+            },
+            Err(error) => match self.record_returned_error() {
+                Ok(journaled) => {
+                    drop(publisher);
+                    Err(PublishOnceError::PublisherReturned {
+                        source: error,
+                        journaled: Box::new(journaled),
+                    })
+                }
+                Err(source) => {
+                    drop(publisher);
+                    Err(PublishOnceError::TerminalBoundaryFailed {
+                        publisher_error: Some(error),
+                        source,
+                    })
+                }
+            },
+        }
+    }
+
+    /// Exercise the live ambiguity transition without constructing a Zenoh session.
+    #[cfg(test)]
+    pub(crate) async fn publish_once_with_live_test_future<Publisher, E, F, Fut>(
+        self,
+        publisher: Publisher,
+        invoke: F,
+    ) -> Result<core::convert::Infallible, PublishOnceError<E>>
+    where
+        F: FnOnce(&ExactNcpCommandFrame) -> Fut,
+        Fut: core::future::Future<Output = Result<(), E>>,
+    {
+        let publisher_result = invoke(self.frame()).await;
+        self.finish_live_publish_once(publisher, publisher_result)
+    }
+
+    /// Exercise route rejection and live return semantics without a Zenoh session.
+    #[cfg(test)]
+    pub(crate) async fn publish_once_with_test_route<Publisher, F, Fut>(
+        self,
+        publisher: Publisher,
+        publisher_route: &str,
+        invoke: F,
+    ) -> Result<core::convert::Infallible, PublishOnceError<StrictPublisherCallError>>
+    where
+        F: FnOnce(&ExactNcpCommandFrame) -> Fut,
+        Fut: core::future::Future<Output = Result<(), SecureZenohError>>,
+    {
+        if !self.publisher_route_matches(publisher_route) {
+            return self.finish_live_publish_once(
+                publisher,
+                Err(StrictPublisherCallError::PublisherRouteMismatch),
+            );
+        }
+        let publisher_result = invoke(self.frame())
+            .await
+            .map_err(StrictPublisherCallError::Publisher);
+        self.finish_live_publish_once(publisher, publisher_result)
+    }
+
     /// Invoke a route-matched concrete strict publisher once for a Called state
     /// descended from this runtime's checked declared-live startup capability.
     ///
     /// A publisher bound to another exact realm/session route is rejected and
-    /// terminally recorded before frame access or invocation. A matched publisher
-    /// is returned for a later distinct output only after its local call returned
-    /// `Ok` and the linked terminal record was sync-confirmed. A publisher error
-    /// or terminal-boundary failure drops the publisher capability.
+    /// terminally recorded before frame access or invocation. Every invoked live
+    /// publisher consumes the runtime and publisher. Even local `Ok` is terminal:
+    /// NCP v0.8 begins TTL at unobserved receiver arrival, so no sound action
+    /// interval or later publication authority can be reconstructed here.
     /// Cancellation while awaiting drops this Called state without inventing a
     /// returned-error record; restart recovery must classify the synced Called tail.
     /// Local `Ok` is not delivery, receiver acceptance, application, or an ACK.
     pub(crate) async fn publish_once(
         self,
         publisher: FinalCommandPublisher,
-    ) -> Result<
-        (
-            JournaledReturnedOk<C, DeclaredLiveZenohPublication>,
-            FinalCommandPublisher,
-        ),
-        PublishOnceError<StrictPublisherCallError>,
-    > {
+    ) -> Result<core::convert::Infallible, PublishOnceError<StrictPublisherCallError>> {
         if !self.publisher_route_matches(publisher.route()) {
-            return self.finish_publish_once(
+            return self.finish_live_publish_once(
                 publisher,
                 Err(StrictPublisherCallError::PublisherRouteMismatch),
             );
@@ -1070,7 +1290,7 @@ impl<C: MonotonicClock> DurableCalledPublication<C, DeclaredLiveZenohPublication
             .publish(self.frame())
             .await
             .map_err(StrictPublisherCallError::Publisher);
-        self.finish_publish_once(publisher, publisher_result)
+        self.finish_live_publish_once((), publisher_result)
     }
 }
 

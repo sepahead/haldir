@@ -4,45 +4,21 @@ use haldir_contracts::digest::DigestV1;
 use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1};
 
-/// A plant-facing action (fixed-point).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PlantAction {
-    /// Hold at zero velocity.
-    Hold,
-    /// Local-NED velocity setpoint (mm/s).
-    Velocity([i32; 3]),
-}
-
-impl PlantAction {
-    /// The commanded velocity vector (`Hold` is zero).
-    #[must_use]
-    pub const fn velocity(self) -> [i32; 3] {
-        match self {
-            Self::Hold => [0, 0, 0],
-            Self::Velocity(v) => v,
-        }
-    }
-}
-
-/// A Gate-authored plant command. This is the ONLY input that can change the
-/// plant's commanded velocity; there is no other ingress (spec A1/B15).
-#[derive(Debug, Clone)]
-pub struct PlantCommand {
-    /// The originating Gate decision id (correlation only, non-authoritative).
+/// Complete provenance attached atomically to every command-related plant event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlantCommandCorrelation {
+    /// Decision id (correlation only; caller-supplied and absent from the NCP output frame).
     pub decision_id: DecisionId,
-    /// The session the command was published under.
+    /// Session carried by the exact output frame.
     pub session: NcpSessionIdentityV1,
-    /// The Gate output stream epoch.
+    /// Gate output epoch carried by the exact output frame.
     pub output_epoch: GateOutputEpoch,
-    /// The Gate output stream sequence.
+    /// Gate output sequence carried by the exact output frame.
     pub output_seq: OutputSeq,
-    /// The causal source reference.
+    /// Exact-object causal-source correlation. The exact NCP v0.8 JSON bytes
+    /// carry epoch/sequence but have no field for `source_key`.
     pub source: NcpSourceRefV1,
-    /// The requested action.
-    pub action: PlantAction,
-    /// Command validity window (ms).
-    pub validity_ms: u32,
-    /// The exact output frame digest.
+    /// Digest of the exact output-frame bytes.
     pub output_frame_digest: DigestV1,
 }
 
@@ -50,14 +26,23 @@ pub struct PlantCommand {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum RejectReason {
+    /// The exact frame no longer matched its immutable bytes/digest projection.
+    InvalidOutputFrame,
     /// The session pair did not match the plant's current session.
     WrongSession,
     /// The output epoch is retired.
     RetiredEpoch,
+    /// A different output epoch was presented before the current stream's
+    /// command horizon expired.
+    PriorStreamLive,
     /// The sequence was a duplicate or lower than the highest accepted.
     DuplicateOrStale,
-    /// The validity was zero.
-    ZeroValidity,
+    /// The current output position was replayed with different exact-object
+    /// provenance or bytes. The caller-supplied decision id is correlation-only
+    /// and does not turn otherwise identical exact bytes into a conflict. In the
+    /// real NCP v0.8 profile, `source_key` is object correlation rather than a
+    /// field carried by the serialized JSON frame.
+    ConflictingReplay,
 }
 
 impl RejectReason {
@@ -65,10 +50,12 @@ impl RejectReason {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::InvalidOutputFrame => "PLANT_REJECT_INVALID_OUTPUT_FRAME",
             Self::WrongSession => "PLANT_REJECT_WRONG_SESSION",
             Self::RetiredEpoch => "PLANT_REJECT_RETIRED_EPOCH",
+            Self::PriorStreamLive => "PLANT_REJECT_PRIOR_STREAM_LIVE",
             Self::DuplicateOrStale => "PLANT_REJECT_DUPLICATE_OR_STALE",
-            Self::ZeroValidity => "PLANT_REJECT_ZERO_VALIDITY",
+            Self::ConflictingReplay => "PLANT_REJECT_CONFLICTING_REPLAY",
         }
     }
 }
@@ -97,13 +84,14 @@ pub enum PlantEventKind {
     Received,
     /// The command passed receiver validation.
     Validated,
-    /// The command was accepted into the action buffer.
+    /// The command was accepted into the action buffer, atomically superseding
+    /// any previously active command.
     Accepted,
     /// The command was rejected (with reason).
     Rejected(RejectReason),
-    /// The command was selected as the active command for a tick.
+    /// The command was first selected for an eligible simulation tick.
     Selected,
-    /// The command was applied to the plant this tick.
+    /// The command was first applied to the simulated plant.
     Applied,
     /// The active command expired.
     Expired,
@@ -116,16 +104,34 @@ pub enum PlantEventKind {
 }
 
 /// A staged plant-evidence event (deterministic, correlated).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlantEvent {
     /// Simulation tick.
     pub tick: u64,
     /// The event kind.
     pub kind: PlantEventKind,
-    /// Correlated Gate decision id, if applicable.
-    pub decision_id: Option<DecisionId>,
-    /// Correlated output sequence, if applicable.
-    pub output_seq: Option<u64>,
+    /// Complete exact-frame correlation for a command-related event.
+    ///
+    /// Plant-owned safe-action events carry the expired command that caused the
+    /// transition. That is causal correlation, not a claim that Gate authored
+    /// or selected the safe action.
+    pub command: Option<PlantCommandCorrelation>,
     /// The plant state at the event.
     pub state: KinematicSnapshot,
+}
+
+impl PlantEvent {
+    /// Correlated Gate decision id, if this event concerns a command.
+    #[must_use]
+    pub fn decision_id(&self) -> Option<DecisionId> {
+        self.command.as_ref().map(|command| command.decision_id)
+    }
+
+    /// Correlated Gate output sequence, if this event concerns a command.
+    #[must_use]
+    pub fn output_seq(&self) -> Option<u64> {
+        self.command
+            .as_ref()
+            .map(|command| command.output_seq.get())
+    }
 }

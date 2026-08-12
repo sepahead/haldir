@@ -6,16 +6,27 @@ in-process profile; H5 (backend-aware admission) is future work.
 - **H1 — Mediation:** within the declared profile, no ordinary controller path
   causes a plant action without a Gate decision.
   *P0:* the reference plant has one command ingress and only Gate-authored commands
-  are accepted; `range::*` shows every unauthorized intent yields zero application.
+  derived from one self-consistent exact NCP frame are accepted; command-related
+  model events retain one atomic exact-object session/output/source/digest
+  correlation. The output digest binds source epoch/sequence in both profiles;
+  NCP v0.8 JSON has no `source_key` field, so that key is in-process correlation
+  only in the exact profile (`CL-REFERENCE-PLANT-CORRELATION-01`). `range::*`
+  shows every unauthorized intent yields zero application.
   *Deferred:* live-transport bypass campaign (needed for the full A1/A2 claim).
 - **H2 — Authority separation:** controller restart/handoff/replay, stale session,
   or stale mission authority cannot seize or refresh the Gate-owned output stream.
   *P0:* two-phase replay, retired epochs, output-stream never reused, session-pair
-  scope, restart invalidates the lease via a fresh boot id (state + gate tests).
+  scope, deterministic distinction between an exact duplicate and a conflicting
+  frame at the latest accepted output position (with older positions rejected as
+  stale), and restart invalidates the lease via a fresh boot id
+  (state + Gate/reference-plant tests; `CL-REFERENCE-PLANT-CORRELATION-01`).
 - **H3 — Transparency:** for allowed requests, Gate preserves the requested
   semantic action within a defined conversion relation and within the deadline
   model. *P0:* `FIXED_POINT_TO_NCP_FLOAT_V1` with proptest round-trip proofs;
-  end-to-end allow drives the plant to the commanded velocity.
+  end-to-end allow drives the plant to the commanded velocity; and the reference
+  plant applies only complete validity-covered ticks while bounding integer
+  velocity change by Euclidean vector magnitude
+  (`CL-REFERENCE-PLANT-DYNAMICS-01`).
 - **H4 — Fail-closed:** malformed input, policy error, state staleness, fault, and
   overload create no plant-affecting authorization. *P0:* all deny paths produce no
   output; `FAULT_LATCHED` is terminal; corrupt anti-rollback → fault; evidence

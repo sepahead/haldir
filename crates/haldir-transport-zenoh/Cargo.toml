@@ -1,6 +1,6 @@
 [package]
 name = "haldir-transport-zenoh"
-description = "Haldir Gate — haldir-transport-zenoh"
+description = "Strict bounded Zenoh ingress and publication adapters for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,22 +15,23 @@ workspace = true
 [features]
 default = []
 live-zenoh = [
+    "dep:haldir-contracts",
     "dep:haldir-ncp08",
     "haldir-ncp08/real-ncp",
     "dep:serde_json",
+    "dep:rustix",
     "dep:tokio",
     "dep:zenoh",
 ]
 
 [dependencies]
+haldir-contracts = { workspace = true, optional = true }
 haldir-ncp08 = { workspace = true, optional = true }
 ncp-core.workspace = true
 serde_json = { workspace = true, optional = true }
+rustix = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 zenoh = { workspace = true, optional = true }
-
-[dev-dependencies]
-haldir-contracts.workspace = true
 
 [[example]]
 name = "live_secure_acl_campaign"

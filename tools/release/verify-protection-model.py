@@ -53,6 +53,7 @@ EXPECTED_KEY_ROLES = [
     "GATE_APPLICATION",
     "CONTROLLER_INTENT",
     "MISSION_AUTHORITY",
+    "TRUST_AUTHORITY",
     "ADMISSION_AUTHORITY",
     "POLICY_AUTHORITY",
     "REVOCATION_AUTHORITY",
@@ -67,6 +68,7 @@ EXPECTED_COMPONENTS = {
     "secure_transport_router",
     "controller",
     "mission_authority",
+    "trust_authority",
     "admission_authority",
     "policy_authority",
     "revocation_authority",
@@ -83,6 +85,7 @@ EXPECTED_STATE_RESOURCES = {
     "state:gate_application_signing_secret",
     "state:controller_intent_signing_secrets",
     "state:mission_authority_signing_secret",
+    "state:trust_authority_signing_secret",
     "state:admission_authority_signing_secret",
     "state:policy_authority_signing_secret",
     "state:revocation_authority_signing_secret",
@@ -97,6 +100,8 @@ EXPECTED_STATE_RESOURCES = {
     "state:plant_crebain_transport_credentials",
     "state:router_transport_trust_and_credentials",
     "state:bootstrap_application_trust",
+    "state:bootstrap_application_revocations",
+    "state:runtime_application_trust_snapshot",
     "state:revocation_snapshot",
     "state:deployment_package_and_artifacts",
     "state:admission_snapshot",
@@ -191,11 +196,11 @@ EXPECTED_TIME_DOMAINS = {
 
 EXPECTED_ROOT_STATUS = {
     "bootstrap_application_trust": "ACTIVE_CALLER_SUPPLIED_PREVALIDATED",
-    "deployment_acceptance_policy": "IMPLEMENTED_PRIMITIVE_NOT_GATE_COMPOSED",
+    "deployment_acceptance_policy": "ACTIVE_CALLER_SUPPLIED_GATE_COMPOSED",
     "transport_mtls_router_acl": "CONFIGURATION_AND_BOUNDED_SYNTHETIC_EVIDENCE",
     "gate_application_signer": "ACTIVE_PROCESS_OWNED_PROTECTED_LOADER_UNPROVEN",
     "gate_boot_monotonic_clock": "ACTIVE_LOCAL_AUTHORITY_CLOCK",
-    "configured_authority_snapshots": "ACTIVE_CALLER_SUPPLIED",
+    "configured_authority_snapshots": "ACTIVE_APPROVED_IDENTITIES_WITH_CALLER_SUPPLIED_OBJECTS",
     "storage_mac_key": "IMPLEMENTED_PRIMITIVE_CALLER_SUPPLIED_SECRET",
     "external_generation_anchor": "INTERFACE_IMPLEMENTED_EXTERNAL_DEPLOYMENT_UNPROVEN",
     "local_file_generation_anchor": "DEVELOPMENT_ONLY_REWRITABLE",
@@ -207,6 +212,7 @@ EXPECTED_ROOT_STATUS = {
 EXPECTED_RULES = {
     "component:controller_intent_only",
     "component:mission_objects_only",
+    "component:trust_objects_only",
     "component:admission_objects_only",
     "component:policy_objects_only",
     "component:revocation_remove_only",
@@ -223,13 +229,13 @@ EXPECTED_RULES = {
 }
 
 EXPECTED_COMPONENT_BINDINGS_SHA256 = (
-    "7047607ab3fb06ae9d5f613634926fb6cd399d105c903417e9a16e04429bcb37"
+    "a7a1fd151a0fff923c17f2e2e4068cb589f374686810877bd674bb7aba2ae328"
 )
 EXPECTED_APPLICATION_ROLE_BINDINGS_SHA256 = (
-    "d947f7e875bec150d318a13a1710926159910693d543d0067f85867faf43324a"
+    "fb7d799639587744603221f4856fa0f38430c1723a44e7c264bb87ff91b79c66"
 )
 EXPECTED_STATE_RESOURCES_SHA256 = (
-    "21ed66b74b0981b951bb56e42433975e970e74dca5900fb6890c236fb51eb9db"
+    "2b91da3cf0620be9249335e0921c702ef3bf89e0b9e893892dfbdc918b5d830c"
 )
 EXPECTED_ROUTE_RESOURCES_SHA256 = (
     "e17df08f4877270c6c11be0e7dcefef48b1330eecb87cb36cacde68bd50ce425"
@@ -241,13 +247,13 @@ EXPECTED_TIME_DOMAINS_SHA256 = (
     "288e94e09fa6c70fefddc6cd7a11fd0ff128e45c1fef02dc73ae00d2e4e881f4"
 )
 EXPECTED_TRUST_ROOTS_SHA256 = (
-    "0accd65a4d9de3a9f0f64084a6c46e35c5c397d55f650c7652fb84f22392cdeb"
+    "8476c42874307f1e3d50e446e0e026c52fcb8b630ad980b9dd42d664dc27d3a7"
 )
 EXPECTED_ACCESS_POLICY_SHA256 = (
-    "da2246ed4a7335a04e4faa992af6e10c0bcaca3a3b495a2baa211e64ec1ff2e4"
+    "a853714f090c679fb17d00fa8a5e4bf9987b120a8237e251fcdf251952c4c0cb"
 )
 EXPECTED_ACCESS_TUPLES_SHA256 = (
-    "29361a576f851a14b9d0ad3b8905473053a7350693de7d0e510f3457e0deeda0"
+    "9f6d8d2cce03cb1d02966a6bfe703c7d93bc8dc37b85860574167cb43c1d0250"
 )
 
 EXPECTED_LENSES = {
@@ -348,7 +354,9 @@ def _verify_document(model: dict[str, Any], repo: Path) -> None:
     if record.get("path") != "docs/release/0.9.0/PROTECTION-MODEL.md":
         raise ProtectionModelError("PROTECTION_DOCUMENT_PATH_INVALID")
     expected = _require_hex(record.get("sha256"), HEX64, "normative_document.sha256")
-    payload = _read_bounded(repo / record["path"], MAX_DOCUMENT_BYTES, "normative_document")
+    payload = _read_bounded(
+        repo / record["path"], MAX_DOCUMENT_BYTES, "normative_document"
+    )
     if _sha256(payload) != expected:
         raise ProtectionModelError("PROTECTION_DOCUMENT_DIGEST_MISMATCH")
     try:
@@ -386,7 +394,8 @@ def _verify_document(model: dict[str, Any], repo: Path) -> None:
     if not all(
         fragment in migration
         for fragment in (
-            "No Rust API, wire, or stored-data change",
+            "The model update itself changes no Rust API, wire format, or stored-data schema",
+            "the prior closure does not verify the evolved bytes",
             "controller/source timestamps as provenance",
             "The release remains NO-GO",
         )
@@ -607,11 +616,15 @@ def _verify_identity_and_subjects(model: dict[str, Any]) -> None:
         raise ProtectionModelError("PROTECTION_COMPONENT_BINDINGS_SEMANTICS_DRIFT")
 
 
-def _capability_index(principals: dict[str, dict[str, Any]], verb: str) -> dict[str, list[str]]:
+def _capability_index(
+    principals: dict[str, dict[str, Any]], verb: str
+) -> dict[str, list[str]]:
     index: dict[str, list[str]] = {}
     for principal_id, principal in principals.items():
         routes = principal.get(verb)
-        if not isinstance(routes, list) or any(not isinstance(route, str) for route in routes):
+        if not isinstance(routes, list) or any(
+            not isinstance(route, str) for route in routes
+        ):
             raise ProtectionModelError("PROTECTION_PRINCIPAL_CAPABILITY_INVALID")
         if len(set(routes)) != len(routes):
             raise ProtectionModelError("PROTECTION_PRINCIPAL_CAPABILITY_DUPLICATE")
@@ -669,7 +682,10 @@ def _verify_profile_and_routes(model: dict[str, Any], profile_path: Path) -> Non
     }
     for principal_id, source in profile_principals_raw.items():
         modeled = model_principals[principal_id]
-        if set(modeled) != principal_fields or modeled != {"principal_id": principal_id, **source}:
+        if set(modeled) != principal_fields or modeled != {
+            "principal_id": principal_id,
+            **source,
+        }:
             raise ProtectionModelError("PROTECTION_PRINCIPAL_PROFILE_DRIFT")
 
     verb_to_route_field = {
@@ -681,7 +697,10 @@ def _verify_profile_and_routes(model: dict[str, Any], profile_path: Path) -> Non
     capability_indexes = {
         verb: _capability_index(model_principals, verb) for verb in verb_to_route_field
     }
-    counts = {verb: sum(len(principal[verb]) for principal in model_principals.values()) for verb in verb_to_route_field}
+    counts = {
+        verb: sum(len(principal[verb]) for principal in model_principals.values())
+        for verb in verb_to_route_field
+    }
     if counts != {"publish": 13, "subscribe": 29, "query": 4, "serve": 4}:
         raise ProtectionModelError("PROTECTION_PROFILE_GRANT_COUNTS_INVALID")
 
@@ -731,11 +750,18 @@ def _verify_profile_and_routes(model: dict[str, Any], profile_path: Path) -> Non
         raise ProtectionModelError("PROTECTION_ROUTE_RESOURCE_SEMANTICS_DRIFT")
 
 
-def _verify_resources_actions_constraints(model: dict[str, Any]) -> tuple[set[str], set[str]]:
+def _verify_resources_actions_constraints(
+    model: dict[str, Any],
+) -> tuple[set[str], set[str]]:
     resources = model.get("resources")
-    if not isinstance(resources, dict) or set(resources) != {"route_resources", "state_resources"}:
+    if not isinstance(resources, dict) or set(resources) != {
+        "route_resources",
+        "state_resources",
+    }:
         raise ProtectionModelError("PROTECTION_RESOURCES_INVALID")
-    states = _unique_objects(resources.get("state_resources"), "resource_id", "STATE_RESOURCE")
+    states = _unique_objects(
+        resources.get("state_resources"), "resource_id", "STATE_RESOURCE"
+    )
     if set(states) != EXPECTED_STATE_RESOURCES:
         raise ProtectionModelError("PROTECTION_STATE_RESOURCE_SET_INVALID")
     state_fields = {
@@ -748,17 +774,21 @@ def _verify_resources_actions_constraints(model: dict[str, Any]) -> tuple[set[st
         "availability_failure",
     }
     for record in states.values():
-        if set(record) != state_fields or any(
-            not isinstance(record[field], str) or not record[field]
-            for field in state_fields - {"resource_id"}
-        ) or record["semantic_owner"] not in EXPECTED_COMPONENTS or record[
-            "runtime_custodian"
-        ] not in EXPECTED_COMPONENTS:
+        if (
+            set(record) != state_fields
+            or any(
+                not isinstance(record[field], str) or not record[field]
+                for field in state_fields - {"resource_id"}
+            )
+            or record["semantic_owner"] not in EXPECTED_COMPONENTS
+            or record["runtime_custodian"] not in EXPECTED_COMPONENTS
+        ):
             raise ProtectionModelError("PROTECTION_STATE_RESOURCE_OWNERSHIP_INVALID")
     secret_resources = {
         "state:gate_application_signing_secret",
         "state:controller_intent_signing_secrets",
         "state:mission_authority_signing_secret",
+        "state:trust_authority_signing_secret",
         "state:admission_authority_signing_secret",
         "state:policy_authority_signing_secret",
         "state:revocation_authority_signing_secret",
@@ -805,7 +835,9 @@ def _verify_resources_actions_constraints(model: dict[str, Any]) -> tuple[set[st
     ):
         raise ProtectionModelError("PROTECTION_ACTION_SEMANTICS_INVALID")
 
-    constraints = _unique_objects(model.get("constraints"), "constraint_id", "CONSTRAINT")
+    constraints = _unique_objects(
+        model.get("constraints"), "constraint_id", "CONSTRAINT"
+    )
     if {key: value.get("category") for key, value in constraints.items()} != (
         EXPECTED_CONSTRAINTS
     ):
@@ -821,15 +853,19 @@ def _verify_resources_actions_constraints(model: dict[str, Any]) -> tuple[set[st
         EXPECTED_CONSTRAINTS_SHA256
     ):
         raise ProtectionModelError("PROTECTION_CONSTRAINT_SEMANTICS_DRIFT")
-    all_resource_ids = {f"route:{item['route_id']}" for item in resources["route_resources"]} | set(
-        states
+    all_resource_ids = {
+        f"route:{item['route_id']}" for item in resources["route_resources"]
+    } | set(states)
+    all_operations = set(actions["transport_verbs"]) | set(
+        actions["authority_operations"]
     )
-    all_operations = set(actions["transport_verbs"]) | set(actions["authority_operations"])
     return all_resource_ids, all_operations
 
 
 def _verify_time_and_roots(model: dict[str, Any]) -> None:
-    domains = _unique_objects(model.get("time_domains"), "time_domain_id", "TIME_DOMAIN")
+    domains = _unique_objects(
+        model.get("time_domains"), "time_domain_id", "TIME_DOMAIN"
+    )
     if set(domains) != set(EXPECTED_TIME_DOMAINS):
         raise ProtectionModelError("PROTECTION_TIME_DOMAIN_SET_INVALID")
     required_fields = {
@@ -859,13 +895,16 @@ def _verify_time_and_roots(model: dict[str, Any]) -> None:
         ):
             raise ProtectionModelError("PROTECTION_TIME_DOMAIN_SEMANTICS_INVALID")
     authority_domains = [
-        domain_id for domain_id, record in domains.items() if record["hot_path_authority"]
+        domain_id
+        for domain_id, record in domains.items()
+        if record["hot_path_authority"]
     ]
     if authority_domains != ["gate_boot_monotonic"]:
         raise ProtectionModelError("PROTECTION_AUTHORITY_CLOCK_AMBIGUOUS")
-    if domains["controller_local_provenance"]["authority_uses"] != [] or domains[
-        "source_publisher_provenance"
-    ]["authority_uses"] != []:
+    if (
+        domains["controller_local_provenance"]["authority_uses"] != []
+        or domains["source_publisher_provenance"]["authority_uses"] != []
+    ):
         raise ProtectionModelError("PROTECTION_PROVENANCE_CLOCK_ESCALATION")
     if domains["durable_logical_ratchets"]["authority_uses"] != [
         "same_scope_anti_rollback"
@@ -1084,6 +1123,8 @@ def _verify_source_contracts(model: dict[str, Any], repo: Path) -> None:
         "anti_rollback_contract": "crates/haldir-state/src/anti_rollback.rs",
         "policy_contract": "crates/haldir-policy-native/src/decide.rs",
         "deployment_contract": "crates/haldir-deployment/src/verify.rs",
+        "deployment_approval_contract": "crates/haldir-deployment/src/artifact.rs",
+        "deployment_approval_schema": "crates/haldir-deployment/src/contract.rs",
         "durable_contract": "crates/haldir-durable/src/snapshot.rs",
         "local_anchor_contract": "crates/haldir-durable/src/local_anchor.rs",
         "evidence_contract": "crates/haldir-evidence/src/publication.rs",
@@ -1093,9 +1134,9 @@ def _verify_source_contracts(model: dict[str, Any], repo: Path) -> None:
         raise ProtectionModelError("PROTECTION_EVIDENCE_SOURCES_INVALID")
 
     def source(name: str) -> str:
-        return _read_bounded(
-            repo / sources[name], MAX_SOURCE_BYTES, name
-        ).decode("utf-8")
+        return _read_bounded(repo / sources[name], MAX_SOURCE_BYTES, name).decode(
+            "utf-8"
+        )
 
     role_source = source("key_role_contract")
     role_block = _rust_block(role_source, "pub const fn as_str")
@@ -1122,15 +1163,15 @@ def _verify_source_contracts(model: dict[str, Any], repo: Path) -> None:
         "secure_profile_renderer": (
             '"default_permission": "deny"',
             'acl.get("default_permission") != "deny"',
-            'rpc_queryable = f"{profile[\'realm\']}/rpc/*"',
+            "rpc_queryable = f\"{profile['realm']}/rpc/*\"",
         ),
         "trust_contract": (
             "Resolve exactly one key record by `kid` (no fallback search)",
             "pub struct RevocationSnapshot",
         ),
         "cose_profile_contract": (
-            "format!(\"application/{}+cbor\"",
-            "format!(\"{kind}.v{schema_major}\")",
+            'format!("application/{}+cbor"',
+            'format!("{kind}.v{schema_major}")',
             "required_role: KeyRole",
         ),
         "identity_contract": (
@@ -1143,8 +1184,9 @@ def _verify_source_contracts(model: dict[str, Any], repo: Path) -> None:
         ),
         "intent_contract": (
             "consistency claim",
-            "no field is",
-            "copied into the emitted command",
+            "Gate derives a new command from the checked action",
+            "it never forwards a",
+            "controller-supplied final frame",
             'kind "haldir.intent"',
         ),
         "lease_contract": (
@@ -1200,7 +1242,19 @@ def _verify_source_contracts(model: dict[str, Any], repo: Path) -> None:
         "deployment_contract": (
             "separately supplied bootstrap policy and trust",
             "performs no entropy, durable-state, secret, artifact-path, or",
-            'DeploymentPackageV1::KIND',
+            "DeploymentPackageV1::KIND",
+        ),
+        "deployment_approval_contract": (
+            "validate_authority_approvals",
+            "bootstrap_trust = verified_package.bootstrap_trust()",
+            "KeyRole::TrustAuthority",
+            "AuthorityApprovalDigestMismatch",
+        ),
+        "deployment_approval_schema": (
+            'kind "haldir.authority_snapshot_approval"',
+            "snapshot_kind: AuthoritySnapshotKindV1",
+            "deployment_revision: DeploymentRevision",
+            "snapshot_digest: DigestV1",
         ),
         "durable_contract": (
             "pub enum AnchorProtection",
@@ -1221,7 +1275,9 @@ def _verify_source_contracts(model: dict[str, Any], repo: Path) -> None:
         if any(fragment not in text for fragment in fragments):
             raise ProtectionModelError(f"PROTECTION_SOURCE_SEMANTICS_DRIFT:{name}")
 
-    authority = _load_json(repo / sources["authority_model"], MAX_MODEL_BYTES, "authority_model")
+    authority = _load_json(
+        repo / sources["authority_model"], MAX_MODEL_BYTES, "authority_model"
+    )
     claimed = authority.get("claimed_profile", {})
     separation = authority.get("decision_action_separation", {})
     if (
@@ -1285,14 +1341,20 @@ def _verify_task_closure(repo: Path, task: dict[str, Any]) -> None:
     module_spec.loader.exec_module(core)
     try:
         record = core.verify_generated_record(repo, repo / closure_path)
-    except (core.EvidenceGenerationError, OSError, UnicodeDecodeError, ValueError) as error:
-        raise ProtectionModelError("PROTECTION_T002_CENTRAL_VERIFICATION_FAILED") from error
+    except (
+        core.EvidenceGenerationError,
+        OSError,
+        UnicodeDecodeError,
+        ValueError,
+    ) as error:
+        raise ProtectionModelError(
+            "PROTECTION_T002_CENTRAL_VERIFICATION_FAILED"
+        ) from error
     if (
         record.get("task_id") != "T002"
         or closures[0].get("implementation_commit")
         != record["implementation"]["commit"]
-        or closures[0].get("evidence_tool_commit")
-        != record["evidence_tool"]["commit"]
+        or closures[0].get("evidence_tool_commit") != record["evidence_tool"]["commit"]
     ):
         raise ProtectionModelError("PROTECTION_T002_LEDGER_CLOSURE_MISMATCH")
 
@@ -1342,12 +1404,16 @@ def _verify_requirements(requirements_path: Path, repo: Path) -> None:
     if (
         not isinstance(review, dict)
         or set(review) != EXPECTED_LENSES
-        or any(not isinstance(value, str) or not value.strip() for value in review.values())
+        or any(
+            not isinstance(value, str) or not value.strip() for value in review.values()
+        )
     ):
         raise ProtectionModelError("PROTECTION_REQUIREMENT_REVIEW_INVALID")
     risks = t002.get("residual_risks")
-    if not isinstance(risks, list) or not risks or any(
-        not isinstance(risk, str) or not risk.strip() for risk in risks
+    if (
+        not isinstance(risks, list)
+        or not risks
+        or any(not isinstance(risk, str) or not risk.strip() for risk in risks)
     ):
         raise ProtectionModelError("PROTECTION_REQUIREMENT_RISKS_INVALID")
     if t002["status"] == "verified":

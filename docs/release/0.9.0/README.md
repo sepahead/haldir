@@ -1,9 +1,11 @@
 # Haldir 0.9 release qualification (historical ledger)
 
 > **Current-head notice:** this document describes the preceding 120-task
-> `T000..T119` qualification program. Its identities and evidence are retained
-> unchanged, but they do not close the later 126-task handoff. The authoritative
-> current program is the
+> `T000..T119` qualification program. Its signed commits and generated evidence
+> remain unchanged and do not close the later 126-task handoff. The T002 working
+> model subsequently evolved and is explicitly reopened as `implemented`; its
+> prior exact-commit record is historical evidence, not proof of the new bytes.
+> The authoritative current program is the
 > [current-head qualification record](../../../release/0.9.0/current-head/README.md),
 > whose tasks are `CH-T000..CH-T125` and whose status remains `NO_GO`.
 
@@ -70,15 +72,16 @@ inventories of protected subjects, exact routes and internal state resources,
 actions, authorization constraints, time domains, and trust roots. Its
 [`protection-model.json`](../../../release/0.9.0/protection-model.json) mirror is
 checked against T001, all eight principals and all seventeen routes in the
-secure-reference profile, the nine current role/key-class/object/domain
-bindings, the fifteen logical subject/type mappings (including the router), the
+secure-reference profile, the ten current role/key-class/object/domain
+bindings, the sixteen logical subject/type mappings (including the router), the
 closed decision/action vocabularies, and the relevant Rust time, trust, identity,
 deployment, durable-state, and evidence semantics. The inventory explicitly
 keeps controller/source timestamps out of freshness authority, separates
 opaque IDs, boot/epoch-scoped counters, and same-scope cross-boot ratchets,
 binds the exact final-command
 constraint set and access tuples, and records current implementation
-enforcement as `PARTIAL`.
+enforcement as `PARTIAL`. Because those inventories evolved after the original
+T002 exact-commit closure, T002 is now `implemented`, not `verified`.
 
 The per-task [migration record](MIGRATION.md) states that T000–T002 introduce no
 Rust API or wire conversion while identifying the semantic/operator impact that
@@ -93,7 +96,9 @@ closure JSON and gzip logs predate it and remain byte-for-byte unchanged; they
 are not retroactively relabeled as generated. T002 closure adds separately
 named `*-generated-*` supplements that bind those historical signed closure
 targets/runs to the signed T002 evidence-tool commit, plus the generated T002
-record for its exact implementation CI and formal attempts.
+record for its exact implementation CI and formal attempts. That unchanged T002
+record is now classified as historical: it still verifies its own commit and
+runs, but cannot close the evolved working model.
 
 ## Evidence discipline
 

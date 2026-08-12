@@ -4,11 +4,14 @@
 //! identity, or end-to-end delivery campaign has been exercised successfully.
 
 use std::fmt;
+use std::fs::File;
+use std::io::{ErrorKind, Read};
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use haldir_contracts::session::NcpSessionIdentityV1;
 use haldir_ncp08::ExactNcpCommandFrame;
 use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
@@ -19,7 +22,15 @@ use zenoh::qos::{CongestionControl, Priority};
 use zenoh::sample::{Locality, Sample, SampleKind};
 use zenoh::{Config, Session};
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use rustix::fs::{Mode, OFlags, open};
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::os::unix::fs::MetadataExt;
+
 use crate::HaldirKeys;
+
+/// Hard maximum for one explicit Zenoh client configuration.
+pub const HARD_MAX_ZENOH_CONFIG_BYTES: usize = 256 * 1024;
 
 /// A secure-client, ingress, or publication failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +108,7 @@ impl fmt::Display for SecureZenohError {
                 "the final command is not validated upstream NCP v0.8 JSON"
             }
             Self::CommandSessionMismatch => {
-                "the final command session differs from the bound command route"
+                "the final command session pair differs from the bound publisher"
             }
         };
         formatter.write_str(message)
@@ -142,9 +153,103 @@ impl SecureClientConfig {
     /// Returns a classified configuration error for any missing strict-client
     /// invariant or file load/parse failure.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, SecureZenohError> {
-        let config = Config::from_file(path).map_err(|_| SecureZenohError::ConfigLoad)?;
+        let captured = read_config_file(path.as_ref())?;
+        let config = Config::from_json5(&captured).map_err(|_| SecureZenohError::ConfigLoad)?;
         validate_secure_client_config(&config)?;
         Ok(Self { inner: config })
+    }
+}
+
+fn read_config_file(path: &Path) -> Result<String, SecureZenohError> {
+    read_config_file_with_observer(path, || {})
+}
+
+fn read_config_file_with_observer<F>(
+    path: &Path,
+    after_initial_metadata: F,
+) -> Result<String, SecureZenohError>
+where
+    F: FnOnce(),
+{
+    let mut file = open_config_file(path)?;
+    let before = file.metadata().map_err(|_| SecureZenohError::ConfigLoad)?;
+    if !before.file_type().is_file()
+        || before.len() > u64::try_from(HARD_MAX_ZENOH_CONFIG_BYTES).unwrap_or(u64::MAX)
+    {
+        return Err(SecureZenohError::ConfigLoad);
+    }
+    after_initial_metadata();
+
+    let mut captured = Vec::new();
+    let mut chunk = [0u8; 8 * 1024];
+    loop {
+        let read = match file.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read) => read,
+            Err(error) if error.kind() == ErrorKind::Interrupted => continue,
+            Err(_) => return Err(SecureZenohError::ConfigLoad),
+        };
+        let next_len = captured
+            .len()
+            .checked_add(read)
+            .ok_or(SecureZenohError::ConfigLoad)?;
+        if next_len > HARD_MAX_ZENOH_CONFIG_BYTES {
+            return Err(SecureZenohError::ConfigLoad);
+        }
+        captured
+            .try_reserve(read)
+            .map_err(|_| SecureZenohError::ConfigLoad)?;
+        let bytes = chunk.get(..read).ok_or(SecureZenohError::ConfigLoad)?;
+        captured.extend_from_slice(bytes);
+    }
+    let after = file.metadata().map_err(|_| SecureZenohError::ConfigLoad)?;
+    if !after.file_type().is_file()
+        || !config_metadata_is_stable(&before, &after)
+        || u64::try_from(captured.len()).unwrap_or(u64::MAX) != after.len()
+    {
+        return Err(SecureZenohError::ConfigLoad);
+    }
+    String::from_utf8(captured).map_err(|_| SecureZenohError::ConfigLoad)
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn config_metadata_is_stable(before: &std::fs::Metadata, after: &std::fs::Metadata) -> bool {
+    before.dev() == after.dev()
+        && before.ino() == after.ino()
+        && before.mode() == after.mode()
+        && before.nlink() == after.nlink()
+        && before.uid() == after.uid()
+        && before.gid() == after.gid()
+        && before.len() == after.len()
+        && before.mtime() == after.mtime()
+        && before.mtime_nsec() == after.mtime_nsec()
+        && before.ctime() == after.ctime()
+        && before.ctime_nsec() == after.ctime_nsec()
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+const fn config_metadata_is_stable(
+    _before: &std::fs::Metadata,
+    _after: &std::fs::Metadata,
+) -> bool {
+    false
+}
+
+fn open_config_file(path: &Path) -> Result<File, SecureZenohError> {
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    {
+        let descriptor = open(
+            path,
+            OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::NOCTTY,
+            Mode::empty(),
+        )
+        .map_err(|_| SecureZenohError::ConfigLoad)?;
+        Ok(File::from(descriptor))
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        let _ = path;
+        Err(SecureZenohError::ConfigLoad)
     }
 }
 
@@ -469,33 +574,59 @@ async fn drain_ingress_queue(
 pub struct FinalCommandPublisher {
     session: Arc<Session>,
     final_command_key: String,
-    session_id: String,
+    expected_session: NcpSessionIdentityV1,
 }
 
 impl FinalCommandPublisher {
-    /// Bind a publisher to the exact base command route built by pinned NCP.
-    #[must_use]
-    pub fn new(session: &SecureZenohSession, keys: &HaldirKeys) -> Self {
-        Self {
+    /// Bind a publisher to the exact base command route and full NCP session pair.
+    ///
+    /// # Errors
+    /// Returns [`SecureZenohError::CommandSessionMismatch`] when the supplied
+    /// session identity does not name the route builder's session id.
+    pub fn try_new(
+        session: &SecureZenohSession,
+        keys: &HaldirKeys,
+        expected_session: &NcpSessionIdentityV1,
+    ) -> Result<Self, SecureZenohError> {
+        if expected_session.session_id.as_str() != keys.session_id() {
+            return Err(SecureZenohError::CommandSessionMismatch);
+        }
+        Ok(Self {
             session: session.session.clone(),
             final_command_key: keys.final_command().to_owned(),
-            session_id: keys.session_id().to_owned(),
-        }
+            expected_session: expected_session.clone(),
+        })
     }
 
-    /// Submit the immutable exact NCP bytes on the sole bound command route.
+    /// Consume this publisher to submit the immutable exact NCP bytes once on
+    /// the sole bound command route.
     ///
     /// A successful return means only that the local Zenoh call returned `Ok`;
     /// it does not prove router delivery, Crebain receipt, acceptance, or application.
-    /// No retry is performed here, so callers can preserve exact bytes/sequence and
-    /// classify ambiguous outcomes explicitly.
+    /// No retry is performed here. Consuming the publisher prevents accidental
+    /// reuse of this particular capability after either a definite or ambiguous
+    /// local return; callers must classify the result explicitly.
+    ///
+    /// ```compile_fail
+    /// use haldir_ncp08::ExactNcpCommandFrame;
+    /// use haldir_transport_zenoh::{FinalCommandPublisher, SecureZenohError};
+    ///
+    /// async fn publish_twice(
+    ///     publisher: FinalCommandPublisher,
+    ///     first: &ExactNcpCommandFrame,
+    ///     second: &ExactNcpCommandFrame,
+    /// ) -> Result<(), SecureZenohError> {
+    ///     publisher.publish(first).await?;
+    ///     publisher.publish(second).await
+    /// }
+    /// ```
     ///
     /// # Errors
     /// Rejects modeled/non-JSON bytes or a frame bound to another session before
     /// touching Zenoh. Returns [`SecureZenohError::Publish`] when the local Zenoh
     /// call itself returns an error.
-    pub async fn publish(&self, frame: &ExactNcpCommandFrame) -> Result<(), SecureZenohError> {
-        let bytes = validated_upstream_json_bytes(frame, &self.session_id)?;
+    pub async fn publish(self, frame: &ExactNcpCommandFrame) -> Result<(), SecureZenohError> {
+        let bytes = validated_upstream_json_bytes(frame, &self.expected_session)?;
         self.session
             .put(&self.final_command_key, bytes.to_vec())
             .encoding(Encoding::APPLICATION_JSON)
@@ -598,14 +729,23 @@ fn is_tls_endpoint(endpoint: &str) -> bool {
 
 fn validated_upstream_json_bytes<'a>(
     frame: &'a ExactNcpCommandFrame,
-    expected_session_id: &str,
+    expected_session: &NcpSessionIdentityV1,
 ) -> Result<&'a [u8], SecureZenohError> {
+    if !frame.is_self_consistent() {
+        return Err(SecureZenohError::InvalidCommandFrame);
+    }
+    if frame.session() != expected_session {
+        return Err(SecureZenohError::CommandSessionMismatch);
+    }
+    let expected_session_id = expected_session.session_id.as_str();
     if frame.session_id() != expected_session_id {
         return Err(SecureZenohError::CommandSessionMismatch);
     }
     let decoded = ncp_core::decode_validated::<ncp_core::CommandFrame>(frame.bytes())
         .map_err(|_| SecureZenohError::InvalidCommandFrame)?;
-    if decoded.session_id != expected_session_id {
+    if decoded.session_id != expected_session_id
+        || decoded.session.generation != expected_session.generation.render()
+    {
         return Err(SecureZenohError::CommandSessionMismatch);
     }
     Ok(frame.bytes())
@@ -723,7 +863,7 @@ mod tests {
     use std::task::{Context, Poll, Waker};
 
     use haldir_contracts::action::RequestedActionV1;
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
     use haldir_ncp08::{
@@ -796,7 +936,6 @@ mod tests {
 
     fn command_input() -> GateCommandBuildInputV1 {
         GateCommandBuildInputV1 {
-            decision_id: DecisionId::new([1; 16]),
             session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("sess-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
@@ -950,6 +1089,54 @@ mod tests {
     }
 
     #[test]
+    fn strict_config_capture_rejects_oversize_and_non_regular_inputs() {
+        let oversized = " ".repeat(HARD_MAX_ZENOH_CONFIG_BYTES + 1);
+        let oversized = TestFile::new(&oversized);
+        assert_eq!(
+            SecureClientConfig::from_file(&oversized.0).unwrap_err(),
+            SecureZenohError::ConfigLoad
+        );
+        assert_eq!(
+            SecureClientConfig::from_file(std::env::temp_dir()).unwrap_err(),
+            SecureZenohError::ConfigLoad
+        );
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[test]
+    fn strict_config_capture_rejects_a_same_length_in_place_rewrite() {
+        use std::time::Duration;
+
+        let file = TestFile::new(VALID_CONFIG);
+        let replacement = VALID_CONFIG.replace("gate.pem", "evil.pem");
+        assert_eq!(replacement.len(), VALID_CONFIG.len());
+
+        let result = read_config_file_with_observer(&file.0, || {
+            // Ensure even filesystems with a coarse timestamp update observe a
+            // distinct metadata epoch before the same-inode, same-size rewrite.
+            std::thread::sleep(Duration::from_millis(20));
+            fs::write(&file.0, replacement).unwrap();
+        });
+
+        assert_eq!(result.unwrap_err(), SecureZenohError::ConfigLoad);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn strict_config_capture_does_not_follow_a_final_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let target = TestFile::new(VALID_CONFIG);
+        let link_path = target.0.with_extension("symlink");
+        symlink(&target.0, &link_path).unwrap();
+        let link = TestFile(link_path);
+        assert_eq!(
+            SecureClientConfig::from_file(&link.0).unwrap_err(),
+            SecureZenohError::ConfigLoad
+        );
+    }
+
+    #[test]
     fn missing_config_never_falls_back_to_a_default_session() {
         assert_eq!(
             SecureClientConfig::from_file("/haldir/does/not/exist").unwrap_err(),
@@ -962,17 +1149,25 @@ mod tests {
         let input = command_input();
         let modeled = AclOnlyAdapter::new().build_command(&input).unwrap();
         assert_eq!(
-            validated_upstream_json_bytes(&modeled, "sess-1").unwrap_err(),
+            validated_upstream_json_bytes(&modeled, &input.session).unwrap_err(),
             SecureZenohError::InvalidCommandFrame
         );
 
         let exact = RealNcp08Adapter::new().build_command(&input).unwrap();
+        let mut wrong_session = input.session.clone();
+        wrong_session.session_id = AsciiId::new("sess-2").unwrap();
         assert_eq!(
-            validated_upstream_json_bytes(&exact, "sess-2").unwrap_err(),
+            validated_upstream_json_bytes(&exact, &wrong_session).unwrap_err(),
+            SecureZenohError::CommandSessionMismatch
+        );
+        let mut wrong_generation = input.session.clone();
+        wrong_generation.generation = CanonicalUuidV4String::from_random_bytes([9; 16]);
+        assert_eq!(
+            validated_upstream_json_bytes(&exact, &wrong_generation).unwrap_err(),
             SecureZenohError::CommandSessionMismatch
         );
         assert_eq!(
-            validated_upstream_json_bytes(&exact, "sess-1").unwrap(),
+            validated_upstream_json_bytes(&exact, &input.session).unwrap(),
             exact.bytes()
         );
     }

@@ -50,12 +50,14 @@ haldir-state.workspace = true
 haldir-policy-native.workspace = true
 haldir-admission.workspace = true
 haldir-ncp08.workspace = true
-haldir-reference-plant.workspace = true
 haldir-evidence.workspace = true
 haldir-durable.workspace = true
+haldir-deployment.workspace = true
 haldir-transport-zenoh = { workspace = true, optional = true }
 getrandom.workspace = true
+rustix.workspace = true
 serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
+haldir-reference-plant.workspace = true

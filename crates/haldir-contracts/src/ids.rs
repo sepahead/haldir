@@ -83,6 +83,50 @@ macro_rules! nonzero_seq {
 byte_id!(
     /// A Gate process-incarnation identifier, regenerated on every boot.
     GateBootId, 16);
+
+/// Stable nonzero identifier for one logical evidence-journal chain.
+///
+/// Unlike process-incarnation identifiers, an all-zero journal identifier is
+/// never a valid sentinel. Keeping that invariant in the type prevents a
+/// deployment or journal-opening API from accidentally treating “not set” as
+/// an authority-bearing journal namespace.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct JournalId([u8; 16]);
+
+impl JournalId {
+    /// Construct a provisioned journal identifier.
+    ///
+    /// # Errors
+    /// Returns [`DecodeError::ZeroForNonZero`] for the all-zero identifier.
+    pub fn new(bytes: [u8; 16]) -> Result<Self, DecodeError> {
+        if bytes == [0; 16] {
+            return Err(DecodeError::ZeroForNonZero);
+        }
+        Ok(Self(bytes))
+    }
+
+    /// Borrow the provisioned identifier bytes.
+    #[must_use]
+    pub const fn as_bytes(&self) -> &[u8; 16] {
+        &self.0
+    }
+}
+
+impl CanonicalValue for JournalId {
+    fn encode(&self, writer: &mut CborWriter) {
+        writer.bytes(&self.0);
+    }
+
+    fn decode(reader: &mut CborReader<'_>) -> Result<Self, DecodeError> {
+        let bytes = reader.read_bytes()?;
+        let bytes = bytes.try_into().map_err(|_| DecodeError::BadLength {
+            expected: 16,
+            found: bytes.len(),
+        })?;
+        Self::new(bytes)
+    }
+}
+
 byte_id!(
     /// A challenge nonce.
     ChallengeNonce, 32);
@@ -193,5 +237,38 @@ impl CanonicalValue for KeyId {
     }
     fn decode(r: &mut CborReader<'_>) -> Result<Self, DecodeError> {
         Self::new(r.read_bytes()?.to_vec())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cbor::Limits;
+
+    #[test]
+    fn journal_identifier_round_trips_as_one_canonical_fixed_byte_string() {
+        let expected = JournalId::new([7; 16]).unwrap();
+        let mut writer = CborWriter::new();
+        expected.encode(&mut writer);
+        let bytes = writer.into_bytes();
+        let mut reader = CborReader::new(&bytes, Limits::DEFAULT);
+
+        let decoded = JournalId::decode(&mut reader).unwrap();
+
+        reader.finish().unwrap();
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn canonical_decoder_rejects_the_zero_journal_identifier() {
+        let mut writer = CborWriter::new();
+        writer.bytes(&[0; 16]);
+        let bytes = writer.into_bytes();
+        let mut reader = CborReader::new(&bytes, Limits::DEFAULT);
+
+        assert_eq!(
+            JournalId::decode(&mut reader),
+            Err(DecodeError::ZeroForNonZero)
+        );
     }
 }

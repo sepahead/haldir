@@ -50,11 +50,15 @@ mod range {
     };
     use haldir_core::time::MonoInstant;
     use haldir_crypto::{
-        KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore, sign_message,
+        KeyClass, KeyRecord, KeyRole, KeySubject, RevocationSnapshot, SigningKey, TrustStore,
+        sign_message,
     };
-    use haldir_gate::{DecisionRecord, GateConfig, VehicleActor};
+    use haldir_gate::{BoundedIntentCandidate, DecisionRecord, GateConfig, VehicleActor};
     use haldir_ncp08::SelectedNcpCommandAdapter;
-    use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
+    use haldir_policy_native::{
+        GeofenceBoxV1, LocallyAdmittedMotionEnvelopeV2, NativePolicySnapshot, PhaseRuleV1,
+        PlantModeRuleV2,
+    };
     use haldir_reference_plant::{PlantConfig, ReferencePlant};
 
     const INTENT_KEY: &str = "veh/uav-1/haldir/intent/survey-v1";
@@ -87,7 +91,7 @@ mod range {
             admission_id: AdmissionId::new([4; 16]),
             controller_id: ControllerId::new("survey-v1").unwrap(),
             admission_profile_id: AsciiId::new("fixed-weight-lif-control-v1").unwrap(),
-            level: AdmissionLevelV1::A2ReferenceConformance,
+            level: AdmissionLevelV1::A1SemanticReconstruction,
             controller_bundle_digest: DigestV1::compute(DigestDomain::Bundle, b"bundle"),
             backend_profile_digest: DigestV1::compute(DigestDomain::BackendProfile, b"nest-3.9"),
             codec_digest: DigestV1::compute(DigestDomain::Payload, b"codec"),
@@ -117,6 +121,17 @@ mod range {
             },
             duty_window_ms: 10_000,
             max_active_ms_in_window: 6000,
+            motion_envelope_v2: Some(LocallyAdmittedMotionEnvelopeV2 {
+                local_ned_frame_id: BoundedAscii::new("map").unwrap(),
+                max_linear_accel_mm_s2: 20_000,
+                max_linear_slew_mm_s2: 100_000,
+                max_continuous_motion_ms: 60_000,
+                minimum_hold_between_bursts_ms: 0,
+                plant_mode_rules: vec![PlantModeRuleV2 {
+                    plant_mode: AsciiId::new("NOMINAL").unwrap(),
+                    allowed: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
+                }],
+            }),
             phase_rules: vec![PhaseRuleV1 {
                 phase: "INSPECTION".to_owned(),
                 allowed: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
@@ -134,7 +149,7 @@ mod range {
         pub actor: VehicleActor,
         /// The admitted controller signing key.
         pub ctrl_sk: SigningKey,
-        /// A second, untrusted signing key (stolen-key / wrong-key attacks).
+        /// A second, untrusted signing key for wrong-secret forgery tests.
         pub other_sk: SigningKey,
         /// The decision-time monotonic instant.
         pub now: MonoInstant,
@@ -158,7 +173,7 @@ mod range {
                     kid: kid(1),
                     role: KeyRole::ControllerIntent,
                     verifying_key: ctrl_sk.verifying_key(),
-                    subject: Some("survey-v1".to_owned()),
+                    subject: KeySubject::new("survey-v1").unwrap(),
                     class: KeyClass::Assurance,
                 })
                 .unwrap();
@@ -167,7 +182,7 @@ mod range {
                     kid: kid(2),
                     role: KeyRole::MissionAuthority,
                     verifying_key: mission_sk.verifying_key(),
-                    subject: Some("mission-authority".to_owned()),
+                    subject: KeySubject::new("mission-authority").unwrap(),
                     class: KeyClass::Assurance,
                 })
                 .unwrap();
@@ -178,7 +193,7 @@ mod range {
                     kid: kid(4),
                     role: KeyRole::GateApplication,
                     verifying_key: gate_sk.verifying_key(),
-                    subject: Some("gate-1".to_owned()),
+                    subject: KeySubject::new("gate-1").unwrap(),
                     class: KeyClass::Assurance,
                 })
                 .unwrap();
@@ -205,26 +220,26 @@ mod range {
                 publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(
                     AclExclusiveEvidenceV1 {
                         gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
-                        final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
+                        final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
                         certificate_fingerprint: DigestV1::compute(DigestDomain::Payload, b"cert"),
                         acl_policy_digest: DigestV1::compute(DigestDomain::Payload, b"acl"),
                         verified_at_mono_ns: 900,
                     },
                 ),
                 output_epoch: GateOutputEpoch::new(uuid(5)),
-                local_cap_ms: 30_000,
+                local_cap_ms: NonZeroU32::new(30_000).unwrap(),
                 gate_signer: gate_sk,
                 gate_signer_kid: kid(4),
             };
-            let mut actor = VehicleActor::new(cfg).expect("range fixture has valid Gate config");
-            actor.register_challenge(
-                ChallengeNonce::new([7; 32]),
-                MonoInstant::from_nanos(u64::MAX),
-                now,
-            );
+            let mut actor =
+                VehicleActor::new_ephemeral(cfg).expect("range fixture has valid Gate config");
+            let issued_challenge = actor
+                .issue_challenge(now)
+                .expect("range Gate issues a signed challenge");
+            let challenge_nonce = issued_challenge.challenge().challenge_nonce;
 
             let lease_env = sign_message(
-                &Self::lease(admission_digest, &rec),
+                &Self::lease(admission_digest, &rec, challenge_nonce),
                 MissionLeaseV1::KIND,
                 1,
                 &kid(2),
@@ -237,7 +252,7 @@ mod range {
             // re-set at `now` strictly advances the anti-rollback capture clock.
             let initial_capture = MonoInstant::from_nanos(now.as_nanos() - 1_000_000);
             actor
-                .set_trusted_state(Self::trusted_state(initial_capture))
+                .set_trusted_state(Self::trusted_state(initial_capture), now)
                 .unwrap();
 
             Self {
@@ -250,7 +265,11 @@ mod range {
             }
         }
 
-        fn lease(admission_digest: DigestV1, rec: &AdmissionRecordV1) -> MissionLeaseV1 {
+        fn lease(
+            admission_digest: DigestV1,
+            rec: &AdmissionRecordV1,
+            challenge_nonce: ChallengeNonce,
+        ) -> MissionLeaseV1 {
             MissionLeaseV1 {
                 schema_major: 1,
                 schema_minor: 0,
@@ -260,7 +279,7 @@ mod range {
                 lease_term: NonZeroU64::new(10).unwrap(),
                 gate_id: GateId::new("gate-1").unwrap(),
                 gate_boot_id: GateBootId::new([9; 16]),
-                challenge_nonce: ChallengeNonce::new([7; 32]),
+                challenge_nonce,
                 realm: AsciiId::new("range-a").unwrap(),
                 vehicle_id: VehicleId::new("uav-1").unwrap(),
                 mission_id: MissionId::new("inspect-1").unwrap(),
@@ -282,19 +301,20 @@ mod range {
                 .unwrap(),
                 allowed_frames: BoundedSet::from_iter_checked([CoordinateFrameV1::LocalNed])
                     .unwrap(),
-                allowed_source_keys: BoundedVec::from_vec(vec![
-                    BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
-                ])
+                allowed_source_keys: BoundedSet::from_iter_checked([BoundedAscii::new(
+                    "veh/uav-1/state/pose",
+                )
+                .unwrap()])
                 .unwrap(),
                 limits: MissionLeaseLimitsV1 {
                     max_output_validity_ms: NonZeroU32::new(500).unwrap(),
                     max_linear_speed_mm_s: NonZeroU32::new(3000).unwrap(),
-                    max_linear_accel_mm_s2: NonZeroU32::new(2000).unwrap(),
+                    max_linear_accel_mm_s2: NonZeroU32::new(20_000).unwrap(),
                     max_linear_slew_mm_s2: NonZeroU32::new(100_000).unwrap(),
                     max_source_age_ms: NonZeroU32::new(200).unwrap(),
                     max_state_age_ms: NonZeroU32::new(200).unwrap(),
-                    max_continuous_motion_ms: NonZeroU32::new(2000).unwrap(),
-                    minimum_hold_between_bursts_ms: 500,
+                    max_continuous_motion_ms: NonZeroU32::new(60_000).unwrap(),
+                    minimum_hold_between_bursts_ms: 0,
                 },
                 max_active_duration_ms: NonZeroU32::new(60_000).unwrap(),
                 max_intent_rate_millihz: NonZeroU32::new(50_000).unwrap(),
@@ -369,16 +389,21 @@ mod range {
             sign_message(intent, HaldirIntentV1::KIND, 1, &kid(1), &self.ctrl_sk)
         }
 
-        /// Sign an intent with an untrusted key (stolen-key attack).
+        /// Sign an intent with the trusted key ID but an untrusted secret key.
+        ///
+        /// This models a wrong-secret forgery, not possession of the enrolled
+        /// controller key.
         #[must_use]
-        pub fn sign_untrusted(&self, intent: &HaldirIntentV1) -> Vec<u8> {
+        pub fn sign_with_wrong_secret(&self, intent: &HaldirIntentV1) -> Vec<u8> {
             // Uses the controller kid but the wrong secret key: signature must fail.
             sign_message(intent, HaldirIntentV1::KIND, 1, &kid(1), &self.other_sk)
         }
 
         /// Run the decision pipeline.
         pub fn decide(&mut self, env: &[u8], key: &str) -> DecisionRecord {
-            self.actor.decide_intent(env, key, self.now)
+            let candidate = BoundedIntentCandidate::new(env, key)
+                .expect("range decision inputs must satisfy the actor ingress bounds");
+            self.actor.decide_bounded_intent(candidate, self.now)
         }
     }
 
@@ -410,8 +435,8 @@ mod range {
     ) -> Option<ReferencePlant> {
         let prepared = record.into_prepared_publication()?;
         let called = actor.mark_publish_called(prepared, published_at).ok()?;
-        let cmd = called.reference_plant_command().clone();
-        let mut plant = ReferencePlant::new(PlantConfig::default()).ok()?;
+        let cmd = called.reference_plant_command();
+        let mut plant = ReferencePlant::new(PlantConfig::default(), cmd.session().clone()).ok()?;
         if plant.ingest(cmd).is_err() {
             let _ = actor.mark_publish_returned_error(called);
             return None;
@@ -474,7 +499,7 @@ mod range {
         #[test]
         fn stolen_transport_wrong_app_key() {
             let mut s = RangeScenario::new();
-            let env = s.sign_untrusted(&s.intent(1, velocity(400)));
+            let env = s.sign_with_wrong_secret(&s.intent(1, velocity(400)));
             assert_denied(&s.decide(&env, INTENT_KEY));
         }
 
@@ -591,8 +616,9 @@ mod range {
             // move the trusted state near the +X boundary
             let now = s.now;
             let mut st = RangeScenario::trusted_state(now);
+            st.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
             st.kinematic.position_mm = [99_000, 0, 0];
-            s.actor.set_trusted_state(st).unwrap();
+            s.actor.set_trusted_state(st, now).unwrap();
             let env = s.sign(&s.intent(1, velocity(3000)));
             assert_denied(&s.decide(&env, INTENT_KEY));
         }
@@ -605,8 +631,9 @@ mod range {
             // freshness. (An older *capture* is now rejected at ingress by the
             // anti-rollback check — see stale_state_rollback_rejected.)
             let mut st = RangeScenario::trusted_state(s.now);
+            st.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
             st.primary_source.receive_mono = MonoInstant::from_nanos(1);
-            s.actor.set_trusted_state(st).unwrap();
+            s.actor.set_trusted_state(st, s.now).unwrap();
             let env = s.sign(&s.intent(1, velocity(400)));
             assert_denied(&s.decide(&env, INTENT_KEY));
         }
@@ -616,18 +643,19 @@ mod range {
             // Anti-rollback (H-B05): after a snapshot at `now`, a producer cannot
             // regress to an older-but-still-fresh capture to revive a stale truth.
             let mut s = RangeScenario::new();
-            let fresh = RangeScenario::trusted_state(s.now);
-            s.actor.set_trusted_state(fresh).unwrap();
-            let older =
+            let mut fresh = RangeScenario::trusted_state(s.now);
+            fresh.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+            s.actor.set_trusted_state(fresh, s.now).unwrap();
+            let mut older =
                 RangeScenario::trusted_state(MonoInstant::from_nanos(s.now.as_nanos() - 500_000));
-            assert!(s.actor.set_trusted_state(older).is_err());
+            older.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(9).unwrap());
+            assert!(s.actor.set_trusted_state(older, s.now).is_err());
         }
 
         #[test]
-        fn oversize_intent_denied() {
-            let mut s = RangeScenario::new();
+        fn oversize_intent_is_rejected_before_actor_admission() {
             let big = vec![0u8; 32 * 1024]; // over the 16 KiB ingress limit
-            assert_denied(&s.decide(&big, INTENT_KEY));
+            assert!(BoundedIntentCandidate::new(&big, INTENT_KEY).is_err());
         }
 
         #[test]

@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
-"""Enforce the immutable CI execution and event-isolation contract.
+"""Enforce Haldir's immutable CI execution and event-isolation contract.
 
 All third-party GitHub Actions must use a full commit SHA. The TLA+ executable
 asset and Java runtime must match the closed records in ``tools/pins.toml``.
-Pull requests execute against GitHub's merge commit and retain every substantive
-check, while history-bound result and attestation work remains trusted-event
-only. The recovery-test dispatcher is an always-run step: it executes the
-reviewed suites on pull requests, explicitly succeeds on trusted events, and
-rejects every unknown event. No third-party dependencies are required.
+Pull requests execute substantive tests against GitHub's merge commit, while the
+lineage step separately verifies the exact signed PR head. Direct pushes trigger
+only on ``main``. Canonical result emission is restricted to main push/manual
+dispatch, and OIDC attestation remains main-push-only. No third-party Python
+dependencies are required.
 """
 
 from __future__ import annotations
 
 from collections import Counter
 import hashlib
+import os
 import re
+import stat
 import sys
 import tomllib
 from pathlib import Path
@@ -61,26 +63,30 @@ ISOLATED_SECURE_ZENOH_COMMAND = (
     '\'import runpy,sys;sys.path.append("tools");'
     'runpy.run_path("tools/verify-secure-zenoh.py",run_name="__main__")\''
 )
-RECOVERY_DISPATCH_STEP_NAME = (
-    "Verify epoch-18 recovery primitives for current event"
-)
-RECOVERY_DISPATCH_STEP_STATUS = "completed"
-RECOVERY_DISPATCH_STEP_CONCLUSION = "success"
-RECOVERY_DISPATCH_STEP_CARDINALITY = 1
-PR_RECOVERY_STEP_NAME = RECOVERY_DISPATCH_STEP_NAME
-PR_RECOVERY_COMMANDS = (
-    "python3 -I -B -W error tools/release/test_verify_framework_recovery_fr_0017.py",
+LINEAGE_STEP_NAME = "Verify signed candidate lineage and immutable pins"
+FORMAL_LINEAGE_STEP_NAME = "Verify signed candidate lineage"
+LINEAGE_STEP_SHELL = "/bin/bash --noprofile --norc -euo pipefail {0}"
+HARNESS_STEP_NAME = "Verify supply-chain and formal runner harnesses"
+HARNESS_COMMANDS = (
     "python3 -I -B -W error tools/test_pinned_cargo_deny.py",
     "python3 -I -B -W error tools/test_run_formal.py",
 )
-RECOVERY_DISPATCH_SHELL = "/bin/bash --noprofile --norc -euo pipefail {0}"
-RECOVERY_DISPATCH_PUSH_MESSAGE = (
-    "current-audit gate verified epoch-18 recovery primitives for push"
+DOCTOR_TEST_COMMAND = "python3 -I -B -W error tools/test_doctor.py"
+TRUSTED_LINEAGE_PYTHON_COMMAND = (
+    'python3 -I -B -S -W error "$TRUSTED_LINEAGE_VERIFIER" \\'
 )
-RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE = (
-    "current-audit gate verified epoch-18 recovery primitives for workflow_dispatch"
+TRUSTED_MAIN_STEP_CONDITION = (
+    "        if: >-\n"
+    "          github.ref == 'refs/heads/main' &&\n"
+    "          (github.event_name == 'push' ||\n"
+    "          github.event_name == 'workflow_dispatch')\n"
 )
-RECOVERY_DISPATCH_DIAGNOSTIC = "unsupported recovery verification event"
+TRUSTED_MAIN_JOB_CONDITION = (
+    "    if: >-\n"
+    "      github.repository == 'sepahead/haldir' &&\n"
+    "      github.event_name == 'push' &&\n"
+    "      github.ref == 'refs/heads/main'\n"
+)
 REQUIRED_ACTION_PINS = {
     (
         "actions/checkout",
@@ -117,17 +123,7 @@ REQUIRED_ACTION_COMMENTS = {
 }
 MAX_WORKFLOW_BYTES = 1024 * 1024
 MAX_PINS_BYTES = 64 * 1024
-PIN_SCHEMA_VERSION = 3
-GH_CLI_VERSION = "2.96.0"
-GH_CLI_ARCHIVE_SHA256 = (
-    "83d5c2ccad5498f58bf6368acb1ab32588cf43ab3a4b1c301bf36328b1c8bd60"
-)
-GH_CLI_ARCHIVE_BYTES = 14_652_560
-GH_CLI_BINARY_SHA256 = (
-    "56b8bbbb27b066ecb33dbef9a256dc9d1314adaeff0908a752feba6c34053b40"
-)
-GH_CLI_BINARY_BYTES = 40_722_594
-GH_CLI_ENVIRONMENT_VARIABLE = "HALDIR_FR0017_GH"
+PIN_SCHEMA_VERSION = 4
 MAX_FORMAL_ASSET_BYTES = 4_000_000
 MAX_JAVA_ARCHIVE_BYTES = 64 * 1024 * 1024
 EXACT_VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)")
@@ -217,40 +213,37 @@ WORKFLOW_TOP_LEVEL_KEYS = frozenset(
 )
 TRUSTED_ONLY_STEPS = {
     "supply-chain": (
-        "Install pinned GitHub CLI for offline attestation verification",
-        "Preload isolated task-runner image",
-        "Verify current-head 0.9 audit cut",
-        "Emit canonical epoch-18 audit result",
-        "Upload canonical epoch-18 audit result",
+        "Emit canonical current audit result",
+        "Upload canonical current audit result",
     ),
     "tlc-model-check": (
-        "Emit canonical epoch-18 formal result",
-        "Upload canonical epoch-18 formal result",
+        "Emit canonical current formal result",
+        "Upload canonical current formal result",
     ),
 }
 OIDC_JOB_SHA256 = {
     "attest-ci-audit-result": (
-        "1a3d958f7b240460faaf87bddfe75c4aea3419a0335581fa50161c32b538cb9d"
+        "89125619326e700d749c73228f3678bc51519a14f6930b949b853c5cc42578c3"
     ),
     "attest-formal-audit-result": (
-        "ae73c51f964662907303152e83bd7285b25c44b18dac384941bdc090afbe48f3"
+        "0084d6d083554450b7838ae2a2f5a8c3184a45b6cfd8b14e629d8376d31530fd"
     ),
 }
 REQUIRED_JOB_SHA256 = {
-    "build-test": ("6a40a09f91b98ffeb6084dcabde5b21cfe6f8c1e72c781428c5ccdc8f045aa7c"),
+    "build-test": ("9e8b039e55d0e3b990e896dc9ae6460225c7d72fb0a87e7b6cad04b0687eabf1"),
     "clean-build": ("3258a0329e7b3c22053c227992b6c4f4dac4fcf7894603e956fb709a15e39177"),
     "feature-matrix": (
         "6c5fc8de278f88eb24a1ef949cc5fbe4a7c32d5799de00d21063842b1acdc891"
     ),
-    "interop": ("1bcbe55e830d34d48df6e20fc2e971877094ee4234f22f470a45ee2039cd58d6"),
+    "interop": ("966a314b840498a56a684e8eea127cc9aae8cf439c0bc02c167731ca9fbf91ae"),
     "macos-compile": (
         "0eb0a0e75662827088aeb2f57a559e6ca56308a8d67b7ecdd598244b27e35291"
     ),
     "supply-chain": (
-        "b17255230b39cfafa988e3ea1da58446938d401c911207d9362288d677f2be46"
+        "ee089907f1eb9f45c262d54997181c87a8b0b345393b5031c6f44959f22f4c86"
     ),
     "tlc-model-check": (
-        "48faf25d2df2b10c063e88f5c2ba08430dd34ea4e5d0e94f062369a805caa002"
+        "f27dc5ded47c88cf35cee23b147572207e892ab1c540a95a9972f82d104934f8"
     ),
 }
 SUPPLY_CHAIN_JOB_SHA256 = REQUIRED_JOB_SHA256["supply-chain"]
@@ -427,7 +420,9 @@ def verify_python_isolation(text: str, *, label: str) -> list[str]:
             or (
                 ISOLATED_REPOSITORY_PYTHON.match(command) is None
                 and command != ISOLATED_SECURE_ZENOH_COMMAND
-                and command not in PR_RECOVERY_COMMANDS
+                and command != DOCTOR_TEST_COMMAND
+                and command not in HARNESS_COMMANDS
+                and command != TRUSTED_LINEAGE_PYTHON_COMMAND
             )
         ):
             problems.append(
@@ -561,7 +556,8 @@ def verify_workflow_envelope(
 
     problems: list[str] = []
     expected_trigger = (
-        'on:\n  push:\n    branches: ["**"]\n  pull_request:\n  workflow_dispatch:\n'
+        'on:\n  push:\n    branches: ["main"]\n  pull_request:\n'
+        '    branches: ["main"]\n  workflow_dispatch:\n'
     )
     observed_top_level = Counter(
         match.group("key")
@@ -603,7 +599,8 @@ def verify_workflow_envelope(
             )
     if text.count(f"{expected_trigger}\nconcurrency:\n") != 1:
         problems.append(
-            f"{label} must run on every branch push, pull request, and dispatch"
+            f"{label} must run on main pushes, main-targeting pull requests, "
+            "and manual dispatches"
         )
     expected_concurrency = (
         "concurrency:\n"
@@ -678,14 +675,6 @@ def verify_workflow_envelope(
             f"{label} must let checkout select the event revision; pull requests "
             "must test GitHub's merge commit"
         )
-    forbidden_head_bypasses = (
-        "github.event.pull_request.head.sha",
-        "github.event.pull_request.head.ref",
-        "github.head_ref",
-    )
-    for fragment in forbidden_head_bypasses:
-        if fragment in text:
-            problems.append(f"{label} forbids pull-request head bypass {fragment!r}")
     return problems
 
 
@@ -724,14 +713,14 @@ def verify_trusted_event_steps(
     label: str,
     job: str,
 ) -> list[str]:
-    """Gate only history/result plumbing away from pull-request merge commits."""
+    """Gate history/result plumbing to main push/manual-dispatch events."""
 
     try:
         block = _job_block(text, job, label=label)
     except ValueError as error:
         return [str(error)]
     problems: list[str] = []
-    expected_condition = "        if: github.event_name != 'pull_request'\n"
+    expected_condition = TRUSTED_MAIN_STEP_CONDITION
     expected_steps = TRUSTED_ONLY_STEPS[job]
     for step in expected_steps:
         try:
@@ -745,76 +734,170 @@ def verify_trusted_event_steps(
             continue
         if step_block.count(expected_condition) != 1:
             problems.append(
-                f"{label}:{job}:{step} must be skipped only for pull requests"
+                f"{label}:{job}:{step} must run only on main push/manual-dispatch"
             )
         if not step_block.startswith(f"      - name: {step}\n{expected_condition}"):
             problems.append(
                 f"{label}:{job}:{step} event condition must precede execution fields"
             )
-    observed_conditions = block.count("if: github.event_name != 'pull_request'")
+    observed_conditions = block.count(expected_condition)
     if observed_conditions != len(expected_steps):
         problems.append(
-            f"{label}:{job} contains {observed_conditions} pull-request exclusions; "
+            f"{label}:{job} contains {observed_conditions} trusted-main gates; "
             f"expected {len(expected_steps)}"
         )
     return problems
 
 
-def verify_pr_recovery_step(text: str, *, label: str) -> list[str]:
-    """Bind the always-run, event-closed recovery-test dispatcher."""
+def _expected_lineage_step(*, name: str, gate_command: str) -> str:
+    """Return the sole predecessor-trusted lineage step."""
+
+    return (
+        f"      - name: {name}\n"
+        f"        shell: {LINEAGE_STEP_SHELL}\n"
+        "        env:\n"
+        "          EPOCH19_BREACH_SHA: "
+        "97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8\n"
+        "          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}\n"
+        "          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}\n"
+        "        run: |\n"
+        "          export GIT_CONFIG_GLOBAL=/dev/null\n"
+        "          export GIT_CONFIG_NOSYSTEM=1\n"
+        "          export GIT_NO_REPLACE_OBJECTS=1\n"
+        "          export LC_ALL=C\n"
+        '          CANDIDATE_SHA="$GITHUB_SHA"\n'
+        '          TRUSTED_BASE_SHA=""\n'
+        '          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]\n'
+        "          then\n"
+        '            CANDIDATE_SHA="$PR_HEAD_SHA"\n'
+        '            TRUSTED_BASE_SHA="$PR_BASE_SHA"\n'
+        "          fi\n"
+        '          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]\n'
+        '          /usr/bin/git cat-file -e "${CANDIDATE_SHA}^{commit}"\n'
+        '          if [[ -z "$TRUSTED_BASE_SHA" ]]\n'
+        "          then\n"
+        '            TRUSTED_BASE_SHA="$(/usr/bin/git show -s --format=%P '
+        '"$CANDIDATE_SHA")"\n'
+        "          fi\n"
+        '          [[ "$TRUSTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]\n'
+        '          /usr/bin/git cat-file -e "${TRUSTED_BASE_SHA}^{commit}"\n'
+        "          if /usr/bin/git cat-file -e \\\n"
+        '            "${TRUSTED_BASE_SHA}:tools/release/'
+        'verify-current-lineage.py" \\\n'
+        "            2>/dev/null\n"
+        "          then\n"
+        '            TRUSTED_VERIFIER_BYTES="$(/usr/bin/git cat-file -s \\\n'
+        '              "${TRUSTED_BASE_SHA}:tools/release/'
+        'verify-current-lineage.py")"\n'
+        '            [[ "$TRUSTED_VERIFIER_BYTES" =~ ^[0-9]+$ ]]\n'
+        "            (( TRUSTED_VERIFIER_BYTES > 0 && "
+        "TRUSTED_VERIFIER_BYTES <= 131072 ))\n"
+        '            TRUSTED_LINEAGE_VERIFIER="$(/usr/bin/mktemp \\\n'
+        '              "${RUNNER_TEMP}/haldir-base-lineage-verifier.'
+        'XXXXXXXX.py")"\n'
+        "            /usr/bin/git cat-file blob \\\n"
+        '              "${TRUSTED_BASE_SHA}:tools/release/'
+        'verify-current-lineage.py" \\\n'
+        '              > "$TRUSTED_LINEAGE_VERIFIER"\n'
+        '            [[ "$(/usr/bin/stat --format=%s '
+        '"$TRUSTED_LINEAGE_VERIFIER")" == \\\n'
+        '              "$TRUSTED_VERIFIER_BYTES" ]]\n'
+        '            /usr/bin/test -f "$TRUSTED_LINEAGE_VERIFIER"\n'
+        '            /usr/bin/test ! -L "$TRUSTED_LINEAGE_VERIFIER"\n'
+        '            /usr/bin/chmod 0400 "$TRUSTED_LINEAGE_VERIFIER"\n'
+        '            python3 -I -B -S -W error "$TRUSTED_LINEAGE_VERIFIER" \\\n'
+        '              --commit "$TRUSTED_BASE_SHA"\n'
+        '            python3 -I -B -S -W error "$TRUSTED_LINEAGE_VERIFIER" \\\n'
+        '              --commit "$CANDIDATE_SHA"\n'
+        "          else\n"
+        '            [[ "$GITHUB_EVENT_NAME" != pull_request ]]\n'
+        '            [[ "$TRUSTED_BASE_SHA" == "$EPOCH19_BREACH_SHA" ]]\n'
+        "          fi\n"
+        "          /usr/bin/env -u BASH_ENV -u ENV /bin/bash "
+        "--noprofile --norc -p \\\n"
+        f"            {gate_command}\n"
+    )
+
+
+def verify_candidate_lineage_steps(text: str, *, label: str) -> list[str]:
+    """Bind predecessor-trusted lineage verification and harness tests."""
 
     try:
         block = _job_block(text, "supply-chain", label=label)
-        step = _step_block(
+        lineage_step = _step_block(
             block,
-            PR_RECOVERY_STEP_NAME,
+            LINEAGE_STEP_NAME,
+            label=f"{label}:supply-chain",
+        )
+        harness_step = _step_block(
+            block,
+            HARNESS_STEP_NAME,
             label=f"{label}:supply-chain",
         )
     except ValueError as error:
         return [str(error)]
-    expected = (
-        f"      - name: {PR_RECOVERY_STEP_NAME}\n"
-        f"        shell: {RECOVERY_DISPATCH_SHELL}\n"
-        "        run: |\n"
-        '          case "$GITHUB_EVENT_NAME" in\n'
-        "            pull_request)\n"
-        + "".join(f"              {command}\n" for command in PR_RECOVERY_COMMANDS)
-        + "              ;;\n"
-        "            push)\n"
-        "              /usr/bin/printf '%s\\n' \\\n"
-        f"                '{RECOVERY_DISPATCH_PUSH_MESSAGE}'\n"
-        "              ;;\n"
-        "            workflow_dispatch)\n"
-        "              /usr/bin/printf '%s\\n' \\\n"
-        f"                '{RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE}'\n"
-        "              ;;\n"
-        "            *)\n"
-        f"              /usr/bin/printf '%s\\n' '{RECOVERY_DISPATCH_DIAGNOSTIC}' >&2\n"
-        "              exit 1\n"
-        "              ;;\n"
-        "          esac\n"
+    expected_lineage = _expected_lineage_step(
+        name=LINEAGE_STEP_NAME,
+        gate_command='tools/release/current-audit-gate.sh "$CANDIDATE_SHA"',
+    )
+    expected_harness = f"      - name: {HARNESS_STEP_NAME}\n        run: |\n" + "".join(
+        f"          {command}\n" for command in HARNESS_COMMANDS
     )
     problems: list[str] = []
-    if step != expected:
+    if lineage_step != expected_lineage:
         problems.append(
-            f"{label}:supply-chain:{PR_RECOVERY_STEP_NAME} must contain only "
-            "the exact always-run fail-closed event dispatcher"
+            f"{label}:supply-chain:{LINEAGE_STEP_NAME} must contain the exact "
+            "merge-ref-preserving predecessor-trusted verification"
         )
-    event_name_env_key = re.compile(
-        r"^\s+(?:GITHUB_EVENT_NAME|\"GITHUB_EVENT_NAME\"|'GITHUB_EVENT_NAME')\s*:",
-        flags=re.MULTILINE,
+    if harness_step != expected_harness:
+        problems.append(
+            f"{label}:supply-chain:{HARNESS_STEP_NAME} must contain the exact "
+            "always-run harness commands"
+        )
+    if text.count("github.event.pull_request.head.sha") != 1:
+        problems.append(
+            f"{label} permits the pull-request head SHA only in the exact lineage step"
+        )
+    for forbidden in ("github.event.pull_request.head.ref", "github.head_ref"):
+        if forbidden in text:
+            problems.append(f"{label} forbids pull-request head bypass {forbidden!r}")
+    if "        if:" in lineage_step or "        if:" in harness_step:
+        problems.append(
+            f"{label} lineage and harness steps must run for every workflow event"
+        )
+    return problems
+
+
+def verify_formal_lineage_step(text: str, *, label: str) -> list[str]:
+    """Bind formal results to the same exact signed candidate subject."""
+
+    try:
+        block = _job_block(text, "tlc-model-check", label=label)
+        lineage_step = _step_block(
+            block,
+            FORMAL_LINEAGE_STEP_NAME,
+            label=f"{label}:tlc-model-check",
+        )
+    except ValueError as error:
+        return [str(error)]
+    expected = _expected_lineage_step(
+        name=FORMAL_LINEAGE_STEP_NAME,
+        gate_command=(
+            'tools/release/current-audit-gate.sh --lineage-only "$CANDIDATE_SHA"'
+        ),
     )
-    if event_name_env_key.search(text) is not None:
+    problems: list[str] = []
+    if lineage_step != expected:
         problems.append(
-            f"{label}:GITHUB_EVENT_NAME must not be shadowed by workflow, job, "
-            "or step env"
+            f"{label}:tlc-model-check:{FORMAL_LINEAGE_STEP_NAME} must contain "
+            "the exact signed-head verification"
         )
-    observed_step_conditions = step.count("        if:")
-    if observed_step_conditions != 0:
+    if text.count("github.event.pull_request.head.sha") != 1:
         problems.append(
-            f"{label}:supply-chain:{PR_RECOVERY_STEP_NAME} must always run; "
-            f"observed {observed_step_conditions} step-level conditions"
+            f"{label} permits the pull-request head SHA only in the exact lineage step"
         )
+    if "        if:" in lineage_step:
+        problems.append(f"{label} formal lineage verification must run for every event")
     return problems
 
 
@@ -915,17 +998,21 @@ def verify_formal_job(
         "-u JAVA_TOOL_OPTIONS": 2,
         "-u _JAVA_OPTIONS": 2,
         "-u JDK_JAVA_OPTIONS": 2,
-        "LC_ALL=C": 6,
+        "LC_ALL=C": 7,
         "count != 1 || matches != 1": 1,
         'assert_property java.vendor "$JAVA_RUNTIME_VENDOR"': 1,
         'assert_property java.runtime.version "$JAVA_RUNTIME_VERSION"': 1,
         ('assert_property java.specification.version "$JAVA_SPECIFICATION_VERSION"'): 1,
         'assert_property os.arch "$JAVA_RUNTIME_ARCHITECTURE"': 1,
+        'TLC_LOG="$(/usr/bin/mktemp \\\n            "${RUNNER_TEMP}/haldir-tlc.XXXXXXXX.log")"': 1,
+        '/usr/bin/test ! -L "$TLC_LOG"': 1,
+        "printf 'TLC_LOG=%s\\n' \"$TLC_LOG\" >> \"$GITHUB_ENV\"": 1,
         '"${JAVA_HOME}/bin/java" \\\n            -XX:+UseParallelGC': 1,
-        "| /usr/bin/tee tlc.log": 1,
+        '| /usr/bin/tee "$TLC_LOG"': 1,
+        "          path: ${{ env.TLC_LOG }}": 1,
         "      - name: Upload TLC log\n        if: always()\n": 1,
-        "framework_recovery_fr_0017_result.py": 1,
-        "epoch-18-formal-result-attempt-": 3,
+        "current_audit_result.py": 1,
+        "current-formal-result-attempt-": 3,
     }
     for fragment, expected_count in expected_fragments.items():
         observed_count = block.count(fragment)
@@ -975,6 +1062,8 @@ def verify_oidc_job(
     observed_digest = hashlib.sha256(block.encode("utf-8")).hexdigest()
     if expected_digest is None or observed_digest != expected_digest:
         problems.append(f"{label}:{job} exact reviewed job block digest mismatch")
+    if not block.startswith(f"  {job}:\n{TRUSTED_MAIN_JOB_CONDITION}"):
+        problems.append(f"{label}:{job} must use the exact trusted-main job condition")
     required_fragments = (
         "github.repository == 'sepahead/haldir'",
         "github.event_name == 'push'",
@@ -1032,8 +1121,8 @@ def verify_supply_chain_job(text: str, *, label: str) -> list[str]:
     if observed != SUPPLY_CHAIN_JOB_SHA256:
         problems.append(f"{label}:supply-chain exact reviewed job block mismatch")
     expected_fragments = {
-        "framework_recovery_fr_0017_result.py": 1,
-        "epoch-18-ci-result-attempt-": 3,
+        "current_audit_result.py": 1,
+        "current-ci-result-attempt-": 3,
     }
     for fragment, expected_count in expected_fragments.items():
         observed_count = block.count(fragment)
@@ -1045,69 +1134,79 @@ def verify_supply_chain_job(text: str, *, label: str) -> list[str]:
     return problems
 
 
-def verify_gh_cli_material(text: str, *, label: str) -> list[str]:
-    """Bind the pinned GitHub CLI and its epoch-18 consumer interface."""
+def _read_bounded_regular_file(path: Path, *, maximum: int, label: str) -> bytes:
+    """Read one stable regular file without following a replaced symlink."""
 
-    problems: list[str] = []
-    required_fragments = {
-        f"GH_CLI_VERSION: {GH_CLI_VERSION}": 1,
-        f"GH_CLI_ARCHIVE_BYTES: {GH_CLI_ARCHIVE_BYTES}": 1,
-        f"GH_CLI_ARCHIVE_SHA256: {GH_CLI_ARCHIVE_SHA256}": 1,
-        f"GH_CLI_BINARY_BYTES: {GH_CLI_BINARY_BYTES}": 1,
-        f"GH_CLI_BINARY_SHA256: {GH_CLI_BINARY_SHA256}": 1,
-        (
-            "https://github.com/cli/cli/releases/download/"
-            "v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.tar.gz"
-        ): 1,
-        "/usr/bin/sha256sum --check --strict": 4,
-        "--proto '=https'": 2,
-        "--proto-redir '=https'": 2,
-        "--tlsv1.2": 2,
-        "--no-same-owner": 1,
-        "--no-same-permissions": 1,
-        '-- "gh_${GH_CLI_VERSION}_linux_amd64/bin/gh"': 1,
-        "gh version ${GH_CLI_VERSION} (2026-07-02)": 1,
-        (
-            f'printf \'{GH_CLI_ENVIRONMENT_VARIABLE}=%s\\n\' "$GH_BIN" >> "$GITHUB_ENV"'
-        ): 1,
-    }
-    for fragment, expected_count in required_fragments.items():
-        observed_count = text.count(fragment)
-        if observed_count != expected_count:
-            problems.append(
-                f"{label} requires exact pinned gh material {fragment!r} "
-                f"{expected_count} time(s), observed {observed_count}"
-            )
-    observed_interfaces = Counter(re.findall(r"\bHALDIR_FR[0-9]{4}_GH\b", text))
-    expected_interfaces = Counter({GH_CLI_ENVIRONMENT_VARIABLE: 1})
-    if observed_interfaces != expected_interfaces:
-        problems.append(
-            f"{label} GitHub CLI environment interface differs: "
-            f"observed {dict(observed_interfaces)!r}; "
-            f"expected {dict(expected_interfaces)!r}"
-        )
-    return problems
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if nofollow:
+        flags |= nofollow
+    before = None
+    if not nofollow:
+        before = path.lstat()
+        if stat.S_ISLNK(before.st_mode):
+            raise ValueError(f"{label} is not a regular file")
+    descriptor = os.open(path, flags)
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise ValueError(f"{label} is not a regular file")
+        if before is not None and (before.st_dev, before.st_ino) != (
+            opened.st_dev,
+            opened.st_ino,
+        ):
+            raise ValueError(f"{label} changed while it was opened")
+        if not 1 <= opened.st_size <= maximum:
+            raise ValueError(f"{label} violates size bounds")
+
+        chunks: list[bytes] = []
+        remaining = maximum + 1
+        while remaining:
+            chunk = os.read(descriptor, min(64 * 1024, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        payload = b"".join(chunks)
+        after = os.fstat(descriptor)
+        if len(payload) > maximum:
+            raise ValueError(f"{label} violates size bounds")
+        if (
+            (opened.st_dev, opened.st_ino) != (after.st_dev, after.st_ino)
+            or opened.st_size != after.st_size
+            or opened.st_mtime_ns != after.st_mtime_ns
+            or len(payload) != after.st_size
+        ):
+            raise ValueError(f"{label} changed while it was read")
+        return payload
+    finally:
+        os.close(descriptor)
 
 
 def _read_workflow(path: Path) -> str:
-    if path.is_symlink() or not path.is_file():
-        raise ValueError(f"{path.relative_to(ROOT)} is not a regular file")
-    payload = path.read_bytes()
-    if not 1 <= len(payload) <= MAX_WORKFLOW_BYTES or b"\0" in payload:
-        raise ValueError(f"{path.relative_to(ROOT)} violates workflow size bounds")
+    label = str(path.relative_to(ROOT))
+    payload = _read_bounded_regular_file(
+        path,
+        maximum=MAX_WORKFLOW_BYTES,
+        label=label,
+    )
+    if b"\0" in payload:
+        raise ValueError(f"{label} contains NUL bytes")
     try:
         return payload.decode("utf-8")
     except UnicodeDecodeError as error:
-        raise ValueError(f"{path.relative_to(ROOT)} is not valid UTF-8") from error
+        raise ValueError(f"{label} is not valid UTF-8") from error
 
 
 def _read_pins() -> dict[str, Any]:
     path = ROOT / "tools" / "pins.toml"
-    if path.is_symlink() or not path.is_file():
-        raise ValueError("tools/pins.toml is not a regular file")
-    payload = path.read_bytes()
-    if not 1 <= len(payload) <= MAX_PINS_BYTES or b"\0" in payload:
-        raise ValueError("tools/pins.toml violates pin-file size bounds")
+    payload = _read_bounded_regular_file(
+        path,
+        maximum=MAX_PINS_BYTES,
+        label="tools/pins.toml",
+    )
+    if b"\0" in payload:
+        raise ValueError("tools/pins.toml contains NUL bytes")
     try:
         text = payload.decode("utf-8")
     except UnicodeDecodeError as error:
@@ -1206,7 +1305,7 @@ def main() -> None:
             )
         )
         problems.extend(
-            verify_pr_recovery_step(
+            verify_candidate_lineage_steps(
                 workflow_texts["ci.yml"],
                 label=".github/workflows/ci.yml",
             )
@@ -1227,6 +1326,12 @@ def main() -> None:
             )
         )
     if "formal.yml" in workflow_texts:
+        problems.extend(
+            verify_formal_lineage_step(
+                workflow_texts["formal.yml"],
+                label=".github/workflows/formal.yml",
+            )
+        )
         if formal_pins is not None:
             problems.extend(
                 verify_formal_job(
@@ -1263,12 +1368,6 @@ def main() -> None:
             f"expected {sorted(REQUIRED_CHECK_JOBS)!r}"
         )
     ci_text = workflow_texts.get("ci.yml", "")
-    problems.extend(
-        verify_gh_cli_material(
-            ci_text,
-            label=".github/workflows/ci.yml",
-        )
-    )
     try:
         supply_chain_block = _job_block(
             ci_text,
@@ -1304,9 +1403,9 @@ def main() -> None:
         "${CARGO_DENY_URL}|${DENY_ARCHIVE}|4936832": 1,
         "${RUSTSEC_URL}|${RUSTSEC_ARCHIVE}|441027": 1,
         'PATH="$TOOLCHAIN_BIN:/usr/bin:/bin"': 1,
-        "GIT_CONFIG_GLOBAL=/dev/null": 2,
-        "GIT_CONFIG_NOSYSTEM=1": 2,
-        "GIT_NO_REPLACE_OBJECTS=1": 2,
+        "GIT_CONFIG_GLOBAL=/dev/null": 3,
+        "GIT_CONFIG_NOSYSTEM=1": 3,
+        "GIT_NO_REPLACE_OBJECTS=1": 3,
         "b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a": 1,
         "1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce": 1,
         "2d3ab21e05f8b06ad2e232f92894b5e247d817ce": 1,
@@ -1314,7 +1413,7 @@ def main() -> None:
         "RUSTUP_TOOLCHAIN=1.96.0": 1,
         "      - name: Install pinned Rust toolchain\n"
         "        run: rustup toolchain install 1.96.0 --profile minimal\n"
-        "      - name: Verify current-head 0.9 audit cut": 1,
+        "      # Pull requests run tests on GitHub's merge ref": 1,
         "      - name: Prime exact locked dependency inputs\n"
         "        shell: /bin/bash --noprofile --norc -euo pipefail {0}\n"
         "        run: cargo fetch --locked --manifest-path "

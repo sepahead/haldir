@@ -168,7 +168,7 @@ class PinPolicyTests(RunnerTestCase):
     @staticmethod
     def _valid_document() -> bytes:
         return (
-            "schema_version = 3\n"
+            "schema_version = 4\n"
             "[formal]\n"
             f'tla_tools_version = "{RUNNER.ADMITTED_TLA_VERSION}"\n'
             f"tla_tools_bytes = {RUNNER.ADMITTED_TLA_BYTES}\n"
@@ -225,7 +225,7 @@ class PinPolicyTests(RunnerTestCase):
             "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar",
         )
 
-    def test_exact_schema_v3_formal_table_is_accepted(self) -> None:
+    def test_exact_schema_v4_formal_table_is_accepted(self) -> None:
         with tempfile.TemporaryDirectory(prefix="haldir-formal-pins-") as directory:
             repository = self._repository(Path(directory), self._valid_document())
             pins = RUNNER.load_pins(repository)
@@ -239,18 +239,18 @@ class PinPolicyTests(RunnerTestCase):
     def test_schema_type_and_value_are_exact(self) -> None:
         mutations = (
             self._valid_document().replace(
-                b"schema_version = 3", b"schema_version = true"
+                b"schema_version = 4", b"schema_version = true"
             ),
             self._valid_document().replace(
-                b"schema_version = 3", b"schema_version = 1"
+                b"schema_version = 4", b"schema_version = 1"
             ),
             self._valid_document().replace(
-                b"schema_version = 3", b"schema_version = 2"
+                b"schema_version = 4", b"schema_version = 3"
             ),
             self._valid_document().replace(
-                b"schema_version = 3", b"schema_version = 4"
+                b"schema_version = 4", b"schema_version = 5"
             ),
-            self._valid_document().replace(b"schema_version = 3\n", b""),
+            self._valid_document().replace(b"schema_version = 4\n", b""),
         )
         for index, document in enumerate(mutations):
             with (
@@ -297,7 +297,7 @@ class PinPolicyTests(RunnerTestCase):
         mutations.extend(
             (
                 valid.replace(b"[formal]\n", b""),
-                b"schema_version = 3\nformal = 7\n",
+                b"schema_version = 4\nformal = 7\n",
                 valid + b'unknown = "value"\n',
             )
         )

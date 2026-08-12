@@ -14,7 +14,7 @@
 use crate::error::CryptoError;
 use crate::key::{Signature, SigningKey};
 use crate::role::{KeyClass, KeyRole};
-use crate::trust::{RevocationSnapshot, TrustStore};
+use crate::trust::{KeySubject, RevocationSnapshot, TrustStore};
 use haldir_contracts::cbor::{CborReader, CborWriter, Limits};
 use haldir_contracts::ids::KeyId;
 
@@ -72,8 +72,8 @@ pub struct VerifiedCose<'a> {
     pub signer_kid: KeyId,
     /// The resolved signer role.
     pub signer_role: KeyRole,
-    /// The resolved signer subject, where present.
-    pub signer_subject: Option<String>,
+    /// The resolved bounded signer subject.
+    pub signer_subject: KeySubject,
 }
 
 fn encode_protected(content_type: &str, kid: &KeyId) -> Vec<u8> {
@@ -248,7 +248,9 @@ fn verify_parsed_sign1<'a>(
     if rec.role != ctx.required_role {
         return Err(CryptoError::WrongRole);
     }
-    if ctx.assurance_profile && rec.class == KeyClass::Development {
+    if ctx.assurance_profile
+        && (rec.class == KeyClass::Development || rec.role == KeyRole::DevelopmentOnly)
+    {
         return Err(CryptoError::DevelopmentKeyInAssurance);
     }
     if revocations.is_key_revoked(&kid) {

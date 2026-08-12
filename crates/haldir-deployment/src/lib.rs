@@ -5,8 +5,16 @@
 //! retains exact artifact bytes while exposing no artifact path or reopen API.
 //! On Linux and macOS, an optional source captures signed flat leaves relative to a
 //! caller-supplied open directory capability. It does not authenticate that
-//! root, load secrets, parse artifacts into runtime configuration, prove the
-//! running binary, start a Gate, or establish a control plane.
+//! root, load secrets, construct runtime objects from the retained snapshots, prove the
+//! running binary, start a Gate, or establish a control plane. Consuming
+//! typestates compose the exact signed `NCP_COMPATIBILITY` role with the compiled
+//! adapter validator, then strictly decode and package-cross-bind the signed
+//! `GATE_CONFIGURATION` role. A final consuming stage verifies independently
+//! role-signed, revision-scoped approvals for the exact runtime trust,
+//! admission, revocation, and policy snapshot identities. That stage also
+//! retains an encapsulated check that the later runtime trust store cannot
+//! rebind a bootstrap key identifier or public key to different authority
+//! semantics. The other seven artifact roles remain byte-verified only.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -26,12 +34,15 @@ mod source;
 mod verify;
 
 pub use artifact::{
-    ArtifactLimits, DeploymentArtifactInput, DeploymentArtifactSet, ResolvedDeploymentPackage,
+    ArtifactLimits, AuthorityApprovalPolicy, AuthorityValidatedDeploymentPackage,
+    DeploymentArtifactInput, DeploymentArtifactSet, GateConfigurationValidatedDeploymentPackage,
+    NcpValidatedDeploymentPackage, ResolvedDeploymentPackage, VerifiedAuthoritySnapshotApproval,
 };
 pub use error::DeploymentError;
 pub use source::ArtifactDirectory;
 pub use verify::{
-    DeploymentAcceptancePolicy, VerifiedDeploymentPackage, verify_deployment_package,
+    DeploymentAcceptancePolicy, DeploymentIdentityExpectation, DeploymentProfileRequirement,
+    VerifiedDeploymentPackage, verify_deployment_package,
 };
 
 /// Crate version string.

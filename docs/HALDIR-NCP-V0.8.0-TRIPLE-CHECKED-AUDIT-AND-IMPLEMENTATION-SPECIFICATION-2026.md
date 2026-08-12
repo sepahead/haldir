@@ -1126,7 +1126,9 @@ This sequence is the shortest authoritative route through the larger phase manua
 70. Import and run upstream v0.8.0 conformance and behavior vectors.
 71. Parse trusted state using the actual received route and exact atomic session pair.
 72. Store source position, source time, receive time, provenance, and qualified state in a bounded cache.
-73. Build commands only from a fully approved `GateCommandBuildInputV1`.
+73. Build commands only from a fully approved `GateCommandBuildInputV1`; before
+    encoding, reject an effective validity of zero or one greater than the
+    signed action's requested validity.
 74. Allocate Gate output position after every decision and evidence prerequisite succeeds.
 75. Set Gate-local monotonic `t` and independently verified source/source time.
 76. Serialize once, compute the digest, validate the exact bytes, and make them immutable.
@@ -2114,7 +2116,15 @@ Use separate digest domains:
 
 - `raw_envelope_digest`: exact received COSE bytes;
 - `payload_digest`: exact canonical CBOR payload bytes;
-- `semantic_intent_digest`: canonical typed action and its policy-relevant bindings;
+- `received_key_digest` / `final_route_digest`: exact UTF-8 bytes of the
+  concrete transport key under the `transport_key` domain;
+- `semantic_intent_digest`: a distinct canonical projection of the typed action
+  and every signed field Gate uses to bind or decide it: controller identity and
+  signing key, exact intent route, Gate/boot, realm/vehicle/mission/session,
+  lease/admission/bundle/backend identities, intent position, causal source, and
+  action. Schema framing, the required-empty auxiliary watermarks, and
+  controller-local instance/time/context provenance are excluded; the exact
+  payload digest still commits those fields;
 - `output_frame_digest`: exact Gate-created NCP serialization;
 - `state_snapshot_digest`: canonical state values used for the decision;
 - `policy_snapshot_digest`: exact approved policy package;
@@ -2195,7 +2205,7 @@ pub struct GateChallengeV1 {
     pub gate_output_epoch: CanonicalUuidV4String,
     pub gate_key_id: KeyId,
     pub policy_snapshot_digest: DigestV1,
-    pub accepted_contract_versions: BoundedVec<ContractVersion, 8>,
+    pub accepted_contract_versions: BoundedSet<ContractVersion, 8>,
     pub ncp_compatibility_id: DigestV1,
 }
 ```
@@ -2253,7 +2263,7 @@ pub struct MissionLeaseV1 {
     pub policy_snapshot_digest: DigestV1,
     pub allowed_actions: BoundedSet<ActionClassV1, 16>,
     pub allowed_frames: BoundedSet<CoordinateFrameV1, 8>,
-    pub allowed_source_keys: BoundedVec<BoundedAscii<256>, 8>,
+    pub allowed_source_keys: BoundedSet<BoundedAscii<256>, 8>,
     pub limits: MissionLeaseLimitsV1,
 
     pub max_active_duration_ms: NonZeroU32,
@@ -2382,9 +2392,15 @@ pub struct NcpSourceRefV1 {
 
 `actual_intent_key` is the concrete key the controller believes it is signing for. Gate compares it to the actual received sample key; it never trusts a wildcard subscription selector or key suffix alone.
 
-`controller_t_ns` is local to the controller intent epoch. Gate may require it to be nondecreasing for diagnostics, but Gate does not compare it directly with Gate time and does not derive authority freshness from it.
+`controller_instance_id`, `controller_t_ns`, and `controller_context_digest` are
+signed controller-local provenance, not independent roots of authority.
+`controller_t_ns` is local to the controller intent epoch. Gate may require it
+to be nondecreasing for diagnostics, but Gate does not compare it directly with
+Gate time and does not derive authority freshness from it. These observational
+fields remain committed by `payload_digest` but are intentionally absent from
+`semantic_intent_digest`.
 
-`primary_source` identifies the NCP frame that directly drove the action. Gate finds that exact frame in its independently populated trusted state cache. `input_watermarks` can name additional bounded inputs for fusion, but the first profile should either prohibit them or define exact semantics. Gate sets the final NCP `source` and `source_t` from its trusted cached source, not from controller-supplied time.
+`primary_source` identifies the NCP frame that directly drove the action. Gate finds that exact frame in its independently populated trusted state cache. Schema v1 requires `input_watermarks` to be empty: no authentication, freshness, or policy-intersection semantics are defined for auxiliary fusion inputs. A later schema must define those semantics before accepting them. Gate sets the final NCP `source` and `source_t` from its trusted cached source, not from controller-supplied time.
 
 #### Intent evaluation order
 
@@ -2780,7 +2796,7 @@ pub enum PlantPublicationAuthorityStateV1 {
 }
 ```
 
-`AclExclusiveV1` is deployment evidence that one authenticated Gate principal alone is permitted to publish the final route. It is not a plant-issued NCP lease and must never be serialized as one. `NcpLeaseV1` is unavailable until a reviewed upstream NCP release defines it. Receipts and status always record which variant authorized publication.
+`AclExclusiveV1` is deployment evidence that one authenticated Gate principal alone is permitted to publish the final route. Its `final_route_digest` is the `transport_key`-domain digest of the exact route bytes. Declared-live startup derives the pinned-NCP route from the configured realm/session and requires this digest to match before durable state, entropy, or I/O. The principal, ACL-policy, certificate, and observation-time claims remain caller-supplied deployment evidence; route equality alone does not authenticate them. It is not a plant-issued NCP lease and must never be serialized as one. `NcpLeaseV1` is unavailable until a reviewed upstream NCP release defines it. Receipts and status always record which variant authorized publication.
 
 ### `GateStatusV1`
 
@@ -2875,6 +2891,15 @@ pub struct DecisionReceiptV1 {
     pub publish_stage: PublishStageV1,
 }
 ```
+
+Intent-derived receipt fields form one closed presence group. Before a payload
+is authenticated, `payload_digest`, `semantic_intent_digest`, controller/intent
+position, mission/lease, admission, source, and state digest are all absent.
+After authentication, every intent-derived field is present; the state digest
+may remain absent only when evaluation short-circuits before a trusted-state
+snapshot is selected. An `ALLOW`/`OutputPrepared` receipt requires the complete
+intent group, a state snapshot digest, and the complete output binding. A
+partial group is semantically invalid even when the envelope signature verifies.
 
 Use stable machine-readable reason codes such as:
 
@@ -3329,7 +3354,7 @@ If the output queue is full, the decision becomes `ALLOW_NOT_PUBLISHED_OVERLOAD`
 | `stream.epoch` | Gate output state |
 | `stream.seq` | Gate output allocator |
 | `source.epoch` / `source.seq` | verified primary source from Gate cache |
-| `frame_id` | validated coordinate-frame id from the trusted primary source |
+| `frame_id` | validated trusted-source frame id after exact equality with the lease-bound native-policy local-NED frame id |
 | `t` | Gate monotonic creation time |
 | `source_t` | trusted source frame, when available |
 | `authority.term` / `lease_id` | absent in NCP `v0.8.0`; populated only by a future adapter from a verified Gate-held NCP plant-authority lease |
@@ -3362,11 +3387,16 @@ Where exact decimal-to-binary representation is impossible, receipts should say 
 | `RECOVERING` | local assets valid | connect, recover spool, load session/state | `READY_NO_SESSION` |
 | `READY_NO_SESSION` | no current session | no lease activation or output | `SESSION_BOUND` on valid session |
 | `SESSION_BOUND` | current session known | acquire output authority, challenge, fill state | `ACTIVE` when all conjuncts hold |
-| `ACTIVE` | authority + lease + state ready | evaluate intents and publish allowed outputs | `QUIESCING`, `SESSION_BOUND`, or `FAULT_LATCHED` |
+| `ACTIVE` | a current mission lease is accepted for the bound session | evaluate intents; publish only while the independent state-readiness and publication-authority axes also permit it | `QUIESCING`, `SESSION_BOUND`, or `FAULT_LATCHED` |
 | `QUIESCING` | shutdown/revocation/profile transition | no new ordinary intents; optional bounded transition | exit or `SESSION_BOUND` only through explicit reactivation |
 | `FAULT_LATCHED` | invariant/internal trust failure | no ordinary output; expose local health | process restart after operator remediation |
 
 Do not automatically clear `FAULT_LATCHED` because a later input looks valid.
+`ACTIVE` records lease lifecycle, not a permanent assertion that every dynamic
+output conjunct remains available. Signed status reports keep process state,
+state readiness, and publication authority separate so a stale state source or
+lost route capability can be reported without pretending the lease disappeared;
+either condition still makes the command path produce no new output.
 
 ### Session state
 
@@ -3614,11 +3644,11 @@ The first profile should support exactly one local navigation frame plus body-fr
 
 A conservative region check should inflate forbidden regions and shrink allowed regions by the position uncertainty plus configured safety margin. A point on an ambiguous boundary should deny.
 
-For a velocity command, prospective region enforcement should evaluate the reachable displacement over effective validity, including state uncertainty and a conservative response model. Do not merely check current position. A simple first model is:
+For a velocity command, prospective region enforcement should evaluate the reachable displacement from the trusted state capture time through the latest possible command end, including accepted state age, state uncertainty, and a conservative response model. Do not merely check current position or project only from decision time. A simple first model is:
 
 ```text
-reachable_axis = current_position
-               + commanded_velocity * validity
+reachable_axis = captured_position
+               + conservative_velocity_interval * (state_age + candidate_horizon)
                + bounded_tracking_error
                + position_uncertainty
 ```
@@ -5692,9 +5722,11 @@ The function performs no I/O and cannot allocate without a documented bound.
 4. Enforce acceleration/slew against the last applied or selected command according to the explicitly chosen reference. Do not compare to the last requested command if it was denied or never applied.
 5. Maintain bounded duty and continuous-motion windows in actor state.
 6. Validate source and state age using Gate receive monotonic time, not controller time.
-7. Perform prospective geofence checks over the effective command horizon using conservative fixed-point integration and uncertainty inflation.
+7. Perform prospective geofence checks from exact trusted-state capture through the candidate command horizon using outward-rounded fixed-point software projection and uncertainty inflation. Do not describe this as physical reachability or containment without separately authenticated and validated dynamics, localization, disturbance, actuator, and vehicle-geometry bounds.
 8. Define a bounded rectangular or convex region for the reference plant. Use integer half-space tests; avoid general computational geometry in MVP.
-9. Enforce mission-phase transitions and allowed action sets.
+9. Enforce mission-phase and trusted-plant-mode transitions through separate,
+   digest-bound allowed-action sets. Unknown modes deny; permitting `Hold` in a
+   mode must not implicitly permit velocity.
 10. Compute effective output validity as the minimum of requested validity, remaining lease duration, policy cap, state/source freshness headroom, NCP cap, and plant profile cap.
 11. Deny when effective validity is below the configured minimum useful horizon.
 12. Return stable machine reason codes and bounded derived values.
@@ -5867,7 +5899,7 @@ Use bounded append-only segment files. Each record contains:
 magic | format_version | record_length | record_bytes | CRC32C
 ```
 
-`record_bytes` is a canonical signed evidence event. A segment header includes Gate ID, boot ID, segment sequence, previous completed-segment digest, and creation metadata. The segment footer includes record count, final digest, and Gate signature.
+`record_bytes` is a canonical signed evidence event. Evidence format v2 includes the Gate ID, typed nonzero logical journal ID, boot ID, segment sequence, previous completed-segment digest, signer identity, and creation metadata in the segment header. The segment footer signs the header/record-content digest and includes record count, final record-chain digest, and Gate signature. Format-v1 segments did not carry a journal ID and are rejected rather than silently adopted.
 
 Rules:
 

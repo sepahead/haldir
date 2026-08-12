@@ -9,7 +9,7 @@ use crate::ids::{
     MissionId, MissionLeaseId, VehicleId,
 };
 use crate::limits::MissionLeaseLimitsV1;
-use crate::scalar::{AsciiId, BoundedAscii, BoundedSet, BoundedVec};
+use crate::scalar::{AsciiId, BoundedAscii, BoundedSet};
 use crate::session::NcpSessionIdentityV1;
 use core::num::{NonZeroU32, NonZeroU64};
 
@@ -41,7 +41,7 @@ canonical_struct! {
         req 24 policy_snapshot_digest: DigestV1,
         req 25 allowed_actions: BoundedSet<ActionClassV1, 16>,
         req 26 allowed_frames: BoundedSet<CoordinateFrameV1, 8>,
-        req 27 allowed_source_keys: BoundedVec<BoundedAscii<256>, 8>,
+        req 27 allowed_source_keys: BoundedSet<BoundedAscii<256>, 8>,
         req 28 limits: MissionLeaseLimitsV1,
         req 29 max_active_duration_ms: NonZeroU32,
         req 30 max_intent_rate_millihz: NonZeroU32,

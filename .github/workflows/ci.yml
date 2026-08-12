@@ -2,8 +2,9 @@ name: ci
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 concurrency:
@@ -24,6 +25,8 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+      - name: Doctor tests
+        run: python3 -I -B -W error tools/test_doctor.py
       # The pinned toolchain + components come from rust-toolchain.toml. `rustup show`
       # installs and selects it; we then verify (H-B01: the previous single-line
       # `--component rustfmt clippy` mis-parsed `clippy` as a positional toolchain).
@@ -48,7 +51,7 @@ jobs:
       - name: Tests
         run: cargo test --workspace --all-targets --all-features --locked
       - name: Doc tests
-        run: cargo test --workspace --doc --locked
+        run: cargo test --workspace --doc --all-features --locked
       - name: Docs build (deny warnings)
         run: cargo doc --workspace --no-deps --all-features --locked
         env:
@@ -126,92 +129,73 @@ jobs:
           PYTHON3="$(/usr/bin/readlink -f "${pythonLocation}/bin/python3")"
           /usr/bin/chmod go-w "$PYTHON3"
           /usr/bin/test -x "$PYTHON3"
-      # Pull requests retain every source, pin, advisory, and security check
-      # below. Only signed-linear current-audit plumbing is inapplicable to
-      # GitHub's two-parent pull-request merge commit.
-      - name: Install pinned GitHub CLI for offline attestation verification
-        if: github.event_name != 'pull_request'
-        shell: /bin/bash --noprofile --norc -euo pipefail {0}
-        env:
-          GH_CLI_ARCHIVE_BYTES: 14652560
-          GH_CLI_ARCHIVE_SHA256: 83d5c2ccad5498f58bf6368acb1ab32588cf43ab3a4b1c301bf36328b1c8bd60
-          GH_CLI_BINARY_BYTES: 40722594
-          GH_CLI_BINARY_SHA256: 56b8bbbb27b066ecb33dbef9a256dc9d1314adaeff0908a752feba6c34053b40
-          GH_CLI_VERSION: 2.96.0
-        run: |
-          GH_ROOT="${RUNNER_TEMP}/haldir-gh-${GH_CLI_VERSION}"
-          GH_ARCHIVE="${RUNNER_TEMP}/gh_${GH_CLI_VERSION}_linux_amd64.tar.gz"
-          /usr/bin/curl \
-            --fail \
-            --silent \
-            --show-error \
-            --location \
-            --proto '=https' \
-            --proto-redir '=https' \
-            --tlsv1.2 \
-            --retry 3 \
-            --connect-timeout 30 \
-            --max-time 300 \
-            --output "$GH_ARCHIVE" \
-            "https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.tar.gz"
-          [[ "$(/usr/bin/stat --format=%s "$GH_ARCHIVE")" == \
-            "$GH_CLI_ARCHIVE_BYTES" ]]
-          printf '%s  %s\n' "$GH_CLI_ARCHIVE_SHA256" "$GH_ARCHIVE" \
-            | /usr/bin/sha256sum --check --strict
-          /usr/bin/mkdir -m 0700 "$GH_ROOT"
-          /usr/bin/tar \
-            --extract \
-            --gzip \
-            --file "$GH_ARCHIVE" \
-            --directory "$GH_ROOT" \
-            --no-same-owner \
-            --no-same-permissions \
-            -- "gh_${GH_CLI_VERSION}_linux_amd64/bin/gh"
-          GH_BIN="${GH_ROOT}/gh_${GH_CLI_VERSION}_linux_amd64/bin/gh"
-          /usr/bin/test -f "$GH_BIN"
-          /usr/bin/test ! -L "$GH_BIN"
-          [[ "$(/usr/bin/stat --format=%s "$GH_BIN")" == \
-            "$GH_CLI_BINARY_BYTES" ]]
-          printf '%s  %s\n' "$GH_CLI_BINARY_SHA256" "$GH_BIN" \
-            | /usr/bin/sha256sum --check --strict
-          /usr/bin/chmod go-w "$GH_BIN"
-          [[ "$("$GH_BIN" --version | /usr/bin/head -n 1)" == \
-            "gh version ${GH_CLI_VERSION} (2026-07-02)" ]]
-          printf 'HALDIR_FR0017_GH=%s\n' "$GH_BIN" >> "$GITHUB_ENV"
-      - name: Preload isolated task-runner image
-        if: github.event_name != 'pull_request'
-        run: /usr/bin/docker pull python@sha256:4a3a38c8710794e278c3651352dd6195d5798eb6ec5ad41db6258e753c9e4ceb
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.96.0 --profile minimal
-      - name: Verify current-head 0.9 audit cut
-        if: github.event_name != 'pull_request'
-        run: /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
+      # Pull requests run tests on GitHub's merge ref, but lineage must be checked
+      # against the contributor's exact signed head. Main and manual dispatches
+      # check the exact workflow subject commit.
+      - name: Verify signed candidate lineage and immutable pins
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        env:
+          EPOCH19_BREACH_SHA: 97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          export GIT_CONFIG_GLOBAL=/dev/null
+          export GIT_CONFIG_NOSYSTEM=1
+          export GIT_NO_REPLACE_OBJECTS=1
+          export LC_ALL=C
+          CANDIDATE_SHA="$GITHUB_SHA"
+          TRUSTED_BASE_SHA=""
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]
+          then
+            CANDIDATE_SHA="$PR_HEAD_SHA"
+            TRUSTED_BASE_SHA="$PR_BASE_SHA"
+          fi
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          /usr/bin/git cat-file -e "${CANDIDATE_SHA}^{commit}"
+          if [[ -z "$TRUSTED_BASE_SHA" ]]
+          then
+            TRUSTED_BASE_SHA="$(/usr/bin/git show -s --format=%P "$CANDIDATE_SHA")"
+          fi
+          [[ "$TRUSTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          /usr/bin/git cat-file -e "${TRUSTED_BASE_SHA}^{commit}"
+          if /usr/bin/git cat-file -e \
+            "${TRUSTED_BASE_SHA}:tools/release/verify-current-lineage.py" \
+            2>/dev/null
+          then
+            TRUSTED_VERIFIER_BYTES="$(/usr/bin/git cat-file -s \
+              "${TRUSTED_BASE_SHA}:tools/release/verify-current-lineage.py")"
+            [[ "$TRUSTED_VERIFIER_BYTES" =~ ^[0-9]+$ ]]
+            (( TRUSTED_VERIFIER_BYTES > 0 && TRUSTED_VERIFIER_BYTES <= 131072 ))
+            TRUSTED_LINEAGE_VERIFIER="$(/usr/bin/mktemp \
+              "${RUNNER_TEMP}/haldir-base-lineage-verifier.XXXXXXXX.py")"
+            /usr/bin/git cat-file blob \
+              "${TRUSTED_BASE_SHA}:tools/release/verify-current-lineage.py" \
+              > "$TRUSTED_LINEAGE_VERIFIER"
+            [[ "$(/usr/bin/stat --format=%s "$TRUSTED_LINEAGE_VERIFIER")" == \
+              "$TRUSTED_VERIFIER_BYTES" ]]
+            /usr/bin/test -f "$TRUSTED_LINEAGE_VERIFIER"
+            /usr/bin/test ! -L "$TRUSTED_LINEAGE_VERIFIER"
+            /usr/bin/chmod 0400 "$TRUSTED_LINEAGE_VERIFIER"
+            python3 -I -B -S -W error "$TRUSTED_LINEAGE_VERIFIER" \
+              --commit "$TRUSTED_BASE_SHA"
+            python3 -I -B -S -W error "$TRUSTED_LINEAGE_VERIFIER" \
+              --commit "$CANDIDATE_SHA"
+          else
+            [[ "$GITHUB_EVENT_NAME" != pull_request ]]
+            [[ "$TRUSTED_BASE_SHA" == "$EPOCH19_BREACH_SHA" ]]
+          fi
+          /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc -p \
+            tools/release/current-audit-gate.sh "$CANDIDATE_SHA"
       - name: Verify source pins
         run: python3 -I -B tools/verify-pins.py
       - name: Verify immutable CI and formal-tool pins
         run: python3 -I -B tools/verify-ci-pins.py
-      - name: Verify epoch-18 recovery primitives for current event
-        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+      - name: Verify supply-chain and formal runner harnesses
         run: |
-          case "$GITHUB_EVENT_NAME" in
-            pull_request)
-              python3 -I -B -W error tools/release/test_verify_framework_recovery_fr_0017.py
-              python3 -I -B -W error tools/test_pinned_cargo_deny.py
-              python3 -I -B -W error tools/test_run_formal.py
-              ;;
-            push)
-              /usr/bin/printf '%s\n' \
-                'current-audit gate verified epoch-18 recovery primitives for push'
-              ;;
-            workflow_dispatch)
-              /usr/bin/printf '%s\n' \
-                'current-audit gate verified epoch-18 recovery primitives for workflow_dispatch'
-              ;;
-            *)
-              /usr/bin/printf '%s\n' 'unsupported recovery verification event' >&2
-              exit 1
-              ;;
-          esac
+          python3 -I -B -W error tools/test_pinned_cargo_deny.py
+          python3 -I -B -W error tools/test_run_formal.py
       - name: Verify immutable 0.9 audit cut
         run: |
           python3 -I -B tools/release/test_verify_audit_inputs.py
@@ -358,27 +342,33 @@ jobs:
                 --all-features \
                 --manifest-path "$GITHUB_WORKSPACE/Cargo.toml" \
                 check
-      # The pull-request model is non-authoritative; trusted push/dispatch
-      # events alone emit and upload the canonical recovery result.
-      - name: Emit canonical epoch-18 audit result
-        if: github.event_name != 'pull_request'
+      # Only the exact main subject emits a provenance result. The result grants
+      # no release, publication, deployment, or tag authority.
+      - name: Emit canonical current audit result
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch')
         id: emit-audit-result
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
-          python3 -I -B tools/release/framework_recovery_fr_0017_result.py \
+          python3 -I -B tools/release/current_audit_result.py \
             --workflow ci \
-            --output "epoch-18-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+            --output "current-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-18-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+            "current-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
           RESULT_SHA256="${RESULT_SHA256%% *}"
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-18 audit result
-        if: github.event_name != 'pull_request'
+      - name: Upload canonical current audit result
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch')
         id: upload-audit-result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: epoch-18-ci-result-attempt-${{ github.run_attempt }}.json
+          path: current-ci-result-attempt-${{ github.run_attempt }}.json
           archive: false
           if-no-files-found: error
           overwrite: false
@@ -418,7 +408,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-audit-result/epoch-18-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-audit-result/current-ci-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-audit-result -mindepth 1 -maxdepth 1 \
@@ -430,7 +420,7 @@ jobs:
       - name: Attest exact audit result
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
-          subject-path: attested-audit-result/epoch-18-ci-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-audit-result/current-ci-result-attempt-${{ github.run_attempt }}.json
 
   interop:
     # An independent (second-implementation) check of the COSE_Sign1 /
@@ -447,7 +437,10 @@ jobs:
         run: rustup toolchain install 1.96.0 --profile minimal
       - name: Regenerate interop vectors (drift check)
         run: |
-          cargo run -q -p haldir-crypto --example emit_interop_vectors > /tmp/vectors.json
-          diff -u tools/interop/vectors.json /tmp/vectors.json
+          cargo run --locked -q -p haldir-crypto --example emit_interop_vectors \
+            > "${RUNNER_TEMP}/haldir-interop-vectors.json"
+          diff -u \
+            tools/interop/vectors.json \
+            "${RUNNER_TEMP}/haldir-interop-vectors.json"
       - name: Independently verify COSE/CBOR vectors
         run: python3 -I -B tools/interop/verify_cose.py tools/interop/vectors.json

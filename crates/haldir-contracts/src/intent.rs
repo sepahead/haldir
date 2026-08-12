@@ -3,11 +3,13 @@
 //! authority, or serialized final frame.
 //!
 //! Every scope/source/session field on the intent is a **consistency claim**
-//! checked for equality against Gate's own snapshot (punch-list B4); no field is
-//! copied into the emitted command.
+//! checked against independently retained Gate authority and state (punch-list
+//! B4). After authorization, Gate derives a new command from the checked action,
+//! trusted source correlation, and its own output stream; it never forwards a
+//! controller-supplied final frame.
 
 use crate::action::RequestedActionV1;
-use crate::digest::DigestV1;
+use crate::digest::{DigestDomain, DigestV1};
 use crate::ids::{
     AdmissionId, ControllerId, ControllerInstanceId, GateBootId, GateId, KeyId, MissionId,
     MissionLeaseId, VehicleId,
@@ -46,10 +48,83 @@ canonical_struct! {
     }
 }
 
+// This is deliberately a distinct canonical object, not a second digest of the
+// full signed payload. It contains every signed intent field that Gate uses to
+// bind or decide the requested action. Controller-process provenance and
+// diagnostics remain committed by the payload digest but cannot perturb the
+// semantic identity of an otherwise identical request.
+canonical_struct! {
+    struct SemanticIntentV1 {
+        req 1 controller_id: ControllerId,
+        req 2 controller_signing_key_id: KeyId,
+        req 3 actual_intent_key: BoundedAscii<256>,
+        req 4 gate_id: GateId,
+        req 5 gate_boot_id: GateBootId,
+        req 6 realm: AsciiId<64>,
+        req 7 vehicle_id: VehicleId,
+        req 8 mission_id: MissionId,
+        req 9 ncp_session: NcpSessionIdentityV1,
+        req 10 mission_lease_id: MissionLeaseId,
+        req 11 mission_lease_term: NonZeroU64,
+        req 12 admission_id: AdmissionId,
+        req 13 admission_digest: DigestV1,
+        req 14 controller_bundle_digest: DigestV1,
+        req 15 backend_profile_digest: DigestV1,
+        req 16 intent_position: HaldirIntentPositionV1,
+        req 17 primary_source: NcpSourceRefV1,
+        req 18 action: RequestedActionV1,
+    }
+}
+
+impl HaldirIntentV1 {
+    /// Digest the canonical action plus every signed field Gate uses to bind or
+    /// decide it.
+    ///
+    /// The projection intentionally excludes schema framing, the unsupported
+    /// (therefore empty) `input_watermarks`, and controller-local observational
+    /// provenance: `controller_instance_id`, `controller_t_ns`, and
+    /// `controller_context_digest`. Those fields remain authenticated and are
+    /// committed by the exact canonical payload digest.
+    #[must_use]
+    pub fn semantic_digest(&self) -> DigestV1 {
+        let semantic = SemanticIntentV1 {
+            controller_id: self.controller_id.clone(),
+            controller_signing_key_id: self.controller_signing_key_id.clone(),
+            actual_intent_key: self.actual_intent_key.clone(),
+            gate_id: self.gate_id.clone(),
+            gate_boot_id: self.gate_boot_id,
+            realm: self.realm.clone(),
+            vehicle_id: self.vehicle_id.clone(),
+            mission_id: self.mission_id.clone(),
+            ncp_session: self.ncp_session.clone(),
+            mission_lease_id: self.mission_lease_id,
+            mission_lease_term: self.mission_lease_term,
+            admission_id: self.admission_id,
+            admission_digest: self.admission_digest,
+            controller_bundle_digest: self.controller_bundle_digest,
+            backend_profile_digest: self.backend_profile_digest,
+            intent_position: self.intent_position.clone(),
+            primary_source: self.primary_source.clone(),
+            action: self.action,
+        };
+        DigestV1::of_value(DigestDomain::SemanticIntent, &semantic)
+    }
+}
+
 impl crate::cbor::Validate for HaldirIntentV1 {
     fn validate(&self) -> Result<(), crate::error::DecodeError> {
         if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(crate::error::DecodeError::UnsupportedVersion);
+        }
+        // The v1 Gate has an exact authority rule only for `primary_source`.
+        // Accepting additional signed watermarks without defining how each is
+        // authenticated, freshness-checked, and bound into policy would make
+        // them misleading non-authoritative metadata. A later schema may add
+        // those semantics; v1 fails closed instead of silently ignoring them.
+        if !self.input_watermarks.is_empty() {
+            return Err(crate::error::DecodeError::SemanticInvalid {
+                code: "INTENT_INPUT_WATERMARKS_UNSUPPORTED",
+            });
         }
         Ok(())
     }

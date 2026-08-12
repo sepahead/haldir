@@ -10,7 +10,9 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+import unittest.mock
 import zipfile
 from copy import deepcopy
 from pathlib import Path
@@ -23,7 +25,9 @@ GENERATE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(GENERATE)
 
 VERIFY_PATH = Path(__file__).with_name("verify-task-evidence.py")
-VERIFY_SPEC = importlib.util.spec_from_file_location("verify_task_evidence", VERIFY_PATH)
+VERIFY_SPEC = importlib.util.spec_from_file_location(
+    "verify_task_evidence", VERIFY_PATH
+)
 assert VERIFY_SPEC is not None and VERIFY_SPEC.loader is not None
 VERIFY = importlib.util.module_from_spec(VERIFY_SPEC)
 VERIFY_SPEC.loader.exec_module(VERIFY)
@@ -118,7 +122,8 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
                 archive.writestr("build-test/system.txt", b"system\n")
                 archive.writestr("build-test/1_Tests.txt", b"tests pass\n")
                 archive.writestr(
-                    "1_supply-chain.txt", b"combined supply\nverify-protection-model: OK\n"
+                    "1_supply-chain.txt",
+                    b"combined supply\nverify-protection-model: OK\n",
                 )
                 archive.writestr("supply-chain/system.txt", b"system\n")
                 value = b"verify-protection-model: OK\n" if marker else b"wrong\n"
@@ -141,7 +146,9 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
         with self.assertRaisesRegex(
             GENERATE.EvidenceGenerationError, "EVIDENCE_JSON_DUPLICATE_KEY"
         ):
-            GENERATE.load_spec_bytes(b'{"schema_version":"2.0.0","schema_version":"2.0.0"}')
+            GENERATE.load_spec_bytes(
+                b'{"schema_version":"2.0.0","schema_version":"2.0.0"}'
+            )
         with self.assertRaisesRegex(
             GENERATE.EvidenceGenerationError, "EVIDENCE_JSON_NONFINITE"
         ):
@@ -154,6 +161,45 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
             GENERATE.EvidenceGenerationError, "EVIDENCE_SPEC_FIELDS_INVALID"
         ):
             GENERATE.load_spec_bytes(json.dumps(value).encode())
+
+    def test_bounded_runner_kills_descendant_that_closes_output_pipes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="haldir-evidence-process-") as directory:
+            marker = Path(directory) / "survived"
+            child = (
+                "import pathlib,time;time.sleep(0.3);"
+                f"pathlib.Path({str(marker)!r}).write_text('escaped')"
+            )
+            leader = (
+                "import subprocess,sys;"
+                f"subprocess.Popen([sys.executable,'-I','-B','-c',{child!r}],"
+                "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,"
+                "stderr=subprocess.DEVNULL)"
+            )
+            GENERATE._run_bounded(
+                [sys.executable, "-I", "-B", "-c", leader],
+                self.repo,
+                8,
+                "test",
+                stderr_limit=8,
+                timeout_seconds=2,
+            )
+            time.sleep(0.5)
+            self.assertFalse(marker.exists())
+
+    def test_git_verification_ignores_ambient_repository_redirection(self) -> None:
+        with unittest.mock.patch.dict(
+            os.environ,
+            {
+                "GIT_DIR": "/definitely/not/the/haldir/repository",
+                "GIT_CONFIG_GLOBAL": "/definitely/not/a/config",
+            },
+        ):
+            observed = GENERATE._git(
+                self.repo,
+                "rev-parse",
+                "--show-toplevel",
+            ).decode().strip()
+        self.assertEqual(Path(observed).resolve(), self.repo.resolve())
 
     def test_canonical_gzip_is_exact_and_cross_runtime_independent(self) -> None:
         fixture = b"abc\n" * 20000
@@ -203,8 +249,8 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
                 attempt=1,
                 expected_commit=self.commit,
                 workflow=self.workflow,
-                    github_scope=self.scope,
-                )
+                github_scope=self.scope,
+            )
 
     def test_combined_only_legacy_logs_pass_but_partial_step_logs_fail(self) -> None:
         jobs = GENERATE._normalize_jobs(
@@ -235,7 +281,9 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
         ):
             GENERATE._validate_log_coverage(partial, jobs, self.workflow)
 
-    def test_redundant_detailed_and_aggregate_only_layouts_normalize_identically(self) -> None:
+    def test_redundant_detailed_and_aggregate_only_layouts_normalize_identically(
+        self,
+    ) -> None:
         jobs = GENERATE._normalize_jobs(
             self.jobs_metadata(), self.workflow["expected_jobs"]
         )
@@ -255,7 +303,9 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
         )
         self.assertEqual(detailed_logical, aggregate_logical)
 
-    def test_exact_repo_workflow_event_branch_attempt_and_jobs_are_enforced(self) -> None:
+    def test_exact_repo_workflow_event_branch_attempt_and_jobs_are_enforced(
+        self,
+    ) -> None:
         record, payload = GENERATE._normalize_run(
             self.run_metadata(),
             self.jobs_metadata(),
@@ -267,7 +317,9 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
             github_scope=self.scope,
         )
         self.assertEqual(record["workflow_path"], ".github/workflows/ci.yml")
-        self.assertEqual([job["name"] for job in record["jobs"]], self.workflow["expected_jobs"])
+        self.assertEqual(
+            [job["name"] for job in record["jobs"]], self.workflow["expected_jobs"]
+        )
         self.assertGreater(len(payload), 0)
 
         mutations = (
@@ -309,7 +361,9 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
         ):
             GENERATE._normalize_jobs(missing, self.workflow["expected_jobs"])
 
-    def test_removed_critical_step_is_rejected_even_when_jobs_and_marker_pass(self) -> None:
+    def test_removed_critical_step_is_rejected_even_when_jobs_and_marker_pass(
+        self,
+    ) -> None:
         missing_step = self.jobs_metadata()
         build = next(job for job in missing_step["jobs"] if job["name"] == "build-test")
         build["steps"] = [
@@ -340,8 +394,11 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
                 "import sys; "
                 f"sys.{stream}.buffer.write(b'x'*131072); sys.{stream}.flush()"
             )
-            with self.subTest(stream=stream), self.assertRaisesRegex(
-                GENERATE.EvidenceGenerationError, "EVIDENCE_RESOURCE_BOUND"
+            with (
+                self.subTest(stream=stream),
+                self.assertRaisesRegex(
+                    GENERATE.EvidenceGenerationError, "EVIDENCE_RESOURCE_BOUND"
+                ),
             ):
                 GENERATE._run_bounded(
                     [sys.executable, "-c", code],
@@ -373,9 +430,17 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-            tree = subprocess.run(
-                ["git", "mktree"], cwd=repo, input=b"", check=True, stdout=subprocess.PIPE
-            ).stdout.decode().strip()
+            tree = (
+                subprocess.run(
+                    ["git", "mktree"],
+                    cwd=repo,
+                    input=b"",
+                    check=True,
+                    stdout=subprocess.PIPE,
+                )
+                .stdout.decode()
+                .strip()
+            )
             commit = (
                 f"tree {tree}\n"
                 "author Sepehr Mahmoudian <sepmhn@gmail.com> 1 +0000\n"
@@ -385,17 +450,24 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
                 " -----END SSH SIGNATURE-----\n\n"
                 "forged signature marker\n"
             ).encode()
-            object_id = subprocess.run(
-                ["git", "hash-object", "-t", "commit", "-w", "--stdin"],
-                cwd=repo,
-                input=commit,
-                check=True,
-                stdout=subprocess.PIPE,
-            ).stdout.decode().strip()
+            object_id = (
+                subprocess.run(
+                    ["git", "hash-object", "-t", "commit", "-w", "--stdin"],
+                    cwd=repo,
+                    input=commit,
+                    check=True,
+                    stdout=subprocess.PIPE,
+                )
+                .stdout.decode()
+                .strip()
+            )
             with self.assertRaisesRegex(
-                GENERATE.EvidenceGenerationError, "EVIDENCE_COMMAND_FAILED:verify_commit"
+                GENERATE.EvidenceGenerationError,
+                "EVIDENCE_COMMAND_FAILED:verify_commit",
             ):
-                GENERATE._verify_signed_commit(repo, object_id, GENERATE.ALLOWED_SIGNERS)
+                GENERATE._verify_signed_commit(
+                    repo, object_id, GENERATE.ALLOWED_SIGNERS
+                )
 
     def test_wrong_pinned_signer_file_is_rejected_before_git(self) -> None:
         with self.assertRaisesRegex(
@@ -429,7 +501,9 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
                 ):
                     GENERATE._verify_spec_derived_fields(changed, spec)
 
-    def test_central_verifier_rejects_artifact_digest_and_must_match_drift(self) -> None:
+    def test_central_verifier_rejects_artifact_digest_and_must_match_drift(
+        self,
+    ) -> None:
         commit = "da40bd8494f894c48add09fc26ce19b161ad91c8"
         stable_spec = [
             {
@@ -456,8 +530,17 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
             "EVIDENCE_RECORD_ARTIFACT_WORKTREE_DRIFT",
         ):
             GENERATE._verify_artifact_manifest(self.repo, drifted, commit, drifted_spec)
+        GENERATE._verify_artifact_manifest(
+            self.repo,
+            drifted,
+            commit,
+            drifted_spec,
+            enforce_current_worktree=False,
+        )
 
-    def test_central_verifier_rejects_run_url_jobs_steps_log_path_and_gzip_tampering(self) -> None:
+    def test_central_verifier_rejects_run_url_jobs_steps_log_path_and_gzip_tampering(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             run, payload = GENERATE._normalize_run(
@@ -552,29 +635,32 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
             GENERATE._verify_record_identity(record, path)
 
     @staticmethod
-    def _write_minimal_requirements(repo: Path, status: str, evidence: list[dict[str, object]]) -> None:
+    def _write_minimal_requirements(
+        repo: Path, status: str, evidence: list[dict[str, object]]
+    ) -> None:
         release = repo / "release/0.9.0"
-        (release / "evidence").mkdir(parents=True)
+        (release / "evidence").mkdir(parents=True, exist_ok=True)
         (release / "requirements.json").write_text(
             json.dumps(
-                {
-                    "tasks": [
-                        {"id": "T002", "status": status, "evidence": evidence}
-                    ]
-                }
+                {"tasks": [{"id": "T002", "status": status, "evidence": evidence}]}
             ),
             encoding="utf-8",
         )
 
-    def test_all_present_reconciles_ledger_and_rejects_missing_or_stale_files(self) -> None:
+    def test_all_present_reconciles_ledger_and_rejects_missing_or_stale_files(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             self._write_minimal_requirements(repo, "implemented", [])
             self.assertEqual(VERIFY.reconcile_all(repo), [])
-            stale = repo / GENERATE.EVIDENCE_DIRECTORY / "t002-generated-ci-stale.log.gz"
+            stale = (
+                repo / GENERATE.EVIDENCE_DIRECTORY / "t002-generated-ci-stale.log.gz"
+            )
             stale.write_bytes(b"stale")
             with self.assertRaisesRegex(
-                VERIFY.CORE.EvidenceGenerationError, "EVIDENCE_LEDGER_GENERATED_FILE_STALE"
+                VERIFY.CORE.EvidenceGenerationError,
+                "EVIDENCE_LEDGER_GENERATED_FILE_STALE",
             ):
                 VERIFY.reconcile_all(repo)
 
@@ -582,7 +668,8 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
             repo = Path(directory)
             self._write_minimal_requirements(repo, "verified", [])
             with self.assertRaisesRegex(
-                VERIFY.CORE.EvidenceGenerationError, "EVIDENCE_LEDGER_T002_CLOSURE_MISSING"
+                VERIFY.CORE.EvidenceGenerationError,
+                "EVIDENCE_LEDGER_T002_CLOSURE_MISSING",
             ):
                 VERIFY.reconcile_all(repo)
 
@@ -600,6 +687,52 @@ class TaskEvidenceGenerationTests(unittest.TestCase):
                 "EVIDENCE_LEDGER_RECORD_RECONCILIATION_FAILED",
             ):
                 VERIFY.reconcile_all(repo)
+
+    def test_reopened_task_retains_exact_historical_record_without_current_freeze(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            record_path = (
+                repo / GENERATE.EVIDENCE_DIRECTORY / "t002-generated-verification.json"
+            )
+            ci_log = (
+                f"{GENERATE.EVIDENCE_DIRECTORY}/"
+                "t002-generated-ci-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.log.gz"
+            )
+            formal_log = (
+                f"{GENERATE.EVIDENCE_DIRECTORY}/"
+                "t002-generated-formal-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.log.gz"
+            )
+            record_path.parent.mkdir(parents=True)
+            for path in (record_path, repo / ci_log, repo / formal_log):
+                path.write_bytes(b"historical")
+            historical = {
+                "kind": "historical_generated_exact_commit_verification",
+                "path": record_path.relative_to(repo).as_posix(),
+                "implementation_commit": "a" * 40,
+                "evidence_tool_commit": "b" * 40,
+            }
+            self._write_minimal_requirements(repo, "implemented", [historical])
+            verified_record = {
+                "task_id": "T002",
+                "implementation": {"commit": "a" * 40},
+                "evidence_tool": {"commit": "b" * 40},
+                "github_ci": {"log": {"path": ci_log}},
+                "github_formal": {"log": {"path": formal_log}},
+            }
+
+            with unittest.mock.patch.object(
+                VERIFY.CORE,
+                "verify_generated_record",
+                return_value=verified_record,
+            ) as verify_record:
+                self.assertEqual(VERIFY.reconcile_task(repo, "T002"), verified_record)
+                verify_record.assert_called_once_with(
+                    repo,
+                    record_path,
+                    enforce_current_worktree=False,
+                )
 
 
 if __name__ == "__main__":

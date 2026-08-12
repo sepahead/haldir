@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use haldir_contracts::action::RequestedActionV1;
-use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
 use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
 use haldir_ncp08::{
@@ -268,7 +268,6 @@ fn build_input(sequence: u64) -> CampaignResult<GateCommandBuildInputV1> {
     let validity =
         NonZeroU32::new(200).ok_or_else(|| campaign_error("command validity must be nonzero"))?;
     Ok(GateCommandBuildInputV1 {
-        decision_id: DecisionId::new([u8::try_from(sequence).unwrap_or(u8::MAX); 16]),
         session: NcpSessionIdentityV1 {
             session_id: AsciiId::new(SESSION_ID)?,
             generation: CanonicalUuidV4String::parse("293279f3-d459-4bfd-aeeb-604799e96925")?,
@@ -514,8 +513,15 @@ async fn run_campaign(config_dir: &Path) -> CampaignResult<CampaignOutput> {
     let intent_a = keys.intent("controller-a")?;
     let intent_b = keys.intent("controller-b")?;
     let frames = build_frames()?;
-    let publisher = FinalCommandPublisher::new(&sessions.gate_final, &keys);
-    if publisher.route() != final_route {
+    let expected_session = frames
+        .values()
+        .next()
+        .ok_or_else(|| campaign_error("campaign command set is empty"))?
+        .session()
+        .clone();
+    let pre_publisher =
+        FinalCommandPublisher::try_new(&sessions.gate_final, &keys, &expected_session)?;
+    if pre_publisher.route() != final_route {
         return Err(campaign_error(
             "typed publisher route differs from pinned NCP route",
         ));
@@ -577,7 +583,7 @@ async fn run_campaign(config_dir: &Path) -> CampaignResult<CampaignOutput> {
     let pre = frames
         .get(FINAL_POSITIVE_PRE)
         .ok_or_else(|| campaign_error("missing pre-positive frame"))?;
-    publisher.publish(pre).await?;
+    pre_publisher.publish(pre).await?;
     attempts.push(attempt(
         FINAL_POSITIVE_PRE,
         "gate",
@@ -647,7 +653,9 @@ async fn run_campaign(config_dir: &Path) -> CampaignResult<CampaignOutput> {
     let post = frames
         .get(FINAL_POSITIVE_POST)
         .ok_or_else(|| campaign_error("missing post-positive frame"))?;
-    publisher.publish(post).await?;
+    let post_publisher =
+        FinalCommandPublisher::try_new(&sessions.gate_final, &keys, &expected_session)?;
+    post_publisher.publish(post).await?;
     attempts.push(attempt(
         FINAL_POSITIVE_POST,
         "gate",
@@ -814,7 +822,6 @@ async fn run_campaign(config_dir: &Path) -> CampaignResult<CampaignOutput> {
         CONTROLLER_A_FINAL_SUBSCRIBE_DENIED,
     ];
 
-    drop(publisher);
     sessions.close().await?;
 
     Ok(CampaignOutput {

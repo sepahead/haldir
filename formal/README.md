@@ -25,7 +25,10 @@ counters without bound and would not have.
 
 Checked invariants (`Safety`): `TypeOK`, `RetiredNeverActive`, `NoOutputReuse`
 (allocated positions are exactly `1..lastOutputSeq` — no gaps or reuse within an
-epoch), and `LeaseBindsCurrentIncarnation`.
+epoch), `LeaseFieldsConsistent`, and `LeaseBindsCurrentIncarnation` (an active
+lease's nonzero boot and session are exactly the current incarnation). TLC also
+checks the temporal property `TerminalFaultBehavior`: after the transition that
+raises `faultLatched`, every authority-bearing model variable remains unchanged.
 
 ## Running locally
 

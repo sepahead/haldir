@@ -1,0 +1,35 @@
+{
+  "authority": {
+    "deployment": false,
+    "publication": false,
+    "release": false,
+    "tag": false
+  },
+  "breach": {
+    "classification": "GITHUB_SQUASH_COMMIT_OUTSIDE_EPOCH_18_IDENTITY",
+    "commit": "97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8",
+    "parent": "079a8fd227bdf6476d307f792cfcb070d6fc3a8c",
+    "subject": "fix: harden cryptographic key provisioning",
+    "tree": "431a9ce47d3cdc615cb5265a2d73c80f2f9ba9ca"
+  },
+  "delivery_contract": {
+    "merge_buttons_authorized": false,
+    "required_author_email": "sepmhn@gmail.com",
+    "required_committer_email": "sepmhn@gmail.com",
+    "required_signer_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU"
+  },
+  "limitations": [
+    "RECOVERY_COMMIT_BOOTSTRAPS_THIS_REVIEWED_VERIFIER",
+    "HOSTED_SETTINGS_REMAIN_MUTABLE_EXTERNAL_STATE",
+    "HOSTED_COMMIT_METADATA_RULE_UNAVAILABLE_ON_USER_REPOSITORY",
+    "WEB_REBASE_BUTTON_REMAINS_A_HOSTED_DELIVERY_RISK",
+    "NO_INDEPENDENT_REVIEWER_AT_RECOVERY",
+    "NO_RELEASE_OR_DEPLOYMENT_AUTHORITY"
+  ],
+  "prior_valid_commit": "079a8fd227bdf6476d307f792cfcb070d6fc3a8c",
+  "protocol": "HALDIR_SIGNED_LINEAGE_RECOVERY_V1",
+  "recovery_id": "FR-0019",
+  "schema_version": "1.0.0",
+  "stage": "RECOVERY",
+  "state_after": "RECOVERED_PENDING_HOSTED_QUALIFICATION"
+}

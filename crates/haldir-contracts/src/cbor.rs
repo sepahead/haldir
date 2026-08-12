@@ -190,6 +190,7 @@ pub struct CborReader<'a> {
     data: &'a [u8],
     pos: usize,
     depth: usize,
+    container_balance_invalid: bool,
     limits: Limits,
 }
 
@@ -201,6 +202,7 @@ impl<'a> CborReader<'a> {
             data,
             pos: 0,
             depth: 0,
+            container_balance_invalid: false,
             limits,
         }
     }
@@ -303,9 +305,14 @@ impl<'a> CborReader<'a> {
         Ok(())
     }
 
-    /// Signal the end of a container previously opened by `read_map_len`/`read_array_len`.
+    /// Signal the end of a container previously opened by
+    /// [`Self::read_map_len`] or [`Self::read_array_len`]. An unmatched close
+    /// permanently invalidates the reader and is reported by [`Self::finish`].
     pub fn end_container(&mut self) {
-        self.depth = self.depth.saturating_sub(1);
+        match self.depth.checked_sub(1) {
+            Some(depth) => self.depth = depth,
+            None => self.container_balance_invalid = true,
+        }
     }
 
     /// Read an unsigned integer (major 0).
@@ -439,11 +446,14 @@ impl<'a> CborReader<'a> {
     ///
     /// # Errors
     /// Returns [`DecodeError::ByteLenExceeded`] if the supplied top-level input
-    /// exceeds its configured bound, or [`DecodeError::TrailingBytes`] if bytes
-    /// remain.
+    /// exceeds its configured bound, [`DecodeError::ContainerBalanceInvalid`] if
+    /// a decoder over- or under-closed a container, or
+    /// [`DecodeError::TrailingBytes`] if bytes remain.
     pub fn finish(&self) -> Result<(), DecodeError> {
         if self.data.len() > self.limits.max_total_bytes {
             Err(DecodeError::ByteLenExceeded)
+        } else if self.container_balance_invalid || self.depth != 0 {
+            Err(DecodeError::ContainerBalanceInvalid)
         } else if self.pos == self.data.len() {
             Ok(())
         } else {

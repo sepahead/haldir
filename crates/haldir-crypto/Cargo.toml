@@ -1,6 +1,6 @@
 [package]
 name = "haldir-crypto"
-description = "Haldir Gate — haldir-crypto"
+description = "Role-bound Ed25519, COSE, trust-store, and revocation primitives for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,10 +15,8 @@ workspace = true
 [dependencies]
 haldir-contracts.workspace = true
 ed25519-compact.workspace = true
-sha2.workspace = true
+curve25519-dalek.workspace = true
 zeroize.workspace = true
-subtle.workspace = true
-getrandom.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

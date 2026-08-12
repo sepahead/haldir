@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import tomllib
 import unittest
 from pathlib import Path
@@ -239,6 +240,65 @@ class CargoDenyPinTests(unittest.TestCase):
             POLICY.SUPPORTED_TARGETS,
         )
 
+    def test_bounded_process_rejects_output_growth_during_execution(self) -> None:
+        with self.assertRaisesRegex(POLICY.PinPolicyError, "stdout exceeds"):
+            POLICY._run_bounded_process(
+                (
+                    sys.executable,
+                    "-I",
+                    "-B",
+                    "-c",
+                    "import sys;sys.stdout.buffer.write(b'x'*9)",
+                ),
+                cwd=ROOT,
+                environment={"PATH": "/usr/bin:/bin"},
+                timeout_seconds=2,
+                stdout_limit=8,
+                stderr_limit=8,
+                label="test process",
+            )
+
+    def test_bounded_process_kills_same_group_child_after_leader_exit(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="haldir-bounded-process-") as directory:
+            marker = Path(directory) / "survived"
+            child = (
+                "import pathlib,time;time.sleep(0.3);"
+                f"pathlib.Path({str(marker)!r}).write_text('escaped')"
+            )
+            leader = (
+                "import subprocess,sys;"
+                f"subprocess.Popen([sys.executable,'-I','-B','-c',{child!r}],"
+                "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,"
+                "stderr=subprocess.DEVNULL)"
+            )
+            result = POLICY._run_bounded_process(
+                (sys.executable, "-I", "-B", "-c", leader),
+                cwd=ROOT,
+                environment={"PATH": "/usr/bin:/bin"},
+                timeout_seconds=2,
+                stdout_limit=8,
+                stderr_limit=8,
+                label="test process",
+            )
+            self.assertEqual(result.returncode, 0)
+            time.sleep(0.5)
+            self.assertFalse(marker.exists())
+
+    def test_bounded_process_times_out_while_child_refuses_stdin(self) -> None:
+        started = time.monotonic()
+        with self.assertRaisesRegex(POLICY.PinPolicyError, "timed out"):
+            POLICY._run_bounded_process(
+                (sys.executable, "-I", "-B", "-c", "import time;time.sleep(5)"),
+                cwd=ROOT,
+                environment={"PATH": "/usr/bin:/bin"},
+                timeout_seconds=0.2,
+                stdout_limit=8,
+                stderr_limit=8,
+                label="test process",
+                stdin=b"x" * POLICY.MAX_PROCESS_INPUT_BYTES,
+            )
+        self.assertLess(time.monotonic() - started, 2.0)
+
     def test_existing_pin_verifier_enforces_closed_policy(self) -> None:
         verifier = runpy.run_path(str(ROOT / "tools" / "verify-pins.py"))
         pins = copy.deepcopy(self.pins)
@@ -373,19 +433,26 @@ class CargoDenyPinTests(unittest.TestCase):
         with self.assertRaisesRegex(POLICY.PinPolicyError, "duplicate"):
             POLICY.parse_policy(pins)
 
-    def test_dependency_values_and_direct_rustix_pin_are_closed(self) -> None:
-        for replacement in ({"version": "1.1.4"}, "1.1.3"):
+    def test_exact_reviewed_dependency_values_are_closed(self) -> None:
+        cases = (
+            ("ed25519-compact", "2.3.0"),
+            ("curve25519-dalek", "4.1.2"),
+            ("subtle", "2.6.0"),
+            ("rustix", {"version": "1.1.4"}),
+            ("rustix", "1.1.3"),
+        )
+        for name, replacement in cases:
             pins = copy.deepcopy(self.pins)
-            pins["dependencies"]["rustix"] = replacement
-            with self.subTest(replacement=replacement):
+            pins["dependencies"][name] = replacement
+            with self.subTest(name=name, replacement=replacement):
                 with self.assertRaisesRegex(
                     POLICY.PinPolicyError,
-                    "dependencies.rustix",
+                    f"dependencies.{name}",
                 ):
                     POLICY.parse_policy(pins)
 
     def test_recorded_formal_runtime_and_asset_are_exact(self) -> None:
-        self.assertEqual(self.pins["schema_version"], 3)
+        self.assertEqual(self.pins["schema_version"], 4)
         self.assertEqual(len(self.pins["formal"]), 16)
         self.assertEqual(len(POLICY.EXACT_JAVA_PINS), 13)
         self.assertEqual(len(CI_POLICY.FORMAL_PIN_KEYS), 16)
@@ -402,13 +469,13 @@ class CargoDenyPinTests(unittest.TestCase):
         )
 
     def test_pin_schema_version_rejects_stale_and_unknown_values(self) -> None:
-        for replacement in (1, 2, 4, True):
+        for replacement in (1, 2, 3, 5, True):
             with self.subTest(schema_version=replacement):
                 pins = copy.deepcopy(self.pins)
                 pins["schema_version"] = replacement
                 with self.assertRaisesRegex(
                     POLICY.PinPolicyError,
-                    "schema_version must be 3",
+                    "schema_version must be 4",
                 ):
                     POLICY.parse_policy(pins)
 
@@ -544,7 +611,7 @@ class CargoDenyPinTests(unittest.TestCase):
 
 
 class WorkflowPinContractTests(unittest.TestCase):
-    """Exercise PR isolation, main concurrency, and formal runtime bindings."""
+    """Exercise PR isolation, event/ref authority, and formal runtime bindings."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -617,13 +684,6 @@ class WorkflowPinContractTests(unittest.TestCase):
             [],
         )
         self.assertEqual(
-            CI_POLICY.verify_gh_cli_material(
-                self.ci,
-                label="ci",
-            ),
-            [],
-        )
-        self.assertEqual(
             CI_POLICY.verify_trusted_event_steps(
                 self.ci,
                 label="ci",
@@ -632,7 +692,7 @@ class WorkflowPinContractTests(unittest.TestCase):
             [],
         )
         self.assertEqual(
-            CI_POLICY.verify_pr_recovery_step(
+            CI_POLICY.verify_candidate_lineage_steps(
                 self.ci,
                 label="ci",
             ),
@@ -647,6 +707,13 @@ class WorkflowPinContractTests(unittest.TestCase):
             [],
         )
         self.assertEqual(
+            CI_POLICY.verify_formal_lineage_step(
+                self.formal,
+                label="formal",
+            ),
+            [],
+        )
+        self.assertEqual(
             CI_POLICY.verify_formal_job(
                 self.formal,
                 label="formal",
@@ -655,301 +722,48 @@ class WorkflowPinContractTests(unittest.TestCase):
             [],
         )
 
-    def test_github_cli_environment_interface_is_epoch_18(self) -> None:
-        canonical = "HALDIR_FR0017_GH"
-        mutations = (
-            self.ci.replace(canonical, "HALDIR_FR9999_GH", 1),
-            self.ci.replace(
-                f"          printf '{canonical}=%s\\n'",
-                "          printf 'HALDIR_FR9999_GH=%s\\n' \"$GH_BIN\""
-                ' >> "$GITHUB_ENV"\n'
-                f"          printf '{canonical}=%s\\n'",
-                1,
-            ),
-        )
-        for index, mutation in enumerate(mutations):
-            with self.subTest(mutation=index):
-                problems = CI_POLICY.verify_gh_cli_material(
-                    mutation,
-                    label="ci",
-                )
-                self.assertTrue(
-                    any(
-                        "environment interface differs" in problem
-                        for problem in problems
-                    ),
-                    problems,
-                )
+    def test_retired_epoch_18_github_cli_interface_is_absent(self) -> None:
+        self.assertNotIn("HALDIR_FR0017_GH", self.ci)
+        self.assertNotIn("Install pinned GitHub CLI", self.ci)
 
-    def test_recovery_dispatcher_is_exact_and_event_closed(self) -> None:
-        self.assertEqual(
+    def test_lineage_step_cannot_trust_the_candidate_to_verify_itself(self) -> None:
+        mutations = (
             (
-                CI_POLICY.RECOVERY_DISPATCH_STEP_STATUS,
-                CI_POLICY.RECOVERY_DISPATCH_STEP_CONCLUSION,
-                CI_POLICY.RECOVERY_DISPATCH_STEP_CARDINALITY,
+                '            TRUSTED_BASE_SHA="$PR_BASE_SHA"',
+                '            TRUSTED_BASE_SHA="$CANDIDATE_SHA"',
             ),
-            ("completed", "success", 1),
-        )
-        supply_chain = CI_POLICY._job_block(
-            self.ci,
-            "supply-chain",
-            label="ci",
-        )
-        dispatcher = CI_POLICY._step_block(
-            supply_chain,
-            CI_POLICY.RECOVERY_DISPATCH_STEP_NAME,
-            label="ci:supply-chain",
-        )
-
-        def mutate(old: str, new: str) -> str:
-            self.assertEqual(dispatcher.count(old), 1, old)
-            changed = dispatcher.replace(old, new, 1)
-            self.assertNotEqual(changed, dispatcher)
-            return self.ci.replace(dispatcher, changed, 1)
-
-        mutations = (
-            mutate(
-                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
-                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n"
-                "        if: github.event_name == 'pull_request'\n",
+            (
+                '            [[ "$TRUSTED_BASE_SHA" == "$EPOCH19_BREACH_SHA" ]]',
+                '            [[ -n "$TRUSTED_BASE_SHA" ]]',
             ),
-            mutate(
-                f"        shell: {CI_POLICY.RECOVERY_DISPATCH_SHELL}\n",
-                "        shell: /bin/bash --noprofile --norc -eu {0}\n",
+            ("TRUSTED_VERIFIER_BYTES <= 131072", "TRUSTED_VERIFIER_BYTES <= 0"),
+            (
+                '            python3 -I -B -S -W error '
+                '"$TRUSTED_LINEAGE_VERIFIER" \\\n'
+                '              --commit "$TRUSTED_BASE_SHA"',
+                '            python3 -I -B -S -W error '
+                '"$TRUSTED_LINEAGE_VERIFIER" \\\n'
+                '              --commit "$CANDIDATE_SHA"',
             ),
-            mutate(
-                '          case "$GITHUB_EVENT_NAME" in\n',
-                '          case "$GITHUB_EVENT" in\n',
+            (
+                "            /usr/bin/git cat-file blob \\\n",
+                "            /usr/bin/git show \\\n",
             ),
-            mutate(
-                CI_POLICY.PR_RECOVERY_COMMANDS[0],
-                CI_POLICY.PR_RECOVERY_COMMANDS[0].replace("-W error ", ""),
-            ),
-            mutate(
-                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[1]}\n",
-                "",
-            ),
-            mutate(
-                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[2]}\n",
-                "",
-            ),
-            mutate(
-                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[2]}\n",
-                f"              {CI_POLICY.PR_RECOVERY_COMMANDS[2]}\n"
-                "              python3 -I -B tools/verify-ci-pins.py\n",
-            ),
-            mutate(
-                "            pull_request)\n",
-                "            pull_request|push)\n",
-            ),
-            mutate(
-                "            push)\n",
-                "            push|schedule)\n",
-            ),
-            mutate(
-                "            workflow_dispatch)\n",
-                "            workflow_dispatch|schedule)\n",
-            ),
-            mutate(
-                f"'{CI_POLICY.RECOVERY_DISPATCH_PUSH_MESSAGE}'\n",
-                "'unverified push'\n",
-            ),
-            mutate(
-                f"'{CI_POLICY.RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE}'\n",
-                "'unverified workflow dispatch'\n",
-            ),
-            mutate(
-                "            *)\n"
-                "              /usr/bin/printf '%s\\n' "
-                f"'{CI_POLICY.RECOVERY_DISPATCH_DIAGNOSTIC}' >&2\n",
-                "            schedule)\n"
-                "              /usr/bin/printf '%s\\n' "
-                f"'{CI_POLICY.RECOVERY_DISPATCH_DIAGNOSTIC}' >&2\n",
-            ),
-            mutate(
-                "              exit 1\n"
-                "              ;;\n"
-                "          esac\n",
-                "              exit 0\n"
-                "              ;;\n"
-                "          esac\n",
-            ),
-            mutate(
-                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
-                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n"
-                "        continue-on-error: true\n",
-            ),
-            mutate(
-                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
-                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n"
-                "        env:\n"
-                "          GITHUB_EVENT_NAME: pull_request\n",
-            ),
-            self.ci.replace(
-                "  supply-chain:\n",
-                "  supply-chain:\n"
-                "    env:\n"
-                "      GITHUB_EVENT_NAME: push\n",
-                1,
-            ),
-            self.ci.replace(
-                "permissions:\n  contents: read\n",
-                "env:\n"
-                "  GITHUB_EVENT_NAME: workflow_dispatch\n\n"
-                "permissions:\n"
-                "  contents: read\n",
-                1,
-            ),
-            self.ci.replace(dispatcher, dispatcher + dispatcher, 1),
-            mutate(
-                f"      - name: {CI_POLICY.PR_RECOVERY_STEP_NAME}\n",
-                "      - name: Unreviewed recovery dispatcher\n",
+            (
+                "97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8",
+                "079a8fd227bdf6476d307f792cfcb070d6fc3a8c",
             ),
         )
-        for index, mutation in enumerate(mutations):
-            with self.subTest(mutation=index):
-                self.assertNotEqual(mutation, self.ci)
-                problems = CI_POLICY.verify_pr_recovery_step(
-                    mutation,
-                    label="ci",
-                )
-                self.assertTrue(problems)
-
-    def test_recovery_dispatcher_observes_trusted_and_unknown_events(self) -> None:
-        supply_chain = CI_POLICY._job_block(
-            self.ci,
-            "supply-chain",
-            label="ci",
+        cases = (
+            (self.ci, CI_POLICY.verify_candidate_lineage_steps, "ci"),
+            (self.formal, CI_POLICY.verify_formal_lineage_step, "formal"),
         )
-        dispatcher = CI_POLICY._step_block(
-            supply_chain,
-            CI_POLICY.RECOVERY_DISPATCH_STEP_NAME,
-            label="ci:supply-chain",
-        )
-        _prefix, separator, body = dispatcher.partition("        run: |\n")
-        self.assertTrue(separator)
-        lines = body.splitlines(keepends=True)
-        self.assertTrue(lines)
-        self.assertTrue(all(line.startswith("          ") for line in lines))
-        script = "".join(line[10:] for line in lines)
-
-        with tempfile.TemporaryDirectory(
-            prefix="haldir-recovery-dispatch-",
-        ) as directory:
-            temporary = Path(directory)
-            argv_log = temporary / "argv.log"
-            python_stub = temporary / "python3"
-            python_stub.write_text(
-                "#!/bin/sh\n"
-                "set -eu\n"
-                ': "${HALDIR_DISPATCH_ARGV_LOG:?}"\n'
-                "/usr/bin/printf '%s:%s\\n' \"$#\" \"$*\" "
-                '>> "$HALDIR_DISPATCH_ARGV_LOG"\n',
-                encoding="utf-8",
-            )
-            python_stub.chmod(0o700)
-            completed = subprocess.run(
-                (
-                    "/bin/bash",
-                    "--noprofile",
-                    "--norc",
-                    "-euo",
-                    "pipefail",
-                    "-c",
-                    script,
-                ),
-                cwd=ROOT,
-                env={
-                    "GITHUB_EVENT_NAME": "pull_request",
-                    "HALDIR_DISPATCH_ARGV_LOG": str(argv_log),
-                    "LC_ALL": "C",
-                    "PATH": f"{temporary}:/usr/bin:/bin",
-                },
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=10,
-            )
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(completed.stdout, "")
-            self.assertEqual(completed.stderr, "")
-            recorded_argv = argv_log.read_text(encoding="utf-8").splitlines()
-        self.assertEqual(
-            recorded_argv,
-            [
-                "5:" + command.removeprefix("python3 ")
-                for command in CI_POLICY.PR_RECOVERY_COMMANDS
-            ],
-        )
-
-        expected = {
-            "push": CI_POLICY.RECOVERY_DISPATCH_PUSH_MESSAGE,
-            "workflow_dispatch": (
-                CI_POLICY.RECOVERY_DISPATCH_WORKFLOW_DISPATCH_MESSAGE
-            ),
-        }
-        for event, message in expected.items():
-            completed = subprocess.run(
-                (
-                    "/bin/bash",
-                    "--noprofile",
-                    "--norc",
-                    "-euo",
-                    "pipefail",
-                    "-c",
-                    script,
-                ),
-                cwd=ROOT,
-                env={
-                    "GITHUB_EVENT_NAME": event,
-                    "LC_ALL": "C",
-                    "PATH": "/usr/bin:/bin",
-                },
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=10,
-            )
-            with self.subTest(event=event):
-                self.assertEqual(completed.returncode, 0, completed.stderr)
-                self.assertEqual(completed.stdout, message + "\n")
-                self.assertEqual(completed.stderr, "")
-
-        for event in ("schedule", "", None):
-            environment = {
-                "LC_ALL": "C",
-                "PATH": "/usr/bin:/bin",
-            }
-            if event is not None:
-                environment["GITHUB_EVENT_NAME"] = event
-            completed = subprocess.run(
-                (
-                    "/bin/bash",
-                    "--noprofile",
-                    "--norc",
-                    "-euo",
-                    "pipefail",
-                    "-c",
-                    script,
-                ),
-                cwd=ROOT,
-                env=environment,
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=10,
-            )
-            with self.subTest(event=event):
-                self.assertNotEqual(completed.returncode, 0)
-                self.assertEqual(completed.stdout, "")
-                if event is not None:
-                    self.assertEqual(
-                        completed.stderr,
-                        CI_POLICY.RECOVERY_DISPATCH_DIAGNOSTIC + "\n",
-                    )
+        for text, verifier, label in cases:
+            for original, replacement in mutations:
+                with self.subTest(workflow=label, mutation=original):
+                    self.assertIn(original, text)
+                    mutated = text.replace(original, replacement, 1)
+                    self.assertTrue(verifier(mutated, label=label))
 
     def test_workflow_python_entrypoints_require_exact_isolation(self) -> None:
         mutations = (
@@ -977,11 +791,24 @@ class WorkflowPinContractTests(unittest.TestCase):
                 1,
             ),
             self.ci.replace(
-                CI_POLICY.PR_RECOVERY_COMMANDS[2],
-                CI_POLICY.PR_RECOVERY_COMMANDS[2].replace(
+                CI_POLICY.DOCTOR_TEST_COMMAND,
+                CI_POLICY.DOCTOR_TEST_COMMAND.replace(
+                    "test_doctor.py",
+                    "verify-claims.py",
+                ),
+                1,
+            ),
+            self.ci.replace(
+                CI_POLICY.HARNESS_COMMANDS[1],
+                CI_POLICY.HARNESS_COMMANDS[1].replace(
                     "test_run_formal.py",
                     "verify-claims.py",
                 ),
+                1,
+            ),
+            self.ci.replace(
+                CI_POLICY.TRUSTED_LINEAGE_PYTHON_COMMAND,
+                CI_POLICY.TRUSTED_LINEAGE_PYTHON_COMMAND.replace(" -I", ""),
                 1,
             ),
         )
@@ -1062,16 +889,16 @@ class WorkflowPinContractTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("verify-secure-zenoh: OK", completed.stdout)
 
-    def test_ci_result_identity_is_epoch_18_and_fr_0017(self) -> None:
+    def test_ci_result_identity_is_current_and_epoch_19_aware(self) -> None:
         mutations = (
             self.ci.replace(
-                "framework_recovery_fr_0017_result.py",
-                "framework_recovery_fr_9999_result.py",
+                "current_audit_result.py",
+                "unreviewed_result.py",
                 1,
             ),
             self.ci.replace(
-                "epoch-18-ci-result-attempt-",
-                "epoch-99-ci-result-attempt-",
+                "current-ci-result-attempt-",
+                "unreviewed-ci-result-attempt-",
                 1,
             ),
         )
@@ -1125,8 +952,32 @@ class WorkflowPinContractTests(unittest.TestCase):
             "permissions:\n",
             1,
         )
+        wildcard_push = self.formal.replace(
+            '    branches: ["main"]\n',
+            '    branches: ["**"]\n',
+            1,
+        )
+        feature_push = self.formal.replace(
+            '    branches: ["main"]\n',
+            '    branches: ["main", "feature/**"]\n',
+            1,
+        )
+        unauthorized_release_push = self.formal.replace(
+            '    branches: ["main"]\n',
+            '    branches: ["main", "release/**"]\n',
+            1,
+        )
+        inverted_push_filter = self.formal.replace(
+            '    branches: ["main"]\n',
+            '    branches-ignore: ["main"]\n',
+            1,
+        )
         expectations = (
-            (extra_event, "every branch push"),
+            (extra_event, "main pushes"),
+            (wildcard_push, "main pushes"),
+            (feature_push, "main pushes"),
+            (unauthorized_release_push, "main pushes"),
+            (inverted_push_filter, "main pushes"),
             (queued_main, "isolate every main run"),
             (
                 self.formal + "\non:\n  workflow_dispatch:\n",
@@ -1144,6 +995,37 @@ class WorkflowPinContractTests(unittest.TestCase):
                     any(diagnostic in problem for problem in problems),
                     problems,
                 )
+
+    def test_feature_pushes_cannot_create_duplicate_required_contexts(self) -> None:
+        exact_trigger = (
+            'on:\n  push:\n    branches: ["main"]\n'
+            '  pull_request:\n    branches: ["main"]\n'
+            "  workflow_dispatch:\n"
+        )
+        for workflow, text in (("ci", self.ci), ("formal", self.formal)):
+            with self.subTest(workflow=workflow, surface="canonical"):
+                self.assertEqual(text.count(exact_trigger), 1)
+                self.assertNotIn('branches: ["**"]', text)
+            for branch_filter in (
+                '["**"]',
+                '["main", "feature/**"]',
+                '["main", "release/**"]',
+            ):
+                mutation = text.replace(
+                    'branches: ["main"]',
+                    f"branches: {branch_filter}",
+                    1,
+                )
+                with self.subTest(workflow=workflow, branch_filter=branch_filter):
+                    problems = CI_POLICY.verify_workflow_envelope(
+                        mutation,
+                        label=workflow,
+                        workflow=workflow,
+                    )
+                    self.assertTrue(
+                        any("main pushes" in problem for problem in problems),
+                        problems,
+                    )
 
     def test_workflow_level_environment_and_shell_overrides_are_forbidden(self) -> None:
         environment = self.ci.replace(
@@ -1193,10 +1075,6 @@ class WorkflowPinContractTests(unittest.TestCase):
         )
         self.assertTrue(
             any("merge commit" in problem for problem in problems),
-            problems,
-        )
-        self.assertTrue(
-            any("head bypass" in problem for problem in problems),
             problems,
         )
 
@@ -1280,6 +1158,63 @@ class WorkflowPinContractTests(unittest.TestCase):
             problems,
         )
 
+    def test_attesters_are_exactly_main_push_only(self) -> None:
+        cases = (
+            (
+                self.ci,
+                "ci",
+                "attest-ci-audit-result",
+                (
+                    "build-test",
+                    "clean-build",
+                    "feature-matrix",
+                    "interop",
+                    "macos-compile",
+                    "supply-chain",
+                ),
+            ),
+            (
+                self.formal,
+                "formal",
+                "attest-formal-audit-result",
+                ("tlc-model-check",),
+            ),
+        )
+        for text, label, job, needs in cases:
+            block = CI_POLICY._job_block(text, job, label=label)
+            self.assertTrue(
+                block.startswith(f"  {job}:\n{CI_POLICY.TRUSTED_MAIN_JOB_CONDITION}")
+            )
+            mutations = (
+                block.replace("refs/heads/main", "refs/heads/feature/bypass", 1),
+                block.replace("refs/heads/main", "refs/heads/release/0.9.0", 1),
+                block.replace(
+                    "github.event_name == 'push'",
+                    "github.event_name == 'workflow_dispatch'",
+                    1,
+                ),
+                block.replace(
+                    "github.event_name == 'push'",
+                    "github.event_name == 'pull_request'",
+                    1,
+                ),
+                block.replace(
+                    CI_POLICY.TRUSTED_MAIN_JOB_CONDITION,
+                    "    if: github.event_name != 'pull_request'\n",
+                    1,
+                ),
+            )
+            for index, mutated_block in enumerate(mutations):
+                mutation = text.replace(block, mutated_block, 1)
+                with self.subTest(job=job, mutation=index):
+                    problems = CI_POLICY.verify_oidc_job(
+                        mutation,
+                        label=label,
+                        job=job,
+                        expected_needs=needs,
+                    )
+                    self.assertTrue(problems)
+
     def test_required_jobs_cannot_override_permissions_with_yaml_scalars(self) -> None:
         quoted_write = self.ci.replace(
             "  build-test:\n    runs-on: ubuntu-24.04\n",
@@ -1321,25 +1256,31 @@ class WorkflowPinContractTests(unittest.TestCase):
                     problems,
                 )
 
-    def test_only_named_history_bound_steps_are_pr_excluded(self) -> None:
-        mutation = self.ci.replace(
+    def test_only_named_history_bound_steps_use_exact_trusted_main_gate(self) -> None:
+        condition = CI_POLICY.TRUSTED_MAIN_STEP_CONDITION
+        replacements = (
             "        if: github.event_name != 'pull_request'\n",
             "        if: github.ref == 'refs/heads/main'\n",
-            1,
+            "        if: github.event_name == 'push'\n",
+            "        if: github.ref == 'refs/heads/release/0.9.0'\n",
         )
-        problems = CI_POLICY.verify_trusted_event_steps(
-            mutation,
-            label="ci",
-            job="supply-chain",
-        )
-        self.assertTrue(
-            any("skipped only for pull requests" in problem for problem in problems),
-            problems,
-        )
-        self.assertTrue(
-            any("pull-request exclusions" in problem for problem in problems),
-            problems,
-        )
+        for replacement in replacements:
+            mutation = self.ci.replace(condition, replacement, 1)
+            with self.subTest(replacement=replacement.strip()):
+                self.assertNotEqual(mutation, self.ci)
+                problems = CI_POLICY.verify_trusted_event_steps(
+                    mutation,
+                    label="ci",
+                    job="supply-chain",
+                )
+                self.assertTrue(
+                    any("main push/manual-dispatch" in problem for problem in problems),
+                    problems,
+                )
+                self.assertTrue(
+                    any("trusted-main gates" in problem for problem in problems),
+                    problems,
+                )
 
     def test_diagnostic_log_upload_remains_distinct_from_canonical_result(self) -> None:
         job = CI_POLICY._job_block(
@@ -1354,15 +1295,15 @@ class WorkflowPinContractTests(unittest.TestCase):
         )
         canonical = CI_POLICY._step_block(
             job,
-            "Upload canonical epoch-18 formal result",
+            "Upload canonical current formal result",
             label="formal:tlc-model-check",
         )
         self.assertIn("        if: always()\n", diagnostic)
-        self.assertNotIn("github.event_name != 'pull_request'", diagnostic)
+        self.assertNotIn(CI_POLICY.TRUSTED_MAIN_STEP_CONDITION, diagnostic)
         self.assertTrue(
             canonical.startswith(
-                "      - name: Upload canonical epoch-18 formal result\n"
-                "        if: github.event_name != 'pull_request'\n"
+                "      - name: Upload canonical current formal result\n"
+                + CI_POLICY.TRUSTED_MAIN_STEP_CONDITION
             )
         )
 
@@ -1416,10 +1357,10 @@ class WorkflowPinContractTests(unittest.TestCase):
         stale_schema["schema_version"] = 1
         mutations.append(stale_schema)
         previous_schema = copy.deepcopy(self.pins)
-        previous_schema["schema_version"] = 2
+        previous_schema["schema_version"] = 3
         mutations.append(previous_schema)
         future_schema = copy.deepcopy(self.pins)
-        future_schema["schema_version"] = 4
+        future_schema["schema_version"] = 5
         mutations.append(future_schema)
         unknown = copy.deepcopy(self.pins)
         unknown["formal"]["unknown"] = "value"

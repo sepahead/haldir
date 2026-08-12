@@ -52,8 +52,16 @@ impl TestClock {
 
     /// Advance by `ms` milliseconds.
     pub fn advance_ms(&self, ms: u64) {
-        self.ns
-            .fetch_add(ms.saturating_mul(1_000_000), Ordering::SeqCst);
+        let delta_ns = ms.saturating_mul(1_000_000);
+        // `AtomicU64::fetch_add` wraps at the namespace boundary. A test clock
+        // advertised as monotonic must instead remain pinned at the last
+        // representable instant; otherwise an overflow can accidentally model a
+        // clock regression unrelated to the behavior under test.
+        let _ = self
+            .ns
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                Some(current.saturating_add(delta_ns))
+            });
     }
 
     /// Set the absolute nanosecond value (may move backward for fault testing).
@@ -65,5 +73,21 @@ impl TestClock {
 impl MonotonicClock for TestClock {
     fn now(&self) -> MonoInstant {
         MonoInstant::from_nanos(self.ns.load(Ordering::SeqCst))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clock_advance_saturates_instead_of_wrapping() {
+        let clock = TestClock::new(u64::MAX - 500_000);
+
+        clock.advance_ms(1);
+        assert_eq!(clock.now().as_nanos(), u64::MAX);
+
+        clock.advance_ms(u64::MAX);
+        assert_eq!(clock.now().as_nanos(), u64::MAX);
     }
 }

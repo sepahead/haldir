@@ -19,6 +19,7 @@
 )]
 
 pub mod adapter;
+pub mod command;
 pub mod compatibility;
 pub mod conversion;
 pub mod error;
@@ -31,8 +32,9 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub use adapter::{
     AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NCP_JSON_SAFE_INTEGER_MAX,
-    NcpCommandAdapter, NcpCommandFrameV1,
+    NcpCommandAdapter, NcpCommandFrameV1, NcpCommandWireProfile,
 };
+pub use command::{PlantAction, PlantCommand, PlantCommandError};
 pub use compatibility::{
     NCP_COMPATIBILITY_ARTIFACT_MAX_BYTES, NCP_V0_8_0, NcpCompatibilityArtifactV1,
     NcpCompatibilityError, NcpCompatibilityRecordV1, ValidatedNcpCompatibilityArtifact,
@@ -42,20 +44,19 @@ pub use conversion::{mm_s_to_ncp_m_s, ncp_m_s_to_mm_s};
 pub use error::NcpAdapterError;
 #[cfg(feature = "real-ncp")]
 pub use real::RealNcp08Adapter;
-pub use selection::{NcpCommandWireProfile, SelectedNcpCommandAdapter};
+pub use selection::SelectedNcpCommandAdapter;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
 
     fn input(seq: u64, action: RequestedActionV1) -> GateCommandBuildInputV1 {
         GateCommandBuildInputV1 {
-            decision_id: DecisionId::new([1; 16]),
             session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("sess-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
@@ -107,9 +108,12 @@ mod tests {
         let f2 = a.build_command(&inp).unwrap();
         assert_eq!(f1.bytes(), f2.bytes(), "build is deterministic");
         assert_eq!(f1.digest(), f2.digest());
+        assert_eq!(f1.wire_profile(), NcpCommandWireProfile::ModeledP0);
+        assert!(f1.source_key_is_wire_bound());
+        assert!(f1.is_self_consistent());
         assert!(a.validate_exact_command(&f1, &inp).is_ok());
         // decoded velocity round-trips the fixed-point exactly (H17)
-        assert_eq!(f1.decoded_velocity_mm_s(), [500, -250, 0]);
+        assert_eq!(f1.decoded_velocity_mm_s().unwrap(), [500, -250, 0]);
         assert_eq!(
             f1.transformation(),
             haldir_contracts::receipt::TransformationRelationV1::FixedPointToNcpFloatV1

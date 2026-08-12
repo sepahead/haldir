@@ -8,8 +8,9 @@
 //!   — a nested value with no `message_kind`; fields may start at key `1`.
 //!
 //! Field keys MUST be declared in strictly ascending order (key `1` reserved for
-//! `message_kind` in the first form). Emission follows declaration order, which is
-//! therefore canonical ascending order. Optional fields are omitted when `None`.
+//! `message_kind` in the first form). The macro enforces this at compile time.
+//! Emission follows declaration order, which is therefore canonical ascending
+//! order. Optional fields are omitted when `None`.
 
 /// Field storage type: `T` for `req`, `Option<T>` for `opt`.
 #[macro_export]
@@ -75,7 +76,8 @@ macro_rules! __hc_build {
 
 /// Generate a `u64`-tagged fieldless enum with a stable string `code()`, a wire
 /// `tag()`, and a canonical encoding. Used for reason codes, stages, and other
-/// closed discriminant enums.
+/// closed discriminant enums. Numeric tags and machine codes are compile-time
+/// unique.
 #[macro_export]
 macro_rules! tagged_enum {
     (
@@ -84,6 +86,47 @@ macro_rules! tagged_enum {
             $( $variant:ident = $tag:literal => $code:literal ),+ $(,)?
         }
     ) => {
+        // Every index is guarded by the adjacent loop bound. Const iteration is
+        // intentionally written without runtime Option handling so a malformed
+        // schema fails during compilation.
+        #[allow(clippy::indexing_slicing)]
+        const _: () = {
+            const fn same_bytes(left: &str, right: &str) -> bool {
+                let left = left.as_bytes();
+                let right = right.as_bytes();
+                if left.len() != right.len() {
+                    return false;
+                }
+                let mut index = 0;
+                while index < left.len() {
+                    if left[index] != right[index] {
+                        return false;
+                    }
+                    index += 1;
+                }
+                true
+            }
+
+            let tags: &[u64] = &[$( $tag ),+];
+            let codes: &[&str] = &[$( $code ),+];
+            let mut left = 0;
+            while left < tags.len() {
+                let mut right = left + 1;
+                while right < tags.len() {
+                    assert!(
+                        tags[left] != tags[right],
+                        "tagged_enum numeric tags must be unique"
+                    );
+                    assert!(
+                        !same_bytes(codes[left], codes[right]),
+                        "tagged_enum machine codes must be unique"
+                    );
+                    right += 1;
+                }
+                left += 1;
+            }
+        };
+
         $(#[$m])*
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         #[non_exhaustive]
@@ -128,10 +171,32 @@ macro_rules! canonical_struct {
             $( $mode:ident $key:literal $field:ident : $ty:ty ),+ $(,)?
         }
     ) => {
+        // Every index is guarded by the adjacent loop bound. Const iteration is
+        // intentionally written without runtime Option handling so a malformed
+        // schema fails during compilation.
+        #[allow(clippy::indexing_slicing)]
+        const _: () = {
+            let keys: &[u64] = &[1, $( $key ),+];
+            let mut index = 1;
+            while index < keys.len() {
+                assert!(
+                    keys[index] > keys[index - 1],
+                    "canonical_struct field keys must be strictly ascending and greater than reserved message-kind key 1"
+                );
+                index += 1;
+            }
+        };
+
         $(#[$smeta])*
         #[derive(Debug, Clone, PartialEq, Eq)]
         $vis struct $name {
-            $( pub $field : $crate::__hc_field_ty!($mode $ty), )+
+            $(
+                #[doc = concat!(
+                    "Canonical `", stringify!($field), "` field at map key `",
+                    stringify!($key), "`."
+                )]
+                pub $field : $crate::__hc_field_ty!($mode $ty),
+            )+
         }
 
         impl $name {
@@ -210,10 +275,32 @@ macro_rules! canonical_struct {
             $( $mode:ident $key:literal $field:ident : $ty:ty ),+ $(,)?
         }
     ) => {
+        // Every index is guarded by the adjacent loop bound. Const iteration is
+        // intentionally written without runtime Option handling so a malformed
+        // schema fails during compilation.
+        #[allow(clippy::indexing_slicing)]
+        const _: () = {
+            let keys: &[u64] = &[0, $( $key ),+];
+            let mut index = 1;
+            while index < keys.len() {
+                assert!(
+                    keys[index] > keys[index - 1],
+                    "canonical_struct field keys must be nonzero and strictly ascending"
+                );
+                index += 1;
+            }
+        };
+
         $(#[$smeta])*
         #[derive(Debug, Clone, PartialEq, Eq)]
         $vis struct $name {
-            $( pub $field : $crate::__hc_field_ty!($mode $ty), )+
+            $(
+                #[doc = concat!(
+                    "Canonical `", stringify!($field), "` field at map key `",
+                    stringify!($key), "`."
+                )]
+                pub $field : $crate::__hc_field_ty!($mode $ty),
+            )+
         }
 
         impl $crate::cbor::CanonicalValue for $name {

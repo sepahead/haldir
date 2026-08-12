@@ -1,3 +1,5 @@
+//! Black-box command-line contract tests for the offline Gate executable.
+
 use std::ffi::OsStr;
 #[cfg(unix)]
 use std::ffi::OsString;

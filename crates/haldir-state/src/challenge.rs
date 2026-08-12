@@ -100,6 +100,7 @@ impl ChallengeTable {
         if self.entries.iter().any(|entry| entry.nonce == nonce)
             || self.len() >= self.max_pending
             || self.entries.len() >= self.max_retained
+            || self.entries.try_reserve(1).is_err()
         {
             return false;
         }

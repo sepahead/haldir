@@ -19,6 +19,7 @@ use crate::scalar::*;
 use crate::session::*;
 use crate::status::*;
 use crate::{CanonicalValue, CborReader};
+use core::cell::Cell;
 use core::num::{NonZeroU32, NonZeroU64};
 
 fn nz32(v: u32) -> NonZeroU32 {
@@ -75,7 +76,7 @@ fn challenge() -> GateChallengeV1 {
         gate_output_epoch: GateOutputEpoch::new(uuid(5)),
         gate_key_id: kid(7),
         policy_snapshot_digest: dig(1),
-        accepted_contract_versions: BoundedVec::from_vec(vec![ContractVersion {
+        accepted_contract_versions: BoundedSet::from_iter_checked([ContractVersion {
             major: 1,
             minor: 0,
         }])
@@ -115,9 +116,10 @@ fn lease() -> MissionLeaseV1 {
         ])
         .unwrap(),
         allowed_frames: BoundedSet::from_iter_checked([CoordinateFrameV1::LocalNed]).unwrap(),
-        allowed_source_keys: BoundedVec::from_vec(vec![
-            BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
-        ])
+        allowed_source_keys: BoundedSet::from_iter_checked([BoundedAscii::new(
+            "veh/uav-1/state/pose",
+        )
+        .unwrap()])
         .unwrap(),
         limits: MissionLeaseLimitsV1 {
             max_output_validity_ms: nz32(500),
@@ -324,6 +326,113 @@ fn intent_rejects_nonzero_schema_minor() {
 }
 
 #[test]
+fn intent_v1_rejects_undefined_auxiliary_input_watermarks() {
+    let mut intent = intent();
+    intent.input_watermarks = BoundedVec::from_vec(vec![src()]).unwrap();
+    let bytes = to_canonical_bytes(&intent);
+
+    assert_eq!(
+        from_canonical_bytes::<HaldirIntentV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::SemanticInvalid {
+            code: "INTENT_INPUT_WATERMARKS_UNSUPPORTED"
+        })
+    );
+}
+
+#[test]
+fn deny_receipt_retains_distinct_same_class_reasons() {
+    let mut receipt = receipt();
+    receipt.decision = DecisionOutcomeV1::Deny;
+    receipt.reason_codes = BoundedVec::from_vec(vec![
+        DecisionReasonCodeV1::DenyCommandRange,
+        DecisionReasonCodeV1::DenyNormBound,
+        DecisionReasonCodeV1::DenyAcceleration,
+    ])
+    .unwrap();
+    receipt.effective_validity_ms = None;
+    receipt.gate_output_stream = None;
+    receipt.output_frame_digest = None;
+    receipt.transformation_relation = None;
+    receipt.publish_stage = PublishStageV1::DecidedDeny;
+
+    rt(&receipt);
+}
+
+#[test]
+fn receipt_rejects_duplicate_or_mixed_reason_classes() {
+    let mut duplicate = receipt();
+    duplicate.decision = DecisionOutcomeV1::Deny;
+    duplicate.reason_codes = BoundedVec::from_vec(vec![
+        DecisionReasonCodeV1::DenyCommandRange,
+        DecisionReasonCodeV1::DenyCommandRange,
+    ])
+    .unwrap();
+    duplicate.effective_validity_ms = None;
+    duplicate.gate_output_stream = None;
+    duplicate.output_frame_digest = None;
+    duplicate.transformation_relation = None;
+    duplicate.publish_stage = PublishStageV1::DecidedDeny;
+    let bytes = to_canonical_bytes(&duplicate);
+    assert_eq!(
+        from_canonical_bytes::<DecisionReceiptV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::SemanticInvalid {
+            code: DecisionReceiptV1::SEMANTIC_ERROR_CODE
+        })
+    );
+
+    duplicate.reason_codes = BoundedVec::from_vec(vec![
+        DecisionReasonCodeV1::DenyCommandRange,
+        DecisionReasonCodeV1::ErrorInternalFault,
+    ])
+    .unwrap();
+    let bytes = to_canonical_bytes(&duplicate);
+    assert_eq!(
+        from_canonical_bytes::<DecisionReceiptV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::SemanticInvalid {
+            code: DecisionReceiptV1::SEMANTIC_ERROR_CODE
+        })
+    );
+}
+
+#[test]
+fn receipt_rejects_partial_intent_bindings_and_unbound_state() {
+    let mut partial = receipt();
+    partial.semantic_intent_digest = None;
+    let bytes = to_canonical_bytes(&partial);
+    assert_eq!(
+        from_canonical_bytes::<DecisionReceiptV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::SemanticInvalid {
+            code: DecisionReceiptV1::SEMANTIC_ERROR_CODE
+        })
+    );
+
+    let mut unbound_state = receipt();
+    unbound_state.decision = DecisionOutcomeV1::Deny;
+    unbound_state.reason_codes =
+        BoundedVec::from_vec(vec![DecisionReasonCodeV1::DenyMalformed]).unwrap();
+    unbound_state.effective_validity_ms = None;
+    unbound_state.gate_output_stream = None;
+    unbound_state.output_frame_digest = None;
+    unbound_state.transformation_relation = None;
+    unbound_state.publish_stage = PublishStageV1::DecidedDeny;
+    unbound_state.payload_digest = None;
+    unbound_state.semantic_intent_digest = None;
+    unbound_state.controller_id = None;
+    unbound_state.controller_intent_position = None;
+    unbound_state.mission_id = None;
+    unbound_state.mission_lease_id = None;
+    unbound_state.admission_digest = None;
+    unbound_state.source = None;
+    let bytes = to_canonical_bytes(&unbound_state);
+    assert_eq!(
+        from_canonical_bytes::<DecisionReceiptV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::SemanticInvalid {
+            code: DecisionReceiptV1::SEMANTIC_ERROR_CODE
+        })
+    );
+}
+
+#[test]
 fn revocation_rejects_nonzero_schema_minor() {
     let mut revocation = revocation();
     revocation.schema_minor = 1;
@@ -385,6 +494,32 @@ fn oversize_rejected_before_decode() {
 }
 
 #[test]
+fn bounded_set_stops_at_the_first_excess_unique_item() {
+    let consumed = Cell::new(0usize);
+    let items = (0u64..100).inspect(|_| consumed.set(consumed.get() + 1));
+
+    assert_eq!(
+        BoundedSet::<u64, 2>::from_iter_checked(items),
+        Err(DecodeError::BoundExceeded)
+    );
+    assert_eq!(consumed.get(), 3);
+}
+
+#[test]
+fn bounded_set_stops_at_the_first_excess_duplicate_item() {
+    let consumed = Cell::new(0usize);
+    let duplicates = core::iter::repeat_n(7u64, 100).inspect(|_| {
+        consumed.set(consumed.get() + 1);
+    });
+
+    assert_eq!(
+        BoundedSet::<u64, 2>::from_iter_checked(duplicates),
+        Err(DecodeError::BoundExceeded)
+    );
+    assert_eq!(consumed.get(), 3);
+}
+
+#[test]
 fn revocation_without_subject_is_invalid() {
     let mut rev = revocation();
     rev.revoke_terms_at_or_below = None;
@@ -399,11 +534,106 @@ fn revocation_without_subject_is_invalid() {
 }
 
 #[test]
-fn digest_domains_do_not_collide() {
+fn revocation_with_two_target_selectors_is_invalid() {
+    let mut rev = revocation();
+    rev.subject_object_digest = Some(dig(9));
+    let bytes = to_canonical_bytes(&rev);
+    assert_eq!(
+        from_canonical_bytes::<AuthorityRevocationV1>(&bytes, Limits::LARGE),
+        Err(DecodeError::SemanticInvalid {
+            code: "REVOCATION_MULTIPLE_TARGETS"
+        })
+    );
+}
+
+#[test]
+fn digest_domains_separate_equal_input_bytes() {
     // Same input, different domain => different digest.
     let a = DigestV1::compute(DigestDomain::Payload, b"x");
     let b = DigestV1::compute(DigestDomain::SemanticIntent, b"x");
     assert_ne!(a.value, b.value);
+}
+
+#[test]
+fn semantic_intent_digest_excludes_only_non_authorizing_controller_provenance() {
+    let original = intent();
+    let expected = original.semantic_digest();
+    assert_eq!(
+        expected.value,
+        [
+            1, 124, 255, 106, 42, 36, 223, 97, 210, 17, 96, 115, 166, 231, 227, 206, 40, 167, 240,
+            36, 152, 75, 11, 143, 38, 143, 241, 144, 232, 74, 234, 21,
+        ],
+        "the semantic projection and its field order are a versioned digest contract"
+    );
+    let payload = DigestV1::of_value(DigestDomain::Payload, &original);
+
+    let mut different_provenance = original.clone();
+    different_provenance.controller_instance_id = ControllerInstanceId::new([0xA5; 16]);
+    different_provenance.controller_t_ns += 1;
+    different_provenance.controller_context_digest = Some(dig(99));
+
+    assert_eq!(different_provenance.semantic_digest(), expected);
+    assert_ne!(
+        DigestV1::of_value(DigestDomain::Payload, &different_provenance),
+        payload
+    );
+}
+
+#[test]
+fn semantic_intent_digest_binds_authority_policy_replay_source_and_action() {
+    let original = intent();
+    let expected = original.semantic_digest();
+
+    let mut changed_authority = original.clone();
+    changed_authority.mission_lease_term = nz64(original.mission_lease_term.get() + 1);
+    assert_ne!(changed_authority.semantic_digest(), expected);
+
+    let mut changed_replay = original.clone();
+    changed_replay.intent_position.seq = IntentSeq::new(nz64(2));
+    assert_ne!(changed_replay.semantic_digest(), expected);
+
+    let mut changed_source = original.clone();
+    changed_source.primary_source.stream_seq = SourceSeq::new(nz64(43));
+    assert_ne!(changed_source.semantic_digest(), expected);
+
+    let mut changed_action = original;
+    changed_action.action = RequestedActionV1::Hold {
+        requested_validity_ms: nz32(300),
+    };
+    assert_ne!(changed_action.semantic_digest(), expected);
+}
+
+#[test]
+fn dynamic_policy_denial_tags_are_stable_and_round_trip() {
+    for (reason, tag, code) in [
+        (
+            DecisionReasonCodeV1::DenyAcceleration,
+            49,
+            "DENY_ACCELERATION",
+        ),
+        (
+            DecisionReasonCodeV1::DenyContinuousMotion,
+            50,
+            "DENY_CONTINUOUS_MOTION",
+        ),
+        (DecisionReasonCodeV1::DenyHoldDwell, 51, "DENY_HOLD_DWELL"),
+        (DecisionReasonCodeV1::DenyPlantMode, 52, "DENY_PLANT_MODE"),
+        (
+            DecisionReasonCodeV1::DenySourceUnrepresentable,
+            53,
+            "DENY_SOURCE_UNREPRESENTABLE",
+        ),
+    ] {
+        assert_eq!(reason.tag(), tag);
+        assert_eq!(reason.code(), code);
+        assert!(reason.is_deny());
+        let bytes = to_canonical_bytes(&reason);
+        let mut reader = CborReader::new(&bytes, Limits::DEFAULT);
+        let decoded = DecisionReasonCodeV1::decode(&mut reader).unwrap();
+        reader.finish().unwrap();
+        assert_eq!(decoded, reason);
+    }
 }
 
 #[test]

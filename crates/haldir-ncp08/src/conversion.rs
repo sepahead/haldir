@@ -12,6 +12,8 @@
     clippy::float_arithmetic
 )]
 
+use crate::error::NcpAdapterError;
+
 /// Convert a millimetre-per-second fixed-point component to an NCP metre-per-second
 /// wire value.
 #[must_use]
@@ -20,18 +22,26 @@ pub fn mm_s_to_ncp_m_s(mm_s: i32) -> f64 {
     f64::from(mm_s) / 1000.0
 }
 
-/// Recover the fixed-point value from a wire value by round-to-nearest. For values
-/// produced by [`mm_s_to_ncp_m_s`] over the `i32` domain this is exact.
-#[must_use]
-pub fn ncp_m_s_to_mm_s(m_s: f64) -> i32 {
-    let scaled = (m_s * 1000.0).round();
-    if scaled >= f64::from(i32::MAX) {
-        i32::MAX
-    } else if scaled <= f64::from(i32::MIN) {
-        i32::MIN
-    } else {
-        scaled as i32
+/// Recover one fixed-point value from the exact image of
+/// [`mm_s_to_ncp_m_s`].
+///
+/// # Errors
+/// Returns [`NcpAdapterError::ConversionOutOfRange`] for a non-finite value,
+/// a value outside the `i32` millimetre-per-second domain, or a finite value
+/// that is not the exact binary64 projection of an integer mm/s component.
+pub fn ncp_m_s_to_mm_s(m_s: f64) -> Result<i32, NcpAdapterError> {
+    if !m_s.is_finite() {
+        return Err(NcpAdapterError::ConversionOutOfRange);
     }
+    let scaled = (m_s * 1000.0).round();
+    if scaled > f64::from(i32::MAX) || scaled < f64::from(i32::MIN) {
+        return Err(NcpAdapterError::ConversionOutOfRange);
+    }
+    let fixed = scaled as i32;
+    if mm_s_to_ncp_m_s(fixed).to_bits() != m_s.to_bits() {
+        return Err(NcpAdapterError::ConversionOutOfRange);
+    }
+    Ok(fixed)
 }
 
 #[cfg(test)]
@@ -56,7 +66,7 @@ mod tests {
 
         #[test]
         fn round_trip_is_exact(x in any::<i32>()) {
-            prop_assert_eq!(ncp_m_s_to_mm_s(mm_s_to_ncp_m_s(x)), x);
+            prop_assert_eq!(ncp_m_s_to_mm_s(mm_s_to_ncp_m_s(x)), Ok(x));
         }
     }
 
@@ -65,7 +75,7 @@ mod tests {
     fn round_trip_exact_full_domain() {
         let mut x = i32::MIN;
         loop {
-            assert_eq!(ncp_m_s_to_mm_s(mm_s_to_ncp_m_s(x)), x);
+            assert_eq!(ncp_m_s_to_mm_s(mm_s_to_ncp_m_s(x)), Ok(x));
             if x == i32::MAX {
                 break;
             }
@@ -78,6 +88,24 @@ mod tests {
         assert!((mm_s_to_ncp_m_s(0) - 0.0).abs() < f64::EPSILON);
         assert!(mm_s_to_ncp_m_s(-1000) < 0.0);
         assert!(mm_s_to_ncp_m_s(1000) > 0.0);
-        assert_eq!(ncp_m_s_to_mm_s(1.0), 1000);
+        assert_eq!(ncp_m_s_to_mm_s(1.0), Ok(1000));
+    }
+
+    #[test]
+    fn reverse_conversion_rejects_non_finite_out_of_range_and_non_image_values() {
+        for value in [
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            (f64::from(i32::MAX) + 1.0) / 1000.0,
+            (f64::from(i32::MIN) - 1.0) / 1000.0,
+            0.000_4,
+            -0.0,
+        ] {
+            assert_eq!(
+                ncp_m_s_to_mm_s(value),
+                Err(NcpAdapterError::ConversionOutOfRange)
+            );
+        }
     }
 }

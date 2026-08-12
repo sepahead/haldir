@@ -25,14 +25,12 @@ use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1};
 use haldir_contracts::cbor::CanonicalMessage;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::ids::{
-    AdmissionId, ChallengeNonce, ControllerId, GateId, KeyId, MissionId, MissionLeaseId,
+    AdmissionId, ChallengeNonce, ControllerId, GateId, JournalId, KeyId, MissionId, MissionLeaseId,
     PrincipalId, SourceSeq, VehicleId,
 };
 use haldir_contracts::lease::MissionLeaseV1;
 use haldir_contracts::limits::MissionLeaseLimitsV1;
-use haldir_contracts::scalar::{
-    AsciiId, BoundedAscii, BoundedSet, BoundedVec, CanonicalUuidV4String,
-};
+use haldir_contracts::scalar::{AsciiId, BoundedAscii, BoundedSet, CanonicalUuidV4String};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1};
 use haldir_contracts::status::{AclExclusiveEvidenceV1, PlantPublicationAuthorityStateV1};
 use haldir_core::snapshot::{
@@ -40,7 +38,8 @@ use haldir_core::snapshot::{
 };
 use haldir_core::time::{MonoInstant, MonotonicClock};
 use haldir_crypto::{
-    KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore, sign_message,
+    KeyClass, KeyRecord, KeyRole, KeySubject, RevocationSnapshot, SigningKey, TrustStore,
+    sign_message,
 };
 use haldir_durable::{AnchorProtection, RecoveryStatus, StorageMacKey, StoreId};
 use haldir_evidence::journal::JournalBounds;
@@ -51,7 +50,10 @@ use haldir_gate::{
     PublicationJournalStartupConfig, StartupProfile, StartupReport, StateOpenMode, start_local,
 };
 use haldir_ncp08::SelectedNcpCommandAdapter;
-use haldir_policy_native::{GeofenceBoxV1, NativePolicySnapshot, PhaseRuleV1};
+use haldir_policy_native::{
+    GeofenceBoxV1, LocallyAdmittedMotionEnvelopeV2, NativePolicySnapshot, PhaseRuleV1,
+    PlantModeRuleV2,
+};
 use haldir_transport_zenoh::{
     HARD_MAX_INTENT_BYTES, HaldirKeys, IngressCountersSnapshot, IngressLimits, SecureClientConfig,
     SecureZenohSession,
@@ -84,6 +86,7 @@ const MISSION_SIGNING_SEED: [u8; 32] = [0x22; 32];
 const CONTROLLER_SIGNING_SEED: [u8; 32] = [0x11; 32];
 const STORAGE_MAC_BYTES: [u8; 32] = [0x44; 32];
 const STORE_ID_BYTES: [u8; 16] = [0x55; 16];
+const JOURNAL_ID_BYTES: [u8; 16] = [0x66; 16];
 
 /// Bounded stage-classified failure that never includes paths or secret material.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -510,8 +513,8 @@ fn fixture_session() -> SmokeResult<NcpSessionIdentityV1> {
     })
 }
 
-fn fixture_policy() -> NativePolicySnapshot {
-    NativePolicySnapshot {
+fn fixture_policy() -> SmokeResult<NativePolicySnapshot> {
+    Ok(NativePolicySnapshot {
         max_component_mm_s: 3000,
         max_speed_mm_s: 3000,
         max_output_validity_ms: 500,
@@ -531,11 +534,24 @@ fn fixture_policy() -> NativePolicySnapshot {
         },
         duty_window_ms: 10_000,
         max_active_ms_in_window: 6000,
+        motion_envelope_v2: Some(LocallyAdmittedMotionEnvelopeV2 {
+            local_ned_frame_id: BoundedAscii::new("map")
+                .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
+            max_linear_accel_mm_s2: 20_000,
+            max_linear_slew_mm_s2: 100_000,
+            max_continuous_motion_ms: 60_000,
+            minimum_hold_between_bursts_ms: 0,
+            plant_mode_rules: vec![PlantModeRuleV2 {
+                plant_mode: AsciiId::new("NOMINAL")
+                    .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
+                allowed: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
+            }],
+        }),
         phase_rules: vec![PhaseRuleV1 {
             phase: FIXTURE_PHASE.to_owned(),
             allowed: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
         }],
-    }
+    })
 }
 
 fn fixture_admission() -> SmokeResult<AdmissionRecordV1> {
@@ -549,7 +565,7 @@ fn fixture_admission() -> SmokeResult<AdmissionRecordV1> {
             .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
         admission_profile_id: AsciiId::new("development-live-bind-smoke-v1")
             .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
-        level: AdmissionLevelV1::A2ReferenceConformance,
+        level: AdmissionLevelV1::A1SemanticReconstruction,
         controller_bundle_digest: DigestV1::compute(
             DigestDomain::Bundle,
             b"development-live-bind-smoke-bundle",
@@ -583,21 +599,24 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
             kid: fixture_key_id(1)?,
             role: KeyRole::ControllerIntent,
             verifying_key: controller_signer.verifying_key(),
-            subject: Some(FIXTURE_CONTROLLER_ID.to_owned()),
+            subject: KeySubject::new(FIXTURE_CONTROLLER_ID)
+                .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
             class: KeyClass::Assurance,
         },
         KeyRecord {
             kid: fixture_key_id(2)?,
             role: KeyRole::MissionAuthority,
             verifying_key: mission_signer.verifying_key(),
-            subject: Some("development-mission-authority".to_owned()),
+            subject: KeySubject::new("development-mission-authority")
+                .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
             class: KeyClass::Assurance,
         },
         KeyRecord {
             kid: fixture_key_id(3)?,
             role: KeyRole::GateApplication,
             verifying_key: gate_signer.verifying_key(),
-            subject: Some(FIXTURE_GATE_ID.to_owned()),
+            subject: KeySubject::new(FIXTURE_GATE_ID)
+                .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
             class: KeyClass::Assurance,
         },
     ] {
@@ -610,6 +629,10 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
     admission
         .try_insert(admission_record)
         .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
+    let policy = fixture_policy()?;
+    let policy_snapshot_digest = policy
+        .canonical_digest()
+        .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
     Ok(GateConfigTemplate {
         gate_id,
         realm: AsciiId::new(FIXTURE_REALM)
@@ -619,9 +642,8 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
         trust,
         revocations: RevocationSnapshot::new(),
         admission,
-        policy: fixture_policy(),
-        policy_snapshot_digest: fixture_policy_digest()
-            .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
+        policy,
+        policy_snapshot_digest,
         session: fixture_session()?,
         runtime_profile: GateRuntimeProfile::DeclaredLiveZenoh,
         ncp_adapter: SelectedNcpCommandAdapter::exact_ncp_v0_8_json(),
@@ -629,7 +651,7 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
             gate_transport_principal: PrincipalId::new("haldir-gate.secure-reference-v1")
                 .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
             final_route_digest: DigestV1::compute(
-                DigestDomain::Payload,
+                DigestDomain::TransportKey,
                 b"haldir-ncp/session/uav-1/command",
             ),
             certificate_fingerprint: DigestV1::compute(
@@ -642,14 +664,11 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
             ),
             verified_at_mono_ns: 1,
         }),
-        local_cap_ms: 30_000,
+        local_cap_ms: NonZeroU32::new(30_000)
+            .ok_or_else(|| SmokeError::before_durable("fixture-invariant"))?,
         gate_signer,
         gate_signer_kid: fixture_key_id(3)?,
     })
-}
-
-fn fixture_policy_digest() -> Result<DigestV1, haldir_policy_native::NativePolicyError> {
-    fixture_policy().canonical_digest()
 }
 
 fn local_startup(paths: &FixturePaths, open_mode: StateOpenMode) -> LocalStartupConfig {
@@ -672,6 +691,8 @@ fn publication_journal_config(
         .map_err(|_| SmokeError::before_durable("fixture-invariant"))?;
     PublicationJournalStartupConfig::new(
         paths.journal.clone(),
+        JournalId::new(JOURNAL_ID_BYTES)
+            .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
         created_mono_ns,
         limits,
         RecoveryCaptureLimits::new(64, 4 * 1024 * 1024),
@@ -694,23 +715,19 @@ struct ActivationSummary {
 fn build_activation(
     report: StartupReport,
     now: MonoInstant,
+    challenge: ChallengeNonce,
     entropy: &mut OsEntropy,
 ) -> SmokeResult<(LiveIntentActivationInput, ActivationSummary)> {
     use haldir_gate::EntropySource as _;
 
-    let mut random = [0_u8; 48];
+    let mut random = [0_u8; 16];
     entropy
         .fill_bytes(&mut random)
         .map_err(|_| SmokeError::after_durable("activation-entropy"))?;
-    let challenge_bytes: [u8; 32] = random
-        .get(..32)
-        .and_then(|bytes| bytes.try_into().ok())
-        .ok_or_else(|| SmokeError::after_durable("fixture-invariant"))?;
     let lease_id_bytes: [u8; 16] = random
-        .get(32..)
+        .get(..)
         .and_then(|bytes| bytes.try_into().ok())
         .ok_or_else(|| SmokeError::after_durable("fixture-invariant"))?;
-    let challenge = ChallengeNonce::new(challenge_bytes);
     let admission =
         fixture_admission().map_err(|_| SmokeError::after_durable("fixture-invariant"))?;
     let admission_digest = admission.admission_digest();
@@ -755,7 +772,9 @@ fn build_activation(
         admission_digest,
         controller_bundle_digest: admission.controller_bundle_digest,
         backend_profile_digest: admission.backend_profile_digest,
-        policy_snapshot_digest: fixture_policy_digest()
+        policy_snapshot_digest: fixture_policy()
+            .map_err(|_| SmokeError::after_durable("fixture-invariant"))?
+            .canonical_digest()
             .map_err(|_| SmokeError::after_durable("fixture-invariant"))?,
         allowed_actions: BoundedSet::from_iter_checked([
             ActionClassV1::Hold,
@@ -764,20 +783,20 @@ fn build_activation(
         .map_err(|_| SmokeError::after_durable("fixture-invariant"))?,
         allowed_frames: BoundedSet::from_iter_checked([CoordinateFrameV1::LocalNed])
             .map_err(|_| SmokeError::after_durable("fixture-invariant"))?,
-        allowed_source_keys: BoundedVec::from_vec(vec![
-            BoundedAscii::new(FIXTURE_SOURCE_ROUTE)
-                .map_err(|_| SmokeError::after_durable("fixture-invariant"))?,
-        ])
+        allowed_source_keys: BoundedSet::from_iter_checked([BoundedAscii::new(
+            FIXTURE_SOURCE_ROUTE,
+        )
+        .map_err(|_| SmokeError::after_durable("fixture-invariant"))?])
         .map_err(|_| SmokeError::after_durable("fixture-invariant"))?,
         limits: MissionLeaseLimitsV1 {
             max_output_validity_ms: nonzero_u32(500)?,
             max_linear_speed_mm_s: nonzero_u32(3000)?,
-            max_linear_accel_mm_s2: nonzero_u32(2000)?,
+            max_linear_accel_mm_s2: nonzero_u32(20_000)?,
             max_linear_slew_mm_s2: nonzero_u32(100_000)?,
             max_source_age_ms: nonzero_u32(200)?,
             max_state_age_ms: nonzero_u32(200)?,
-            max_continuous_motion_ms: nonzero_u32(2000)?,
-            minimum_hold_between_bursts_ms: 500,
+            max_continuous_motion_ms: nonzero_u32(60_000)?,
+            minimum_hold_between_bursts_ms: 0,
         },
         max_active_duration_ms: nonzero_u32(30_000)?,
         max_intent_rate_millihz: nonzero_u32(50_000)?,
@@ -831,7 +850,7 @@ fn build_activation(
         &mission_kid,
         &mission_signer,
     );
-    let activation = LiveIntentActivationInput::new(state, challenge, signed_lease)
+    let activation = LiveIntentActivationInput::new(state, signed_lease)
         .map_err(|_| SmokeError::after_durable("activation-input"))?;
     let summary = ActivationSummary {
         controller_id: FIXTURE_CONTROLLER_ID.to_owned(),
@@ -965,7 +984,8 @@ pub fn provision_fixture(args: ProvisionArgs) -> SmokeResult<()> {
     let running = start_local(
         template,
         local_startup(&paths, StateOpenMode::ProvisionNew),
-        StorageMacKey::new(STORAGE_MAC_BYTES),
+        StorageMacKey::new(STORAGE_MAC_BYTES)
+            .map_err(|_| SmokeError::before_durable("storage-mac-key"))?,
         &mut entropy,
     )
     .map_err(|_| SmokeError::after_durable("state-provision"))?;
@@ -1025,7 +1045,8 @@ pub async fn bind_and_shutdown(args: BindArgs) -> SmokeResult<()> {
     let running = start_local(
         template,
         local_startup(&paths, StateOpenMode::OpenExisting),
-        StorageMacKey::new(STORAGE_MAC_BYTES),
+        StorageMacKey::new(STORAGE_MAC_BYTES)
+            .map_err(|_| SmokeError::before_durable("storage-mac-key"))?,
         &mut entropy,
     )
     .map_err(|_| SmokeError::after_durable("state-open"))
@@ -1040,12 +1061,21 @@ pub async fn bind_and_shutdown(args: BindArgs) -> SmokeResult<()> {
         .map_err(|error| record_bind_failure(&args.result, error))?;
     let journal = bound.journal_recovery_report();
     let unknown_events = bound.recovery_unknown_events();
-    let (activation, activation_summary) = build_activation(report, clock.now(), &mut entropy)
-        .map_err(|error| record_bind_failure(&args.result, error))?;
-    let kernel = DeclaredLiveGateKernel::start(bound, clock)
+    let kernel = DeclaredLiveGateKernel::start(bound, clock.clone())
         .map_err(|_| SmokeError::after_durable("kernel-start"))
         .map_err(|error| record_bind_failure(&args.result, error))?;
-    let route_bound = kernel
+    let issued = kernel
+        .issue_activation_challenge()
+        .map_err(|_| SmokeError::after_durable("challenge-issue"))
+        .map_err(|error| record_bind_failure(&args.result, error))?;
+    let (activation, activation_summary) = build_activation(
+        report,
+        clock.now(),
+        issued.challenge().challenge_nonce,
+        &mut entropy,
+    )
+    .map_err(|error| record_bind_failure(&args.result, error))?;
+    let route_bound = issued
         .activate(activation)
         .map_err(|_| SmokeError::after_durable("local-activation"))
         .map_err(|error| record_bind_failure(&args.result, error))?;

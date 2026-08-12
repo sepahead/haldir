@@ -6,7 +6,7 @@ use crate::ids::{
     ChallengeNonce, ChallengeSeq, GateBootId, GateId, GateOutputEpoch, KeyId, VehicleId,
 };
 use crate::limits::ContractVersion;
-use crate::scalar::{AsciiId, BoundedVec};
+use crate::scalar::{AsciiId, BoundedSet};
 use crate::session::NcpSessionIdentityV1;
 
 canonical_struct! {
@@ -27,7 +27,7 @@ canonical_struct! {
         req 11 gate_output_epoch: GateOutputEpoch,
         req 12 gate_key_id: KeyId,
         req 13 policy_snapshot_digest: DigestV1,
-        req 14 accepted_contract_versions: BoundedVec<ContractVersion, 8>,
+        req 14 accepted_contract_versions: BoundedSet<ContractVersion, 8>,
         req 15 ncp_compatibility_id: DigestV1,
     }
 }

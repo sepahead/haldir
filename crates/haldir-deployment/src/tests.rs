@@ -1,4 +1,4 @@
-use core::num::NonZeroU64;
+use core::num::{NonZeroU32, NonZeroU64};
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 use std::fs::{self, File};
@@ -10,22 +10,165 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use haldir_contracts::cbor::{Limits, from_canonical_bytes, to_canonical_bytes};
 use haldir_contracts::deployment::DeploymentRevision;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
-use haldir_contracts::ids::{GateId, KeyId, VehicleId};
-use haldir_contracts::scalar::{AsciiId, BoundedVec};
+use haldir_contracts::ids::{GateId, JournalId, KeyId, PrincipalId, VehicleId};
+use haldir_contracts::scalar::{AsciiId, BoundedVec, CanonicalUuidV4String};
+use haldir_contracts::session::NcpSessionIdentityV1;
 use haldir_crypto::{
-    KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore, content_type_for,
-    external_aad_for, sign_message,
+    KeyClass, KeyRecord, KeyRole, KeySubject, RevocationSnapshot, SigningKey, TrustStore,
+    content_type_for, external_aad_for, sign_message,
 };
 use proptest::prelude::*;
 
 use super::*;
 use crate::contract::{
+    AclPublicationBindingV1, AuthoritySnapshotApprovalV1, AuthoritySnapshotKindV1,
     DeploymentArtifactIdV1, DeploymentArtifactRefV1, DeploymentClassV1, DeploymentNcpWireProfileV1,
-    DeploymentPackageV1, DeploymentRuntimeProfileV1,
+    DeploymentPackageV1, DeploymentRuntimeProfileV1, GateConfigurationArtifactV1,
 };
 
+fn gate_configuration() -> GateConfigurationArtifactV1 {
+    let signer = SigningKey::from_seed([44; 32]).expect("nonzero test seed");
+    GateConfigurationArtifactV1 {
+        schema_major: 1,
+        schema_minor: 0,
+        gate_id: GateId::new("gate-1").unwrap(),
+        realm: AsciiId::new("range-a").unwrap(),
+        vehicle_id: VehicleId::new("uav-1").unwrap(),
+        profile_class: DeploymentClassV1::AssuranceSimulation,
+        runtime_profile: DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+        ncp_wire_profile: DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+        state_store_id: [1; 16],
+        journal_id: JournalId::new([2; 16]).unwrap(),
+        trust_snapshot_digest: DigestV1::compute(DigestDomain::TrustStoreSnapshot, b"trust"),
+        revocation_snapshot_digest: DigestV1::compute(
+            DigestDomain::RevocationSnapshot,
+            b"revocations",
+        ),
+        admission_snapshot_digest: DigestV1::compute(DigestDomain::AdmissionSnapshot, b"admission"),
+        policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
+        session: NcpSessionIdentityV1 {
+            session_id: AsciiId::new("session-1").unwrap(),
+            generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+        },
+        publication: AclPublicationBindingV1 {
+            gate_transport_principal: PrincipalId::new("gate-transport").unwrap(),
+            final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"final-route"),
+            certificate_fingerprint: DigestV1::compute(DigestDomain::Payload, b"certificate"),
+            acl_policy_digest: DigestV1::compute(DigestDomain::Payload, b"acl"),
+        },
+        local_cap_ms: NonZeroU32::new(1_000).unwrap(),
+        gate_signer_kid: KeyId::new(vec![44, 0xa5]).unwrap(),
+        gate_signer_public_key: signer.verifying_key().to_bytes(),
+    }
+}
+
 fn artifact_bytes(role: DeploymentArtifactIdV1) -> Vec<u8> {
-    vec![u8::try_from(role.tag()).unwrap(); usize::try_from(role.tag()).unwrap() + 1]
+    match role {
+        DeploymentArtifactIdV1::GateConfiguration => to_canonical_bytes(&gate_configuration()),
+        DeploymentArtifactIdV1::NcpCompatibility => {
+            haldir_ncp08::pinned_ncp_compatibility_artifact_bytes().unwrap()
+        }
+        DeploymentArtifactIdV1::TrustManifest
+        | DeploymentArtifactIdV1::AdmissionSnapshot
+        | DeploymentArtifactIdV1::RevocationSnapshot
+        | DeploymentArtifactIdV1::PolicySnapshot => signed_authority_approval(role),
+        _ => vec![u8::try_from(role.tag()).unwrap(); usize::try_from(role.tag()).unwrap() + 1],
+    }
+}
+
+fn authority_spec(
+    role: DeploymentArtifactIdV1,
+) -> (AuthoritySnapshotKindV1, KeyRole, u8, &'static str, DigestV1) {
+    let configuration = gate_configuration();
+    match role {
+        DeploymentArtifactIdV1::TrustManifest => (
+            AuthoritySnapshotKindV1::Trust,
+            KeyRole::TrustAuthority,
+            51,
+            "trust-authority-a",
+            configuration.trust_snapshot_digest,
+        ),
+        DeploymentArtifactIdV1::AdmissionSnapshot => (
+            AuthoritySnapshotKindV1::Admission,
+            KeyRole::AdmissionAuthority,
+            52,
+            "admission-authority-a",
+            configuration.admission_snapshot_digest,
+        ),
+        DeploymentArtifactIdV1::RevocationSnapshot => (
+            AuthoritySnapshotKindV1::Revocation,
+            KeyRole::RevocationAuthority,
+            53,
+            "revocation-authority-a",
+            configuration.revocation_snapshot_digest,
+        ),
+        DeploymentArtifactIdV1::PolicySnapshot => (
+            AuthoritySnapshotKindV1::Policy,
+            KeyRole::PolicyAuthority,
+            54,
+            "policy-authority-a",
+            configuration.policy_snapshot_digest,
+        ),
+        _ => panic!("artifact role is not an authority approval"),
+    }
+}
+
+fn authority_approval(role: DeploymentArtifactIdV1) -> AuthoritySnapshotApprovalV1 {
+    let (snapshot_kind, _, _, issuer_id, snapshot_digest) = authority_spec(role);
+    AuthoritySnapshotApprovalV1 {
+        schema_major: 1,
+        schema_minor: 0,
+        snapshot_kind,
+        issuer_id: AsciiId::new(issuer_id).unwrap(),
+        deployment_id: AsciiId::new("deployment-a").unwrap(),
+        deployment_revision: DeploymentRevision::new(NonZeroU64::new(7).unwrap()),
+        gate_id: GateId::new("gate-1").unwrap(),
+        realm: AsciiId::new("range-a").unwrap(),
+        vehicle_id: VehicleId::new("uav-1").unwrap(),
+        snapshot_digest,
+    }
+}
+
+fn signed_authority_approval(role: DeploymentArtifactIdV1) -> Vec<u8> {
+    let (_, _, seed, _, _) = authority_spec(role);
+    let signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
+    sign_message(
+        &authority_approval(role),
+        AuthoritySnapshotApprovalV1::KIND,
+        1,
+        &key_id(seed),
+        &signer,
+    )
+}
+
+fn authority_policy() -> AuthorityApprovalPolicy {
+    AuthorityApprovalPolicy::new(
+        AsciiId::new("trust-authority-a").unwrap(),
+        AsciiId::new("admission-authority-a").unwrap(),
+        AsciiId::new("revocation-authority-a").unwrap(),
+        AsciiId::new("policy-authority-a").unwrap(),
+    )
+}
+
+fn insert_authority_trust(trust: &mut TrustStore, class: KeyClass) {
+    for role in [
+        DeploymentArtifactIdV1::TrustManifest,
+        DeploymentArtifactIdV1::AdmissionSnapshot,
+        DeploymentArtifactIdV1::RevocationSnapshot,
+        DeploymentArtifactIdV1::PolicySnapshot,
+    ] {
+        let (_, key_role, seed, subject, _) = authority_spec(role);
+        let signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
+        trust
+            .insert(trust_record(
+                &key_id(seed),
+                &signer,
+                key_role,
+                class,
+                subject,
+            ))
+            .unwrap();
+    }
 }
 
 fn artifact_logical_id(role: DeploymentArtifactIdV1) -> AsciiId<64> {
@@ -56,7 +199,7 @@ fn package() -> DeploymentPackageV1 {
         runtime_profile: DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
         ncp_wire_profile: DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
         state_store_id: [1; 16],
-        journal_id: [2; 16],
+        journal_id: JournalId::new([2; 16]).unwrap(),
         artifacts: BoundedVec::from_vec(
             DeploymentArtifactIdV1::ALL
                 .into_iter()
@@ -69,13 +212,18 @@ fn package() -> DeploymentPackageV1 {
 
 fn policy() -> DeploymentAcceptancePolicy {
     DeploymentAcceptancePolicy::new(
-        AsciiId::new("deployment-authority-a").unwrap(),
-        GateId::new("gate-1").unwrap(),
-        AsciiId::new("range-a").unwrap(),
-        VehicleId::new("uav-1").unwrap(),
-        DeploymentClassV1::AssuranceSimulation,
-        DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-        DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+        DeploymentIdentityExpectation::new(
+            AsciiId::new("deployment-authority-a").unwrap(),
+            GateId::new("gate-1").unwrap(),
+            AsciiId::new("range-a").unwrap(),
+            VehicleId::new("uav-1").unwrap(),
+        ),
+        DeploymentProfileRequirement::new(
+            DeploymentClassV1::AssuranceSimulation,
+            DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+            DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+        ),
+        authority_policy(),
     )
 }
 
@@ -88,13 +236,13 @@ fn trust_record(
     signer: &SigningKey,
     role: KeyRole,
     class: KeyClass,
-    subject: Option<&str>,
+    subject: &str,
 ) -> KeyRecord {
     KeyRecord {
         kid: key_id.clone(),
         role,
         verifying_key: signer.verifying_key(),
-        subject: subject.map(str::to_owned),
+        subject: KeySubject::new(subject).unwrap(),
         class,
     }
 }
@@ -104,7 +252,7 @@ fn signed_with(
     seed: u8,
     role: KeyRole,
     class: KeyClass,
-    subject: Option<&str>,
+    subject: &str,
 ) -> (Vec<u8>, TrustStore, KeyId) {
     let signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
     let key_id = key_id(seed);
@@ -116,15 +264,126 @@ fn signed_with(
     (envelope, trust, key_id)
 }
 
+fn signed_with_authority_trust(
+    package: &DeploymentPackageV1,
+    seed: u8,
+    role: KeyRole,
+    class: KeyClass,
+    subject: &str,
+    authority_class: KeyClass,
+) -> (Vec<u8>, TrustStore, KeyId) {
+    let (envelope, mut trust, key_id) = signed_with(package, seed, role, class, subject);
+    insert_authority_trust(&mut trust, authority_class);
+    (envelope, trust, key_id)
+}
+
 fn verified() -> VerifiedDeploymentPackage {
-    let (envelope, trust, _) = signed_with(
+    verified_with_authority_class(KeyClass::Assurance)
+}
+
+fn verified_with_authority_class(authority_class: KeyClass) -> VerifiedDeploymentPackage {
+    let (envelope, trust, _) = signed_with_authority_trust(
         &package(),
         1,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
+        authority_class,
     );
     verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new()).unwrap()
+}
+
+fn ncp_validated_with_gate_configuration(
+    configuration: &GateConfigurationArtifactV1,
+) -> NcpValidatedDeploymentPackage {
+    let configuration_bytes = to_canonical_bytes(configuration);
+    let mut configured_package = package();
+    let mut references = configured_package.artifacts.as_slice().to_vec();
+    let reference = references
+        .iter_mut()
+        .find(|reference| reference.role == DeploymentArtifactIdV1::GateConfiguration)
+        .unwrap();
+    reference.digest = DigestV1::compute(DigestDomain::DeploymentArtifact, &configuration_bytes);
+    reference.size_bytes =
+        NonZeroU64::new(u64::try_from(configuration_bytes.len()).unwrap()).unwrap();
+    configured_package.artifacts = BoundedVec::from_vec(references).unwrap();
+
+    let (envelope, trust, _) = signed_with(
+        &configured_package,
+        92,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        "deployment-authority-a",
+    );
+    let verified =
+        verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
+            .unwrap();
+    let inputs =
+        DeploymentArtifactSet::from_inputs(configured_package.artifacts.as_slice().iter().map(
+            |artifact| {
+                let bytes = if artifact.role == DeploymentArtifactIdV1::GateConfiguration {
+                    configuration_bytes.clone()
+                } else {
+                    artifact_bytes(artifact.role)
+                };
+                DeploymentArtifactInput::new(artifact.role, artifact.logical_id.clone(), bytes)
+            },
+        ))
+        .unwrap();
+    verified
+        .resolve_artifacts(inputs, ArtifactLimits::new(4096, 16 * 1024).unwrap())
+        .unwrap()
+        .validate_ncp_compatibility()
+        .unwrap()
+}
+
+fn gate_configuration_validated_with_artifact(
+    role: DeploymentArtifactIdV1,
+    bytes: Vec<u8>,
+) -> GateConfigurationValidatedDeploymentPackage {
+    let mut configured_package = package();
+    let mut references = configured_package.artifacts.as_slice().to_vec();
+    let reference = references
+        .iter_mut()
+        .find(|reference| reference.role == role)
+        .unwrap();
+    reference.digest = DigestV1::compute(DigestDomain::DeploymentArtifact, &bytes);
+    reference.size_bytes = NonZeroU64::new(u64::try_from(bytes.len()).unwrap()).unwrap();
+    configured_package.artifacts = BoundedVec::from_vec(references).unwrap();
+
+    let (envelope, trust, _) = signed_with_authority_trust(
+        &configured_package,
+        93,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        "deployment-authority-a",
+        KeyClass::Assurance,
+    );
+    let verified =
+        verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
+            .unwrap();
+    let inputs =
+        DeploymentArtifactSet::from_inputs(configured_package.artifacts.as_slice().iter().map(
+            |artifact| {
+                DeploymentArtifactInput::new(
+                    artifact.role,
+                    artifact.logical_id.clone(),
+                    if artifact.role == role {
+                        bytes.clone()
+                    } else {
+                        artifact_bytes(artifact.role)
+                    },
+                )
+            },
+        ))
+        .unwrap();
+    verified
+        .resolve_artifacts(inputs, ArtifactLimits::new(4096, 16 * 1024).unwrap())
+        .unwrap()
+        .validate_ncp_compatibility()
+        .unwrap()
+        .validate_gate_configuration()
+        .unwrap()
 }
 
 fn artifact_inputs(package: &DeploymentPackageV1) -> DeploymentArtifactSet {
@@ -136,6 +395,384 @@ fn artifact_inputs(package: &DeploymentPackageV1) -> DeploymentArtifactSet {
         )
     }))
     .unwrap()
+}
+
+#[test]
+fn signed_ncp_role_composes_into_a_compiled_compatibility_proof() {
+    let resolved = verified()
+        .resolve_artifacts(
+            artifact_inputs(&package()),
+            ArtifactLimits::new(1024, 4096).unwrap(),
+        )
+        .unwrap();
+    let validated = resolved.validate_ncp_compatibility().unwrap();
+
+    assert_eq!(
+        validated.ncp_compatibility().compatibility_id(),
+        haldir_ncp08::NCP_V0_8_0.compatibility_id()
+    );
+    assert_eq!(
+        validated
+            .resolved()
+            .artifact(DeploymentArtifactIdV1::NcpCompatibility),
+        Some(
+            haldir_ncp08::pinned_ncp_compatibility_artifact_bytes()
+                .unwrap()
+                .as_slice()
+        )
+    );
+
+    let configured = validated.validate_gate_configuration().unwrap();
+    assert_eq!(configured.gate_configuration(), &gate_configuration());
+}
+
+#[test]
+fn independently_signed_snapshot_approvals_compose_into_startup_authority() {
+    let configured = verified()
+        .resolve_artifacts(
+            artifact_inputs(&package()),
+            ArtifactLimits::new(4096, 16 * 1024).unwrap(),
+        )
+        .unwrap()
+        .validate_ncp_compatibility()
+        .unwrap()
+        .validate_gate_configuration()
+        .unwrap();
+
+    let validated = configured.validate_authority_approvals().unwrap();
+
+    for kind in [
+        AuthoritySnapshotKindV1::Trust,
+        AuthoritySnapshotKindV1::Admission,
+        AuthoritySnapshotKindV1::Revocation,
+        AuthoritySnapshotKindV1::Policy,
+    ] {
+        let approval = validated.approval(kind).unwrap();
+        assert_eq!(approval.approval().snapshot_kind, kind);
+        assert_eq!(
+            approval.signer_subject(),
+            approval.approval().issuer_id.as_str()
+        );
+    }
+}
+
+#[test]
+fn snapshot_approval_cannot_authorize_a_different_runtime_digest() {
+    let role = DeploymentArtifactIdV1::PolicySnapshot;
+    let mut approval = authority_approval(role);
+    approval.snapshot_digest = DigestV1::compute(DigestDomain::PolicySnapshot, b"other-policy");
+    let (_, _, seed, _, _) = authority_spec(role);
+    let signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
+    let bytes = sign_message(
+        &approval,
+        AuthoritySnapshotApprovalV1::KIND,
+        1,
+        &key_id(seed),
+        &signer,
+    );
+    let configured = gate_configuration_validated_with_artifact(role, bytes);
+
+    assert_eq!(
+        configured.validate_authority_approvals().unwrap_err(),
+        DeploymentError::AuthorityApprovalDigestMismatch(AuthoritySnapshotKindV1::Policy)
+    );
+}
+
+#[test]
+fn snapshot_approval_cannot_be_replayed_into_another_package_revision() {
+    let role = DeploymentArtifactIdV1::TrustManifest;
+    let mut approval = authority_approval(role);
+    approval.deployment_revision = DeploymentRevision::new(NonZeroU64::new(6).unwrap());
+    let (_, _, seed, _, _) = authority_spec(role);
+    let signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
+    let bytes = sign_message(
+        &approval,
+        AuthoritySnapshotApprovalV1::KIND,
+        1,
+        &key_id(seed),
+        &signer,
+    );
+    let configured = gate_configuration_validated_with_artifact(role, bytes);
+
+    assert_eq!(
+        configured.validate_authority_approvals().unwrap_err(),
+        DeploymentError::AuthorityApprovalPackageMismatch(AuthoritySnapshotKindV1::Trust)
+    );
+}
+
+#[test]
+fn separately_expected_snapshot_authorities_cannot_be_selected_by_the_package() {
+    let different_policy = AuthorityApprovalPolicy::new(
+        AsciiId::new("different-trust-authority").unwrap(),
+        AsciiId::new("admission-authority-a").unwrap(),
+        AsciiId::new("revocation-authority-a").unwrap(),
+        AsciiId::new("policy-authority-a").unwrap(),
+    );
+
+    let mut differently_bound_package = package();
+    differently_bound_package.deployment_authority_id =
+        AsciiId::new("deployment-authority-a").unwrap();
+    let (envelope, trust, _) = signed_with_authority_trust(
+        &differently_bound_package,
+        94,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        "deployment-authority-a",
+        KeyClass::Assurance,
+    );
+    let acceptance = DeploymentAcceptancePolicy::new(
+        DeploymentIdentityExpectation::new(
+            AsciiId::new("deployment-authority-a").unwrap(),
+            GateId::new("gate-1").unwrap(),
+            AsciiId::new("range-a").unwrap(),
+            VehicleId::new("uav-1").unwrap(),
+        ),
+        DeploymentProfileRequirement::new(
+            DeploymentClassV1::AssuranceSimulation,
+            DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+            DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+        ),
+        different_policy,
+    );
+    let configured =
+        verify_deployment_package(&envelope, &acceptance, &trust, &RevocationSnapshot::new())
+            .unwrap()
+            .resolve_artifacts(
+                artifact_inputs(&differently_bound_package),
+                ArtifactLimits::new(4096, 16 * 1024).unwrap(),
+            )
+            .unwrap()
+            .validate_ncp_compatibility()
+            .unwrap()
+            .validate_gate_configuration()
+            .unwrap();
+
+    assert_eq!(
+        configured.validate_authority_approvals().unwrap_err(),
+        DeploymentError::AuthorityApprovalPolicyMismatch(AuthoritySnapshotKindV1::Trust)
+    );
+}
+
+#[test]
+fn assurance_snapshot_approval_rejects_development_keys() {
+    let configured = verified_with_authority_class(KeyClass::Development)
+        .resolve_artifacts(
+            artifact_inputs(&package()),
+            ArtifactLimits::new(4096, 16 * 1024).unwrap(),
+        )
+        .unwrap()
+        .validate_ncp_compatibility()
+        .unwrap()
+        .validate_gate_configuration()
+        .unwrap();
+
+    assert_eq!(
+        configured.validate_authority_approvals().unwrap_err(),
+        DeploymentError::Crypto(haldir_crypto::CryptoError::DevelopmentKeyInAssurance)
+    );
+}
+
+#[test]
+fn approval_verification_cannot_introduce_a_second_trust_root() {
+    let (envelope, trust, _) = signed_with(
+        &package(),
+        95,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        "deployment-authority-a",
+    );
+    let configured =
+        verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
+            .unwrap()
+            .resolve_artifacts(
+                artifact_inputs(&package()),
+                ArtifactLimits::new(4096, 16 * 1024).unwrap(),
+            )
+            .unwrap()
+            .validate_ncp_compatibility()
+            .unwrap()
+            .validate_gate_configuration()
+            .unwrap();
+
+    assert_eq!(
+        configured.validate_authority_approvals().unwrap_err(),
+        DeploymentError::Crypto(haldir_crypto::CryptoError::KidUnknown)
+    );
+}
+
+#[test]
+fn approval_verification_uses_the_revocations_retained_at_package_verification() {
+    let (envelope, trust, _) = signed_with_authority_trust(
+        &package(),
+        96,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        "deployment-authority-a",
+        KeyClass::Assurance,
+    );
+    let mut bootstrap_revocations = RevocationSnapshot::new();
+    bootstrap_revocations.revoke_key(&key_id(51), 1).unwrap();
+
+    let configured =
+        verify_deployment_package(&envelope, &policy(), &trust, &bootstrap_revocations)
+            .unwrap()
+            .resolve_artifacts(
+                artifact_inputs(&package()),
+                ArtifactLimits::new(4096, 16 * 1024).unwrap(),
+            )
+            .unwrap()
+            .validate_ncp_compatibility()
+            .unwrap()
+            .validate_gate_configuration()
+            .unwrap();
+
+    assert_eq!(
+        configured.validate_authority_approvals().unwrap_err(),
+        DeploymentError::Crypto(haldir_crypto::CryptoError::KeyRevoked)
+    );
+}
+
+#[test]
+fn signed_gate_configuration_cross_binds_redundant_package_identity() {
+    let mut configuration = gate_configuration();
+    configuration.gate_id = GateId::new("gate-2").unwrap();
+    let ncp_validated = ncp_validated_with_gate_configuration(&configuration);
+    let error = ncp_validated.validate_gate_configuration().unwrap_err();
+
+    assert_eq!(error, DeploymentError::GateConfigurationPackageMismatch);
+    assert_eq!(
+        error.reason_code(),
+        "DEPLOYMENT_GATE_CONFIGURATION_PACKAGE_MISMATCH"
+    );
+    assert_eq!(
+        error.to_string(),
+        "DEPLOYMENT_GATE_CONFIGURATION_PACKAGE_MISMATCH"
+    );
+}
+
+#[test]
+fn gate_configuration_artifact_digest_vector_is_stable() {
+    assert_eq!(
+        DigestV1::compute(
+            DigestDomain::DeploymentArtifact,
+            &to_canonical_bytes(&gate_configuration())
+        )
+        .value,
+        [
+            186, 174, 62, 97, 240, 245, 36, 153, 73, 76, 94, 171, 6, 208, 114, 70, 96, 189, 173,
+            131, 16, 99, 57, 179, 82, 225, 207, 75, 117, 84, 6, 78,
+        ]
+    );
+}
+
+#[test]
+fn gate_configuration_artifact_rejects_an_invalid_signer_point() {
+    let mut configuration = gate_configuration();
+    configuration.gate_signer_public_key = [0; 32];
+
+    assert_eq!(
+        from_canonical_bytes::<GateConfigurationArtifactV1>(
+            &to_canonical_bytes(&configuration),
+            Limits::DEFAULT,
+        ),
+        Err(haldir_contracts::DecodeError::SemanticInvalid {
+            code: "GATE_CONFIGURATION_SIGNER_KEY_INVALID",
+        })
+    );
+}
+
+#[test]
+fn gate_configuration_artifact_rejects_an_inexact_live_wire_profile() {
+    let mut configuration = gate_configuration();
+    configuration.ncp_wire_profile = DeploymentNcpWireProfileV1::ModeledP0;
+
+    assert_eq!(
+        from_canonical_bytes::<GateConfigurationArtifactV1>(
+            &to_canonical_bytes(&configuration),
+            Limits::DEFAULT,
+        ),
+        Err(haldir_contracts::DecodeError::SemanticInvalid {
+            code: "GATE_CONFIGURATION_LIVE_NCP_PROFILE_INVALID",
+        })
+    );
+}
+
+#[test]
+fn gate_configuration_artifact_rejects_aliased_durable_identities() {
+    let mut configuration = gate_configuration();
+    configuration.state_store_id = *configuration.journal_id.as_bytes();
+
+    assert_eq!(
+        from_canonical_bytes::<GateConfigurationArtifactV1>(
+            &to_canonical_bytes(&configuration),
+            Limits::DEFAULT,
+        ),
+        Err(haldir_contracts::DecodeError::SemanticInvalid {
+            code: "GATE_CONFIGURATION_DURABLE_ID_INVALID",
+        })
+    );
+}
+
+#[test]
+fn signed_gate_configuration_rejects_unsupported_schema_before_runtime_use() {
+    let mut configuration = gate_configuration();
+    configuration.schema_minor = 1;
+    let ncp_validated = ncp_validated_with_gate_configuration(&configuration);
+
+    assert_eq!(
+        ncp_validated.validate_gate_configuration().unwrap_err(),
+        DeploymentError::Decode(haldir_contracts::DecodeError::UnsupportedVersion)
+    );
+}
+
+#[test]
+fn signed_but_incompatible_ncp_role_fails_the_consuming_typestate() {
+    let mut incompatible = haldir_ncp08::NcpCompatibilityArtifactV1::pinned().unwrap();
+    incompatible.ncp_tag = AsciiId::new("v0.8.1").unwrap();
+    let incompatible_bytes = to_canonical_bytes(&incompatible);
+    let mut incompatible_package = package();
+    let mut refs = incompatible_package.artifacts.as_slice().to_vec();
+    let reference = refs
+        .iter_mut()
+        .find(|reference| reference.role == DeploymentArtifactIdV1::NcpCompatibility)
+        .unwrap();
+    reference.digest = DigestV1::compute(DigestDomain::DeploymentArtifact, &incompatible_bytes);
+    reference.size_bytes =
+        NonZeroU64::new(u64::try_from(incompatible_bytes.len()).unwrap()).unwrap();
+    incompatible_package.artifacts = BoundedVec::from_vec(refs).unwrap();
+
+    let (envelope, trust, _) = signed_with(
+        &incompatible_package,
+        91,
+        KeyRole::DeploymentAuthority,
+        KeyClass::Assurance,
+        "deployment-authority-a",
+    );
+    let verified =
+        verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
+            .unwrap();
+    let inputs =
+        DeploymentArtifactSet::from_inputs(incompatible_package.artifacts.as_slice().iter().map(
+            |artifact| {
+                let bytes = if artifact.role == DeploymentArtifactIdV1::NcpCompatibility {
+                    incompatible_bytes.clone()
+                } else {
+                    artifact_bytes(artifact.role)
+                };
+                DeploymentArtifactInput::new(artifact.role, artifact.logical_id.clone(), bytes)
+            },
+        ))
+        .unwrap();
+    let resolved = verified
+        .resolve_artifacts(inputs, ArtifactLimits::new(1024, 4096).unwrap())
+        .unwrap();
+
+    let error = resolved.validate_ncp_compatibility().unwrap_err();
+    assert!(matches!(
+        error,
+        DeploymentError::NcpCompatibility(haldir_ncp08::NcpCompatibilityError::PinMismatch)
+    ));
+    assert!(std::error::Error::source(&error).is_some());
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -272,24 +909,26 @@ fn contract_rejects_versions_durable_ids_and_inexact_live_ncp() {
     );
 
     let mut alias = package();
-    alias.journal_id = alias.state_store_id;
+    alias.journal_id = haldir_contracts::ids::JournalId::new(alias.state_store_id).unwrap();
     assert!(
         from_canonical_bytes::<DeploymentPackageV1>(&to_canonical_bytes(&alias), Limits::LARGE)
             .is_err()
     );
 
-    for (state_store_id, journal_id) in [([0; 16], [2; 16]), ([1; 16], [0; 16])] {
-        let mut zero_id = package();
-        zero_id.state_store_id = state_store_id;
-        zero_id.journal_id = journal_id;
-        assert!(
-            from_canonical_bytes::<DeploymentPackageV1>(
-                &to_canonical_bytes(&zero_id),
-                Limits::LARGE
-            )
-            .is_err()
-        );
-    }
+    let mut zero_store_id = package();
+    zero_store_id.state_store_id = [0; 16];
+    assert!(
+        from_canonical_bytes::<DeploymentPackageV1>(
+            &to_canonical_bytes(&zero_store_id),
+            Limits::LARGE
+        )
+        .is_err()
+    );
+
+    assert_eq!(
+        haldir_contracts::ids::JournalId::new([0; 16]),
+        Err(haldir_contracts::DecodeError::ZeroForNonZero)
+    );
 
     let mut inexact = package();
     inexact.ncp_wire_profile = DeploymentNcpWireProfileV1::ModeledP0;
@@ -322,7 +961,7 @@ fn verification_binds_external_policy_and_authority_subject() {
         1,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let verified =
         verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
@@ -344,7 +983,7 @@ fn separately_expected_authority_rejects_another_trusted_deployment_authority() 
         9,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-b"),
+        "deployment-authority-b",
     );
     let expected_signer = SigningKey::from_seed([10; 32]).expect("nonzero test seed");
     let expected_kid = key_id(10);
@@ -354,7 +993,7 @@ fn separately_expected_authority_rejects_another_trusted_deployment_authority() 
             &expected_signer,
             KeyRole::DeploymentAuthority,
             KeyClass::Assurance,
-            Some("deployment-authority-a"),
+            "deployment-authority-a",
         ))
         .unwrap();
 
@@ -372,19 +1011,18 @@ fn wrong_role_subject_revocation_and_assurance_class_fail_closed() {
         (
             KeyRole::MissionAuthority,
             KeyClass::Assurance,
-            Some("deployment-authority-a"),
+            "deployment-authority-a",
         ),
         (
             KeyRole::DeploymentAuthority,
             KeyClass::Assurance,
-            Some("different-authority"),
+            "different-authority",
         ),
         (
             KeyRole::DeploymentAuthority,
             KeyClass::Development,
-            Some("deployment-authority-a"),
+            "deployment-authority-a",
         ),
-        (KeyRole::DeploymentAuthority, KeyClass::Assurance, None),
     ];
     for (role, class, subject) in cases {
         let (envelope, trust, _) = signed_with(&package, 2, role, class, subject);
@@ -399,10 +1037,10 @@ fn wrong_role_subject_revocation_and_assurance_class_fail_closed() {
         3,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let mut revoked = RevocationSnapshot::new();
-    revoked.revoke_key(&kid, 1);
+    revoked.revoke_key(&kid, 1).unwrap();
     assert!(verify_deployment_package(&envelope, &policy(), &trust, &revoked).is_err());
 
     assert!(
@@ -427,7 +1065,7 @@ fn valid_signature_over_an_unknown_payload_field_is_rejected() {
             &signer,
             KeyRole::DeploymentAuthority,
             KeyClass::Assurance,
-            Some("deployment-authority-a"),
+            "deployment-authority-a",
         ))
         .unwrap();
     let mut payload = to_canonical_bytes(&package());
@@ -457,16 +1095,21 @@ fn package_mismatch_cannot_override_separately_passed_profile_policy() {
         4,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let development_policy = DeploymentAcceptancePolicy::new(
-        AsciiId::new("deployment-authority-a").unwrap(),
-        GateId::new("gate-1").unwrap(),
-        AsciiId::new("range-a").unwrap(),
-        VehicleId::new("uav-1").unwrap(),
-        DeploymentClassV1::Development,
-        DeploymentRuntimeProfileV1::InProcessReference,
-        DeploymentNcpWireProfileV1::ModeledP0,
+        DeploymentIdentityExpectation::new(
+            AsciiId::new("deployment-authority-a").unwrap(),
+            GateId::new("gate-1").unwrap(),
+            AsciiId::new("range-a").unwrap(),
+            VehicleId::new("uav-1").unwrap(),
+        ),
+        DeploymentProfileRequirement::new(
+            DeploymentClassV1::Development,
+            DeploymentRuntimeProfileV1::InProcessReference,
+            DeploymentNcpWireProfileV1::ModeledP0,
+        ),
+        authority_policy(),
     );
     assert_eq!(
         verify_deployment_package(
@@ -487,66 +1130,72 @@ fn gate_realm_vehicle_runtime_and_wire_mismatches_are_distinct() {
         5,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
+    let identity = |gate: &str, realm: &str, vehicle: &str| {
+        DeploymentIdentityExpectation::new(
+            AsciiId::new("deployment-authority-a").unwrap(),
+            GateId::new(gate).unwrap(),
+            AsciiId::new(realm).unwrap(),
+            VehicleId::new(vehicle).unwrap(),
+        )
+    };
+    let profile = |runtime, wire| {
+        DeploymentProfileRequirement::new(DeploymentClassV1::AssuranceSimulation, runtime, wire)
+    };
     let policies = [
         (
             DeploymentAcceptancePolicy::new(
-                AsciiId::new("deployment-authority-a").unwrap(),
-                GateId::new("gate-2").unwrap(),
-                AsciiId::new("range-a").unwrap(),
-                VehicleId::new("uav-1").unwrap(),
-                DeploymentClassV1::AssuranceSimulation,
-                DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-                DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                identity("gate-2", "range-a", "uav-1"),
+                profile(
+                    DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                ),
+                authority_policy(),
             ),
             DeploymentError::GateMismatch,
         ),
         (
             DeploymentAcceptancePolicy::new(
-                AsciiId::new("deployment-authority-a").unwrap(),
-                GateId::new("gate-1").unwrap(),
-                AsciiId::new("range-b").unwrap(),
-                VehicleId::new("uav-1").unwrap(),
-                DeploymentClassV1::AssuranceSimulation,
-                DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-                DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                identity("gate-1", "range-b", "uav-1"),
+                profile(
+                    DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                ),
+                authority_policy(),
             ),
             DeploymentError::RealmMismatch,
         ),
         (
             DeploymentAcceptancePolicy::new(
-                AsciiId::new("deployment-authority-a").unwrap(),
-                GateId::new("gate-1").unwrap(),
-                AsciiId::new("range-a").unwrap(),
-                VehicleId::new("uav-2").unwrap(),
-                DeploymentClassV1::AssuranceSimulation,
-                DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-                DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                identity("gate-1", "range-a", "uav-2"),
+                profile(
+                    DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                ),
+                authority_policy(),
             ),
             DeploymentError::VehicleMismatch,
         ),
         (
             DeploymentAcceptancePolicy::new(
-                AsciiId::new("deployment-authority-a").unwrap(),
-                GateId::new("gate-1").unwrap(),
-                AsciiId::new("range-a").unwrap(),
-                VehicleId::new("uav-1").unwrap(),
-                DeploymentClassV1::AssuranceSimulation,
-                DeploymentRuntimeProfileV1::InProcessReference,
-                DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                identity("gate-1", "range-a", "uav-1"),
+                profile(
+                    DeploymentRuntimeProfileV1::InProcessReference,
+                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                ),
+                authority_policy(),
             ),
             DeploymentError::RuntimeProfileMismatch,
         ),
         (
             DeploymentAcceptancePolicy::new(
-                AsciiId::new("deployment-authority-a").unwrap(),
-                GateId::new("gate-1").unwrap(),
-                AsciiId::new("range-a").unwrap(),
-                VehicleId::new("uav-1").unwrap(),
-                DeploymentClassV1::AssuranceSimulation,
-                DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-                DeploymentNcpWireProfileV1::ModeledP0,
+                identity("gate-1", "range-a", "uav-1"),
+                profile(
+                    DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+                    DeploymentNcpWireProfileV1::ModeledP0,
+                ),
+                authority_policy(),
             ),
             DeploymentError::NcpWireProfileMismatch,
         ),
@@ -568,14 +1217,14 @@ fn payload_digest_is_signature_rotation_invariant_but_envelope_digest_is_not() {
         6,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let (second_envelope, second_trust, _) = signed_with(
         &package,
         7,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let first = verify_deployment_package(
         &first_envelope,
@@ -603,7 +1252,7 @@ fn tampering_fails_signature_verification() {
         8,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let last = envelope.len() - 1;
     envelope[last] ^= 1;
@@ -818,7 +1467,7 @@ fn directory_source_rejects_a_second_role_resolving_to_the_same_inode() {
         34,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let verified_same =
         verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
@@ -1041,7 +1690,7 @@ fn directory_source_opens_then_rejects_a_device_entry() {
         33,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let verified_device =
         verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
@@ -1128,11 +1777,18 @@ fn directory_source_preflights_limits_and_flat_signed_names_before_entry_open() 
         ),
         Err(DeploymentError::ArtifactDeclaredTooLarge(_))
     ));
+    let maximum_declared_artifact = package()
+        .artifacts
+        .as_slice()
+        .iter()
+        .map(|artifact| usize::try_from(artifact.size_bytes.get()).unwrap())
+        .max()
+        .unwrap();
     assert_eq!(
         verified()
             .resolve_artifacts_from_directory(
                 artifact_source(empty_directory.path()),
-                ArtifactLimits::new(14, 20).unwrap(),
+                ArtifactLimits::new(maximum_declared_artifact, maximum_declared_artifact).unwrap(),
             )
             .unwrap_err(),
         DeploymentError::ArtifactTotalTooLarge
@@ -1151,7 +1807,7 @@ fn directory_source_preflights_limits_and_flat_signed_names_before_entry_open() 
             seed,
             KeyRole::DeploymentAuthority,
             KeyClass::Assurance,
-            Some("deployment-authority-a"),
+            "deployment-authority-a",
         );
         let verified_invalid =
             verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
@@ -1290,10 +1946,20 @@ fn artifact_length_digest_and_bounds_fail_before_resolution() {
         Err(DeploymentError::ArtifactDeclaredTooLarge(_))
     ));
 
+    let maximum_declared_artifact = package()
+        .artifacts
+        .as_slice()
+        .iter()
+        .map(|artifact| usize::try_from(artifact.size_bytes.get()).unwrap())
+        .max()
+        .unwrap();
     let inputs = artifact_inputs(verified().package());
     assert_eq!(
         verified()
-            .resolve_artifacts(inputs, ArtifactLimits::new(14, 20).unwrap())
+            .resolve_artifacts(
+                inputs,
+                ArtifactLimits::new(maximum_declared_artifact, maximum_declared_artifact).unwrap(),
+            )
             .unwrap_err(),
         DeploymentError::ArtifactTotalTooLarge
     );
@@ -1321,7 +1987,7 @@ fn artifact_length_digest_and_bounds_fail_before_resolution() {
         11,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let verified_cross_domain =
         verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())
@@ -1374,7 +2040,7 @@ fn artifact_debug_output_redacts_owned_bytes() {
         12,
         KeyRole::DeploymentAuthority,
         KeyClass::Assurance,
-        Some("deployment-authority-a"),
+        "deployment-authority-a",
     );
     let resolved =
         verify_deployment_package(&envelope, &policy(), &trust, &RevocationSnapshot::new())

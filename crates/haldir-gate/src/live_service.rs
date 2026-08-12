@@ -16,8 +16,9 @@ use core::num::NonZeroUsize;
 use core::task::Poll;
 
 use haldir_contracts::cbor::Limits;
+use haldir_contracts::challenge::GateChallengeV1;
 use haldir_contracts::digest::DigestV1;
-use haldir_contracts::ids::{ChallengeNonce, ControllerId};
+use haldir_contracts::ids::ControllerId;
 use haldir_contracts::receipt::DecisionReasonCodeV1;
 use haldir_core::snapshot::TrustedStateSnapshotV1;
 use haldir_core::time::{MonoInstant, MonotonicClock};
@@ -30,13 +31,22 @@ use haldir_transport_zenoh::{
 };
 use tokio::sync::watch;
 
-use crate::actor::{DecisionRecord, GateError, PublicationError};
+use crate::actor::{
+    DecisionRecord, GateError, MAX_INTENT_ENVELOPE_BYTES, MAX_INTENT_ROUTE_BYTES, PublicationError,
+};
 use crate::startup::publication_coordinator::{
     ActiveIntentBinding, CallTransition, CoordinatorFatal, DecisionTransition, DecisionUnavailable,
     DeclaredLiveZenohPublication, DurableCalledPublication, LiveIntentActivationFailure,
     OutputCapacityPool, PublicationCoordinator, PublishOnceError, StrictPublisherCallError,
+    TrustedStateUpdateFailure,
 };
 use crate::startup::{GateRuntimeProfile, JournalBoundRunningGate};
+
+// The transport callback and the actor must enforce one closed pre-verification
+// profile. A future edit may deliberately change both, but independent drift
+// must fail at compile time instead of moving attacker-sized hashing into Gate.
+const _: () = assert!(HARD_MAX_INTENT_BYTES == MAX_INTENT_ENVELOPE_BYTES);
+const _: () = assert!(MAX_HALDIR_ROUTE_BYTES == MAX_INTENT_ROUTE_BYTES);
 
 /// Failure while validating one startup-marked runtime as a declared-live kernel.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +98,8 @@ pub enum LiveZenohServiceBindFailure {
     IntentRouteMismatch,
     /// The internally derived final-command publisher did not match the runtime.
     Publisher(LiveServiceBindError),
+    /// The internally derived publisher could not bind the full NCP session pair.
+    PublisherSession(SecureZenohError),
     /// Declaring the exact bounded intent ingress failed.
     Ingress(SecureZenohError),
 }
@@ -102,6 +114,9 @@ impl fmt::Display for LiveZenohServiceBindFailure {
                 formatter.write_str("accepted intent route failed its binding cross-check")
             }
             Self::Publisher(error) => write!(formatter, "publisher binding failed: {error}"),
+            Self::PublisherSession(error) => {
+                write!(formatter, "publisher session binding failed: {error}")
+            }
             Self::Ingress(error) => write!(formatter, "intent-ingress declaration failed: {error}"),
         }
     }
@@ -154,6 +169,13 @@ impl std::error::Error for LiveZenohServiceBindError {
 /// declared-live local activation.
 pub const MAX_LIVE_LEASE_ENVELOPE_BYTES: usize = Limits::LARGE.max_total_bytes;
 
+/// Local monotonic lifetime of the one initial declared-live Gate challenge.
+///
+/// The deadline is deliberately not serialized into [`GateChallengeV1`]: it is
+/// enforced only by this Gate process's monotonic clock. An authority must
+/// return a matching signed lease within this interval.
+pub const LIVE_ACTIVATION_CHALLENGE_TTL_MS: u32 = crate::actor::GATE_CHALLENGE_TTL_MS;
+
 /// Invalid bounded input for one local declared-live activation attempt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -183,14 +205,14 @@ impl fmt::Display for LiveIntentActivationInputError {
 
 impl std::error::Error for LiveIntentActivationInputError {}
 
-/// Bounded caller-supplied inputs for one static local activation attempt.
+/// Bounded caller-supplied inputs for one initial live activation attempt.
 ///
 /// This is not an authenticated control-plane message. The trusted-state value,
-/// challenge nonce, and lease delivery are supplied by the embedding caller.
+/// and lease delivery are supplied by the embedding caller. The lease itself
+/// must bind the Gate-issued challenge retained by [`IssuedLiveGateChallenge`].
 /// Construction proves only the lease-envelope size bound.
 pub struct LiveIntentActivationInput {
     trusted_state: TrustedStateSnapshotV1,
-    challenge_nonce: ChallengeNonce,
     signed_lease_envelope: Vec<u8>,
 }
 
@@ -203,7 +225,6 @@ impl LiveIntentActivationInput {
     /// occur only when a declared-live kernel consumes this value.
     pub fn new(
         trusted_state: TrustedStateSnapshotV1,
-        challenge_nonce: ChallengeNonce,
         signed_lease_envelope: Vec<u8>,
     ) -> Result<Self, LiveIntentActivationInputError> {
         if signed_lease_envelope.len() > MAX_LIVE_LEASE_ENVELOPE_BYTES {
@@ -214,7 +235,6 @@ impl LiveIntentActivationInput {
         }
         Ok(Self {
             trusted_state,
-            challenge_nonce,
             signed_lease_envelope,
         })
     }
@@ -228,8 +248,6 @@ pub enum LiveIntentActivationError {
     Coordinator(LiveServiceFatal),
     /// The caller-supplied initial trusted-state snapshot was rejected.
     TrustedState(DecisionReasonCodeV1),
-    /// The nonce was duplicate, expired, or outside the bounded challenge table.
-    ChallengeRejected,
     /// The signed lease selected a route other than the canonical realm/session/controller route.
     IntentRouteMismatch,
     /// Signed lease verification, admission, scope, challenge, or term acceptance failed.
@@ -243,7 +261,6 @@ impl fmt::Display for LiveIntentActivationError {
         let message = match self {
             Self::Coordinator(_) => "declared-live coordinator activation failed",
             Self::TrustedState(_) => "initial trusted state was rejected",
-            Self::ChallengeRejected => "challenge registration was rejected",
             Self::IntentRouteMismatch => "lease intent route is not canonical for this runtime",
             Self::Lease(_) => "signed mission lease was rejected",
             Self::ActiveBindingUnavailable => "active intent binding is unavailable",
@@ -259,7 +276,6 @@ impl From<LiveIntentActivationFailure> for LiveIntentActivationError {
         match error {
             LiveIntentActivationFailure::Fatal(error) => Self::Coordinator(error.into()),
             LiveIntentActivationFailure::TrustedState(reason) => Self::TrustedState(reason),
-            LiveIntentActivationFailure::ChallengeRejected => Self::ChallengeRejected,
             LiveIntentActivationFailure::IntentRouteMismatch => Self::IntentRouteMismatch,
             LiveIntentActivationFailure::Lease(error) => Self::Lease(error),
             LiveIntentActivationFailure::ActiveBindingUnavailable => Self::ActiveBindingUnavailable,
@@ -267,7 +283,7 @@ impl From<LiveIntentActivationFailure> for LiveIntentActivationError {
     }
 }
 
-/// Validated declared-live kernel before caller-supplied local authority priming.
+/// Validated declared-live kernel before Gate challenge issuance.
 ///
 /// It is non-cloneable, contains the sole startup capability descendant, and has
 /// no actor/coordinator decomposition API. It performs no network activity.
@@ -275,6 +291,18 @@ impl From<LiveIntentActivationFailure> for LiveIntentActivationError {
 /// ```compile_fail
 /// fn requires_clone<T: Clone>() {}
 /// requires_clone::<haldir_gate::DeclaredLiveGateKernel<()>>();
+/// ```
+///
+/// ```compile_fail
+/// use haldir_core::time::MonotonicClock;
+/// use haldir_gate::{DeclaredLiveGateKernel, LiveIntentActivationInput};
+///
+/// fn activation_requires_an_issued_challenge<C: MonotonicClock>(
+///     kernel: DeclaredLiveGateKernel<C>,
+///     activation: LiveIntentActivationInput,
+/// ) {
+///     let _ = kernel.activate(activation);
+/// }
 /// ```
 #[must_use = "dropping the kernel stops the bound Gate runtime"]
 pub struct DeclaredLiveGateKernel<C> {
@@ -293,30 +321,96 @@ impl<C: MonotonicClock> DeclaredLiveGateKernel<C> {
         Ok(Self { coordinator })
     }
 
-    /// Consume this kernel and one bounded static activation input.
+    /// Consume this kernel to construct, sign, and register its sole initial
+    /// activation challenge.
     ///
-    /// The signed lease's verified/admission-bound controller ID is used to
-    /// derive the canonical exact intent route. Route equality is checked before
-    /// lease-term commit, challenge consumption, revision change, or activation.
+    /// Challenge nonce authority comes from startup's OS-entropy transaction;
+    /// the embedding caller cannot select or register it. The signed envelope
+    /// binds the Gate boot, session, output epoch, policy, contract version, and
+    /// pinned NCP compatibility identity. Registration uses Gate monotonic time
+    /// and the fixed [`LIVE_ACTIVATION_CHALLENGE_TTL_MS`] lifetime.
+    ///
     /// Any failure is fail-stop and returns no kernel owner.
     ///
-    /// This does not authenticate how the caller obtained the state, nonce, or
-    /// lease and does not implement ongoing lease/state/revocation ingress.
+    /// # Errors
+    /// Returns on clock regression, local deadline overflow, contract
+    /// construction failure, or challenge-table registration rejection.
+    pub fn issue_activation_challenge(
+        self,
+    ) -> Result<IssuedLiveGateChallenge<C>, LiveServiceFatal> {
+        let (coordinator, issued) = self
+            .coordinator
+            .issue_live_activation_challenge(LIVE_ACTIVATION_CHALLENGE_TTL_MS)
+            .map_err(LiveServiceFatal::from)?;
+        let (challenge, signed_challenge_envelope) = issued.into_parts();
+        Ok(IssuedLiveGateChallenge {
+            coordinator,
+            challenge,
+            signed_challenge_envelope,
+        })
+    }
+}
+
+/// Move-only declared-live Gate after its initial signed challenge is pending.
+///
+/// Only this state can consume an activation input, which makes challenge
+/// issuance a compile-time prerequisite for lease acceptance. The challenge
+/// payload and exact signed envelope are read-only; dropping this value stops
+/// the bound runtime and invalidates its pending nonce.
+///
+/// ```compile_fail
+/// fn requires_clone<T: Clone>() {}
+/// requires_clone::<haldir_gate::IssuedLiveGateChallenge<()>>();
+/// ```
+#[must_use = "dropping the issued challenge stops the bound Gate runtime"]
+pub struct IssuedLiveGateChallenge<C> {
+    coordinator: PublicationCoordinator<C, DeclaredLiveZenohPublication>,
+    challenge: GateChallengeV1,
+    signed_challenge_envelope: Vec<u8>,
+}
+
+impl<C> IssuedLiveGateChallenge<C> {
+    /// Exact challenge payload signed by Gate.
+    #[must_use]
+    pub const fn challenge(&self) -> &GateChallengeV1 {
+        &self.challenge
+    }
+
+    /// Exact COSE envelope an external mission authority must verify before
+    /// binding the challenge nonce into a lease.
+    #[must_use]
+    pub fn signed_challenge_envelope(&self) -> &[u8] {
+        &self.signed_challenge_envelope
+    }
+}
+
+impl<C: MonotonicClock> IssuedLiveGateChallenge<C> {
+    /// Consume this issued-challenge owner and one bounded activation input.
+    ///
+    /// The signed lease's verified/admission-bound controller ID derives the
+    /// canonical exact intent route. Initial state and its replay position are
+    /// installed before the one-shot challenge or durable lease term can be
+    /// consumed; route and source equality are checked before lease-term commit,
+    /// challenge consumption, revision change, or activation. Any failure is
+    /// fail-stop and returns no runtime owner.
+    ///
+    /// This does not authenticate trusted-state or lease delivery. Later service
+    /// states accept caller-supplied local state updates, but this kernel does not
+    /// implement authenticated ongoing lease/revocation ingress.
     ///
     /// # Errors
-    /// Returns on clock, state, challenge, lease, or exact-route validation failure.
+    /// Returns on clock, state, lease, challenge, or exact-route validation failure.
     pub fn activate(
         self,
         activation: LiveIntentActivationInput,
     ) -> Result<LiveIntentRouteBoundGate<C>, LiveIntentActivationError> {
         let LiveIntentActivationInput {
             trusted_state,
-            challenge_nonce,
             signed_lease_envelope,
         } = activation;
         let (coordinator, intent_binding) = self
             .coordinator
-            .activate_live_intent(trusted_state, challenge_nonce, &signed_lease_envelope)
+            .activate_live_intent(trusted_state, &signed_lease_envelope)
             .map_err(LiveIntentActivationError::from)?;
         Ok(LiveIntentRouteBoundGate {
             coordinator,
@@ -360,6 +454,10 @@ impl<C> LiveIntentRouteBoundGate<C> {
 impl<C: MonotonicClock> LiveIntentRouteBoundGate<C> {
     pub(crate) const fn actor(&self) -> &crate::actor::VehicleActor {
         self.coordinator.actor()
+    }
+
+    pub(crate) fn actor_mut_for_test(&mut self) -> &mut crate::actor::VehicleActor {
+        self.coordinator.actor_mut_for_test()
     }
 }
 
@@ -421,6 +519,8 @@ pub enum LiveServiceFatal {
     InvalidPreparedReceipt,
     /// The injected monotonic clock regressed.
     ClockRegression,
+    /// Trusted-state ingress exposed a terminal actor invariant fault.
+    ActorFaultLatched,
     /// The conservative restart diagnostic horizon overflowed.
     RestartDiagnosticHorizonOverflow,
     /// The retained startup declaration was not the required live profile.
@@ -441,6 +541,12 @@ pub enum LiveServiceFatal {
     DeclaredLiveStartupCapabilityUnavailable,
     /// The final-command route could not be derived from retained runtime identity.
     InvalidFinalCommandRoute(HaldirKeyError),
+    /// The fixed local challenge lifetime overflowed the monotonic clock.
+    ChallengeDeadlineOverflow,
+    /// The Gate challenge contract could not be constructed exactly.
+    InvalidGateChallenge,
+    /// The fresh startup challenge could not be registered in actor state.
+    ChallengeRegistrationRejected,
 }
 
 impl From<CoordinatorFatal> for LiveServiceFatal {
@@ -450,6 +556,7 @@ impl From<CoordinatorFatal> for LiveServiceFatal {
             CoordinatorFatal::Publication(error) => Self::Publication(error),
             CoordinatorFatal::InvalidPreparedReceipt => Self::InvalidPreparedReceipt,
             CoordinatorFatal::ClockRegression => Self::ClockRegression,
+            CoordinatorFatal::ActorFaultLatched => Self::ActorFaultLatched,
             CoordinatorFatal::RestartDiagnosticHorizonOverflow => {
                 Self::RestartDiagnosticHorizonOverflow
             }
@@ -465,6 +572,9 @@ impl From<CoordinatorFatal> for LiveServiceFatal {
             CoordinatorFatal::InvalidFinalCommandRoute(error) => {
                 Self::InvalidFinalCommandRoute(error)
             }
+            CoordinatorFatal::ChallengeDeadlineOverflow => Self::ChallengeDeadlineOverflow,
+            CoordinatorFatal::InvalidGateChallenge => Self::InvalidGateChallenge,
+            CoordinatorFatal::ChallengeRegistrationRejected => Self::ChallengeRegistrationRejected,
         }
     }
 }
@@ -476,6 +586,7 @@ impl fmt::Display for LiveServiceFatal {
             Self::Publication(_) => "publication state transition failed",
             Self::InvalidPreparedReceipt => "prepared receipt binding is invalid",
             Self::ClockRegression => "monotonic clock regressed",
+            Self::ActorFaultLatched => "Gate actor fault latched during state ingress",
             Self::RestartDiagnosticHorizonOverflow => "restart diagnostic horizon overflowed",
             Self::RuntimeProfileMismatch { .. } => "runtime profile mismatch",
             Self::NcpWireProfileMismatch { .. } => "NCP wire profile mismatch",
@@ -483,6 +594,9 @@ impl fmt::Display for LiveServiceFatal {
                 "declared-live startup capability is unavailable"
             }
             Self::InvalidFinalCommandRoute(_) => "final-command route is invalid",
+            Self::ChallengeDeadlineOverflow => "challenge deadline overflowed",
+            Self::InvalidGateChallenge => "Gate challenge construction failed",
+            Self::ChallengeRegistrationRejected => "Gate challenge registration was rejected",
         };
         formatter.write_str(message)
     }
@@ -541,13 +655,6 @@ pub enum LiveServiceOutcome {
         /// Exact actor-side rejection.
         reason: PublicationError,
     },
-    /// The local strict publisher returned `Ok` and the linked terminal record was confirmed.
-    PublishReturnedOk {
-        /// Signed ALLOW decision for the published frame.
-        decision: Box<DecisionRecord>,
-        /// Digest of the locally confirmed `PUBLISH_RETURNED_OK` envelope.
-        terminal_envelope_digest: DigestV1,
-    },
 }
 
 /// Terminal service outcome. No coordinator, publisher, or output capability is returned.
@@ -565,6 +672,15 @@ pub enum LiveServiceStop {
         /// Digest of the locally confirmed `PUBLISH_RETURNED_ERROR` envelope.
         terminal_envelope_digest: DigestV1,
     },
+    /// The local transport returned `Ok`, but plant arrival/application remains
+    /// unobserved, so the service cannot safely compute an action interval or
+    /// authorize a later command.
+    ApplicationUnobserved {
+        /// Signed ALLOW decision for the submitted frame.
+        decision: Box<DecisionRecord>,
+        /// Digest of the locally confirmed `PUBLISH_RETURNED_OK` envelope.
+        terminal_envelope_digest: DigestV1,
+    },
     /// Terminal recording or the immediately linked actor transition failed or became ambiguous.
     TerminalBoundaryFailed {
         /// Original route, preflight, or publisher error, if one was observed.
@@ -576,7 +692,7 @@ pub enum LiveServiceStop {
 
 /// Result of presenting one raw intent event to the service hard-boundary.
 #[must_use = "the returned service is required to process another event through this service instance"]
-pub enum LiveServiceTransition<C> {
+pub(crate) enum LiveServiceTransition<C> {
     /// The service may process another event only through the returned owner.
     Continue {
         /// Same single-owner service after a safe continuation path.
@@ -597,13 +713,56 @@ pub enum LiveServiceTransition<C> {
     Stopped(LiveServiceStop),
 }
 
+/// Result of one caller-supplied trusted-state update at an idle service boundary.
+///
+/// Rejection returns the same sole service owner; any terminal Gate fault destroys it.
+#[must_use = "the returned service is required for every later state or intent transition"]
+pub(crate) enum LiveStateUpdateTransition<C> {
+    /// The snapshot and its source replay position were accepted atomically.
+    Updated {
+        /// Same single-owner service with the newer trusted state.
+        service: DeclaredLiveGateService<C>,
+    },
+    /// The snapshot was rejected without replacing the prior trusted state.
+    Rejected {
+        /// Same single-owner service.
+        service: DeclaredLiveGateService<C>,
+        /// Stable state-ingress reason.
+        reason: DecisionReasonCodeV1,
+    },
+    /// Gate time or an internal actor invariant faulted and destroyed the service.
+    Stopped(LiveServiceFatal),
+}
+
 struct LiveServiceCore<C, P> {
     coordinator: PublicationCoordinator<C, DeclaredLiveZenohPublication>,
     publisher: P,
     output_pool: OutputCapacityPool,
 }
 
-/// Single-owner process-local kernel for one declared-live Gate runtime.
+enum PreparedStateUpdate<C, P> {
+    Updated(LiveServiceCore<C, P>),
+    Rejected {
+        core: LiveServiceCore<C, P>,
+        reason: DecisionReasonCodeV1,
+    },
+    Stopped(LiveServiceFatal),
+}
+
+fn update_trusted_state_core<C: MonotonicClock, P>(
+    mut core: LiveServiceCore<C, P>,
+    trusted_state: TrustedStateSnapshotV1,
+) -> PreparedStateUpdate<C, P> {
+    match core.coordinator.update_trusted_state(trusted_state) {
+        Ok(()) => PreparedStateUpdate::Updated(core),
+        Err(TrustedStateUpdateFailure::Rejected(reason)) => {
+            PreparedStateUpdate::Rejected { core, reason }
+        }
+        Err(TrustedStateUpdateFailure::Fatal(error)) => PreparedStateUpdate::Stopped(error.into()),
+    }
+}
+
+/// Internal single-owner process-local kernel for one declared-live Gate runtime.
 ///
 /// The service is not cloneable and exposes no coordinator, publisher, frame,
 /// pool, permit, or decomposition accessor. Calling [`Self::process_one`] consumes
@@ -615,12 +774,8 @@ struct LiveServiceCore<C, P> {
 /// service neither opens nor exclusively owns; other holders can create publishers
 /// or close that session.
 ///
-/// ```compile_fail
-/// fn requires_clone<T: Clone>() {}
-/// requires_clone::<haldir_gate::DeclaredLiveGateService<()>>();
-/// ```
 #[must_use = "dropping the service stops the bound Gate runtime and drops its owned publisher handle"]
-pub struct DeclaredLiveGateService<C> {
+pub(crate) struct DeclaredLiveGateService<C> {
     core: LiveServiceCore<C, FinalCommandPublisher>,
     intent_binding: ActiveIntentBinding,
 }
@@ -636,7 +791,7 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
     ///
     /// Route equality does not authenticate the session's credential identity or
     /// establish exclusive credential/session custody.
-    pub fn bind(
+    pub(crate) fn bind(
         route_bound: LiveIntentRouteBoundGate<C>,
         publisher: FinalCommandPublisher,
     ) -> Result<Self, LiveServiceBindError> {
@@ -653,14 +808,48 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
 
     /// Verified and admission-bound controller selected by the accepted lease.
     #[must_use]
-    pub const fn controller_id(&self) -> &ControllerId {
+    pub(crate) const fn controller_id(&self) -> &ControllerId {
         self.intent_binding.controller_id()
     }
 
     /// Canonical exact intent route retained from the accepted lease.
     #[must_use]
-    pub fn intent_route(&self) -> &str {
+    pub(crate) fn intent_route(&self) -> &str {
         self.intent_binding.intent_route()
+    }
+
+    /// Consume and apply one caller-supplied trusted-state snapshot.
+    ///
+    /// This is the service's ongoing state-update seam. It preserves exclusive
+    /// actor ownership and samples the same Gate clock used for decisions. It
+    /// validates state shape, boot-local capture/source monotonicity, and bounded
+    /// source replay state, but does not authenticate the caller or state producer.
+    /// A normal rejection returns the service unchanged; clock regression or an
+    /// internal actor invariant fault stops it.
+    pub(crate) fn update_trusted_state(
+        self,
+        trusted_state: TrustedStateSnapshotV1,
+    ) -> LiveStateUpdateTransition<C> {
+        let Self {
+            core,
+            intent_binding,
+        } = self;
+        match update_trusted_state_core(core, trusted_state) {
+            PreparedStateUpdate::Updated(core) => LiveStateUpdateTransition::Updated {
+                service: Self {
+                    core,
+                    intent_binding,
+                },
+            },
+            PreparedStateUpdate::Rejected { core, reason } => LiveStateUpdateTransition::Rejected {
+                service: Self {
+                    core,
+                    intent_binding,
+                },
+                reason,
+            },
+            PreparedStateUpdate::Stopped(error) => LiveStateUpdateTransition::Stopped(error),
+        }
     }
 
     /// Consume one caller-supplied raw intent event through service hard bounds, decision,
@@ -670,7 +859,7 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
     /// creating Called. Cancellation after Called drops all service capabilities;
     /// restart recovery must classify the locally confirmed Called tail. Local
     /// publisher `Ok` is not delivery, receiver acceptance, application, or an ACK.
-    pub async fn process_one(self, event: IntentIngressEvent) -> LiveServiceTransition<C> {
+    pub(crate) async fn process_one(self, event: IntentIngressEvent) -> LiveServiceTransition<C> {
         let Self {
             core,
             intent_binding,
@@ -703,24 +892,15 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
                 publisher,
                 output_pool,
             } => match called.publish_once(publisher).await {
-                Ok((journaled, publisher)) => {
-                    let (coordinator, decision, terminal_envelope_digest, output_permit) =
+                Ok(infallible) => match infallible {},
+                Err(PublishOnceError::ApplicationUnobserved { journaled }) => {
+                    let (decision, terminal_envelope_digest, output_permit) =
                         journaled.into_parts();
-                    drop(output_permit);
-                    LiveServiceTransition::Continue {
-                        service: Self {
-                            core: LiveServiceCore {
-                                coordinator,
-                                publisher,
-                                output_pool,
-                            },
-                            intent_binding,
-                        },
-                        outcome: LiveServiceOutcome::PublishReturnedOk {
-                            decision: Box::new(decision),
-                            terminal_envelope_digest,
-                        },
-                    }
+                    drop((output_permit, output_pool, intent_binding));
+                    LiveServiceTransition::Stopped(LiveServiceStop::ApplicationUnobserved {
+                        decision: Box::new(decision),
+                        terminal_envelope_digest,
+                    })
                 }
                 Err(PublishOnceError::PublisherReturned { source, journaled }) => {
                     let (decision, terminal_envelope_digest, output_permit) =
@@ -747,12 +927,13 @@ impl<C: MonotonicClock> DeclaredLiveGateService<C> {
 /// Cloneable local request handle for a safe-boundary Gate aggregate shutdown.
 ///
 /// A request is persistent and monotonic. It can wake
-/// [`DeclaredLiveGateZenohService::process_next_or_shutdown`] while that method is
-/// waiting for ingress, but it never cancels an event already handed to the Gate
-/// decision/publication lifecycle. The aggregate remains the sole explicit close
-/// handle. The request is cooperative and irreversible, so production wiring must
-/// restrict clones and exclusively drive the aggregate through the shutdown-aware
-/// processing method.
+/// [`DeclaredLiveGateZenohService::process_next_or_shutdown`] or
+/// [`DeclaredLiveGateZenohService::process_next_or_state_or_shutdown`] while that
+/// method is waiting for ingress, but it never cancels an event already handed to
+/// the Gate decision/publication lifecycle. The aggregate remains the sole explicit
+/// close handle. The request is cooperative and irreversible, so production wiring
+/// must restrict clones and exclusively drive the aggregate through a
+/// shutdown-aware processing method.
 #[derive(Clone)]
 pub struct LiveZenohShutdownHandle {
     requested: watch::Sender<bool>,
@@ -795,6 +976,8 @@ pub enum LiveZenohServiceStop {
     IngressClosed,
     /// The owned ingress/service topology produced an otherwise unreachable refusal.
     OwnedIoInvariant(LiveDecisionUnavailable),
+    /// Aggregate ownership contradicted its retained-intent invariant.
+    PendingIntentInvariant,
     /// The inner decision/publication service stopped fail-closed.
     Gate(LiveServiceStop),
 }
@@ -822,6 +1005,71 @@ pub enum LiveZenohServiceTransition<C> {
         reason: LiveDecisionUnavailable,
     },
     /// The aggregate is deliberately unavailable until restart/recovery.
+    Stopped(LiveZenohServiceStop),
+}
+
+/// Result of one trusted-state update on the session-owning Zenoh aggregate.
+#[must_use = "the returned aggregate is required for every later receive or shutdown transition"]
+pub enum LiveZenohStateUpdateTransition<C> {
+    /// The snapshot was accepted and every aggregate-local capability is retained.
+    Updated {
+        /// Same single-owner aggregate with the newer trusted state.
+        service: DeclaredLiveGateZenohService<C>,
+    },
+    /// The snapshot was rejected without replacing the prior trusted state.
+    Rejected {
+        /// Same single-owner aggregate, including any privately pending intent.
+        service: DeclaredLiveGateZenohService<C>,
+        /// Stable state-ingress reason.
+        reason: DecisionReasonCodeV1,
+    },
+    /// The Gate stopped fail-closed and no aggregate owner remains.
+    Stopped(LiveZenohServiceStop),
+}
+
+/// Result of waiting for either one trusted-state update, one owned intent, or
+/// a cooperative shutdown request.
+///
+/// This is the embedding seam for a real event loop: the aggregate remains the
+/// sole Gate/transport owner while the caller's state-receive future is polled
+/// beside the internally owned intent ingress. The state future is dropped when
+/// intent or shutdown wins, so callers must supply a cancellation-safe receive
+/// operation. The internally owned Tokio MPSC intent receive is cancellation-safe;
+/// that property does not transfer to the caller-supplied state future.
+#[must_use = "the returned aggregate is required for every later live transition"]
+pub enum LiveZenohActivityTransition<C> {
+    /// A persistent local shutdown request won at a safe receive boundary.
+    ShutdownRequested {
+        /// Same aggregate owner, ready for explicit shutdown.
+        service: DeclaredLiveGateZenohService<C>,
+    },
+    /// The caller-supplied state snapshot was accepted atomically.
+    StateUpdated {
+        /// Same aggregate owner with the newer trusted state.
+        service: DeclaredLiveGateZenohService<C>,
+    },
+    /// The state snapshot was rejected without replacing trusted state.
+    StateRejected {
+        /// Same aggregate owner.
+        service: DeclaredLiveGateZenohService<C>,
+        /// Stable state-ingress reason.
+        reason: DecisionReasonCodeV1,
+    },
+    /// One intent completed through a safe continuation path.
+    IntentProcessed {
+        /// Same aggregate owner.
+        service: DeclaredLiveGateZenohService<C>,
+        /// Decision/publication outcome.
+        outcome: LiveServiceOutcome,
+    },
+    /// A retryable journal/restart refusal retained the exact intent privately.
+    IntentUnavailable {
+        /// Same aggregate owner with the private pending intent.
+        service: DeclaredLiveGateZenohService<C>,
+        /// Ownership-preserving refusal.
+        reason: LiveDecisionUnavailable,
+    },
+    /// The aggregate stopped fail-closed and no owner remains.
     Stopped(LiveZenohServiceStop),
 }
 
@@ -886,8 +1134,9 @@ impl std::error::Error for LiveZenohShutdownError {}
 /// Binding consumes an accepted-lease-derived route capability, constructs the
 /// strict publisher and exact bounded ingress internally from the same supplied
 /// session wrapper, and retains all of them behind the consuming
-/// [`Self::process_next`] and [`Self::process_next_or_shutdown`] methods. No public
-/// method accepts or returns a raw [`IntentIngressEvent`]. An ownership-preserving
+/// [`Self::process_next`], [`Self::process_next_or_shutdown`], and
+/// [`Self::process_next_or_state_or_shutdown`] methods. No public method accepts or
+/// returns a raw [`IntentIngressEvent`]. An ownership-preserving
 /// journal-capacity or restart-clearance refusal is retained privately and retried
 /// byte-for-byte before receiving a newer event. Input/key/output-capacity refusals
 /// are unreachable through this owned topology and stop as an invariant violation.
@@ -901,6 +1150,13 @@ impl std::error::Error for LiveZenohShutdownError {}
 /// ```compile_fail
 /// fn requires_clone<T: Clone>() {}
 /// requires_clone::<haldir_gate::DeclaredLiveGateZenohService<()>>();
+/// ```
+///
+/// The lower raw-event coordinator facade is deliberately not part of the
+/// public Gate API:
+///
+/// ```compile_fail
+/// use haldir_gate::DeclaredLiveGateService;
 /// ```
 #[must_use = "dropping the aggregate stops the bound Gate runtime and drops its Zenoh handles"]
 pub struct DeclaredLiveGateZenohService<C> {
@@ -967,7 +1223,17 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
             }
         };
 
-        let publisher = FinalCommandPublisher::new(&session, &keys);
+        let expected_session = route_bound.coordinator.actor().ncp_session().clone();
+        let publisher = match FinalCommandPublisher::try_new(&session, &keys, &expected_session) {
+            Ok(publisher) => publisher,
+            Err(error) => {
+                return Err(close_failed_zenoh_binding(
+                    session,
+                    LiveZenohServiceBindFailure::PublisherSession(error),
+                )
+                .await);
+            }
+        };
         let service = match DeclaredLiveGateService::bind(route_bound, publisher) {
             Ok(service) => service,
             Err(error) => {
@@ -1028,7 +1294,7 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
 
     /// Obtain a cloneable local handle that can request safe-boundary shutdown.
     ///
-    /// Only [`Self::process_next_or_shutdown`] observes this request. The handle
+    /// Only the shutdown-aware processing methods observe this request. The handle
     /// cannot close transport resources or extract the aggregate owner. Each clone
     /// is an irreversible cooperative stop capability and should remain restricted
     /// to the runner's shutdown path.
@@ -1036,6 +1302,64 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
     pub fn shutdown_handle(&self) -> LiveZenohShutdownHandle {
         LiveZenohShutdownHandle {
             requested: self.shutdown_sender.clone(),
+        }
+    }
+
+    /// Consume and apply one caller-supplied state snapshot while retaining the
+    /// session, exact ingress, shutdown latch, and any privately pending intent.
+    ///
+    /// The update is synchronous and can only occur at an aggregate ownership
+    /// boundary, so it cannot race an in-flight decision or publisher call.
+    pub fn update_trusted_state(
+        self,
+        trusted_state: TrustedStateSnapshotV1,
+    ) -> LiveZenohStateUpdateTransition<C> {
+        let Self {
+            service,
+            ingress,
+            session,
+            pending_event,
+            shutdown_sender,
+            shutdown_receiver,
+        } = self;
+        match service.update_trusted_state(trusted_state) {
+            LiveStateUpdateTransition::Updated { service } => {
+                LiveZenohStateUpdateTransition::Updated {
+                    service: Self {
+                        service,
+                        ingress,
+                        session,
+                        pending_event,
+                        shutdown_sender,
+                        shutdown_receiver,
+                    },
+                }
+            }
+            LiveStateUpdateTransition::Rejected { service, reason } => {
+                LiveZenohStateUpdateTransition::Rejected {
+                    service: Self {
+                        service,
+                        ingress,
+                        session,
+                        pending_event,
+                        shutdown_sender,
+                        shutdown_receiver,
+                    },
+                    reason,
+                }
+            }
+            LiveStateUpdateTransition::Stopped(error) => {
+                drop((
+                    ingress,
+                    session,
+                    pending_event,
+                    shutdown_sender,
+                    shutdown_receiver,
+                ));
+                LiveZenohStateUpdateTransition::Stopped(LiveZenohServiceStop::Gate(
+                    LiveServiceStop::Fatal(error),
+                ))
+            }
         }
     }
 
@@ -1104,6 +1428,116 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
         self.process_owned_event(event).await
     }
 
+    /// Wait concurrently for a caller-owned trusted-state receive, the owned
+    /// intent ingress, or a cooperative shutdown request.
+    ///
+    /// Unlike calling [`Self::update_trusted_state`] only between blocking
+    /// [`Self::process_next_or_shutdown`] calls, this method lets a quiet intent
+    /// stream continue refreshing Gate state. Shutdown is polled first, then
+    /// state, then intent. If a retryable intent is already retained, an
+    /// immediately ready state update may still advance state before that intent
+    /// is retried; the signed intent's exact source correlation is checked during
+    /// evaluation and fails closed if it no longer names the current state.
+    ///
+    /// `next_state` must be cancellation-safe: it is dropped whenever shutdown or
+    /// intent wins. It must also not remain perpetually ready; state wins the
+    /// documented poll order and such a producer can starve intent processing.
+    /// Cancelling this consuming method itself still drops the whole aggregate;
+    /// use [`Self::shutdown_handle`] for ownership-preserving shutdown.
+    pub async fn process_next_or_state_or_shutdown<F>(
+        mut self,
+        next_state: F,
+    ) -> LiveZenohActivityTransition<C>
+    where
+        F: Future<Output = TrustedStateSnapshotV1>,
+    {
+        if *self.shutdown_receiver.borrow() {
+            return LiveZenohActivityTransition::ShutdownRequested { service: self };
+        }
+
+        // A retained retry must remain owned by `self` until the intent branch
+        // actually wins. Moving it into an immediately-ready future would drop
+        // the event when state or shutdown wins the race.
+        if self.pending_event.is_some() {
+            return match race_shutdown_state_intent(
+                &mut self.shutdown_receiver,
+                next_state,
+                core::future::ready(()),
+            )
+            .await
+            {
+                ShutdownStateIntentRace::Requested => {
+                    LiveZenohActivityTransition::ShutdownRequested { service: self }
+                }
+                ShutdownStateIntentRace::State(trusted_state) => {
+                    self.apply_activity_state_update(trusted_state)
+                }
+                ShutdownStateIntentRace::Intent(()) => match self.pending_event.take() {
+                    Some(event) => self.process_activity_intent(event).await,
+                    None => LiveZenohActivityTransition::Stopped(
+                        LiveZenohServiceStop::PendingIntentInvariant,
+                    ),
+                },
+            };
+        }
+
+        match race_shutdown_state_intent(
+            &mut self.shutdown_receiver,
+            next_state,
+            self.ingress.recv(),
+        )
+        .await
+        {
+            ShutdownStateIntentRace::Requested => {
+                LiveZenohActivityTransition::ShutdownRequested { service: self }
+            }
+            ShutdownStateIntentRace::State(trusted_state) => {
+                self.apply_activity_state_update(trusted_state)
+            }
+            ShutdownStateIntentRace::Intent(Some(event)) => {
+                self.process_activity_intent(event).await
+            }
+            ShutdownStateIntentRace::Intent(None) => {
+                LiveZenohActivityTransition::Stopped(LiveZenohServiceStop::IngressClosed)
+            }
+        }
+    }
+
+    fn apply_activity_state_update(
+        self,
+        trusted_state: TrustedStateSnapshotV1,
+    ) -> LiveZenohActivityTransition<C> {
+        match self.update_trusted_state(trusted_state) {
+            LiveZenohStateUpdateTransition::Updated { service } => {
+                LiveZenohActivityTransition::StateUpdated { service }
+            }
+            LiveZenohStateUpdateTransition::Rejected { service, reason } => {
+                LiveZenohActivityTransition::StateRejected { service, reason }
+            }
+            LiveZenohStateUpdateTransition::Stopped(stop) => {
+                LiveZenohActivityTransition::Stopped(stop)
+            }
+        }
+    }
+
+    async fn process_activity_intent(
+        self,
+        event: IntentIngressEvent,
+    ) -> LiveZenohActivityTransition<C> {
+        match self.process_owned_event(event).await {
+            LiveZenohServiceTransition::ShutdownRequested { service } => {
+                LiveZenohActivityTransition::ShutdownRequested { service }
+            }
+            LiveZenohServiceTransition::Continue { service, outcome } => {
+                LiveZenohActivityTransition::IntentProcessed { service, outcome }
+            }
+            LiveZenohServiceTransition::Unavailable { service, reason } => {
+                LiveZenohActivityTransition::IntentUnavailable { service, reason }
+            }
+            LiveZenohServiceTransition::Stopped(stop) => LiveZenohActivityTransition::Stopped(stop),
+        }
+    }
+
     async fn process_owned_event(self, event: IntentIngressEvent) -> LiveZenohServiceTransition<C> {
         let Self {
             service,
@@ -1113,8 +1547,12 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
             shutdown_sender,
             shutdown_receiver,
         } = self;
-        debug_assert!(pending_event.is_none());
-        drop(pending_event);
+        if pending_event.is_some() {
+            drop((service, session, ingress, pending_event));
+            return LiveZenohServiceTransition::Stopped(
+                LiveZenohServiceStop::PendingIntentInvariant,
+            );
+        }
 
         match service.process_one(event).await {
             LiveServiceTransition::Continue { service, outcome } => {
@@ -1162,12 +1600,14 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
         }
     }
 
-    /// Explicitly undeclare/drain ingress, drop the publisher-owning Gate service,
-    /// and then close the retained session. Cleanup continues after undeclare error.
+    /// Explicitly undeclare/drain ingress, close the retained session while the
+    /// publisher-owning Gate service still retains its instance lock, and only
+    /// then drop that service. Cleanup continues after undeclare error.
     /// This is local transport cleanup, not durable-journal footer finalization or
-    /// confirmed remote session retirement. Because dropping the service releases
-    /// its retained instance lock before session close completes, a runnable package
-    /// must retain its own outer instance lock through final teardown.
+    /// confirmed remote session retirement. A cancelled shutdown future still
+    /// drops its owned service and cannot confirm session closure, so a runnable
+    /// package needs an outer supervision/lock policy for cancellation and process
+    /// teardown rather than treating this local return as remote retirement proof.
     ///
     /// # Errors
     /// Returns either or both explicit transport cleanup failures. Cancellation
@@ -1185,8 +1625,11 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
         let pending_count = usize::from(pending_event.is_some());
         let ingress_result = ingress.undeclare_and_drain().await;
         drop(pending_event);
-        drop(service);
         let session_result = session.close().await;
+        // Keep the durable Gate owner (and therefore its retained instance lock)
+        // alive until the explicit session-close attempt has returned. This
+        // prevents an orderly restart from overlapping a still-open old session.
+        drop(service);
         finish_zenoh_shutdown(
             ingress_result.map(|(events, counters)| (events.len(), counters)),
             session_result,
@@ -1198,6 +1641,42 @@ impl<C: MonotonicClock> DeclaredLiveGateZenohService<C> {
 enum ShutdownRace<T> {
     Requested,
     Completed(T),
+}
+
+enum ShutdownStateIntentRace<S, T> {
+    Requested,
+    State(S),
+    Intent(T),
+}
+
+async fn race_shutdown_state_intent<SF, IF, S, T>(
+    shutdown_receiver: &mut watch::Receiver<bool>,
+    state: SF,
+    intent: IF,
+) -> ShutdownStateIntentRace<S, T>
+where
+    SF: Future<Output = S>,
+    IF: Future<Output = T>,
+{
+    if *shutdown_receiver.borrow() {
+        return ShutdownStateIntentRace::Requested;
+    }
+    let mut shutdown = core::pin::pin!(shutdown_receiver.changed());
+    let mut state = core::pin::pin!(state);
+    let mut intent = core::pin::pin!(intent);
+    poll_fn(|context| {
+        if shutdown.as_mut().poll(context).is_ready() {
+            return Poll::Ready(ShutdownStateIntentRace::Requested);
+        }
+        if let Poll::Ready(state) = state.as_mut().poll(context) {
+            return Poll::Ready(ShutdownStateIntentRace::State(state));
+        }
+        intent
+            .as_mut()
+            .poll(context)
+            .map(ShutdownStateIntentRace::Intent)
+    })
+    .await
 }
 
 async fn race_shutdown<F, T>(
@@ -1409,6 +1888,16 @@ pub(crate) struct TestDeclaredLiveGateService<C, P> {
 }
 
 #[cfg(test)]
+pub(crate) enum TestLiveStateUpdateTransition<C, P> {
+    Updated(TestDeclaredLiveGateService<C, P>),
+    Rejected {
+        service: TestDeclaredLiveGateService<C, P>,
+        reason: DecisionReasonCodeV1,
+    },
+    Stopped(LiveServiceFatal),
+}
+
+#[cfg(test)]
 #[allow(
     dead_code,
     reason = "the test service mirrors production endpoints whose fault matrix is covered below the facade"
@@ -1426,6 +1915,10 @@ pub(crate) enum TestLiveServiceTransition<C, P, E> {
     Fatal(LiveServiceFatal),
     PublisherReturned {
         error: E,
+        decision: Box<DecisionRecord>,
+        terminal_envelope_digest: DigestV1,
+    },
+    ApplicationUnobserved {
         decision: Box<DecisionRecord>,
         terminal_envelope_digest: DigestV1,
     },
@@ -1474,6 +1967,24 @@ impl<C: MonotonicClock, P> TestDeclaredLiveGateService<C, P> {
         &self,
     ) -> Option<crate::startup::publication_coordinator::OutputCapacityPermit> {
         self.core.output_pool.try_reserve()
+    }
+
+    pub(crate) fn update_trusted_state(
+        self,
+        trusted_state: TrustedStateSnapshotV1,
+    ) -> TestLiveStateUpdateTransition<C, P> {
+        match update_trusted_state_core(self.core, trusted_state) {
+            PreparedStateUpdate::Updated(core) => {
+                TestLiveStateUpdateTransition::Updated(Self { core })
+            }
+            PreparedStateUpdate::Rejected { core, reason } => {
+                TestLiveStateUpdateTransition::Rejected {
+                    service: Self { core },
+                    reason,
+                }
+            }
+            PreparedStateUpdate::Stopped(error) => TestLiveStateUpdateTransition::Stopped(error),
+        }
     }
 
     pub(crate) async fn process_one_with_test_future<E, F, Fut>(
@@ -1527,25 +2038,18 @@ impl<C: MonotonicClock, P> TestDeclaredLiveGateService<C, P> {
                     None => called,
                 };
                 match called
-                    .publish_once_with_test_future(publisher, invoke)
+                    .publish_once_with_live_test_future(publisher, invoke)
                     .await
                 {
-                    Ok((journaled, publisher)) => {
-                        let (coordinator, decision, terminal_envelope_digest, output_permit) =
+                    Ok(infallible) => match infallible {},
+                    Err(PublishOnceError::ApplicationUnobserved { journaled }) => {
+                        let (decision, terminal_envelope_digest, output_permit) =
                             journaled.into_parts();
                         drop(output_permit);
-                        TestLiveServiceTransition::Continue {
-                            service: Self {
-                                core: LiveServiceCore {
-                                    coordinator,
-                                    publisher,
-                                    output_pool,
-                                },
-                            },
-                            outcome: LiveServiceOutcome::PublishReturnedOk {
-                                decision: Box::new(decision),
-                                terminal_envelope_digest,
-                            },
+                        drop(output_pool);
+                        TestLiveServiceTransition::ApplicationUnobserved {
+                            decision: Box::new(decision),
+                            terminal_envelope_digest,
                         }
                     }
                     Err(PublishOnceError::PublisherReturned { source, journaled }) => {
@@ -1603,9 +2107,14 @@ pub(crate) enum TestLiveZenohServiceTransition<C, P, S, I, E> {
     },
     IngressClosed,
     OwnedIoInvariant(LiveDecisionUnavailable),
+    PendingIntentInvariant,
     Fatal(LiveServiceFatal),
     PublisherReturned {
         error: E,
+        decision: Box<DecisionRecord>,
+        terminal_envelope_digest: DigestV1,
+    },
+    ApplicationUnobserved {
         decision: Box<DecisionRecord>,
         terminal_envelope_digest: DigestV1,
     },
@@ -1753,8 +2262,10 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
             controller_id,
             intent_route,
         } = self;
-        debug_assert!(pending_event.is_none());
-        drop(pending_event);
+        if pending_event.is_some() {
+            drop((service, session, ingress, pending_event));
+            return TestLiveZenohServiceTransition::PendingIntentInvariant;
+        }
         match service.process_one_with_test_future(event, invoke).await {
             TestLiveServiceTransition::Continue { service, outcome } => {
                 TestLiveZenohServiceTransition::Continue {
@@ -1805,6 +2316,13 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
                 decision,
                 terminal_envelope_digest,
             },
+            TestLiveServiceTransition::ApplicationUnobserved {
+                decision,
+                terminal_envelope_digest,
+            } => TestLiveZenohServiceTransition::ApplicationUnobserved {
+                decision,
+                terminal_envelope_digest,
+            },
             TestLiveServiceTransition::TerminalBoundaryFailed {
                 publisher_error,
                 source,
@@ -1842,16 +2360,19 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
         let pending_count = usize::from(pending_event.is_some());
         let ingress_result = undeclare(ingress).await;
         drop(pending_event);
-        drop(service);
         let session_result = close(session).await;
+        // Mirror production shutdown: the publisher-owning Gate service keeps
+        // the process-instance lock until the explicit session-close attempt
+        // returns, so an orderly restart cannot overlap the old session.
+        drop(service);
         finish_zenoh_shutdown(ingress_result, session_result, pending_count)
     }
 }
 
 #[cfg(test)]
 mod shutdown_race_tests {
-    use super::{ShutdownRace, race_shutdown};
-    use core::future::{Future, pending};
+    use super::{ShutdownRace, ShutdownStateIntentRace, race_shutdown, race_shutdown_state_intent};
+    use core::future::{Future, pending, ready};
     use core::sync::atomic::{AtomicUsize, Ordering};
     use core::task::{Context, Poll, Waker};
     use std::sync::Arc;
@@ -1883,6 +2404,23 @@ mod shutdown_race_tests {
         assert!(matches!(
             race.as_mut().poll(&mut context),
             Poll::Ready(ShutdownRace::Requested)
+        ));
+    }
+
+    #[test]
+    fn ready_state_precedes_a_simultaneously_ready_intent() {
+        let (_sender, mut receiver) = tokio::sync::watch::channel(false);
+        let mut race = Box::pin(race_shutdown_state_intent(
+            &mut receiver,
+            ready(7_u8),
+            ready(9_u8),
+        ));
+        let waker = Waker::from(Arc::new(WakeCounter(AtomicUsize::new(0))));
+        let mut context = Context::from_waker(&waker);
+
+        assert!(matches!(
+            race.as_mut().poll(&mut context),
+            Poll::Ready(ShutdownStateIntentRace::State(7))
         ));
     }
 }

@@ -1,10 +1,10 @@
 <!-- markdownlint-disable MD013 -->
 # Haldir Gate — P0 implementation punch-list
 
-Synthesized from an independent five-lens review (complete mediation & authority;
-canonical encoding/signing/replay; time/restart/session-stream/evidence; fixed-point
-policy; falsifiability/honesty) of the normative specification. IDs `B#/H#/G#/O#` are
-stable handles cited in per-milestone reviews. Spec invariants are `A#/S#/T#/P#/F#`.
+Originally synthesized from a five-workstream review of the normative
+specification and now maintained under the twenty-lens rubric in
+`CONTRIBUTING.md`. IDs `B#/H#/G#/O#` are stable handles cited in per-milestone
+reviews. Spec invariants are `A#/S#/T#/P#/F#`.
 
 This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done, or
 `[~]` deliberately out of P0 scope (see `docs/LIMITATIONS.md`).
@@ -60,14 +60,14 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   the declaration in `StartupReport` and separately mints a private move-only capability
   consumed by the live coordinator typestate, holds the instance lock, and explicitly
   provisions or opens development-local state. Exact reference and copied-report paths
-  cannot mint the capability. A separate strict package/owned-artifact verifier, bounded Linux/macOS
-  source from a caller-supplied directory capability, and atomic v3 package-plus-boot ratchet now
-  exist, but no Gate startup consumes either typestate
-  (`CL-DEPLOYMENT-PRIMITIVE-01`). **Still absent:** private Gate glue that makes the authenticated
-  declaration mandatory, authenticated/protected artifact-root and credential acquisition,
-  semantic loaders for the remaining artifacts and signed-role composition for the standalone NCP
-  command-subset compatibility proof (`CL-NCP-COMPATIBILITY-01`), and a deployed external
-  non-rewindable anchor, so end-to-end cross-restart protection is not established (see
+  cannot mint the capability. The package-bound entry point now consumes the strict verifier,
+  exact owned-artifact/NCP typestate, and atomic v3 package-plus-boot ratchet; exact runtime identity,
+  wire, store, and assurance mismatches fail before effects, and unbound assurance startup is closed
+  (`CL-DEPLOYMENT-PRIMITIVE-01`). A later journal bind exact-matches the signed journal ID and
+  commits it into each format-v2 segment header. **Still absent:** an authenticated runner that makes
+  this path and journal binding mandatory, authenticated/protected artifact-root and credential
+  acquisition, semantic loaders for the remaining artifacts, running-executable and journal-path
+  binding, and a deployed external non-rewindable anchor, so end-to-end cross-restart protection is not established (see
   `docs/LIMITATIONS.md`). Direct actor construction bypasses template startup.
 - `[~]` **B12** Anti-rollback high-water, strict-advance rejection, canonical decode,
   an unambiguous versioned `(logical issuer, vehicle)` term namespace with a
@@ -118,13 +118,18 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   off-by-default concrete method exists only on a Called typestate descended from the
   startup-minted declared-live capability. It rejects a publisher outside the actor's exact
   realm/session route before invocation, consumes a matched strict publisher around one
-  await, and journals the observed local result. Test-only futures also cover cold drop,
+  await, and journals the observed local result. Every invoked live call is terminal, including
+  local `Ok`, because NCP v0.8 starts TTL at unobserved plant-local arrival; no guessed live
+  history interval or later publication authority is created. Test-only futures also cover cold drop,
   pending timeout-as-drop, and panic unwind without converting an unobserved result to
-  ReturnedError. A public no-network activation kernel first validates one bounded caller-supplied
-  initial state/challenge/signed lease and mints a canonical route capability only from the
-  verified controller. The lower consuming service encloses that marked route-bound coordinator,
+  ReturnedError. A public no-network kernel first issues one Gate-signed, locally expiring
+  challenge from startup entropy. Only the returned move-only challenge state can validate one
+  bounded caller-supplied initial state and matching signed lease and mint a canonical route
+  capability from the verified controller. The lower consuming service encloses that marked route-bound coordinator,
   preconstructed matched publisher, and one private slot. The outer aggregate can instead retain
-  one supplied session wrapper plus internally derived publisher/ingress handles. Its cloneable
+  one supplied session wrapper plus internally derived publisher/ingress handles. Both expose a
+  consuming Gate-clocked state-update transition that retains the sole owner after acceptance or
+  ordinary rejection; it does not authenticate a producer or supply a state transport. Its cloneable
   local stop-only handle can latch a request that lets the consuming method return the aggregate
   before receive/retry or wake idle receive, while never request-cancelling an already-selected
   event; a concurrent request then stays latched. The cooperative clones must remain restricted and
@@ -140,7 +145,9 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **H9** COSE content-type ⇔ payload kind ⇔ external-AAD domain all agree; negatives for
   each mismatch; AAD encodes major version.
 - `[x]` **H10** Domain-separated, golden-vectored `semantic_intent_digest` /
-  `state_snapshot_digest` (per-kind prefix so digest domains cannot collide).
+  `state_snapshot_digest` (length-framed per-kind prefixes place object classes
+  in distinct preimage namespaces; SHA-256 supplies computational collision
+  resistance).
 - `[x]` **H11** Structural limits enforced DURING decode; strict ASCII security IDs; reject
   seq 0 / malformed UUID. Declared-live activation also rejects a signed lease envelope larger
   than the 64-KiB large-contract profile before consuming the live kernel.
@@ -177,8 +184,8 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   also rejects an inexact or feature-disabled `DeclaredLiveZenoh` declaration before its
   listed backend calls, entropy, locks, or directory access, and its private process-local
   capability now gates concrete coordinator publication. A public no-network activation
-  typestate requires bounded initial state/challenge/signed-lease input and derives the intent
-  route from the verified controller; the outer aggregate can consume that route-bound result
+  typestate requires Gate-signed challenge issuance followed by bounded initial state and matching
+  signed-lease input, and derives the intent route from the verified controller; the outer aggregate can consume that route-bound result
   plus one supplied session wrapper and derive its publisher/exact ingress internally.
   A local monotonic request latch now preserves the owner across idle stop, without cancelling an
   already-selected event or claiming timeout/supervision behavior. Separate development examples
@@ -187,8 +194,10 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   authenticated credential-opening executable or ongoing control loop selects them. A separate
   package primitive verifies and retains exact signed artifact bytes; its optional bounded Linux/macOS
   source captures signed flat leaves from a caller-supplied open directory without reopening them.
-  It can also supply neutral values to an atomic package/boot ratchet, but no Gate path consumes
-  those stages. The
+  Its NCP-validated stage now composes with strict signed Gate-configuration decoding; Gate startup
+  verifies four separately role-bound, public-key-distinct revision-scoped snapshot approvals under the same retained bootstrap
+  trust/revocations, then derives and exact-matches every configuration identity before atomically
+  ratcheting the package with the boot. The other seven roles and protected acquisition remain open. The
   retained synthetic ACL campaign proves the fixed final-command/controller-intent subset across all
   configured principals, and the separate retained development campaign proves only concrete
   session-open, aggregate-bind, and immediate local-shutdown returns. Certificate

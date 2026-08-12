@@ -1,24 +1,38 @@
 //! Durable Gate startup orchestration.
 //!
 //! Startup validates the static actor configuration and deployment profile,
-//! obtains both runtime identifiers' entropy, acquires a retained instance lock,
+//! obtains the runtime identifiers' entropy (plus the initial live challenge
+//! nonce when live support is compiled), acquires a retained instance lock,
 //! explicitly provisions or opens durable state, and commits a new boot before
 //! constructing [`VehicleActor`].
 
-use core::num::{NonZeroU64, NonZeroUsize};
-use std::fs::{self, File, OpenOptions, TryLockError};
+use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
+#[cfg(not(unix))]
+use std::fs::OpenOptions;
+use std::fs::{self, File, TryLockError};
 use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
-use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
+use rustix::fs::{Mode, OFlags, open};
+#[cfg(unix)]
+use std::os::unix::fs::{DirBuilderExt, MetadataExt};
 
 use haldir_admission::AdmissionSnapshot;
+use haldir_contracts::deployment::{DeploymentPayloadDigestV1, DeploymentRevision};
+#[cfg(feature = "live-zenoh")]
+use haldir_contracts::digest::DigestDomain;
 use haldir_contracts::digest::DigestV1;
-use haldir_contracts::ids::{GateBootId, GateId, GateOutputEpoch, KeyId, VehicleId};
+#[cfg(feature = "live-zenoh")]
+use haldir_contracts::ids::ChallengeNonce;
+use haldir_contracts::ids::{GateBootId, GateId, GateOutputEpoch, JournalId, KeyId, VehicleId};
 use haldir_contracts::scalar::{AsciiId, CanonicalUuidV4String};
 use haldir_contracts::session::NcpSessionIdentityV1;
 use haldir_contracts::status::PlantPublicationAuthorityStateV1;
-use haldir_crypto::{RevocationSnapshot, SigningKey, TrustStore};
+use haldir_crypto::{RevocationSnapshot, SigningKey, TrustStore, TrustStoreDisjointnessError};
+use haldir_deployment::AuthorityValidatedDeploymentPackage;
+use haldir_deployment::contract::{
+    DeploymentClassV1, DeploymentNcpWireProfileV1, DeploymentRuntimeProfileV1,
+};
 use haldir_durable::{
     AnchorProtection, AtomicFileSnapshot, CommitReceipt, GenerationAnchor,
     LocalFileGenerationAnchor, RecoveryStatus, SnapshotBinding, SnapshotStorage, StorageMacKey,
@@ -34,6 +48,8 @@ use haldir_evidence::manager::{
 use haldir_ncp08::{NcpCommandWireProfile, SelectedNcpCommandAdapter};
 use haldir_policy_native::NativePolicySnapshot;
 use haldir_state::{DurableAntiRollbackError, DurableAntiRollbackStore};
+#[cfg(feature = "live-zenoh")]
+use haldir_transport_zenoh::HaldirKeys;
 
 use crate::actor::{
     GateConfig, GateConfigError, GateSignerValidation, GateStartupError, PolicyBindingValidation,
@@ -53,23 +69,32 @@ mod live_service;
 
 #[cfg(feature = "live-zenoh")]
 pub use live_service::{
-    DeclaredLiveGateKernel, DeclaredLiveGateService, DeclaredLiveGateZenohService,
-    LiveDecisionUnavailable, LiveIntentActivationError, LiveIntentActivationInput,
-    LiveIntentActivationInputError, LiveIntentRouteBoundGate, LiveKernelStartError,
-    LivePublisherError, LiveServiceBindError, LiveServiceFatal, LiveServiceOutcome,
-    LiveServiceStop, LiveServiceTransition, LiveZenohServiceBindError, LiveZenohServiceBindFailure,
-    LiveZenohServiceStop, LiveZenohServiceTransition, LiveZenohShutdownError,
-    LiveZenohShutdownHandle, LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
+    DeclaredLiveGateKernel, DeclaredLiveGateZenohService, IssuedLiveGateChallenge,
+    LIVE_ACTIVATION_CHALLENGE_TTL_MS, LiveDecisionUnavailable, LiveIntentActivationError,
+    LiveIntentActivationInput, LiveIntentActivationInputError, LiveIntentRouteBoundGate,
+    LiveKernelStartError, LivePublisherError, LiveServiceBindError, LiveServiceFatal,
+    LiveServiceOutcome, LiveServiceStop, LiveZenohActivityTransition, LiveZenohServiceBindError,
+    LiveZenohServiceBindFailure, LiveZenohServiceStop, LiveZenohServiceTransition,
+    LiveZenohShutdownError, LiveZenohShutdownHandle, LiveZenohShutdownReport,
+    LiveZenohStateUpdateTransition, MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 
 #[cfg(all(test, feature = "live-zenoh"))]
 pub(crate) use live_service::{
-    TestDeclaredLiveGateService, TestDeclaredLiveGateZenohService, TestLiveServiceTransition,
+    DeclaredLiveGateService, LiveServiceTransition, TestDeclaredLiveGateService,
+    TestDeclaredLiveGateZenohService, TestLiveServiceTransition, TestLiveStateUpdateTransition,
     TestLiveZenohServiceTransition, finish_zenoh_shutdown, unavailable_is_owned_io_invariant,
 };
 
-const ENTROPY_BYTES: usize = 48;
 const BOOT_ENTROPY_BYTES: usize = 32;
+const OUTPUT_EPOCH_ENTROPY_BYTES: usize = 16;
+#[cfg(feature = "live-zenoh")]
+const ACTIVATION_CHALLENGE_ENTROPY_BYTES: usize = 32;
+#[cfg(not(feature = "live-zenoh"))]
+const ENTROPY_BYTES: usize = BOOT_ENTROPY_BYTES + OUTPUT_EPOCH_ENTROPY_BYTES;
+#[cfg(feature = "live-zenoh")]
+const ENTROPY_BYTES: usize =
+    BOOT_ENTROPY_BYTES + OUTPUT_EPOCH_ENTROPY_BYTES + ACTIVATION_CHALLENGE_ENTROPY_BYTES;
 const LOCAL_SNAPSHOT_OVERHEAD_ALLOWANCE: usize = 1024;
 const LOCAL_SNAPSHOT_FILE: &str = "anti-rollback.snapshot";
 const LOCAL_ANCHOR_FILE: &str = "generation.anchor";
@@ -115,7 +140,7 @@ pub struct GateConfigTemplate {
     /// Current ACL-only plant-publication authority evidence.
     pub publication: PlantPublicationAuthorityStateV1,
     /// Local cap on lease active duration (ms).
-    pub local_cap_ms: u32,
+    pub local_cap_ms: NonZeroU32,
     /// Gate application signing key.
     pub gate_signer: SigningKey,
     /// Gate application signing key id.
@@ -172,6 +197,20 @@ impl GateConfigTemplate {
 
                 #[cfg(feature = "live-zenoh")]
                 {
+                    let keys =
+                        HaldirKeys::try_new(self.realm.as_str(), self.session.session_id.as_str())
+                            .map_err(|_| DurableGateStartupError::PublicationRouteBinding)?;
+                    let evidence = match &self.publication {
+                        PlantPublicationAuthorityStateV1::AclExclusiveV1(evidence) => evidence,
+                        _ => return Err(DurableGateStartupError::UnsupportedPublicationProfile),
+                    };
+                    let expected = DigestV1::compute(
+                        DigestDomain::TransportKey,
+                        keys.final_command().as_bytes(),
+                    );
+                    if evidence.final_route_digest != expected {
+                        return Err(DurableGateStartupError::PublicationRouteBinding);
+                    }
                     Ok(())
                 }
                 #[cfg(not(feature = "live-zenoh"))]
@@ -218,7 +257,9 @@ pub enum StateOpenMode {
 pub enum StartupProfile {
     /// Development startup with a locally durable, rewritable anchor.
     DevelopmentLocal,
-    /// Assurance startup with an independently administered non-rewindable anchor.
+    /// Package-bound assurance startup with a supplied anchor that declares
+    /// external non-rewindable protection. This profile check does not attest
+    /// the implementation or its administrative failure domain.
     AssuranceExternal,
 }
 
@@ -300,6 +341,12 @@ pub struct StartupReport {
     pub boot_commit: CommitReceipt,
     /// Protection class declared by the selected generation anchor.
     pub anchor_protection: AnchorProtection,
+    /// Startup assurance profile enforced before backend access.
+    pub startup_profile: StartupProfile,
+    /// Signed package revision atomically committed with this boot, when bound.
+    pub deployment_revision: Option<DeploymentRevision>,
+    /// Exact verified canonical package-payload digest committed with this boot.
+    pub deployment_payload_digest: Option<DeploymentPayloadDigestV1>,
     /// Fresh committed Gate boot identifier.
     pub gate_boot_id: GateBootId,
     /// Fresh process-local output stream epoch.
@@ -311,9 +358,21 @@ pub struct StartupReport {
 pub struct RunningGate {
     actor: VehicleActor,
     report: StartupReport,
+    deployment_package: Option<AuthorityValidatedDeploymentPackage>,
     #[cfg(feature = "live-zenoh")]
     declared_live_zenoh: Option<ValidatedDeclaredLiveZenohStartup>,
-    _instance_lock: File,
+    _instance_lock: InstanceLock,
+}
+
+/// Exclusive process-instance lock with deterministic release on ownership
+/// teardown. Closing the file is an OS-level fallback; the explicit unlock
+/// avoids relying on drop timing when a replacement Gate starts immediately.
+struct InstanceLock(File);
+
+impl Drop for InstanceLock {
+    fn drop(&mut self) {
+        let _unlock_result = self.0.unlock();
+    }
 }
 
 /// Non-cloneable process-local proof that this exact [`RunningGate`] descended
@@ -321,7 +380,14 @@ pub struct RunningGate {
 /// observability data; concrete coordinator authority consumes this private value.
 #[cfg(feature = "live-zenoh")]
 pub(super) struct ValidatedDeclaredLiveZenohStartup {
-    _private: (),
+    activation_challenge_nonce: ChallengeNonce,
+}
+
+#[cfg(feature = "live-zenoh")]
+impl ValidatedDeclaredLiveZenohStartup {
+    pub(super) const fn activation_challenge_nonce(&self) -> ChallengeNonce {
+        self.activation_challenge_nonce
+    }
 }
 
 /// A durable-started Gate fused with the exact journal manager and publication
@@ -336,12 +402,13 @@ pub struct JournalBoundRunningGate {
     recovery_unknown_events: usize,
 }
 
-/// Identity-free bounds and paths for one Gate publication-journal startup.
-/// Gate ID, boot ID, signer, trust, and revocations are always derived from the
-/// consuming [`RunningGate`].
+/// Explicit logical journal identity plus non-authority bounds and paths for one
+/// Gate publication-journal startup. Gate ID, boot ID, signer, trust, and
+/// revocations are always derived from the consuming [`RunningGate`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublicationJournalStartupConfig {
     directory: PathBuf,
+    journal_id: JournalId,
     created_mono_ns: u64,
     limits: JournalLimits,
     capture_limits: RecoveryCaptureLimits,
@@ -349,7 +416,7 @@ pub struct PublicationJournalStartupConfig {
     max_traces: NonZeroUsize,
 }
 
-/// Invalid identity-free publication-journal startup bounds.
+/// Invalid publication-journal startup bounds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PublicationJournalConfigError {
@@ -357,13 +424,32 @@ pub enum PublicationJournalConfigError {
     TraceCapacityTooSmall,
 }
 
+impl PublicationJournalConfigError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::TraceCapacityTooSmall => "PUBLICATION_JOURNAL_TRACE_CAPACITY_TOO_SMALL",
+        }
+    }
+}
+
+impl std::fmt::Display for PublicationJournalConfigError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for PublicationJournalConfigError {}
+
 impl PublicationJournalStartupConfig {
-    /// Construct the non-authority journal path and bounded replay profile.
+    /// Construct the logical journal selection, path, and bounded replay profile.
     ///
     /// # Errors
     /// Returns when the reducer bound is smaller than the capture record bound.
     pub fn new(
         directory: impl Into<PathBuf>,
+        journal_id: JournalId,
         created_mono_ns: u64,
         limits: JournalLimits,
         capture_limits: RecoveryCaptureLimits,
@@ -376,6 +462,7 @@ impl PublicationJournalStartupConfig {
         }
         Ok(Self {
             directory: directory.into(),
+            journal_id,
             created_mono_ns,
             limits,
             capture_limits,
@@ -395,6 +482,8 @@ pub enum JournalBindingError {
     NoActiveSegment,
     /// The current segment belongs to another Gate.
     GateMismatch,
+    /// The configured or recovered journal differs from the signed deployment.
+    JournalIdMismatch,
     /// The current segment does not name this actual committed Gate boot.
     BootMismatch,
     /// The current segment does not use the actor's validated signer identity.
@@ -407,6 +496,46 @@ pub enum JournalBindingError {
     JournalProvisionRequiresFreshGateState,
     /// A freshly provisioned durable Gate attempted to adopt existing history.
     JournalOpenRequiresExistingGateState,
+}
+
+impl JournalBindingError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        match self {
+            Self::Journal(_) => "GATE_JOURNAL_BINDING_JOURNAL",
+            Self::NoActiveSegment => "GATE_JOURNAL_BINDING_NO_ACTIVE_SEGMENT",
+            Self::GateMismatch => "GATE_JOURNAL_BINDING_GATE_MISMATCH",
+            Self::JournalIdMismatch => "GATE_JOURNAL_BINDING_JOURNAL_ID_MISMATCH",
+            Self::BootMismatch => "GATE_JOURNAL_BINDING_BOOT_MISMATCH",
+            Self::SignerMismatch => "GATE_JOURNAL_BINDING_SIGNER_MISMATCH",
+            Self::CurrentBootAlreadyRecovered => {
+                "GATE_JOURNAL_BINDING_CURRENT_BOOT_ALREADY_RECOVERED"
+            }
+            Self::SequenceMismatch => "GATE_JOURNAL_BINDING_SEQUENCE_MISMATCH",
+            Self::JournalProvisionRequiresFreshGateState => {
+                "GATE_JOURNAL_BINDING_PROVISION_REQUIRES_FRESH_GATE_STATE"
+            }
+            Self::JournalOpenRequiresExistingGateState => {
+                "GATE_JOURNAL_BINDING_OPEN_REQUIRES_EXISTING_GATE_STATE"
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for JournalBindingError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for JournalBindingError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Journal(error) => Some(error),
+            _ => None,
+        }
+    }
 }
 
 impl From<GateJournalOpenError> for JournalBindingError {
@@ -435,7 +564,9 @@ impl RunningGate {
             GateRuntimeProfile::DeclaredLiveZenoh
                 if actor.ncp_command_wire_profile() == NcpCommandWireProfile::ExactNcpV0_8Json =>
             {
-                Some(ValidatedDeclaredLiveZenohStartup { _private: () })
+                Some(ValidatedDeclaredLiveZenohStartup {
+                    activation_challenge_nonce: ChallengeNonce::new([7; 32]),
+                })
             }
             GateRuntimeProfile::DeclaredLiveZenoh => None,
         };
@@ -450,12 +581,16 @@ impl RunningGate {
                     snapshot_digest: [0; 32],
                 },
                 anchor_protection: AnchorProtection::EphemeralTest,
+                startup_profile: StartupProfile::DevelopmentLocal,
+                deployment_revision: None,
+                deployment_payload_digest: None,
                 gate_boot_id,
                 output_epoch,
             },
+            deployment_package: None,
             #[cfg(feature = "live-zenoh")]
             declared_live_zenoh,
-            _instance_lock: instance_lock,
+            _instance_lock: InstanceLock(instance_lock),
         }
         .bind_publication_journal_with_recovery_count(journal, recovery_unknown_events)
     }
@@ -472,6 +607,14 @@ impl RunningGate {
         self.report
     }
 
+    /// Signed, exact-role-resolved, NCP- and Gate-configuration-validated
+    /// package retained by a deployment-bound startup, if this is that stronger
+    /// startup class.
+    #[must_use]
+    pub const fn deployment_package(&self) -> Option<&AuthorityValidatedDeploymentPackage> {
+        self.deployment_package.as_ref()
+    }
+
     /// Provision and bind a fresh selected Gate publication journal using this
     /// runtime's committed boot and sole validated application signer.
     ///
@@ -485,8 +628,10 @@ impl RunningGate {
         if !self.report.provisioned {
             return Err(JournalBindingError::JournalProvisionRequiresFreshGateState);
         }
+        self.validate_journal_id(config.journal_id)?;
         let PublicationJournalStartupConfig {
             directory,
+            journal_id,
             created_mono_ns,
             limits,
             capture_limits,
@@ -495,6 +640,7 @@ impl RunningGate {
         } = config;
         let options = JournalOpenOptions::new(
             self.actor.gate_id().clone(),
+            journal_id,
             self.actor.gate_boot_id(),
             created_mono_ns,
             limits,
@@ -532,8 +678,10 @@ impl RunningGate {
         if self.report.provisioned {
             return Err(JournalBindingError::JournalOpenRequiresExistingGateState);
         }
+        self.validate_journal_id(config.journal_id)?;
         let PublicationJournalStartupConfig {
             directory,
+            journal_id,
             created_mono_ns,
             limits,
             capture_limits,
@@ -542,6 +690,7 @@ impl RunningGate {
         } = config;
         let options = JournalOpenOptions::new(
             self.actor.gate_id().clone(),
+            journal_id,
             self.actor.gate_boot_id(),
             created_mono_ns,
             limits,
@@ -581,6 +730,7 @@ impl RunningGate {
         if active.gate_id != *self.actor.gate_id() {
             return Err(JournalBindingError::GateMismatch);
         }
+        self.validate_journal_id(active.journal_id)?;
         if active.gate_boot_id != self.actor.gate_boot_id() {
             return Err(JournalBindingError::BootMismatch);
         }
@@ -619,6 +769,17 @@ impl RunningGate {
             recovery_unknown_events,
         })
     }
+
+    fn validate_journal_id(&self, selected: JournalId) -> Result<(), JournalBindingError> {
+        if self
+            .deployment_package
+            .as_ref()
+            .is_some_and(|package| package.resolved().verified().package().journal_id != selected)
+        {
+            return Err(JournalBindingError::JournalIdMismatch);
+        }
+        Ok(())
+    }
 }
 
 impl JournalBoundRunningGate {
@@ -626,6 +787,13 @@ impl JournalBoundRunningGate {
     #[must_use]
     pub const fn report(&self) -> StartupReport {
         self.gate.report
+    }
+
+    /// Deployment package retained through journal binding, when startup was
+    /// package-bound.
+    #[must_use]
+    pub const fn deployment_package(&self) -> Option<&AuthorityValidatedDeploymentPackage> {
+        self.gate.deployment_package.as_ref()
     }
 
     /// Read-only started actor retained behind the journal binding.
@@ -672,6 +840,97 @@ impl JournalBoundRunningGate {
     }
 }
 
+/// Mismatch between one NCP/configuration-validated signed package and the
+/// runtime objects it is being asked to authorize.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum DeploymentGateBindingError {
+    /// The package and template name different Gates.
+    GateMismatch,
+    /// The package and template name different realms.
+    RealmMismatch,
+    /// The package and template name different vehicles.
+    VehicleMismatch,
+    /// The package runtime selection differs from the template selection.
+    RuntimeProfileMismatch,
+    /// The package NCP wire selection differs from the compiled adapter selection.
+    NcpWireProfileMismatch,
+    /// The package state-store identifier differs from the selected durable store.
+    StateStoreMismatch,
+    /// Package assurance class and startup anchor profile are incompatible.
+    AssuranceProfileMismatch,
+    /// The live trust store differs from the signed Gate configuration.
+    TrustSnapshotMismatch,
+    /// Bootstrap and runtime trust reuse a key identifier or public key under
+    /// incompatible authority semantics.
+    BootstrapRuntimeTrustConflict(TrustStoreDisjointnessError),
+    /// The live key-revocation snapshot differs from the signed Gate configuration.
+    RevocationSnapshotMismatch,
+    /// The live admission snapshot differs from the signed Gate configuration.
+    AdmissionSnapshotMismatch,
+    /// The validated executable policy differs from the signed Gate configuration.
+    PolicySnapshotMismatch,
+    /// The live NCP session differs from the signed Gate configuration.
+    SessionMismatch,
+    /// Publication-authority evidence differs from the signed Gate configuration.
+    PublicationMismatch,
+    /// The local lease-duration cap differs from the signed Gate configuration.
+    LocalCapMismatch,
+    /// The Gate application signer id differs from the signed Gate configuration.
+    GateSignerKidMismatch,
+    /// The Gate application public key differs from the signed Gate configuration.
+    GateSignerPublicKeyMismatch,
+}
+
+impl DeploymentGateBindingError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::GateMismatch => "DEPLOYMENT_GATE_BINDING_GATE_MISMATCH",
+            Self::RealmMismatch => "DEPLOYMENT_GATE_BINDING_REALM_MISMATCH",
+            Self::VehicleMismatch => "DEPLOYMENT_GATE_BINDING_VEHICLE_MISMATCH",
+            Self::RuntimeProfileMismatch => "DEPLOYMENT_GATE_BINDING_RUNTIME_PROFILE_MISMATCH",
+            Self::NcpWireProfileMismatch => "DEPLOYMENT_GATE_BINDING_NCP_WIRE_PROFILE_MISMATCH",
+            Self::StateStoreMismatch => "DEPLOYMENT_GATE_BINDING_STATE_STORE_MISMATCH",
+            Self::AssuranceProfileMismatch => "DEPLOYMENT_GATE_BINDING_ASSURANCE_PROFILE_MISMATCH",
+            Self::TrustSnapshotMismatch => "DEPLOYMENT_GATE_BINDING_TRUST_SNAPSHOT_MISMATCH",
+            Self::BootstrapRuntimeTrustConflict(_) => {
+                "DEPLOYMENT_GATE_BINDING_BOOTSTRAP_RUNTIME_TRUST_CONFLICT"
+            }
+            Self::RevocationSnapshotMismatch => {
+                "DEPLOYMENT_GATE_BINDING_REVOCATION_SNAPSHOT_MISMATCH"
+            }
+            Self::AdmissionSnapshotMismatch => {
+                "DEPLOYMENT_GATE_BINDING_ADMISSION_SNAPSHOT_MISMATCH"
+            }
+            Self::PolicySnapshotMismatch => "DEPLOYMENT_GATE_BINDING_POLICY_SNAPSHOT_MISMATCH",
+            Self::SessionMismatch => "DEPLOYMENT_GATE_BINDING_SESSION_MISMATCH",
+            Self::PublicationMismatch => "DEPLOYMENT_GATE_BINDING_PUBLICATION_MISMATCH",
+            Self::LocalCapMismatch => "DEPLOYMENT_GATE_BINDING_LOCAL_CAP_MISMATCH",
+            Self::GateSignerKidMismatch => "DEPLOYMENT_GATE_BINDING_SIGNER_KID_MISMATCH",
+            Self::GateSignerPublicKeyMismatch => {
+                "DEPLOYMENT_GATE_BINDING_SIGNER_PUBLIC_KEY_MISMATCH"
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for DeploymentGateBindingError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for DeploymentGateBindingError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::BootstrapRuntimeTrustConflict(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
 /// Durable startup orchestration failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -691,6 +950,8 @@ pub enum DurableGateStartupError {
     },
     /// Live Zenoh was declared but this build omits live-Zenoh support.
     LiveZenohSupportNotCompiled,
+    /// ACL evidence does not bind the exact final route derived for this realm/session.
+    PublicationRouteBinding,
     /// Snapshot binding does not name the configured Gate.
     StoreGateMismatch,
     /// A zero or overflowing durable-size bound was supplied.
@@ -702,6 +963,10 @@ pub enum DurableGateStartupError {
         /// Protection declared by the supplied anchor.
         actual: AnchorProtection,
     },
+    /// Assurance startup was attempted through the cooperative unbound API.
+    DeploymentPackageRequired,
+    /// A validated package did not bind the supplied runtime objects exactly.
+    DeploymentBinding(DeploymentGateBindingError),
     /// Cryptographic entropy was unavailable before backend access.
     EntropyUnavailable,
     /// The configured instance-lock path is invalid or inaccessible.
@@ -727,11 +992,14 @@ impl DurableGateStartupError {
             }
             Self::NcpWireProfileMismatch { .. } => "DURABLE_GATE_STARTUP_NCP_WIRE_PROFILE_MISMATCH",
             Self::LiveZenohSupportNotCompiled => "DURABLE_GATE_STARTUP_LIVE_ZENOH_NOT_COMPILED",
+            Self::PublicationRouteBinding => "DURABLE_GATE_STARTUP_PUBLICATION_ROUTE_BINDING",
             Self::StoreGateMismatch => "DURABLE_GATE_STARTUP_STORE_GATE_MISMATCH",
             Self::InvalidSizeLimit => "DURABLE_GATE_STARTUP_INVALID_SIZE_LIMIT",
             Self::AnchorProtectionMismatch { .. } => {
                 "DURABLE_GATE_STARTUP_ANCHOR_PROTECTION_MISMATCH"
             }
+            Self::DeploymentPackageRequired => "DURABLE_GATE_STARTUP_DEPLOYMENT_PACKAGE_REQUIRED",
+            Self::DeploymentBinding(error) => error.reason_code(),
             Self::EntropyUnavailable => "DURABLE_GATE_STARTUP_ENTROPY_UNAVAILABLE",
             Self::LockUnavailable => "DURABLE_GATE_STARTUP_LOCK_UNAVAILABLE",
             Self::LockHeld => "DURABLE_GATE_STARTUP_LOCK_HELD",
@@ -753,6 +1021,8 @@ impl std::error::Error for DurableGateStartupError {
         match self {
             Self::Config(error) => Some(error),
             Self::Actor(error) => Some(error),
+            Self::DeploymentBinding(error) => Some(error),
+            Self::Durable(error) => Some(error),
             _ => None,
         }
     }
@@ -770,6 +1040,12 @@ impl From<GateStartupError> for DurableGateStartupError {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeploymentStartupMode {
+    Unbound,
+    PackageBound,
+}
+
 /// Validate, lock, explicitly open/provision arbitrary durable backends, commit
 /// a fresh boot, and construct the actor.
 ///
@@ -778,7 +1054,9 @@ impl From<GateStartupError> for DurableGateStartupError {
 /// entropy failure. Missing state under [`StateOpenMode::OpenExisting`] is never
 /// provisioned. Backend, lock, boot-commit, and actor-construction errors fail closed.
 /// The lock path must be distinct from every backend path, and all backend writers
-/// must cooperate on that same lock.
+/// must cooperate on that same lock. [`StartupProfile::AssuranceExternal`] is
+/// rejected here; use [`start_deployment_with_backends`] so assurance startup
+/// cannot omit the signed package and package-bound boot ratchet.
 pub fn start_with_backends<S, A, E>(
     template: GateConfigTemplate,
     state: StartupStateConfig,
@@ -792,8 +1070,70 @@ where
     A: GenerationAnchor + Send + 'static,
     E: EntropySource + ?Sized,
 {
-    let prepared = prepare(&template, &state, &anchor, entropy)?;
+    let prepared = prepare(
+        &template,
+        &state,
+        &anchor,
+        entropy,
+        DeploymentStartupMode::Unbound,
+    )?;
     start_prepared(template, state, storage, anchor, key, prepared)
+}
+
+/// Start a Gate whose signed package, exact NCP compatibility and Gate
+/// configuration roles, package ratchet, runtime selections, and durable boot
+/// are one consuming chain.
+///
+/// The supplied package must already have passed signature/policy verification,
+/// exact artifact-byte resolution, signed-role NCP compatibility validation,
+/// strict Gate-configuration decoding/cross-binding, and four separately
+/// role-bound, public-key-distinct authority-approval checks rooted in the same retained bootstrap trust and
+/// revocation snapshots that verified the package. This function
+/// additionally exact-matches its Gate, realm, vehicle, runtime, NCP wire,
+/// state-store, assurance, trust, revocation, admission, policy, session,
+/// publication, local-cap, and application-signer selections to the concrete
+/// startup objects and rejects incompatible bootstrap/runtime `kid` or public-key
+/// bindings before entropy, lock, storage, or anchor mutation. It then
+/// commits the verified package revision and canonical payload digest atomically
+/// with the fresh boot and retains the package through the running lifecycle.
+///
+/// The trust/admission/revocation/policy roles carry revision-scoped approvals
+/// of runtime snapshot digests; the corresponding runtime objects are supplied
+/// separately and exact-matched here. The other seven artifact roles remain
+/// byte-verified, not semantically loaded by this function. A later journal
+/// bind exact-matches the signed
+/// journal ID to the authenticated format-v2 segment chain, but this boundary
+/// does not prove a mandatory journal, its path, the running executable,
+/// credential custody, or transport setup.
+///
+/// # Errors
+/// Returns before entropy or backend access on any package/runtime mismatch.
+/// Other failures have the same fail-closed semantics as
+/// [`start_with_backends`].
+pub fn start_deployment_with_backends<S, A, E>(
+    package: AuthorityValidatedDeploymentPackage,
+    template: GateConfigTemplate,
+    state: StartupStateConfig,
+    storage: S,
+    anchor: A,
+    key: StorageMacKey,
+    entropy: &mut E,
+) -> Result<RunningGate, DurableGateStartupError>
+where
+    S: SnapshotStorage + Send + 'static,
+    A: GenerationAnchor + Send + 'static,
+    E: EntropySource + ?Sized,
+{
+    template.validate()?;
+    validate_deployment_binding(&package, &template, &state)?;
+    let prepared = prepare_validated_template(
+        &template,
+        &state,
+        &anchor,
+        entropy,
+        DeploymentStartupMode::PackageBound,
+    )?;
+    start_prepared_deployment(package, template, state, storage, anchor, key, prepared)
 }
 
 /// Start with the fixed-name Unix local snapshot and rewritable local anchor.
@@ -828,7 +1168,13 @@ pub fn start_local<E: EntropySource + ?Sized>(
         max_payload_bytes: local.max_payload_bytes,
     };
 
-    let prepared = prepare_validated_template(&template, &state, &anchor, entropy)?;
+    let prepared = prepare_validated_template(
+        &template,
+        &state,
+        &anchor,
+        entropy,
+        DeploymentStartupMode::Unbound,
+    )?;
     #[cfg(not(unix))]
     {
         let _ = (template, state, storage, anchor, key, prepared);
@@ -842,9 +1188,153 @@ pub fn start_local<E: EntropySource + ?Sized>(
     start_prepared(template, state, storage, anchor, key, prepared)
 }
 
+fn validate_deployment_binding(
+    package: &AuthorityValidatedDeploymentPackage,
+    template: &GateConfigTemplate,
+    state: &StartupStateConfig,
+) -> Result<(), DurableGateStartupError> {
+    let signed = package.resolved().verified().package();
+    if signed.gate_id != template.gate_id {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::GateMismatch,
+        ));
+    }
+    if signed.realm != template.realm {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::RealmMismatch,
+        ));
+    }
+    if signed.vehicle_id != template.vehicle_id {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::VehicleMismatch,
+        ));
+    }
+
+    let runtime_matches = matches!(
+        (signed.runtime_profile, template.runtime_profile),
+        (
+            DeploymentRuntimeProfileV1::InProcessReference,
+            GateRuntimeProfile::InProcessReference
+        ) | (
+            DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+            GateRuntimeProfile::DeclaredLiveZenoh
+        )
+    );
+    if !runtime_matches {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::RuntimeProfileMismatch,
+        ));
+    }
+
+    let wire_matches = matches!(
+        (signed.ncp_wire_profile, template.ncp_adapter.wire_profile()),
+        (
+            DeploymentNcpWireProfileV1::ModeledP0,
+            NcpCommandWireProfile::ModeledP0
+        ) | (
+            DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+            NcpCommandWireProfile::ExactNcpV0_8Json
+        )
+    );
+    if !wire_matches {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::NcpWireProfileMismatch,
+        ));
+    }
+
+    if &signed.state_store_id != state.binding.store_id().as_bytes() {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::StateStoreMismatch,
+        ));
+    }
+
+    let assurance_matches = matches!(
+        (signed.profile_class, state.profile),
+        (
+            DeploymentClassV1::Development,
+            StartupProfile::DevelopmentLocal
+        ) | (
+            DeploymentClassV1::ExperimentalCanary | DeploymentClassV1::AssuranceSimulation,
+            StartupProfile::AssuranceExternal
+        )
+    );
+    if !assurance_matches {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::AssuranceProfileMismatch,
+        ));
+    }
+
+    let configuration = package.gate_configuration();
+    if configuration.gate_signer_kid != template.gate_signer_kid {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::GateSignerKidMismatch,
+        ));
+    }
+    if configuration.gate_signer_public_key != template.gate_signer.verifying_key().to_bytes() {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::GateSignerPublicKeyMismatch,
+        ));
+    }
+    if configuration.trust_snapshot_digest != template.trust.canonical_digest() {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::TrustSnapshotMismatch,
+        ));
+    }
+    package
+        .validate_runtime_trust_bindings(&template.trust)
+        .map_err(|error| {
+            DurableGateStartupError::DeploymentBinding(
+                DeploymentGateBindingError::BootstrapRuntimeTrustConflict(error),
+            )
+        })?;
+    if configuration.revocation_snapshot_digest != template.revocations.canonical_digest() {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::RevocationSnapshotMismatch,
+        ));
+    }
+    if configuration.admission_snapshot_digest != template.admission.canonical_digest() {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::AdmissionSnapshotMismatch,
+        ));
+    }
+    if configuration.policy_snapshot_digest != template.policy_snapshot_digest {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::PolicySnapshotMismatch,
+        ));
+    }
+    if configuration.session != template.session {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::SessionMismatch,
+        ));
+    }
+    let PlantPublicationAuthorityStateV1::AclExclusiveV1(publication) = &template.publication
+    else {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::PublicationMismatch,
+        ));
+    };
+    if configuration.publication.gate_transport_principal != publication.gate_transport_principal
+        || configuration.publication.final_route_digest != publication.final_route_digest
+        || configuration.publication.certificate_fingerprint != publication.certificate_fingerprint
+        || configuration.publication.acl_policy_digest != publication.acl_policy_digest
+    {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::PublicationMismatch,
+        ));
+    }
+    if configuration.local_cap_ms != template.local_cap_ms {
+        return Err(DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::LocalCapMismatch,
+        ));
+    }
+    Ok(())
+}
+
 struct PreparedStartup {
     boot_entropy: [u8; BOOT_ENTROPY_BYTES],
     output_epoch: GateOutputEpoch,
+    #[cfg(feature = "live-zenoh")]
+    activation_challenge_nonce: ChallengeNonce,
     anchor_protection: AnchorProtection,
 }
 
@@ -853,9 +1343,10 @@ fn prepare<A: GenerationAnchor, E: EntropySource + ?Sized>(
     state: &StartupStateConfig,
     anchor: &A,
     entropy: &mut E,
+    deployment_mode: DeploymentStartupMode,
 ) -> Result<PreparedStartup, DurableGateStartupError> {
     template.validate()?;
-    prepare_validated_template(template, state, anchor, entropy)
+    prepare_validated_template(template, state, anchor, entropy, deployment_mode)
 }
 
 fn prepare_validated_template<A: GenerationAnchor, E: EntropySource + ?Sized>(
@@ -863,6 +1354,7 @@ fn prepare_validated_template<A: GenerationAnchor, E: EntropySource + ?Sized>(
     state: &StartupStateConfig,
     anchor: &A,
     entropy: &mut E,
+    deployment_mode: DeploymentStartupMode,
 ) -> Result<PreparedStartup, DurableGateStartupError> {
     if !state
         .binding
@@ -884,6 +1376,11 @@ fn prepare_validated_template<A: GenerationAnchor, E: EntropySource + ?Sized>(
             actual: anchor_protection,
         });
     }
+    if state.profile == StartupProfile::AssuranceExternal
+        && deployment_mode == DeploymentStartupMode::Unbound
+    {
+        return Err(DurableGateStartupError::DeploymentPackageRequired);
+    }
 
     let mut bytes = [0u8; ENTROPY_BYTES];
     entropy
@@ -893,8 +1390,14 @@ fn prepare_validated_template<A: GenerationAnchor, E: EntropySource + ?Sized>(
         .get(..BOOT_ENTROPY_BYTES)
         .and_then(|value| value.try_into().ok())
         .ok_or(DurableGateStartupError::EntropyUnavailable)?;
+    let output_entropy_end = BOOT_ENTROPY_BYTES + OUTPUT_EPOCH_ENTROPY_BYTES;
     let output_random = bytes
-        .get(BOOT_ENTROPY_BYTES..)
+        .get(BOOT_ENTROPY_BYTES..output_entropy_end)
+        .and_then(|value| value.try_into().ok())
+        .ok_or(DurableGateStartupError::EntropyUnavailable)?;
+    #[cfg(feature = "live-zenoh")]
+    let activation_challenge_random = bytes
+        .get(output_entropy_end..)
         .and_then(|value| value.try_into().ok())
         .ok_or(DurableGateStartupError::EntropyUnavailable)?;
     let output_epoch =
@@ -903,6 +1406,8 @@ fn prepare_validated_template<A: GenerationAnchor, E: EntropySource + ?Sized>(
     Ok(PreparedStartup {
         boot_entropy,
         output_epoch,
+        #[cfg(feature = "live-zenoh")]
+        activation_challenge_nonce: ChallengeNonce::new(activation_challenge_random),
         anchor_protection,
     })
 }
@@ -919,6 +1424,7 @@ where
     S: SnapshotStorage + Send + 'static,
     A: GenerationAnchor + Send + 'static,
 {
+    let startup_profile = state.profile;
     let instance_lock = acquire_instance_lock(&state.instance_lock_path)?;
     let (store, recovery, provisioned) = match state.open_mode {
         StateOpenMode::ProvisionNew => (
@@ -952,9 +1458,9 @@ where
     #[cfg(feature = "live-zenoh")]
     let declared_live_zenoh = match runtime_profile {
         GateRuntimeProfile::InProcessReference => None,
-        GateRuntimeProfile::DeclaredLiveZenoh => {
-            Some(ValidatedDeclaredLiveZenohStartup { _private: () })
-        }
+        GateRuntimeProfile::DeclaredLiveZenoh => Some(ValidatedDeclaredLiveZenohStartup {
+            activation_challenge_nonce: prepared.activation_challenge_nonce,
+        }),
     };
     let report = StartupReport {
         runtime_profile,
@@ -962,6 +1468,9 @@ where
         recovery,
         boot_commit,
         anchor_protection: prepared.anchor_protection,
+        startup_profile,
+        deployment_revision: None,
+        deployment_payload_digest: None,
         gate_boot_id,
         output_epoch: prepared.output_epoch,
     };
@@ -969,24 +1478,121 @@ where
     Ok(RunningGate {
         actor,
         report,
+        deployment_package: None,
         #[cfg(feature = "live-zenoh")]
         declared_live_zenoh,
         _instance_lock: instance_lock,
     })
 }
 
-fn acquire_instance_lock(path: &Path) -> Result<File, DurableGateStartupError> {
+fn start_prepared_deployment<S, A>(
+    package: AuthorityValidatedDeploymentPackage,
+    template: GateConfigTemplate,
+    state: StartupStateConfig,
+    storage: S,
+    anchor: A,
+    key: StorageMacKey,
+    prepared: PreparedStartup,
+) -> Result<RunningGate, DurableGateStartupError>
+where
+    S: SnapshotStorage + Send + 'static,
+    A: GenerationAnchor + Send + 'static,
+{
+    let startup_profile = state.profile;
+    let package_contract = package.resolved().verified().package();
+    let deployment_revision = package_contract.deployment_revision;
+    let deployment_payload_digest = package.resolved().verified().payload_digest();
+    let instance_lock = acquire_instance_lock(&state.instance_lock_path)?;
+    let (store, recovery, provisioned) = match state.open_mode {
+        StateOpenMode::ProvisionNew => (
+            DurableAntiRollbackStore::provision_new(
+                storage,
+                anchor,
+                key,
+                state.binding,
+                state.max_payload_bytes,
+            )?,
+            None,
+            true,
+        ),
+        StateOpenMode::OpenExisting => {
+            let (store, recovery) = DurableAntiRollbackStore::open_existing(
+                storage,
+                anchor,
+                key,
+                state.binding,
+                state.max_payload_bytes,
+            )?;
+            (store, Some(recovery), false)
+        }
+    };
+
+    let (booted, boot_commit) = store.begin_deployment_boot(
+        &template.gate_id,
+        prepared.boot_entropy,
+        deployment_revision,
+        deployment_payload_digest,
+    )?;
+    let gate_boot_id = booted.boot_context().gate_boot_id;
+    let runtime_profile = template.runtime_profile;
+    let config = template.into_runtime(gate_boot_id, prepared.output_epoch);
+    let actor = VehicleActor::new_deployment_recovered(config, booted)?;
+    #[cfg(feature = "live-zenoh")]
+    let declared_live_zenoh = match runtime_profile {
+        GateRuntimeProfile::InProcessReference => None,
+        GateRuntimeProfile::DeclaredLiveZenoh => Some(ValidatedDeclaredLiveZenohStartup {
+            activation_challenge_nonce: prepared.activation_challenge_nonce,
+        }),
+    };
+    let report = StartupReport {
+        runtime_profile,
+        provisioned,
+        recovery,
+        boot_commit,
+        anchor_protection: prepared.anchor_protection,
+        startup_profile,
+        deployment_revision: Some(deployment_revision),
+        deployment_payload_digest: Some(deployment_payload_digest),
+        gate_boot_id,
+        output_epoch: prepared.output_epoch,
+    };
+
+    Ok(RunningGate {
+        actor,
+        report,
+        deployment_package: Some(package),
+        #[cfg(feature = "live-zenoh")]
+        declared_live_zenoh,
+        _instance_lock: instance_lock,
+    })
+}
+
+fn acquire_instance_lock(path: &Path) -> Result<InstanceLock, DurableGateStartupError> {
     if let Ok(metadata) = fs::symlink_metadata(path)
         && !metadata.file_type().is_file()
     {
         return Err(DurableGateStartupError::LockUnavailable);
     }
 
-    let mut options = OpenOptions::new();
-    options.read(true).write(true).create(true);
     #[cfg(unix)]
-    options.mode(0o600);
-    let file = options
+    let file = File::from(
+        open(
+            path,
+            OFlags::RDWR
+                | OFlags::CREATE
+                | OFlags::CLOEXEC
+                | OFlags::NOFOLLOW
+                | OFlags::NONBLOCK
+                | OFlags::NOCTTY,
+            Mode::RUSR | Mode::WUSR,
+        )
+        .map_err(|_| DurableGateStartupError::LockUnavailable)?,
+    );
+    #[cfg(not(unix))]
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
         .open(path)
         .map_err(|_| DurableGateStartupError::LockUnavailable)?;
     let path_metadata =
@@ -1007,7 +1613,7 @@ fn acquire_instance_lock(path: &Path) -> Result<File, DurableGateStartupError> {
     }
 
     match file.try_lock() {
-        Ok(()) => Ok(file),
+        Ok(()) => Ok(InstanceLock(file)),
         Err(TryLockError::WouldBlock) => Err(DurableGateStartupError::LockHeld),
         Err(TryLockError::Error(_)) => Err(DurableGateStartupError::LockUnavailable),
     }
@@ -1040,22 +1646,36 @@ fn prepare_local_directory(
 
 #[cfg(test)]
 mod tests {
-    use core::num::NonZeroU32;
+    use core::num::{NonZeroU32, NonZeroU64};
     use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
 
-    use haldir_contracts::cbor::CanonicalMessage;
+    use haldir_contracts::cbor::{CanonicalMessage, to_canonical_bytes};
+    use haldir_contracts::deployment::DeploymentRevision;
     use haldir_contracts::digest::DigestDomain;
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, PrincipalId};
+    use haldir_contracts::ids::{
+        AdmissionId, ControllerId, DecisionId, GateOutputEpoch, IntentEpoch, IntentSeq, KeyId,
+        MissionId, MissionLeaseId, OutputSeq, PrincipalId, SourceSeq,
+    };
     use haldir_contracts::publication::PublicationStageEventV1;
     use haldir_contracts::receipt::{
         DecisionOutcomeV1, DecisionReasonCodeV1, DecisionReceiptV1, PublishStageV1,
         TransformationRelationV1,
     };
-    use haldir_contracts::scalar::BoundedVec;
-    use haldir_contracts::session::NcpStreamPositionV1;
+    use haldir_contracts::scalar::{BoundedAscii, BoundedVec};
+    use haldir_contracts::session::{HaldirIntentPositionV1, NcpSourceRefV1, NcpStreamPositionV1};
     use haldir_contracts::status::{AclExclusiveEvidenceV1, PlantPublicationUnavailableReasonV1};
-    use haldir_crypto::{KeyClass, KeyRecord, KeyRole, sign_message};
+    use haldir_crypto::{KeyClass, KeyRecord, KeyRole, KeySubject, sign_message};
+    use haldir_deployment::contract::{
+        AclPublicationBindingV1, AuthoritySnapshotApprovalV1, AuthoritySnapshotKindV1,
+        DeploymentArtifactIdV1, DeploymentArtifactRefV1, DeploymentPackageV1,
+        GateConfigurationArtifactV1,
+    };
+    use haldir_deployment::{
+        ArtifactLimits, AuthorityApprovalPolicy, AuthorityValidatedDeploymentPackage,
+        DeploymentAcceptancePolicy, DeploymentArtifactInput, DeploymentArtifactSet,
+        DeploymentIdentityExpectation, DeploymentProfileRequirement, verify_deployment_package,
+    };
     use haldir_durable::{Anchor, DurableError};
     use haldir_evidence::journal::JournalBounds;
     use haldir_evidence::manager::{EvidenceJournalManager, JournalManagerError};
@@ -1134,6 +1754,28 @@ mod tests {
             }
             *head = Some(next);
             Ok(())
+        }
+    }
+
+    #[derive(Clone, Default)]
+    struct ExternalMemoryAnchor(MemoryAnchor);
+
+    impl GenerationAnchor for ExternalMemoryAnchor {
+        fn protection(&self) -> AnchorProtection {
+            AnchorProtection::ExternalNonRewindable
+        }
+
+        fn read(&self, store_id: StoreId) -> Result<Option<Anchor>, DurableError> {
+            self.0.read(store_id)
+        }
+
+        fn compare_and_set(
+            &mut self,
+            store_id: StoreId,
+            expected: Option<Anchor>,
+            next: Anchor,
+        ) -> Result<(), DurableError> {
+            self.0.compare_and_set(store_id, expected, next)
         }
     }
 
@@ -1243,11 +1885,10 @@ mod tests {
                 kid: gate_signer_kid.clone(),
                 role: KeyRole::GateApplication,
                 verifying_key: gate_signer.verifying_key(),
-                subject: Some(gate_id.as_str().to_owned()),
+                subject: KeySubject::new(gate_id.as_str()).unwrap(),
                 class: KeyClass::Assurance,
             })
             .unwrap();
-
         let policy = NativePolicySnapshot {
             max_component_mm_s: 1,
             max_speed_mm_s: 1,
@@ -1268,6 +1909,14 @@ mod tests {
             },
             duty_window_ms: 1,
             max_active_ms_in_window: 1,
+            motion_envelope_v2: Some(haldir_policy_native::LocallyAdmittedMotionEnvelopeV2 {
+                local_ned_frame_id: BoundedAscii::new("map").unwrap(),
+                max_linear_accel_mm_s2: 1,
+                max_linear_slew_mm_s2: 1,
+                max_continuous_motion_ms: 1,
+                minimum_hold_between_bursts_ms: 0,
+                plant_mode_rules: Vec::new(),
+            }),
             phase_rules: Vec::new(),
         };
         let policy_snapshot_digest = policy.canonical_digest().unwrap();
@@ -1289,12 +1938,15 @@ mod tests {
             ncp_adapter: SelectedNcpCommandAdapter::modeled_p0(),
             publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
                 gate_transport_principal: PrincipalId::new("gate-transport").unwrap(),
-                final_route_digest: digest(b"route"),
+                final_route_digest: DigestV1::compute(
+                    DigestDomain::TransportKey,
+                    b"range-a/session/session-1/command",
+                ),
                 certificate_fingerprint: digest(b"certificate"),
                 acl_policy_digest: digest(b"acl"),
                 verified_at_mono_ns: 1,
             }),
-            local_cap_ms: 1_000,
+            local_cap_ms: NonZeroU32::new(1_000).unwrap(),
             gate_signer,
             gate_signer_kid,
         }
@@ -1311,7 +1963,313 @@ mod tests {
     }
 
     fn key() -> StorageMacKey {
-        StorageMacKey::new([7; 32])
+        StorageMacKey::new([7; 32]).expect("nonzero test storage key")
+    }
+
+    fn deployment_authority_spec(
+        role: DeploymentArtifactIdV1,
+        gate_configuration: &GateConfigurationArtifactV1,
+    ) -> (AuthoritySnapshotKindV1, KeyRole, u8, &'static str, DigestV1) {
+        match role {
+            DeploymentArtifactIdV1::TrustManifest => (
+                AuthoritySnapshotKindV1::Trust,
+                KeyRole::TrustAuthority,
+                51,
+                "trust-authority-a",
+                gate_configuration.trust_snapshot_digest,
+            ),
+            DeploymentArtifactIdV1::AdmissionSnapshot => (
+                AuthoritySnapshotKindV1::Admission,
+                KeyRole::AdmissionAuthority,
+                52,
+                "admission-authority-a",
+                gate_configuration.admission_snapshot_digest,
+            ),
+            DeploymentArtifactIdV1::RevocationSnapshot => (
+                AuthoritySnapshotKindV1::Revocation,
+                KeyRole::RevocationAuthority,
+                53,
+                "revocation-authority-a",
+                gate_configuration.revocation_snapshot_digest,
+            ),
+            DeploymentArtifactIdV1::PolicySnapshot => (
+                AuthoritySnapshotKindV1::Policy,
+                KeyRole::PolicyAuthority,
+                54,
+                "policy-authority-a",
+                gate_configuration.policy_snapshot_digest,
+            ),
+            _ => panic!("artifact role is not an authority approval"),
+        }
+    }
+
+    fn deployment_artifact_bytes(
+        role: DeploymentArtifactIdV1,
+        gate_configuration: &GateConfigurationArtifactV1,
+        gate_configuration_bytes: &[u8],
+        deployment_id: &str,
+    ) -> Vec<u8> {
+        match role {
+            DeploymentArtifactIdV1::GateConfiguration => gate_configuration_bytes.to_vec(),
+            DeploymentArtifactIdV1::NcpCompatibility => {
+                haldir_ncp08::pinned_ncp_compatibility_artifact_bytes().unwrap()
+            }
+            DeploymentArtifactIdV1::TrustManifest
+            | DeploymentArtifactIdV1::AdmissionSnapshot
+            | DeploymentArtifactIdV1::RevocationSnapshot
+            | DeploymentArtifactIdV1::PolicySnapshot => {
+                let (snapshot_kind, _, seed, issuer_id, snapshot_digest) =
+                    deployment_authority_spec(role, gate_configuration);
+                let approval = AuthoritySnapshotApprovalV1 {
+                    schema_major: 1,
+                    schema_minor: 0,
+                    snapshot_kind,
+                    issuer_id: AsciiId::new(issuer_id).unwrap(),
+                    deployment_id: AsciiId::new(deployment_id).unwrap(),
+                    deployment_revision: DeploymentRevision::new(NonZeroU64::new(7).unwrap()),
+                    gate_id: gate_configuration.gate_id.clone(),
+                    realm: gate_configuration.realm.clone(),
+                    vehicle_id: gate_configuration.vehicle_id.clone(),
+                    snapshot_digest,
+                };
+                let signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
+                sign_message(
+                    &approval,
+                    AuthoritySnapshotApprovalV1::KIND,
+                    1,
+                    &KeyId::new(vec![seed, 0xa5]).unwrap(),
+                    &signer,
+                )
+            }
+            _ => vec![u8::try_from(role.tag()).unwrap(); usize::try_from(role.tag()).unwrap() + 1],
+        }
+    }
+
+    fn deployment_artifact_logical_id(role: DeploymentArtifactIdV1) -> AsciiId<64> {
+        AsciiId::new(&format!("artifact-{}", role.tag())).unwrap()
+    }
+
+    fn validated_deployment_package(
+        configured: &GateConfigTemplate,
+        profile_class: DeploymentClassV1,
+        state_store_id: [u8; 16],
+    ) -> AuthorityValidatedDeploymentPackage {
+        validated_deployment_package_named(
+            configured,
+            profile_class,
+            state_store_id,
+            "deployment-a",
+        )
+    }
+
+    fn validated_deployment_package_named(
+        configured: &GateConfigTemplate,
+        profile_class: DeploymentClassV1,
+        state_store_id: [u8; 16],
+        deployment_id: &str,
+    ) -> AuthorityValidatedDeploymentPackage {
+        let runtime_profile = match configured.runtime_profile {
+            GateRuntimeProfile::InProcessReference => {
+                DeploymentRuntimeProfileV1::InProcessReference
+            }
+            GateRuntimeProfile::DeclaredLiveZenoh => DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
+        };
+        let ncp_wire_profile = match configured.ncp_adapter.wire_profile() {
+            NcpCommandWireProfile::ModeledP0 => DeploymentNcpWireProfileV1::ModeledP0,
+            NcpCommandWireProfile::ExactNcpV0_8Json => DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+            _ => panic!("test helper does not support an unknown NCP wire profile"),
+        };
+        let journal_id = JournalId::new([2; 16]).unwrap();
+        let PlantPublicationAuthorityStateV1::AclExclusiveV1(publication) = &configured.publication
+        else {
+            panic!("test helper requires ACL-only publication evidence")
+        };
+        let gate_configuration = GateConfigurationArtifactV1 {
+            schema_major: 1,
+            schema_minor: 0,
+            gate_id: configured.gate_id.clone(),
+            realm: configured.realm.clone(),
+            vehicle_id: configured.vehicle_id.clone(),
+            profile_class,
+            runtime_profile,
+            ncp_wire_profile,
+            state_store_id,
+            journal_id,
+            trust_snapshot_digest: configured.trust.canonical_digest(),
+            revocation_snapshot_digest: configured.revocations.canonical_digest(),
+            admission_snapshot_digest: configured.admission.canonical_digest(),
+            policy_snapshot_digest: configured.policy_snapshot_digest,
+            session: configured.session.clone(),
+            publication: AclPublicationBindingV1 {
+                gate_transport_principal: publication.gate_transport_principal.clone(),
+                final_route_digest: publication.final_route_digest,
+                certificate_fingerprint: publication.certificate_fingerprint,
+                acl_policy_digest: publication.acl_policy_digest,
+            },
+            local_cap_ms: configured.local_cap_ms,
+            gate_signer_kid: configured.gate_signer_kid.clone(),
+            gate_signer_public_key: configured.gate_signer.verifying_key().to_bytes(),
+        };
+        let gate_configuration_bytes = to_canonical_bytes(&gate_configuration);
+        let artifacts = DeploymentArtifactIdV1::ALL
+            .into_iter()
+            .map(|role| {
+                let bytes = deployment_artifact_bytes(
+                    role,
+                    &gate_configuration,
+                    &gate_configuration_bytes,
+                    deployment_id,
+                );
+                DeploymentArtifactRefV1 {
+                    role,
+                    logical_id: deployment_artifact_logical_id(role),
+                    digest: DigestV1::compute(DigestDomain::DeploymentArtifact, &bytes),
+                    size_bytes: NonZeroU64::new(u64::try_from(bytes.len()).unwrap()).unwrap(),
+                }
+            })
+            .collect();
+        let package = DeploymentPackageV1 {
+            schema_major: 1,
+            schema_minor: 0,
+            deployment_authority_id: AsciiId::new("deployment-authority-a").unwrap(),
+            deployment_id: AsciiId::new(deployment_id).unwrap(),
+            deployment_revision: DeploymentRevision::new(NonZeroU64::new(7).unwrap()),
+            profile_class,
+            gate_id: configured.gate_id.clone(),
+            realm: configured.realm.clone(),
+            vehicle_id: configured.vehicle_id.clone(),
+            runtime_profile,
+            ncp_wire_profile,
+            state_store_id,
+            journal_id,
+            artifacts: BoundedVec::from_vec(artifacts).unwrap(),
+        };
+        let signer = SigningKey::from_seed([9; 32]).expect("nonzero test seed");
+        let signer_kid = KeyId::new(vec![9, 0xa5]).unwrap();
+        let mut trust = TrustStore::new();
+        trust
+            .insert(KeyRecord {
+                kid: signer_kid.clone(),
+                role: KeyRole::DeploymentAuthority,
+                verifying_key: signer.verifying_key(),
+                subject: KeySubject::new("deployment-authority-a").unwrap(),
+                class: if profile_class == DeploymentClassV1::Development {
+                    KeyClass::Development
+                } else {
+                    KeyClass::Assurance
+                },
+            })
+            .unwrap();
+        for role in [
+            DeploymentArtifactIdV1::TrustManifest,
+            DeploymentArtifactIdV1::AdmissionSnapshot,
+            DeploymentArtifactIdV1::RevocationSnapshot,
+            DeploymentArtifactIdV1::PolicySnapshot,
+        ] {
+            let (_, key_role, seed, subject, _) =
+                deployment_authority_spec(role, &gate_configuration);
+            let authority_signer = SigningKey::from_seed([seed; 32]).expect("nonzero test seed");
+            trust
+                .insert(KeyRecord {
+                    kid: KeyId::new(vec![seed, 0xa5]).unwrap(),
+                    role: key_role,
+                    verifying_key: authority_signer.verifying_key(),
+                    subject: KeySubject::new(subject).unwrap(),
+                    class: if profile_class == DeploymentClassV1::Development {
+                        KeyClass::Development
+                    } else {
+                        KeyClass::Assurance
+                    },
+                })
+                .unwrap();
+        }
+        let envelope = sign_message(
+            &package,
+            DeploymentPackageV1::KIND,
+            DeploymentPackageV1::SCHEMA_MAJOR,
+            &signer_kid,
+            &signer,
+        );
+        let policy = DeploymentAcceptancePolicy::new(
+            DeploymentIdentityExpectation::new(
+                AsciiId::new("deployment-authority-a").unwrap(),
+                configured.gate_id.clone(),
+                configured.realm.clone(),
+                configured.vehicle_id.clone(),
+            ),
+            DeploymentProfileRequirement::new(profile_class, runtime_profile, ncp_wire_profile),
+            AuthorityApprovalPolicy::new(
+                AsciiId::new("trust-authority-a").unwrap(),
+                AsciiId::new("admission-authority-a").unwrap(),
+                AsciiId::new("revocation-authority-a").unwrap(),
+                AsciiId::new("policy-authority-a").unwrap(),
+            ),
+        );
+        let verified =
+            verify_deployment_package(&envelope, &policy, &trust, &RevocationSnapshot::new())
+                .unwrap();
+        let inputs = DeploymentArtifactSet::from_inputs(
+            DeploymentArtifactIdV1::ALL.into_iter().map(|role| {
+                DeploymentArtifactInput::new(
+                    role,
+                    deployment_artifact_logical_id(role),
+                    deployment_artifact_bytes(
+                        role,
+                        &gate_configuration,
+                        &gate_configuration_bytes,
+                        deployment_id,
+                    ),
+                )
+            }),
+        )
+        .unwrap();
+        let gate_configuration_validated = verified
+            .resolve_artifacts(inputs, ArtifactLimits::new(4096, 32 * 1024).unwrap())
+            .unwrap()
+            .validate_ncp_compatibility()
+            .unwrap()
+            .validate_gate_configuration()
+            .unwrap();
+        gate_configuration_validated
+            .validate_authority_approvals()
+            .unwrap()
+    }
+
+    fn deployment_fixture() -> (AuthorityValidatedDeploymentPackage, GateConfigTemplate) {
+        let configured = template();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [1; 16]);
+        (package, configured)
+    }
+
+    fn assert_configuration_binding_rejected_before_effects(
+        package: AuthorityValidatedDeploymentPackage,
+        configured: GateConfigTemplate,
+        expected: DeploymentGateBindingError,
+    ) {
+        let directory = TestDirectory::new();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mut entropy = DeterministicEntropy::new(1);
+        let result = start_deployment_with_backends(
+            package,
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            CountingStorage(calls.clone()),
+            CountingAnchor(calls.clone()),
+            key(),
+            &mut entropy,
+        );
+
+        match result {
+            Err(DurableGateStartupError::DeploymentBinding(actual)) => {
+                assert_eq!(actual, expected);
+            }
+            Ok(_) => panic!("mismatched signed Gate configuration authorized startup"),
+            Err(other) => panic!("unexpected startup failure: {other}"),
+        }
+        assert_eq!(entropy.calls, 0);
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+        assert!(!directory.absent_child("gate.lock").exists());
     }
 
     fn journal_limits() -> JournalLimits {
@@ -1327,8 +2285,23 @@ mod tests {
         created_mono_ns: u64,
         limits: JournalLimits,
     ) -> PublicationJournalStartupConfig {
+        journal_config_with_id(
+            directory,
+            JournalId::new([2; 16]).unwrap(),
+            created_mono_ns,
+            limits,
+        )
+    }
+
+    fn journal_config_with_id(
+        directory: impl Into<PathBuf>,
+        journal_id: JournalId,
+        created_mono_ns: u64,
+        limits: JournalLimits,
+    ) -> PublicationJournalStartupConfig {
         PublicationJournalStartupConfig::new(
             directory,
+            journal_id,
             created_mono_ns,
             limits,
             capture_limits(),
@@ -1344,21 +2317,31 @@ mod tests {
             gate_id: GateId::new("gate-1").unwrap(),
             gate_boot_id,
             vehicle_id: VehicleId::new("uav-1").unwrap(),
-            mission_id: None,
+            mission_id: Some(MissionId::new("mission-1").unwrap()),
             ncp_session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("session-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
             },
-            received_key_digest: digest(b"key"),
+            received_key_digest: DigestV1::compute(DigestDomain::TransportKey, b"key"),
             raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, b"intent"),
-            payload_digest: None,
-            semantic_intent_digest: None,
-            controller_id: None,
-            controller_intent_position: None,
-            mission_lease_id: None,
-            admission_digest: None,
-            source: None,
-            state_snapshot_digest: None,
+            payload_digest: Some(DigestV1::compute(DigestDomain::Payload, b"intent-payload")),
+            semantic_intent_digest: Some(DigestV1::compute(
+                DigestDomain::SemanticIntent,
+                b"intent-semantics",
+            )),
+            controller_id: Some(ControllerId::new("controller-1").unwrap()),
+            controller_intent_position: Some(HaldirIntentPositionV1 {
+                epoch: IntentEpoch::new([6; 16]),
+                seq: IntentSeq::new(NonZeroU64::new(1).unwrap()),
+            }),
+            mission_lease_id: Some(MissionLeaseId::new([7; 16])),
+            admission_digest: Some(DigestV1::compute(DigestDomain::Admission, b"admission")),
+            source: Some(NcpSourceRefV1 {
+                source_key: BoundedAscii::new("range-a/session/session-1/sensor/pose").unwrap(),
+                stream_epoch: CanonicalUuidV4String::from_random_bytes([8; 16]),
+                stream_seq: SourceSeq::new(NonZeroU64::new(1).unwrap()),
+            }),
+            state_snapshot_digest: Some(DigestV1::compute(DigestDomain::StateSnapshot, b"state")),
             policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
             decision: DecisionOutcomeV1::Allow,
             reason_codes: BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPrepared]).unwrap(),
@@ -1490,6 +2473,43 @@ mod tests {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
+    fn declared_live_acl_evidence_must_bind_the_derived_final_route_before_side_effects() {
+        let directory = TestDirectory::new();
+        let backend_calls = Arc::new(AtomicUsize::new(0));
+        let storage = CountingStorage(Arc::clone(&backend_calls));
+        let anchor = CountingAnchor(Arc::clone(&backend_calls));
+        let mut configured = template();
+        configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let PlantPublicationAuthorityStateV1::AclExclusiveV1(evidence) =
+            &mut configured.publication
+        else {
+            panic!("template must carry ACL evidence");
+        };
+        evidence.final_route_digest =
+            DigestV1::compute(DigestDomain::TransportKey, b"range-a/session/other/command");
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let result = start_with_backends(
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage,
+            anchor,
+            key(),
+            &mut entropy,
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::PublicationRouteBinding)
+        ));
+        assert_eq!(entropy.calls, 0);
+        assert_eq!(backend_calls.load(Ordering::Relaxed), 0);
+        assert!(!directory.0.join("gate.lock").exists());
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
     fn declared_live_exact_startup_capability_constructs_the_live_coordinator() {
         let directory = TestDirectory::new();
         let mut configured = template();
@@ -1529,10 +2549,20 @@ mod tests {
             publication_coordinator::DeclaredLiveZenohPublication,
         >::new_declared_live(bound, FixedCoordinatorClock)
         .unwrap();
+        let (coordinator, issued) = coordinator
+            .issue_live_activation_challenge(super::live_service::LIVE_ACTIVATION_CHALLENGE_TTL_MS)
+            .unwrap();
+        let expected_challenge_nonce = ChallengeNonce::new(core::array::from_fn(|index| {
+            let offset =
+                u8::try_from(BOOT_ENTROPY_BYTES + OUTPUT_EPOCH_ENTROPY_BYTES + index).unwrap();
+            1_u8.wrapping_add(offset)
+        }));
         assert_eq!(
             coordinator.actor().ncp_command_wire_profile(),
             NcpCommandWireProfile::ExactNcpV0_8Json
         );
+        assert_eq!(issued.challenge().challenge_nonce, expected_challenge_nonce);
+        assert_eq!(entropy.calls, 1);
     }
 
     #[cfg(feature = "live-zenoh")]
@@ -1738,6 +2768,7 @@ mod tests {
         assert_eq!(
             PublicationJournalStartupConfig::new(
                 directory.0.join("journal"),
+                JournalId::new([2; 16]).unwrap(),
                 10,
                 journal_limits(),
                 RecoveryCaptureLimits::new(8, 64 * 1024),
@@ -1902,6 +2933,7 @@ mod tests {
                 &journal_path,
                 JournalOpenOptions::new(
                     first.actor.gate_id().clone(),
+                    JournalId::new([2; 16]).unwrap(),
                     first_boot,
                     10,
                     journal_limits(),
@@ -1989,6 +3021,7 @@ mod tests {
         .unwrap();
         let forged_options = JournalOpenOptions::new(
             running.actor.gate_id().clone(),
+            JournalId::new([2; 16]).unwrap(),
             GateBootId::new([0xee; 16]),
             10,
             journal_limits(),
@@ -2031,6 +3064,7 @@ mod tests {
         let current_options = || {
             JournalOpenOptions::new(
                 running.actor.gate_id().clone(),
+                JournalId::new([2; 16]).unwrap(),
                 running.actor.gate_boot_id(),
                 10,
                 journal_limits(),
@@ -2113,7 +3147,7 @@ mod tests {
         let storage = MemoryStorage::default();
         let anchor = MemoryAnchor::default();
         let mut invalid = template();
-        invalid.local_cap_ms = 0;
+        invalid.policy.max_speed_mm_s = 0;
         invalid.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
         let mut entropy = DeterministicEntropy::new(1);
 
@@ -2129,7 +3163,9 @@ mod tests {
         assert!(matches!(
             result,
             Err(DurableGateStartupError::Config(
-                GateConfigError::LocalCapZero
+                GateConfigError::InvalidPolicy(
+                    haldir_policy_native::NativePolicyError::NonPositiveVelocityBound
+                )
             ))
         ));
         assert_eq!(entropy.calls, 0);
@@ -2198,6 +3234,626 @@ mod tests {
     }
 
     #[test]
+    fn assurance_startup_requires_a_validated_deployment_package_before_entropy_or_storage() {
+        let directory = TestDirectory::new();
+        let storage = MemoryStorage::default();
+        let anchor = ExternalMemoryAnchor::default();
+        let mut startup_state = state(&directory, StateOpenMode::ProvisionNew);
+        startup_state.profile = StartupProfile::AssuranceExternal;
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let result = start_with_backends(
+            template(),
+            startup_state,
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            &mut entropy,
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::DeploymentPackageRequired)
+        ));
+        assert_eq!(entropy.calls, 0);
+        assert!(storage.0.lock().unwrap().is_none());
+        assert!(anchor.0.head.lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn deployment_startup_commits_and_retains_the_exact_verified_package_binding() {
+        let directory = TestDirectory::new();
+        let configured = template();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [1; 16]);
+        let expected_digest = package.resolved().verified().payload_digest();
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let running = start_deployment_with_backends(
+            package,
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut entropy,
+        )
+        .unwrap();
+
+        assert_eq!(entropy.calls, 1);
+        assert_eq!(
+            running.report().startup_profile,
+            StartupProfile::DevelopmentLocal
+        );
+        assert_eq!(
+            running
+                .report()
+                .deployment_revision
+                .map(DeploymentRevision::get),
+            Some(7)
+        );
+        assert_eq!(
+            running.report().deployment_payload_digest,
+            Some(expected_digest)
+        );
+        assert_eq!(
+            running
+                .deployment_package()
+                .unwrap()
+                .resolved()
+                .verified()
+                .package()
+                .deployment_id
+                .as_str(),
+            "deployment-a"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn deployment_package_proof_is_retained_through_journal_binding() {
+        let directory = TestDirectory::new();
+        let configured = template();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [1; 16]);
+        let running = start_deployment_with_backends(
+            package,
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+
+        let bound = running
+            .provision_publication_journal(journal_config(
+                directory.0.join("journal"),
+                10,
+                journal_limits(),
+            ))
+            .unwrap();
+
+        assert_eq!(
+            bound
+                .deployment_package()
+                .unwrap()
+                .resolved()
+                .verified()
+                .package()
+                .deployment_revision
+                .get(),
+            7
+        );
+        assert_eq!(
+            bound.active_journal_identity().unwrap().journal_id,
+            JournalId::new([2; 16]).unwrap()
+        );
+    }
+
+    #[test]
+    fn deployment_journal_mismatch_is_rejected_before_directory_access() {
+        let directory = TestDirectory::new();
+        let configured = template();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [1; 16]);
+        let running = start_deployment_with_backends(
+            package,
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        let journal_path = directory.absent_child("wrong-deployment-journal");
+
+        let result = running.provision_publication_journal(journal_config_with_id(
+            &journal_path,
+            JournalId::new([3; 16]).unwrap(),
+            10,
+            journal_limits(),
+        ));
+
+        assert!(matches!(
+            result,
+            Err(JournalBindingError::JournalIdMismatch)
+        ));
+        assert!(!journal_path.exists());
+    }
+
+    #[test]
+    fn assurance_package_selects_only_an_external_anchor_profile() {
+        let directory = TestDirectory::new();
+        let configured = template();
+        let package = validated_deployment_package(
+            &configured,
+            DeploymentClassV1::AssuranceSimulation,
+            [1; 16],
+        );
+        let mut startup_state = state(&directory, StateOpenMode::ProvisionNew);
+        startup_state.profile = StartupProfile::AssuranceExternal;
+
+        let running = start_deployment_with_backends(
+            package,
+            configured,
+            startup_state,
+            MemoryStorage::default(),
+            ExternalMemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+
+        assert_eq!(
+            running.report().startup_profile,
+            StartupProfile::AssuranceExternal
+        );
+        assert_eq!(
+            running.report().anchor_protection,
+            AnchorProtection::ExternalNonRewindable
+        );
+        assert!(running.deployment_package().is_some());
+    }
+
+    #[test]
+    fn deployment_state_store_mismatch_precedes_anchor_entropy_lock_and_storage() {
+        let directory = TestDirectory::new();
+        let configured = template();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [9; 16]);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mut entropy = DeterministicEntropy::new(1);
+
+        let result = start_deployment_with_backends(
+            package,
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            CountingStorage(calls.clone()),
+            CountingAnchor(calls.clone()),
+            key(),
+            &mut entropy,
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::DeploymentBinding(
+                DeploymentGateBindingError::StateStoreMismatch
+            ))
+        ));
+        assert_eq!(entropy.calls, 0);
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+        assert!(!directory.absent_child("gate.lock").exists());
+    }
+
+    #[test]
+    fn deployment_trust_snapshot_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        let extra_signer = SigningKey::from_seed([41; 32]).expect("nonzero test seed");
+        configured
+            .trust
+            .insert(KeyRecord {
+                kid: KeyId::new(vec![41]).unwrap(),
+                role: KeyRole::ControllerIntent,
+                verifying_key: extra_signer.verifying_key(),
+                subject: KeySubject::new("controller-extra").unwrap(),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::TrustSnapshotMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_rejects_bootstrap_key_reenrolled_under_runtime_authority() {
+        let mut configured = template();
+        let deployment_signer = SigningKey::from_seed([9; 32]).expect("nonzero test seed");
+        configured
+            .trust
+            .insert(KeyRecord {
+                kid: KeyId::new(vec![90]).unwrap(),
+                role: KeyRole::ControllerIntent,
+                verifying_key: deployment_signer.verifying_key(),
+                subject: KeySubject::new("controller-alias").unwrap(),
+                class: KeyClass::Development,
+            })
+            .unwrap();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [1; 16]);
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::BootstrapRuntimeTrustConflict(
+                TrustStoreDisjointnessError::OverlappingKeyMaterial,
+            ),
+        );
+    }
+
+    #[test]
+    fn deployment_rejects_bootstrap_kid_rebound_in_runtime_trust() {
+        let mut configured = template();
+        let runtime_signer = SigningKey::from_seed([90; 32]).expect("nonzero test seed");
+        configured
+            .trust
+            .insert(KeyRecord {
+                kid: KeyId::new(vec![9, 0xa5]).unwrap(),
+                role: KeyRole::ControllerIntent,
+                verifying_key: runtime_signer.verifying_key(),
+                subject: KeySubject::new("controller-rebound-kid").unwrap(),
+                class: KeyClass::Development,
+            })
+            .unwrap();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [1; 16]);
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::BootstrapRuntimeTrustConflict(
+                TrustStoreDisjointnessError::OverlappingKid,
+            ),
+        );
+    }
+
+    #[test]
+    fn deployment_rejects_exact_bootstrap_record_in_runtime_trust() {
+        let mut configured = template();
+        let deployment_signer = SigningKey::from_seed([9; 32]).expect("nonzero test seed");
+        configured
+            .trust
+            .insert(KeyRecord {
+                kid: KeyId::new(vec![9, 0xa5]).unwrap(),
+                role: KeyRole::DeploymentAuthority,
+                verifying_key: deployment_signer.verifying_key(),
+                subject: KeySubject::new("deployment-authority-a").unwrap(),
+                class: KeyClass::Development,
+            })
+            .unwrap();
+        let package =
+            validated_deployment_package(&configured, DeploymentClassV1::Development, [1; 16]);
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::BootstrapRuntimeTrustConflict(
+                TrustStoreDisjointnessError::OverlappingKid,
+            ),
+        );
+    }
+
+    #[test]
+    fn deployment_revocation_snapshot_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        configured
+            .revocations
+            .revoke_key(&KeyId::new(vec![42]).unwrap(), 1)
+            .unwrap();
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::RevocationSnapshotMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_admission_snapshot_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        configured
+            .admission
+            .revoke(&AdmissionId::new([43; 16]), 1)
+            .unwrap();
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::AdmissionSnapshotMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_policy_snapshot_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        configured.policy.max_speed_mm_s = 2;
+        configured.policy_snapshot_digest = configured.policy.canonical_digest().unwrap();
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::PolicySnapshotMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_session_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        configured.session.generation = CanonicalUuidV4String::from_random_bytes([44; 16]);
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::SessionMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_publication_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        let PlantPublicationAuthorityStateV1::AclExclusiveV1(evidence) =
+            &mut configured.publication
+        else {
+            panic!("fixture publication profile changed")
+        };
+        evidence.acl_policy_digest = digest(b"different-acl-policy");
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::PublicationMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_publication_observation_time_is_not_static_authority() {
+        let directory = TestDirectory::new();
+        let (package, mut configured) = deployment_fixture();
+        let PlantPublicationAuthorityStateV1::AclExclusiveV1(evidence) =
+            &mut configured.publication
+        else {
+            panic!("fixture publication profile changed")
+        };
+        evidence.verified_at_mono_ns = 999;
+
+        let running = start_deployment_with_backends(
+            package,
+            configured,
+            state(&directory, StateOpenMode::ProvisionNew),
+            MemoryStorage::default(),
+            MemoryAnchor::default(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+
+        assert_eq!(
+            running
+                .report()
+                .deployment_revision
+                .map(DeploymentRevision::get),
+            Some(7)
+        );
+    }
+
+    #[test]
+    fn deployment_local_cap_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        configured.local_cap_ms = NonZeroU32::new(999).unwrap();
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::LocalCapMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_signer_kid_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        let replacement = SigningKey::from_seed([45; 32]).expect("nonzero test seed");
+        let replacement_kid = KeyId::new(vec![45]).unwrap();
+        let mut trust = TrustStore::new();
+        trust
+            .insert(KeyRecord {
+                kid: replacement_kid.clone(),
+                role: KeyRole::GateApplication,
+                verifying_key: replacement.verifying_key(),
+                subject: KeySubject::new(configured.gate_id.as_str()).unwrap(),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
+        configured.trust = trust;
+        configured.gate_signer = replacement;
+        configured.gate_signer_kid = replacement_kid;
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::GateSignerKidMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_signer_public_key_mismatch_precedes_every_startup_effect() {
+        let (package, mut configured) = deployment_fixture();
+        let replacement = SigningKey::from_seed([46; 32]).expect("nonzero test seed");
+        let mut trust = TrustStore::new();
+        trust
+            .insert(KeyRecord {
+                kid: configured.gate_signer_kid.clone(),
+                role: KeyRole::GateApplication,
+                verifying_key: replacement.verifying_key(),
+                subject: KeySubject::new(configured.gate_id.as_str()).unwrap(),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
+        configured.trust = trust;
+        configured.gate_signer = replacement;
+
+        assert_configuration_binding_rejected_before_effects(
+            package,
+            configured,
+            DeploymentGateBindingError::GateSignerPublicKeyMismatch,
+        );
+    }
+
+    #[test]
+    fn deployment_startup_rejects_same_revision_package_equivocation_on_reopen() {
+        let directory = TestDirectory::new();
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let first_config = template();
+        let first_package = validated_deployment_package_named(
+            &first_config,
+            DeploymentClassV1::Development,
+            [1; 16],
+            "deployment-a",
+        );
+        let first = start_deployment_with_backends(
+            first_package,
+            first_config,
+            state(&directory, StateOpenMode::ProvisionNew),
+            storage.clone(),
+            anchor.clone(),
+            key(),
+            &mut DeterministicEntropy::new(1),
+        )
+        .unwrap();
+        drop(first);
+
+        let conflicting_config = template();
+        let conflicting_package = validated_deployment_package_named(
+            &conflicting_config,
+            DeploymentClassV1::Development,
+            [1; 16],
+            "deployment-b",
+        );
+        let result = start_deployment_with_backends(
+            conflicting_package,
+            conflicting_config,
+            state(&directory, StateOpenMode::OpenExisting),
+            storage,
+            anchor,
+            key(),
+            &mut DeterministicEntropy::new(91),
+        );
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::Durable(
+                DurableAntiRollbackError::State(
+                    haldir_state::AntiRollbackError::PackageEquivocation
+                )
+            ))
+        ));
+    }
+
+    #[test]
+    fn deployment_and_durable_startup_errors_preserve_nested_sources() {
+        fn assert_standard_error<E: std::error::Error + Send + Sync + 'static>() {}
+        assert_standard_error::<DeploymentGateBindingError>();
+        assert_standard_error::<DurableGateStartupError>();
+        assert_standard_error::<JournalBindingError>();
+        assert_standard_error::<PublicationJournalConfigError>();
+
+        let binding = DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::StateStoreMismatch,
+        );
+        let durable = DurableGateStartupError::Durable(DurableAntiRollbackError::State(
+            haldir_state::AntiRollbackError::PackageEquivocation,
+        ));
+        let trust_binding = DurableGateStartupError::DeploymentBinding(
+            DeploymentGateBindingError::BootstrapRuntimeTrustConflict(
+                TrustStoreDisjointnessError::OverlappingKeyMaterial,
+            ),
+        );
+
+        assert_eq!(
+            binding.to_string(),
+            "DEPLOYMENT_GATE_BINDING_STATE_STORE_MISMATCH"
+        );
+        assert_eq!(durable.to_string(), "DURABLE_GATE_STARTUP_DURABLE_STATE");
+        assert!(std::error::Error::source(&binding).is_some());
+        assert!(std::error::Error::source(&durable).is_some());
+        let binding_source = std::error::Error::source(&trust_binding).unwrap();
+        assert_eq!(
+            binding_source.to_string(),
+            "DEPLOYMENT_GATE_BINDING_BOOTSTRAP_RUNTIME_TRUST_CONFLICT"
+        );
+        assert_eq!(
+            binding_source.source().unwrap().to_string(),
+            "TRUST_STORES_OVERLAPPING_KEY_MATERIAL"
+        );
+    }
+
+    #[test]
+    fn deployment_configuration_binding_errors_have_stable_reason_codes() {
+        for (error, expected) in [
+            (
+                DeploymentGateBindingError::TrustSnapshotMismatch,
+                "DEPLOYMENT_GATE_BINDING_TRUST_SNAPSHOT_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::BootstrapRuntimeTrustConflict(
+                    TrustStoreDisjointnessError::OverlappingKeyMaterial,
+                ),
+                "DEPLOYMENT_GATE_BINDING_BOOTSTRAP_RUNTIME_TRUST_CONFLICT",
+            ),
+            (
+                DeploymentGateBindingError::RevocationSnapshotMismatch,
+                "DEPLOYMENT_GATE_BINDING_REVOCATION_SNAPSHOT_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::AdmissionSnapshotMismatch,
+                "DEPLOYMENT_GATE_BINDING_ADMISSION_SNAPSHOT_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::PolicySnapshotMismatch,
+                "DEPLOYMENT_GATE_BINDING_POLICY_SNAPSHOT_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::SessionMismatch,
+                "DEPLOYMENT_GATE_BINDING_SESSION_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::PublicationMismatch,
+                "DEPLOYMENT_GATE_BINDING_PUBLICATION_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::LocalCapMismatch,
+                "DEPLOYMENT_GATE_BINDING_LOCAL_CAP_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::GateSignerKidMismatch,
+                "DEPLOYMENT_GATE_BINDING_SIGNER_KID_MISMATCH",
+            ),
+            (
+                DeploymentGateBindingError::GateSignerPublicKeyMismatch,
+                "DEPLOYMENT_GATE_BINDING_SIGNER_PUBLIC_KEY_MISMATCH",
+            ),
+        ] {
+            assert_eq!(error.reason_code(), expected);
+            assert_eq!(error.to_string(), expected);
+        }
+    }
+
+    #[test]
     fn retained_instance_lock_excludes_a_second_startup() {
         let directory = TestDirectory::new();
         let storage = MemoryStorage::default();
@@ -2233,6 +3889,35 @@ mod tests {
         )
         .unwrap();
         assert_eq!(third.report().boot_commit.generation, 3);
+    }
+
+    #[test]
+    fn instance_lock_rejects_a_fifo_without_waiting_for_a_writer() {
+        use std::sync::mpsc;
+        use std::thread;
+        use std::time::Duration;
+
+        let directory = TestDirectory::new();
+        let path = directory.absent_child("instance.lock");
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&path)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let (sender, receiver) = mpsc::channel();
+        let worker = thread::spawn(move || sender.send(acquire_instance_lock(&path)).unwrap());
+
+        let result = receiver
+            .recv_timeout(Duration::from_secs(2))
+            .expect("FIFO instance-lock open exceeded the nonblocking deadline");
+        worker.join().unwrap();
+
+        assert!(matches!(
+            result,
+            Err(DurableGateStartupError::LockUnavailable)
+        ));
     }
 
     #[test]

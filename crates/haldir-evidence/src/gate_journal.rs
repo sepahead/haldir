@@ -18,15 +18,15 @@ use core::{
     fmt,
     num::{NonZeroU32, NonZeroU64, NonZeroUsize},
 };
-use haldir_contracts::cbor::{CanonicalMessage, Limits, from_canonical_bytes};
+use haldir_contracts::cbor::{Limits, from_canonical_bytes};
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::error::DecodeError;
-use haldir_contracts::ids::{DecisionId, GateBootId, GateId};
+use haldir_contracts::ids::{DecisionId, GateBootId, GateId, VehicleId};
 use haldir_contracts::publication::PublicationStageEventV1;
 use haldir_contracts::receipt::{DecisionOutcomeV1, DecisionReceiptV1};
 use haldir_crypto::{
     ExpectedContext, KeyClass, KeyRole, RevocationSnapshot, TrustStore, VerifyingKey,
-    content_type_for, sign_message, verify_sign1_dispatched,
+    content_type_for, sign_typed_message, verify_sign1_dispatched,
 };
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -51,10 +51,13 @@ pub enum GateJournalVerificationError {
     ReceiptSemanticInvalid,
     /// The record and footer used different Gate application key IDs.
     RecordSignerMismatch,
-    /// The record signer subject was absent or did not name the configured Gate.
+    /// The record signer subject did not name the configured Gate.
     RecordSubjectMismatch,
     /// The typed record claimed another Gate.
     RecordGateMismatch,
+    /// The typed record claimed another vehicle than the one assigned to this
+    /// one-vehicle Gate journal.
+    RecordVehicleMismatch,
     /// The typed record's producing Gate boot did not match its segment boot.
     RecordBootMismatch,
 }
@@ -72,6 +75,7 @@ impl GateJournalVerificationError {
             Self::RecordSignerMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_SIGNER_MISMATCH",
             Self::RecordSubjectMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_SUBJECT_MISMATCH",
             Self::RecordGateMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_GATE_MISMATCH",
+            Self::RecordVehicleMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_VEHICLE_MISMATCH",
             Self::RecordBootMismatch => "EVIDENCE_GATE_JOURNAL_RECORD_BOOT_MISMATCH",
         }
     }
@@ -298,6 +302,8 @@ pub struct RecoveredPublicationState {
     replayed_records: u64,
     recovered_boots: BTreeSet<GateBootId>,
     last_recovered_segment_sequence: Option<NonZeroU64>,
+    recovered_tail_boot_id: Option<GateBootId>,
+    recovered_tail_segment_created_mono_ns: Option<u64>,
     decision_receipts: BTreeSet<(GateBootId, DecisionId)>,
     current_boot_record_high_water: Option<u64>,
 }
@@ -355,6 +361,8 @@ impl RecoveredGateJournal {
         max_traces: NonZeroUsize,
     ) -> Result<Self, GateJournalOpenError> {
         preflight_trace_bound(capture_limits, max_traces)?;
+        let current_boot_id = options.gate_boot_id();
+        let current_created_mono_ns = options.created_mono_ns();
         let mut publication = None;
         let mut capture_usage = None;
         let mut replay_failure = None;
@@ -362,7 +370,14 @@ impl RecoveredGateJournal {
         let mut precommit = |recovery: &JournalRecovery| match verifier
             .rebuild_publication_state_ref(recovery, max_traces.get())
         {
-            Ok(state) => {
+            Ok(mut state) => {
+                if let Err(error) =
+                    state.bind_active_segment(current_boot_id, current_created_mono_ns)
+                {
+                    replay_report = Some(recovery.report());
+                    replay_failure = Some(error);
+                    return Err(JournalManagerError::RecoveryConsumerRejected);
+                }
                 publication = Some(state);
                 capture_usage =
                     Some((recovery.report().recovered_records, recovery.record_bytes()));
@@ -425,6 +440,8 @@ impl RecoveredGateJournal {
         max_traces: NonZeroUsize,
     ) -> Result<Self, GateJournalOpenError> {
         preflight_trace_bound(capture_limits, max_traces)?;
+        let current_boot_id = options.gate_boot_id();
+        let current_created_mono_ns = options.created_mono_ns();
         let mut publication = None;
         let mut capture_usage = None;
         let mut replay_failure = None;
@@ -432,7 +449,14 @@ impl RecoveredGateJournal {
         let mut precommit = |recovery: &JournalRecovery| match verifier
             .rebuild_publication_state_ref(recovery, max_traces.get())
         {
-            Ok(state) => {
+            Ok(mut state) => {
+                if let Err(error) =
+                    state.bind_active_segment(current_boot_id, current_created_mono_ns)
+                {
+                    replay_report = Some(recovery.report());
+                    replay_failure = Some(error);
+                    return Err(JournalManagerError::RecoveryConsumerRejected);
+                }
                 publication = Some(state);
                 capture_usage =
                     Some((recovery.report().recovered_records, recovery.record_bytes()));
@@ -507,6 +531,7 @@ impl RecoveredGateJournal {
         let observed_mono_ns = options.created_mono_ns();
         let prospective_identity = SegmentIdentity {
             gate_id: verifier.gate_id().clone(),
+            journal_id: options.journal_id(),
             gate_boot_id: recovery_boot_id,
             segment_sequence: NonZeroU64::new(1).ok_or(GateJournalOpenError::Journal(
                 JournalManagerError::SequenceExhausted,
@@ -538,6 +563,11 @@ impl RecoveredGateJournal {
                 ));
                 return Err(JournalManagerError::RecoveryConsumerRejected);
             }
+            if let Err(error) = state.bind_active_segment(recovery_boot_id, observed_mono_ns) {
+                replay_report = Some(recovery.report());
+                replay_failure = Some(error);
+                return Err(JournalManagerError::RecoveryConsumerRejected);
+            }
             let events = match state
                 .reducer
                 .unknown_after_publish_events(recovery_boot_id, observed_mono_ns)
@@ -551,15 +581,7 @@ impl RecoveredGateJournal {
             };
             let envelopes = events
                 .iter()
-                .map(|event| {
-                    sign_message(
-                        event,
-                        PublicationStageEventV1::KIND,
-                        PublicationStageEventV1::SCHEMA_MAJOR,
-                        signer.kid(),
-                        signer.key(),
-                    )
-                })
+                .map(|event| sign_typed_message(event, signer.kid(), signer.key()))
                 .collect::<Vec<_>>();
             let required_records = recovery
                 .report()
@@ -881,15 +903,7 @@ impl RecoveredGateJournal {
 
         let envelopes = events
             .iter()
-            .map(|event| {
-                sign_message(
-                    event,
-                    PublicationStageEventV1::KIND,
-                    PublicationStageEventV1::SCHEMA_MAJOR,
-                    signer.kid(),
-                    signer.key(),
-                )
-            })
+            .map(|event| sign_typed_message(event, signer.kid(), signer.key()))
             .collect::<Vec<_>>();
         let envelope_refs = envelopes.iter().map(Vec::as_slice).collect::<Vec<_>>();
         let _ = self.preview_mutation(&envelope_refs)?;
@@ -1022,6 +1036,36 @@ fn replay_open_error(
 }
 
 impl RecoveredPublicationState {
+    fn bind_active_segment(
+        &mut self,
+        active_boot_id: GateBootId,
+        active_created_mono_ns: u64,
+    ) -> Result<(), PublicationRecoveryError> {
+        match self.recovered_tail_boot_id {
+            None => {
+                self.current_boot_record_high_water = None;
+            }
+            Some(tail_boot_id) if tail_boot_id == active_boot_id => {
+                if self
+                    .recovered_tail_segment_created_mono_ns
+                    .is_some_and(|created| active_created_mono_ns < created)
+                    || self
+                        .current_boot_record_high_water
+                        .is_some_and(|recorded| active_created_mono_ns < recorded)
+                {
+                    return Err(PublicationRecoveryError::SegmentTimeRegression);
+                }
+            }
+            Some(_) => {
+                if self.recovered_boots.contains(&active_boot_id) {
+                    return Err(PublicationRecoveryError::BootResurrection);
+                }
+                self.current_boot_record_high_water = None;
+            }
+        }
+        Ok(())
+    }
+
     /// Reduced trace state for one decision key.
     #[must_use]
     pub fn state(
@@ -1116,6 +1160,7 @@ impl VerifiedGateRecord {
 #[derive(Clone)]
 pub struct GateJournalVerifier {
     gate_id: GateId,
+    vehicle_id: VehicleId,
     trust: TrustStore,
     revocations: RevocationSnapshot,
     max_envelope_bytes: NonZeroUsize,
@@ -1129,12 +1174,14 @@ impl GateJournalVerifier {
     #[must_use]
     pub fn new(
         gate_id: GateId,
+        vehicle_id: VehicleId,
         trust: TrustStore,
         revocations: RevocationSnapshot,
         max_envelope_bytes: NonZeroUsize,
     ) -> Self {
         Self {
             gate_id,
+            vehicle_id,
             trust,
             revocations,
             max_envelope_bytes,
@@ -1167,7 +1214,7 @@ impl GateJournalVerifier {
             .ok_or(GateJournalVerificationError::SegmentSignerUntrusted)?;
         if record.role != KeyRole::GateApplication
             || record.class != KeyClass::Assurance
-            || record.subject.as_deref() != Some(self.gate_id.as_str())
+            || record.subject.as_str() != self.gate_id.as_str()
             || record.verifying_key.to_bytes() != identity.signer_public_key
             || self.revocations.is_key_revoked(&identity.signer_kid)
         {
@@ -1231,7 +1278,7 @@ impl GateJournalVerifier {
         if verified.signer_kid != identity.signer_kid {
             return Err(GateJournalVerificationError::RecordSignerMismatch);
         }
-        if verified.signer_subject.as_deref() != Some(self.gate_id.as_str()) {
+        if verified.signer_subject.as_str() != self.gate_id.as_str() {
             return Err(GateJournalVerificationError::RecordSubjectMismatch);
         }
 
@@ -1250,6 +1297,9 @@ impl GateJournalVerifier {
                 if receipt.gate_id != self.gate_id {
                     return Err(GateJournalVerificationError::RecordGateMismatch);
                 }
+                if receipt.vehicle_id != self.vehicle_id {
+                    return Err(GateJournalVerificationError::RecordVehicleMismatch);
+                }
                 if receipt.gate_boot_id != identity.gate_boot_id {
                     return Err(GateJournalVerificationError::RecordBootMismatch);
                 }
@@ -1263,6 +1313,9 @@ impl GateJournalVerifier {
                 .map_err(|_| GateJournalVerificationError::InvalidEnvelope)?;
                 if event.gate_id != self.gate_id {
                     return Err(GateJournalVerificationError::RecordGateMismatch);
+                }
+                if event.vehicle_id != self.vehicle_id {
+                    return Err(GateJournalVerificationError::RecordVehicleMismatch);
                 }
                 if event.producer_gate_boot_id != identity.gate_boot_id {
                     return Err(GateJournalVerificationError::RecordBootMismatch);
@@ -1368,8 +1421,10 @@ impl GateJournalVerifier {
             replayed_records,
             recovered_boots: seen_boots,
             last_recovered_segment_sequence,
+            recovered_tail_boot_id: active_boot,
+            recovered_tail_segment_created_mono_ns: active_boot.map(|_| last_segment_created),
             decision_receipts,
-            current_boot_record_high_water: None,
+            current_boot_record_high_water: last_record_mono_ns,
         })
     }
 }
@@ -1405,13 +1460,18 @@ mod tests {
     use crate::publication::PublicationTraceState;
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::digest::{DigestDomain, DigestV1};
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, KeyId, OutputSeq, VehicleId};
+    use haldir_contracts::ids::{
+        ControllerId, DecisionId, GateOutputEpoch, IntentEpoch, IntentSeq, JournalId, KeyId,
+        MissionId, MissionLeaseId, OutputSeq, SourceSeq, VehicleId,
+    };
     use haldir_contracts::receipt::{
         DecisionReasonCodeV1, PublishStageV1, TransformationRelationV1,
     };
-    use haldir_contracts::scalar::{AsciiId, BoundedVec, CanonicalUuidV4String};
-    use haldir_contracts::session::{NcpSessionIdentityV1, NcpStreamPositionV1};
-    use haldir_crypto::{KeyRecord, SigningKey, sign_message};
+    use haldir_contracts::scalar::{AsciiId, BoundedAscii, BoundedVec, CanonicalUuidV4String};
+    use haldir_contracts::session::{
+        HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1,
+    };
+    use haldir_crypto::{KeyRecord, KeySubject, SigningKey, sign_message};
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::sync::LazyLock;
@@ -1447,6 +1507,14 @@ mod tests {
         GateId::new("gate-1").unwrap()
     }
 
+    fn vehicle() -> VehicleId {
+        VehicleId::new("uav-1").unwrap()
+    }
+
+    fn journal_id() -> JournalId {
+        JournalId::new([7; 16]).unwrap()
+    }
+
     fn kid(seed: u8) -> KeyId {
         KeyId::new(vec![seed, 0xaa, seed]).unwrap()
     }
@@ -1469,7 +1537,7 @@ mod tests {
                     kid: kid(*seed),
                     role: KeyRole::GateApplication,
                     verifying_key: key(*seed).verifying_key(),
-                    subject: Some(gate().as_str().to_owned()),
+                    subject: KeySubject::new(gate().as_str()).unwrap(),
                     class: KeyClass::Assurance,
                 })
                 .unwrap();
@@ -1480,6 +1548,7 @@ mod tests {
     fn verifier() -> GateJournalVerifier {
         GateJournalVerifier::new(
             gate(),
+            vehicle(),
             trust_with_gate_keys(&[3]),
             RevocationSnapshot::new(),
             NonZeroUsize::new(32 * 1024).unwrap(),
@@ -1496,7 +1565,13 @@ mod tests {
     }
 
     fn options(boot: u8, created_mono_ns: u64, limits: JournalLimits) -> JournalOpenOptions {
-        JournalOpenOptions::new(gate(), GateBootId::new([boot; 16]), created_mono_ns, limits)
+        JournalOpenOptions::new(
+            gate(),
+            journal_id(),
+            GateBootId::new([boot; 16]),
+            created_mono_ns,
+            limits,
+        )
     }
 
     fn session() -> NcpSessionIdentityV1 {
@@ -1521,7 +1596,7 @@ mod tests {
             vehicle_id: VehicleId::new("uav-1").unwrap(),
             mission_id: None,
             ncp_session: session(),
-            received_key_digest: DigestV1::compute(DigestDomain::Payload, b"key"),
+            received_key_digest: DigestV1::compute(DigestDomain::TransportKey, b"key"),
             raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, b"intent"),
             payload_digest: None,
             semantic_intent_digest: None,
@@ -1546,6 +1621,26 @@ mod tests {
 
     fn prepared_receipt(decision: u8, boot: u8, decided_mono_ns: u64) -> DecisionReceiptV1 {
         let mut receipt = deny_receipt(decision, boot, decided_mono_ns);
+        receipt.mission_id = Some(MissionId::new("mission-1").unwrap());
+        receipt.payload_digest = Some(DigestV1::compute(DigestDomain::Payload, b"intent-payload"));
+        receipt.semantic_intent_digest = Some(DigestV1::compute(
+            DigestDomain::SemanticIntent,
+            b"intent-semantics",
+        ));
+        receipt.controller_id = Some(ControllerId::new("controller-1").unwrap());
+        receipt.controller_intent_position = Some(HaldirIntentPositionV1 {
+            epoch: IntentEpoch::new([6; 16]),
+            seq: IntentSeq::new(NonZeroU64::new(1).unwrap()),
+        });
+        receipt.mission_lease_id = Some(MissionLeaseId::new([7; 16]));
+        receipt.admission_digest = Some(DigestV1::compute(DigestDomain::Admission, b"admission"));
+        receipt.source = Some(NcpSourceRefV1 {
+            source_key: BoundedAscii::new("range-a/session/sess-1/sensor/pose").unwrap(),
+            stream_epoch: CanonicalUuidV4String::from_random_bytes([8; 16]),
+            stream_seq: SourceSeq::new(NonZeroU64::new(1).unwrap()),
+        });
+        receipt.state_snapshot_digest =
+            Some(DigestV1::compute(DigestDomain::StateSnapshot, b"state"));
         receipt.decision = DecisionOutcomeV1::Allow;
         receipt.reason_codes =
             BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPrepared]).unwrap();
@@ -1744,12 +1839,14 @@ mod tests {
         let trust = trust_with_gate_keys(&[3, 4]);
         let verifier = GateJournalVerifier::new(
             gate(),
+            vehicle(),
             trust,
             RevocationSnapshot::new(),
             NonZeroUsize::new(32 * 1024).unwrap(),
         );
         let identity = SegmentIdentity {
             gate_id: gate(),
+            journal_id: journal_id(),
             gate_boot_id: GateBootId::new([1; 16]),
             segment_sequence: NonZeroU64::new(1).unwrap(),
             previous_completed_digest: [0; 32],
@@ -1772,6 +1869,14 @@ mod tests {
                 .verify_record(&identity, &sign_receipt(&wrong_gate, 3))
                 .err(),
             Some(GateJournalVerificationError::RecordGateMismatch)
+        );
+        let mut wrong_vehicle = prepared.clone();
+        wrong_vehicle.vehicle_id = VehicleId::new("uav-2").unwrap();
+        assert_eq!(
+            verifier
+                .verify_record(&identity, &sign_receipt(&wrong_vehicle, 3))
+                .err(),
+            Some(GateJournalVerificationError::RecordVehicleMismatch)
         );
         let mut wrong_boot = prepared.clone();
         wrong_boot.gate_boot_id = GateBootId::new([2; 16]);
@@ -1830,9 +1935,25 @@ mod tests {
                 .err(),
             Some(GateJournalVerificationError::RecordBootMismatch)
         );
+        let mut wrong_event_vehicle = stage_event(
+            &prepared,
+            1,
+            PublishStageV1::PublishCalled,
+            prepared_digest,
+            prepared_digest,
+            12,
+        );
+        wrong_event_vehicle.vehicle_id = VehicleId::new("uav-2").unwrap();
+        assert_eq!(
+            verifier
+                .verify_record(&identity, &sign_stage(&wrong_event_vehicle, 3))
+                .err(),
+            Some(GateJournalVerificationError::RecordVehicleMismatch)
+        );
 
         let bounded = GateJournalVerifier::new(
             gate(),
+            vehicle(),
             trust_with_gate_keys(&[3]),
             RevocationSnapshot::new(),
             NonZeroUsize::new(sign_receipt(&prepared, 3).len() - 1).unwrap(),
@@ -1937,6 +2058,119 @@ mod tests {
             verifier().rebuild_publication_state(recovery, 1),
             Err(PublicationRecoveryError::BootResurrection)
         ));
+    }
+
+    #[test]
+    fn fused_open_rejects_active_boot_resurrection_before_creating_a_segment() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(4);
+        let (first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, journal_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        drop(first.finish(&journal_signer()).unwrap());
+        let (second, _) = EvidenceJournalManager::open_existing(
+            &journal,
+            options(2, 20, journal_limits),
+            &journal_signer(),
+            None,
+            verifier(),
+        )
+        .unwrap();
+        drop(second.finish(&journal_signer()).unwrap());
+        let tail_path = journal.join("segment-00000000000000000002");
+        let prospective_path = journal.join("segment-00000000000000000003");
+        let tail_bytes = fs::metadata(&tail_path).unwrap().len();
+
+        assert!(matches!(
+            RecoveredGateJournal::open_existing(
+                &journal,
+                options(1, 30, journal_limits),
+                &journal_signer(),
+                None,
+                RecoveryCaptureLimits::new(8, 64 * 1024),
+                verifier(),
+                NonZeroUsize::new(8).unwrap(),
+            ),
+            Err(GateJournalOpenError::Replay {
+                error: PublicationRecoveryError::BootResurrection,
+                recovery: JournalRecoveryReport {
+                    closed_active_tail: false,
+                    active_sequence: None,
+                    ..
+                }
+            })
+        ));
+        assert_eq!(fs::metadata(tail_path).unwrap().len(), tail_bytes);
+        assert!(!prospective_path.exists());
+    }
+
+    #[test]
+    fn fused_open_binds_same_boot_segment_time_to_the_recovered_record_horizon() {
+        let directory = TestDirectory::new();
+        let journal = directory.journal();
+        let journal_limits = limits(4);
+        let (mut first, _) = EvidenceJournalManager::provision_new(
+            &journal,
+            options(1, 10, journal_limits),
+            &journal_signer(),
+            verifier(),
+        )
+        .unwrap();
+        first
+            .append(
+                &sign_receipt(&deny_receipt(1, 1, 20), 3),
+                20,
+                &journal_signer(),
+            )
+            .unwrap();
+        drop(first.finish(&journal_signer()).unwrap());
+        let tail_path = journal.join("segment-00000000000000000001");
+        let prospective_path = journal.join("segment-00000000000000000002");
+        let tail_bytes = fs::metadata(&tail_path).unwrap().len();
+
+        assert!(matches!(
+            RecoveredGateJournal::open_existing(
+                &journal,
+                options(1, 19, journal_limits),
+                &journal_signer(),
+                None,
+                RecoveryCaptureLimits::new(8, 64 * 1024),
+                verifier(),
+                NonZeroUsize::new(8).unwrap(),
+            ),
+            Err(GateJournalOpenError::Replay {
+                error: PublicationRecoveryError::SegmentTimeRegression,
+                recovery: JournalRecoveryReport {
+                    closed_active_tail: false,
+                    active_sequence: None,
+                    ..
+                }
+            })
+        ));
+        assert_eq!(fs::metadata(&tail_path).unwrap().len(), tail_bytes);
+        assert!(!prospective_path.exists());
+
+        let reopened = RecoveredGateJournal::open_existing(
+            &journal,
+            options(1, 20, journal_limits),
+            &journal_signer(),
+            None,
+            RecoveryCaptureLimits::new(8, 64 * 1024),
+            verifier(),
+            NonZeroUsize::new(8).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            reopened
+                .active_identity()
+                .map(|identity| identity.segment_sequence),
+            NonZeroU64::new(2)
+        );
     }
 
     #[test]
@@ -2746,12 +2980,13 @@ mod tests {
                 kid: kid(3),
                 role: KeyRole::ControllerIntent,
                 verifying_key: key(3).verifying_key(),
-                subject: Some(gate().as_str().to_owned()),
+                subject: KeySubject::new(gate().as_str()).unwrap(),
                 class: KeyClass::Assurance,
             })
             .unwrap();
         let identity = SegmentIdentity {
             gate_id: gate(),
+            journal_id: journal_id(),
             gate_boot_id: GateBootId::new([1; 16]),
             segment_sequence: NonZeroU64::new(1).unwrap(),
             previous_completed_digest: [0; 32],
@@ -2761,6 +2996,7 @@ mod tests {
         };
         let wrong_role_verifier = GateJournalVerifier::new(
             gate(),
+            vehicle(),
             wrong_role,
             RevocationSnapshot::new(),
             NonZeroUsize::new(4096).unwrap(),
@@ -2771,9 +3007,8 @@ mod tests {
         );
 
         for (subject, class) in [
-            (None, KeyClass::Assurance),
-            (Some("gate-2"), KeyClass::Assurance),
-            (Some("gate-1"), KeyClass::Development),
+            ("gate-2", KeyClass::Assurance),
+            ("gate-1", KeyClass::Development),
         ] {
             let mut trust = TrustStore::new();
             trust
@@ -2781,12 +3016,13 @@ mod tests {
                     kid: kid(3),
                     role: KeyRole::GateApplication,
                     verifying_key: key(3).verifying_key(),
-                    subject: subject.map(str::to_owned),
+                    subject: KeySubject::new(subject).unwrap(),
                     class,
                 })
                 .unwrap();
             let verifier = GateJournalVerifier::new(
                 gate(),
+                vehicle(),
                 trust,
                 RevocationSnapshot::new(),
                 NonZeroUsize::new(4096).unwrap(),
@@ -2811,9 +3047,10 @@ mod tests {
         );
 
         let mut revocations = RevocationSnapshot::new();
-        revocations.revoke_key(&kid(3), 1);
+        revocations.revoke_key(&kid(3), 1).unwrap();
         let revoked = GateJournalVerifier::new(
             gate(),
+            vehicle(),
             trust_with_gate_keys(&[3]),
             revocations,
             NonZeroUsize::new(4096).unwrap(),

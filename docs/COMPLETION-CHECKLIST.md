@@ -12,19 +12,28 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   produce only `HaldirIntentV1` and configured controller principals cannot publish the
   final route; the final frame is Gate-authored. Runnable-service credential custody and
   complete-mediation/bypass evidence remain absent.
-- **YES** — Gate alone originates final NCP frames (`haldir-ncp08`, `actor.rs` Stage 12).
+- **PARTIAL** — Within the composed P0 actor path, Gate constructs each final NCP
+  frame only after an `ALLOW`; controller input never supplies final frame bytes.
+  The reusable lower adapter, actor, session, and publisher APIs are not a
+  process-wide exclusivity boundary, so this does not prove that Gate alone can
+  originate or publish frames in a deployment.
 - **YES** — Mission lease, admission, policy, session, Gate output stream,
   controller intent stream, boot id, and ACL-exclusive publication are separate
   identities/types (`ids.rs` B5 newtypes; state machines).
 - **PARTIAL** — A strict signed deployment-package contract, separately passed exact-policy verifier,
-  exact owned-artifact resolver, bounded Linux/macOS source from a caller-supplied open directory, and
-  atomic store-global package-plus-boot ratchet for one authenticated Gate binding are tested
-  (`CL-DEPLOYMENT-PRIMITIVE-01`). A separate bounded decoder exact-matches a supplied canonical NCP
-  compatibility artifact to the implemented frozen command subset (`CL-NCP-COMPATIBILITY-01`), but
-  no Gate startup binds that proof to the signed role, consumes the resolved/package-booted stages,
-  authenticates/protects artifact-root or credential acquisition, semantically uses the remaining
-  artifacts, or makes their selections mandatory
-  (`CL-DEPLOYMENT-PACKAGE-01`).
+  exact owned-artifact resolver, bounded Linux/macOS source from a caller-supplied open directory,
+  signed-role NCP validator, strict signed Gate-configuration validator, and atomic store-global
+  package-plus-boot ratchet are tested
+  (`CL-DEPLOYMENT-PRIMITIVE-01`, `CL-NCP-COMPATIBILITY-01`). The package-bound Gate entry point
+  consumes those stages and exact-matches Gate/realm/vehicle/runtime/wire/state-store/assurance plus
+  four separately verified, role-separated, public-key-distinct trust/revocation/admission/policy snapshot digests and the concrete
+  session/publication/local-cap/signer identities before effects,
+  commits the verified package revision/digest with the boot, retains the proof, and
+  exact-matches the signed journal ID before binding a format-v2 authenticated evidence chain; the
+  cooperative entry point can no longer select `AssuranceExternal`. Artifact-root and credential
+  acquisition remain unauthenticated/unprotected, the other seven roles are not semantically used,
+  journal binding/path are not mandatory, the running binary is not bound, and no production runner
+  makes this path mandatory (`CL-DEPLOYMENT-PACKAGE-01`).
 - **YES** — Restart invalidates active controller delegation (fresh boot id; state
   `restart_invalidates_lease_via_new_boot_id`).
 - **PARTIAL** — Revocation can preempt command traffic: the revocation snapshot and
@@ -43,20 +52,28 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **PARTIAL** — NCP stream/source/session semantics: current P0 fixtures remain modeled,
   while a closed explicit exact-revision selection passes upstream validated JSON,
   frozen-corpus, differential, tamper, and actor-Called-boundary tests
-  (`CL-NCP-REAL-01`). A standalone strict canonical artifact decoder exact-matches the implemented
-  frozen command subset to all compiled pins, but is not yet bound to the signed deployment role
-  (`CL-NCP-COMPATIBILITY-01`). Template startup's explicit `DeclaredLiveZenoh` profile now requires
+  (`CL-NCP-REAL-01`). A strict canonical artifact decoder exact-matches the implemented frozen
+  command subset to all compiled pins, the deployment resolver consumes that proof together
+  with the exact signed role bytes into `NcpValidatedDeploymentPackage`, and a second stage validates
+  the strict signed Gate configuration before package-bound Gate startup consumes and retains the
+  composition (`CL-NCP-COMPATIBILITY-01`). Template startup's explicit
+  `DeclaredLiveZenoh` profile now requires
   that exact selection and the compiled `live-zenoh` feature before startup-owned backend
   calls, entropy, locks, or directories. Successful declared-live startup separately mints
   the private move-only capability required by the live coordinator; exact reference and
   forged-report paths cannot mint it. The declaration remains cooperative, process-local,
-  and bypassed by direct actor construction. A public no-network kernel can consume the marked
-  coordinator plus one bounded caller-supplied initial state/challenge/signed lease, and it
-  validates the signed intent route against the canonical verified-controller route before the
-  lease becomes active. The lower public service can consume only that route-bound result plus a
-  preconstructed matched publisher. The outer aggregate instead consumes that result and one
+  and bypassed by direct actor construction. A public no-network kernel consumes the marked
+  coordinator to issue one Gate-signed, startup-entropy-derived, locally expiring challenge.
+  Only the resulting move-only issued-challenge state can consume one bounded caller-supplied
+  initial state and matching signed lease; it validates the signed intent route against the
+  canonical verified-controller route before the lease becomes active. The crate-private lower
+  service can consume only that route-bound result plus an internally constructed matched
+  publisher. The public outer aggregate consumes that result and one
   supplied session wrapper, internally deriving the publisher and exact ingress from the same
-  lineage. Separate development examples explicitly provision then `OpenExisting`-open that path
+  lineage. Both service layers now expose a consuming caller-supplied state update that preserves
+  the single owner on acceptance or ordinary rejection and fail-stops clock regression; producer
+  authentication and state transport remain absent (`CL-STATE-INGRESS-01`). Separate development
+  examples explicitly provision then `OpenExisting`-open that path
   for immediate bind/shutdown only; they do not authenticate/refresh control inputs, protect
   credential custody, process an intent, or select a Crebain deployment. Retained evidence proves
   only the strict-session-open, aggregate-bind, and immediate aggregate-shutdown local returns
@@ -67,10 +84,12 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   ambiguity. Its off-by-default live typestate is reachable only through the startup-minted
   capability and is the only Called type exposing the concrete method. It rejects a concrete
   publisher whose exact route differs from the actor realm/session before frame access or
-  invocation, then consumes a matched publisher around one awaited call and returns that
-  capability only after local `Ok` plus terminal journal success. A public non-cloneable
-  service kernel adds an internal capacity-one pool and returns itself only on safe
-  continuation. An initially inactive marked actor is tested through local state/challenge/lease
+  invocation, then consumes a matched publisher around one awaited call. Every invoked live
+  call consumes the runtime and publisher. Even a local `Ok` is a terminal
+  application-unobserved result: it records truthful local evidence, commits no guessed plant
+  interval, and permits no later command because NCP v0.8 begins TTL at unobserved plant
+  arrival. A public non-cloneable service kernel adds an internal capacity-one pool and
+  returns itself only before publication or after an ordinary no-publication outcome. An initially inactive marked actor is tested through signed Gate-challenge issuance and local state/lease
   activation, canonical intent-route binding, and fake-publisher service binding. A separate
   fake session/ingress facade tests the outer aggregate's derivation, journal-capacity
   retention/retry, closure, drops, and shutdown ordering. Its local stop-only handle is tested
@@ -142,7 +161,9 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   network-isolated execution. Acquisition availability, an
   availability-independent bootstrap, SBOM/provenance, and a reproducible release
   remain release-phase work.
-- **YES** — Every push was normal and non-forced.
+- **PARTIAL** — The retained commit graph is linear and current protection
+  settings prohibit force pushes, but Git objects do not prove the mechanics of
+  every historical hosted ref update. No stronger historical claim is made.
 
 ## Verdict
 
@@ -152,7 +173,7 @@ profile and `docs/LIMITATIONS.md` state precisely what remains unproven.
 
 ## Reproducing the P0-R exit gate
 
-Run every offline acceptance check in one command:
+Run every local acceptance check in one command:
 
 ```bash
 bash tools/p0r-exit-gate.sh
@@ -163,5 +184,8 @@ all-feature tests and doc tests, warning-free docs, no-default and cold builds,
 dependency policy, source/CI/formal/evidence/claim/generated-artifact verifiers,
 diff hygiene, and the independent COSE/CBOR interop check (re-emit + diff +
 verify). The pinned TLA+ model check runs in CI (`.github/workflows/formal.yml`,
-`CL-FORMAL-01`) and can run locally when a JRE is available. Every claim these gates back is listed in
+`CL-FORMAL-01`) and can run locally when a JRE is available. Cargo can acquire
+missing locked dependencies, and the ordinary local dependency-policy lane can
+refresh its advisory database; this aggregate command is not a hermetic offline
+execution claim. Every claim these gates back is listed in
 [`CLAIM-LEDGER.md`](CLAIM-LEDGER.md).

@@ -8,8 +8,16 @@ use haldir_contracts::receipt::DecisionReasonCodeV1;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum AdmissionSnapshotError {
+    /// The candidate record failed its supported record validation.
+    InvalidRecord,
     /// A different record already uses the same admission id.
     ConflictingAdmissionId,
+    /// The fixed active-record bound is already exhausted.
+    RecordCapacityExceeded,
+    /// A new revocation did not carry an epoch above the current high-water.
+    RevocationEpochNotAdvanced,
+    /// The fixed revoked-id bound is already exhausted.
+    RevocationCapacityExceeded,
 }
 
 impl AdmissionSnapshotError {
@@ -17,7 +25,11 @@ impl AdmissionSnapshotError {
     #[must_use]
     pub const fn reason_code(self) -> &'static str {
         match self {
+            Self::InvalidRecord => "ADMISSION_SNAPSHOT_INVALID_RECORD",
             Self::ConflictingAdmissionId => "ADMISSION_SNAPSHOT_CONFLICTING_ADMISSION_ID",
+            Self::RecordCapacityExceeded => "ADMISSION_SNAPSHOT_RECORD_CAPACITY_EXCEEDED",
+            Self::RevocationEpochNotAdvanced => "ADMISSION_SNAPSHOT_REVOCATION_EPOCH_NOT_ADVANCED",
+            Self::RevocationCapacityExceeded => "ADMISSION_SNAPSHOT_REVOCATION_CAPACITY_EXCEEDED",
         }
     }
 }

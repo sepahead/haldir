@@ -15,6 +15,11 @@ pub enum KeyRole {
     ControllerIntent,
     /// Mission-lease and mission-revocation signing.
     MissionAuthority,
+    /// Runtime trust-snapshot approval signing.
+    ///
+    /// This role is distinct from deployment integration: a deployment signer
+    /// may select an approved trust snapshot but cannot mint trust authority.
+    TrustAuthority,
     /// Admission-record and admission-revocation signing.
     AdmissionAuthority,
     /// Policy-package signing.
@@ -37,6 +42,7 @@ impl KeyRole {
             Self::GateApplication => "GATE_APPLICATION",
             Self::ControllerIntent => "CONTROLLER_INTENT",
             Self::MissionAuthority => "MISSION_AUTHORITY",
+            Self::TrustAuthority => "TRUST_AUTHORITY",
             Self::AdmissionAuthority => "ADMISSION_AUTHORITY",
             Self::PolicyAuthority => "POLICY_AUTHORITY",
             Self::RevocationAuthority => "REVOCATION_AUTHORITY",

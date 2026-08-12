@@ -12,7 +12,7 @@ use std::num::NonZeroU64;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum OutputStreamError {
-    /// The sequence space or bounded retired-epoch capacity is exhausted.
+    /// The sequence space, bounded retired-epoch capacity, or backing allocation is exhausted.
     Exhausted,
     /// The requested epoch is already the active epoch.
     EpochAlreadyActive,
@@ -44,7 +44,7 @@ impl std::error::Error for OutputStreamError {}
 #[derive(Debug, Clone)]
 pub struct GateOutputStreamState {
     epoch: GateOutputEpoch,
-    next_seq: u64,
+    next_seq: Option<NonZeroU64>,
     retired_epochs: Vec<GateOutputEpoch>,
     max_retired: usize,
 }
@@ -55,7 +55,7 @@ impl GateOutputStreamState {
     pub fn new(epoch: GateOutputEpoch, max_retired: usize) -> Self {
         Self {
             epoch,
-            next_seq: 1,
+            next_seq: Some(NonZeroU64::MIN),
             retired_epochs: Vec::new(),
             max_retired,
         }
@@ -67,10 +67,13 @@ impl GateOutputStreamState {
         self.epoch
     }
 
-    /// The next sequence that would be allocated (for status/tests).
+    /// The next sequence that would be allocated, or `None` after exhaustion.
     #[must_use]
-    pub const fn peek_next_seq(&self) -> u64 {
-        self.next_seq
+    pub const fn peek_next_seq(&self) -> Option<OutputSeq> {
+        match self.next_seq {
+            Some(next) => Some(OutputSeq::new(next)),
+            None => None,
+        }
     }
 
     /// Allocate the next output sequence. Never reuses a prior value.
@@ -78,12 +81,9 @@ impl GateOutputStreamState {
     /// # Errors
     /// Returns [`OutputStreamError::Exhausted`] if the sequence space is full.
     pub fn allocate(&mut self) -> Result<OutputSeq, OutputStreamError> {
-        let seq = NonZeroU64::new(self.next_seq).ok_or(OutputStreamError::Exhausted)?;
-        self.next_seq = self
-            .next_seq
-            .checked_add(1)
-            .ok_or(OutputStreamError::Exhausted)?;
-        Ok(OutputSeq::new(seq))
+        let current = self.next_seq.ok_or(OutputStreamError::Exhausted)?;
+        self.next_seq = current.get().checked_add(1).and_then(NonZeroU64::new);
+        Ok(OutputSeq::new(current))
     }
 
     /// Rotate to a fresh epoch (restart / authority transition), retiring the old
@@ -93,7 +93,7 @@ impl GateOutputStreamState {
     /// Returns [`OutputStreamError::EpochAlreadyActive`] if `new_epoch` is
     /// already active, [`OutputStreamError::RetiredEpoch`] if it was previously
     /// retired, or [`OutputStreamError::Exhausted`] if the retired-epoch set is
-    /// full.
+    /// logically full or cannot reserve its bounded backing allocation.
     pub fn rotate_epoch(&mut self, new_epoch: GateOutputEpoch) -> Result<(), OutputStreamError> {
         if new_epoch == self.epoch {
             return Err(OutputStreamError::EpochAlreadyActive);
@@ -104,9 +104,12 @@ impl GateOutputStreamState {
         if self.retired_epochs.len() >= self.max_retired {
             return Err(OutputStreamError::Exhausted);
         }
+        self.retired_epochs
+            .try_reserve(1)
+            .map_err(|_| OutputStreamError::Exhausted)?;
         self.retired_epochs.push(self.epoch);
         self.epoch = new_epoch;
-        self.next_seq = 1;
+        self.next_seq = Some(NonZeroU64::MIN);
         Ok(())
     }
 
@@ -153,6 +156,22 @@ mod tests {
         assert_eq!(b.get(), 2);
         assert_eq!(c.get(), 3);
         assert!(a.get() < b.get() && b.get() < c.get());
+    }
+
+    #[test]
+    fn allocates_maximum_sequence_once_then_exhausts_without_mutation() {
+        let mut state = GateOutputStreamState {
+            epoch: epoch(1),
+            next_seq: Some(NonZeroU64::MAX),
+            retired_epochs: Vec::new(),
+            max_retired: 8,
+        };
+
+        assert_eq!(state.allocate().unwrap().get(), u64::MAX);
+        assert_eq!(state.peek_next_seq(), None);
+        let before = state.clone();
+        assert_eq!(state.allocate(), Err(OutputStreamError::Exhausted));
+        assert_state_unchanged(&state, &before);
     }
 
     #[test]

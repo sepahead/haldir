@@ -31,17 +31,19 @@ semantics:
    preventing chronological rollback.
 3. Validation rejects zero/reversed or future-start intervals, unsorted,
    overlapping or touching noncanonical unions, capacity violations, inconsistent
-   slew/high-water state, future records, and policy-window mismatch. An interval
-   end after evaluation time is valid and is clipped normally.
-4. Retained overlap with the owned rolling window is clipped and summed exactly
-   in nanoseconds. The evaluator compares widened `u128` nanoseconds:
-
-   `retained_ns + candidate_ms * 1_000_000 > cap_ms * 1_000_000`.
-
-   Equality is allowed; one nanosecond over denies. When capacity suffices, the
-   retained union is exact. Closest-gap compression intentionally counts gaps and
-   is conservative; it can over-count, not under-count, the original charged
-   intervals.
+   slew/high-water/motion state, future records, and policy-window mismatch. An
+   interval end after evaluation time is valid and remains part of prospective
+   accounting.
+4. The evaluator forms an exact union of (a) every retained horizon clipped only
+   at the owned trailing-window start and (b) the candidate half-open interval
+   `[now, now + candidate)`. It does not clip retained horizons at `now`: a
+   previously published command's future tail remains chargeable when a shorter
+   candidate is wholly contained in it. Candidate overlap is counted once. The
+   resulting nanoseconds are compared in widened arithmetic with
+   `cap_ms * 1_000_000`; equality is allowed and one nanosecond over denies. When
+   capacity suffices, the retained union is exact. Closest-gap compression
+   intentionally counts gaps and is conservative; it can over-count, not
+   under-count, the original charged intervals.
 5. The prospective candidate remains the conservative requested/NCP horizon, not
    the final effective published validity. The effective-validity minimum
    subtracts the publication margin, and byte exposure is bounded by that same
@@ -54,23 +56,33 @@ semantics:
    `ErrorInternalFault`, and prepares no output. The legacy infallible evaluator
    remains an explicitly lossy compatibility wrapper.
 7. Hold evaluation deliberately does not consult motion-duty history, preserving
-   availability of a stop command when that history is malformed. A publisher-
-   reported successful Hold must still update the publication high-water. If that
-   transactional commit fails, the Gate fault-latches, retains `PublishCalled`,
-   returns a typed no-retry error, and cannot issue later motion.
+   availability of a stop command when that history is malformed. At the
+   synchronous in-process reference boundary, a receiver-reported successful
+   Hold must transactionally record its exact applied
+   `[called_at, active_until)` horizon as well as the publication high-water. A
+   newer Hold supersedes the prior horizon end; only overlapping/touching coverage
+   preserves the earlier Hold start. If that commit fails, the Gate fault-latches,
+   retains `PublishCalled`, returns a typed no-retry error, and cannot issue later
+   motion.
 8. The publication coordinator locally journals and `sync_data`-confirms a
-   publisher-reported success before the in-process accounting transition. If
-   accounting then fails, the runtime is consumed and the locally confirmed
-   result remains truthful. Recovery already requires explicit clearance for
-   every Called-or-later trace, including `ReturnedOk`. This is not a power-loss
-   durability claim.
+   publisher-reported success before the synchronous in-process reference
+   accounting transition. If accounting then fails, the runtime is consumed and
+   the locally confirmed result remains truthful. A declared-live local `Ok`
+   cannot drive that transition: NCP v0.8 starts TTL at unobserved plant-local
+   arrival, so the live service records ReturnedOk, commits no guessed interval,
+   and terminates without later publication authority. Recovery requires explicit
+   clearance for every Called-or-later trace, including `ReturnedOk`. This is not
+   a power-loss durability, delivery, or application claim.
 
 ## Consequences
 
-- Sub-millisecond retained activity cannot disappear at the duty boundary.
+- Sub-millisecond retained activity and retained future tails cannot disappear at
+  the duty boundary.
 - Malformed state cannot masquerade as a legitimate controller duty-limit DENY.
-- Compression and prospective charging can deliberately deny early; the claim is
-  conservative authorization accounting, not physical motion measurement.
+- Retained future tails model publication uncertainty even when a newer command
+  may supersede them downstream. Together with compression, this can deliberately
+  deny early; the claim is exact arithmetic over a conservative retained
+  representation, not exact receiver application or physical motion measurement.
 - History is boot-local and in-process. The repository does not claim durable
   reconstruction of prior-boot duty; restart remains blocked behind the existing
   Called-or-later clearance rule.
@@ -83,8 +95,9 @@ semantics:
 
 `haldir-core` exact/checked duration boundary and conversion tests;
 `haldir-policy-native` exact-cap, one-nanosecond-over, fractional-union,
-half-open clipping, constructor/window, structural validation, transactional
-rollback/high-water, Hold exception, error-chain, widened-reference, and
+retained-future-tail union, half-open clipping, candidate-overflow,
+constructor/window, structural validation, transactional rollback/high-water,
+Hold-horizon/supersession, Hold exception, error-chain, widened-reference, and
 compression/eviction property tests; `haldir-gate`
 `gate_binds_history_capacity_and_window_to_validated_policy`,
 `velocity_history_failure_latches_error_and_prepares_no_output`,

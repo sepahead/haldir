@@ -13,8 +13,10 @@ canonical_struct! {
 
 canonical_struct! {
     /// The numeric limits carried by a mission lease. A lease may be stricter than
-    /// the policy package but never looser; effective bounds are the intersection
-    /// of lease, policy, admission, NCP, and plant limits.
+    /// the locally configured executable policy but never looser. The current
+    /// evaluator intersects these fields with its local motion envelope and
+    /// protocol/validity caps; admission provenance and independently attested
+    /// plant capabilities remain separate system-level requirements.
     pub struct MissionLeaseLimitsV1 {
         req 1 max_output_validity_ms: NonZeroU32,
         req 2 max_linear_speed_mm_s: NonZeroU32,

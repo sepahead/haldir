@@ -2,6 +2,12 @@
 
 ## HALDIR-0.9-T002 — protected subjects, resources, actions, constraints, time and roots
 
+> **Qualification status: IMPLEMENTED, REOPENED.** The model evolved after the
+> signed `b528678d…` T002 closure to represent deployment-bound runtime snapshot
+> approvals. That exact record remains historical evidence for its own commit;
+> it does not verify these current bytes. T002 must receive a new signed
+> exact-commit closure before its ledger status can return to `verified`.
+
 The key words **SHALL**, **SHALL NOT**, **MUST**, and **MUST NOT** are
 normative. This requirement refines the authority rule in
 `HALDIR-0.9-T001`; it does not broaden that rule. It applies to the declared
@@ -37,7 +43,7 @@ publish/subscribe/query/serve grants are part of this requirement and **SHALL
 NOT** be inferred from a role label.
 
 The closed application-key-role inventory is `GATE_APPLICATION`,
-`CONTROLLER_INTENT`, `MISSION_AUTHORITY`, `ADMISSION_AUTHORITY`,
+`CONTROLLER_INTENT`, `MISSION_AUTHORITY`, `TRUST_AUTHORITY`, `ADMISSION_AUTHORITY`,
 `POLICY_AUTHORITY`, `REVOCATION_AUTHORITY`, `CREBAIN_EVIDENCE`,
 `DEPLOYMENT_AUTHORITY`, and `DEVELOPMENT_ONLY`. `DEVELOPMENT_ONLY` **SHALL
 NOT** grant assurance authority. A role absent from the transport profile may
@@ -46,25 +52,27 @@ grant from that fact.
 
 The machine model also freezes each role's allowed key class, signed Rust type,
 message kind, schema major, protected content type, external AAD, and signer
-subject binding. `POLICY_AUTHORITY` and `CREBAIN_EVIDENCE` currently have no
-implemented signed-object domain, so their role names grant no assurance
-authority. `DEVELOPMENT_ONLY` accepts only the development key class, has no
+subject binding. `TRUST_AUTHORITY`, `ADMISSION_AUTHORITY`, `REVOCATION_AUTHORITY`,
+and `POLICY_AUTHORITY` sign only the matching discriminator of the revision-scoped
+`haldir.authority_snapshot_approval` contract. `CREBAIN_EVIDENCE` currently has no
+implemented signed-object domain, so its role name grants no assurance authority.
+`DEVELOPMENT_ONLY` accepts only the development key class, has no
 signed-object domain, and is forbidden in an assurance profile. An object kind
 or signature domain absent from this registry **SHALL NOT** be inferred from a
 role comment or from successful generic `COSE_Sign1` verification.
 
 The protected logical/component subjects are the Gate application signer, Gate
-transport principal, secure transport router, controllers, mission authority, admission authority,
-policy authority, revocation authority, deployment authority, trusted-state
-producer, lifecycle service, plant/Crebain boundary, observer/auditor,
-provisioning operator, and external generation-anchor service. Controllers may
-request semantic actions only. Issuers may issue or revoke only their named
-authority objects. The Gate application may verify, decide, allocate, construct,
-and record. The Gate transport may publish only its exact profile grants. The
-plant/Crebain boundary may produce state and application evidence and consume a
-final command, but it is not Haldir authorization authority. Observers,
-Galadriel, PID evidence, receipts, and other advisory producers **SHALL NOT**
-grant or widen authority.
+transport principal, secure transport router, controllers, mission authority,
+trust authority, admission authority, policy authority, revocation authority,
+deployment authority, trusted-state producer, lifecycle service,
+plant/Crebain boundary, observer/auditor, provisioning operator, and external
+generation-anchor service. Controllers may request semantic actions only.
+Issuers may issue or revoke only their named authority objects. The Gate
+application may verify, decide, allocate, construct, and record. The Gate
+transport may publish only its exact profile grants. The plant/Crebain boundary
+may produce state and application evidence and consume a final command, but it
+is not Haldir authorization authority. Observers, Galadriel, PID evidence,
+receipts, and other advisory producers **SHALL NOT** grant or widen authority.
 
 For every logical component, the exact transport-principal IDs, application
 key roles, logical Rust subject types, and current binding status are frozen in
@@ -86,11 +94,15 @@ receipt, acceptance, application, or physical effect.
 
 The non-route protected resources are:
 
-- the Gate, controller, mission, admission, policy, revocation, deployment, and
-  Crebain application-signing secrets, each scoped to its actual custodian;
+- the Gate, controller, mission, trust, admission, policy, revocation,
+  deployment, and Crebain application-signing secrets, each scoped to its
+  actual custodian;
 - the Gate, controller, mission, admission, lifecycle, observer, Crebain, and
   router transport credentials/trust, each scoped to its actual custodian;
-- bootstrap application trust and the independently owned revocation snapshot;
+- the caller-provisioned bootstrap application trust and bootstrap revocation
+  snapshot retained for package and authority-approval verification;
+- the separately approved runtime application-trust and runtime-revocation
+  snapshots selected by the deployment package;
 - the signed deployment package and its exact owned artifact bytes;
 - admission, mission-lease, Gate-owned one-shot challenge, policy, and
   trusted-state snapshots as distinct resources;
@@ -226,22 +238,34 @@ durable anti-rollback ratchet.
 
 ### Trust roots and root status
 
-The current implementation consumes caller-supplied prevalidated application
-trust and revocation snapshots, exact external deployment-acceptance policy,
-configured policy/admission/session/publication snapshots, the Gate monotonic
-clock, and Gate-owned signing material. These are trusted inputs at their local
-verification boundary; their protected acquisition, freshness, custody, and
-deployment composition are not thereby proven.
+The current implementation consumes caller-supplied prevalidated bootstrap
+application trust and bootstrap revocations, exact external
+deployment-acceptance policy, separately role/key-approved runtime
+trust/revocation/admission/policy snapshots, configured session/publication
+state, the Gate monotonic clock, and Gate-owned signing material. These are
+trusted inputs at their local verification boundary; their protected
+acquisition, freshness, custody, and deployment composition are not thereby
+proven.
 
 The deployment verifier and owned-artifact resolver, mTLS/router/default-deny
 profile, storage MAC, authenticated snapshot, generation-anchor interface, and
-evidence journal are implemented primitives. Gate startup does not yet consume
-the resolved deployment-package typestate. The retained ACL campaign uses an
-ephemeral PKI and proves only its bounded experiment. The local file generation
-anchor is rewritable and development-only. No deployed external non-rewindable
-anchor, protected secret loader, exclusive custom-CA trust, authenticated
-ongoing state/control provenance, global credential/handle exclusivity, or
-plant/firmware trust proof exists.
+evidence journal are implemented primitives. Package-bound Gate startup
+consumes the NCP- and Gate-configuration-validated resolved typestate plus four
+separately verified, role-separated, public-key-distinct, revision-scoped
+snapshot approvals under the same bootstrap trust/revocation snapshots retained
+by package verification. It then matches the package's top-level runtime/store
+fields and its derived trust/revocation/admission/policy/session/publication/
+local-cap/application-signer identities, atomically ratchets the verified
+package with the boot, and exact-matches its journal ID when binding a format-v2
+authenticated evidence chain. That later journal binding and its path are not
+mandatory or part of the durable ratchet. The other seven signed roles are not
+yet semantic runtime inputs. The retained ACL campaign uses an ephemeral PKI
+and proves only its bounded experiment. The local file generation anchor is
+rewritable and development-only. No deployed external non-rewindable anchor,
+protected secret loader, exclusive custom-CA trust, authenticated ongoing
+state/control provenance, global credential/handle exclusivity, or
+plant/firmware trust proof exists. Distinct roles and public keys do not prove
+separate organizations, operators, or administrative control.
 
 The pinned NCP v0.8.0 commit, dependency lock, toolchain, router image, and
 artifact digests are supply-chain integrity anchors, not runtime principals and

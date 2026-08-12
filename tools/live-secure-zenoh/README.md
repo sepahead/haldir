@@ -1,7 +1,7 @@
 # Live secure-Zenoh campaign harness
 
 This directory contains the pinned container build for the receiver-observed ACL
-campaign. The campaign is intentionally not part of the offline `just ci` gate: it
+campaign. The campaign is intentionally not part of the local `just ci` gate: it
 requires Docker, OpenSSL, ephemeral private keys, and live processes.
 
 Run only from a clean committed Haldir tree:

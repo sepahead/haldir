@@ -323,13 +323,12 @@ mod tests {
                 "13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227095820abd9",
                 "743323e4f6eabdbc27888704462b1b1fd128777422b35146605709a013440a58203e3d73",
                 "235fe2dd4288158c29f9cd2f3f17034f7a58d803682f45c145a9733f2e0b010c765052",
-                "455f415554484f524954595f41434c5f4f4e4c590d72302e312e302d6578706572696d",
-                "656e74616c"
+                "455f415554484f524954595f41434c5f4f4e4c590d65302e392e30"
             )
         );
         assert_eq!(
             hex(&NCP_V0_8_0.compatibility_id().value),
-            "7598422f3c123c52dcd79b97ee77f92d1467116edf7bb0e9f403bc9953f5300e"
+            "17f040a0fc9d06d4b958adfa9267b16689b8aa3b91dab21560c1d655de1c17af"
         );
     }
 
@@ -375,7 +374,7 @@ mod tests {
         substitutions.push(artifact);
 
         let mut artifact = expected;
-        artifact.haldir_adapter_version = AsciiId::new("0.1.1-experimental").unwrap();
+        artifact.haldir_adapter_version = AsciiId::new("0.9.1").unwrap();
         substitutions.push(artifact);
 
         for substitution in substitutions {

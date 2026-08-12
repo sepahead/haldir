@@ -6,6 +6,8 @@ use core::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum DurableError {
+    /// The supplied storage-authentication key is an invalid provisioning value.
+    InvalidKey,
     /// The snapshot envelope is malformed or internally inconsistent.
     Corrupt,
     /// Authentication failed or the snapshot was bound to another store/Gate.
@@ -46,6 +48,7 @@ impl DurableError {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::InvalidKey => "DURABLE_INVALID_KEY",
             Self::Corrupt => "DURABLE_CORRUPT",
             Self::AuthenticationFailed => "DURABLE_AUTHENTICATION_FAILED",
             Self::Missing => "DURABLE_MISSING",
@@ -87,6 +90,7 @@ mod tests {
     #[test]
     fn every_error_has_a_stable_display_code_and_no_source() {
         let cases = [
+            (DurableError::InvalidKey, "DURABLE_INVALID_KEY"),
             (DurableError::Corrupt, "DURABLE_CORRUPT"),
             (
                 DurableError::AuthenticationFailed,

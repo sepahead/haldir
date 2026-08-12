@@ -15,17 +15,16 @@ members = [
     "crates/haldir-transport-zenoh",
     "crates/haldir-gate",
     "crates/haldir-range",
-    "crates/haldir-testkit",
     "tools/haldir-ctl",
 ]
 
 [workspace.package]
-version = "0.1.0-experimental"
+version = "0.9.0"
 edition = "2024"
 rust-version = "1.96"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/sepahead/haldir"
-authors = ["Sepahead"]
+authors = ["Sepehr Mahmoudian <sepmhn@gmail.com>"]
 # Experimental workspace crates: not published to any registry.
 publish = false
 # Haldir Gate is an EXPERIMENTAL inline mission-authorization reference monitor.
@@ -47,12 +46,11 @@ haldir-evidence = { path = "crates/haldir-evidence" }
 haldir-durable = { path = "crates/haldir-durable" }
 haldir-transport-zenoh = { path = "crates/haldir-transport-zenoh" }
 haldir-gate = { path = "crates/haldir-gate" }
-haldir-testkit = { path = "crates/haldir-testkit" }
-# --- external (all pinned; all available offline in the reviewed cache) ---
-ed25519-compact = { version = "2.2", default-features = false, features = ["std"] }
+# --- external (resolved by the committed lockfile; reviewed cache is offline-capable) ---
+ed25519-compact = { version = "=2.3.1", default-features = false, features = ["std"] }
+curve25519-dalek = { version = "=4.1.3", default-features = false }
 sha2 = { version = "0.10", default-features = false }
 zeroize = { version = "1", default-features = false }
-subtle = { version = "2", default-features = false }
 getrandom = { version = "0.2" }
 proptest = { version = "1" }
 rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }
@@ -73,7 +71,7 @@ zenoh-transport = { git = "https://github.com/sepahead/zenoh-transport-lz4-backp
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
-# `missing_docs` hardening is deferred to the release-hardening pass; see docs/LIMITATIONS.md.
+missing_docs = "warn"
 
 [workspace.lints.clippy]
 all = "warn"
@@ -91,5 +89,6 @@ cast_precision_loss = "warn"
 # security comparison could turn an out-of-range value into an allowed one.
 [profile.release]
 overflow-checks = true
-# panic = "unwind" is intentional: Gate must flush bounded evidence on a fault
-# rather than abort. Do not switch to abort without an evidence-flush analysis.
+# Unwinding permits ownership cleanup and outer recovery handling; it does not
+# promise that evidence not already sync-confirmed will be flushed.
+panic = "unwind"

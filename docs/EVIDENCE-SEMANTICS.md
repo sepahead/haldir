@@ -13,15 +13,18 @@ recovered dangling `PublishCalled` before returning the bound runtime
 bound runtime and one monotonic clock through an exact receipt -> `PublishCalled` ->
 local-return lifecycle (`CL-GATE-LIFECYCLE-01`). It reserves all three maximum-sized
 journal units and requires a non-cloneable slot minted by a bounded permit pool before
-the actor can allocate a decision/output sequence. Successful declared-live startup also
+the actor can allocate a decision/output sequence. Before the receipt can seed later
+publication events, the coordinator cross-checks its complete NCP session, source,
+state digest, effective validity, output position, frame digest, and transformation
+against the self-consistent opaque exact frame. Successful declared-live startup also
 mints a separate move-only capability that the live coordinator consumes and carries through
-each runtime-returning state; error and fatal paths destroy it. The concrete production
+each runtime-returning state; error and fatal paths destroy it. The concrete declared-live
 publisher path borrows the frame only from the resulting live Called type, after the linked
 Called append was locally `sync_data`-confirmed and post-sync actor
-checks pass. Before service binding, a public no-network kernel consumes one bounded
-caller-supplied initial trusted state, challenge, and signed lease. It validates the canonical
-intent route from the verified, admission-bound controller before lease-term/challenge commit and
-returns a move-only route-bound capability. The service kernel consumes only that capability plus
+checks pass. Before service binding, a public no-network kernel issues one Gate-signed,
+startup-entropy-derived challenge with a fixed Gate-monotonic lifetime. Only the move-only
+issued-challenge state can consume one bounded caller-supplied initial trusted state and matching
+signed lease. It validates the canonical intent route from the verified, admission-bound controller before lease-term/challenge commit and returns a move-only route-bound capability. The service kernel consumes only that capability plus
 one preconstructed route-matched concrete publisher and creates one internal capacity slot. Its
 consuming one-event API returns the sole owner only on safe continuation paths. This is a
 lower process-local ownership boundary. The outer `DeclaredLiveGateZenohService` instead consumes
@@ -45,7 +48,9 @@ identity, publisher worker, process manager, delivery, remote cleanup, or a prod
 - **Plant** (`haldir-reference-plant`) records its own stages: `Received`,
   `Validated`, `Accepted`, `Rejected(reason)`, `Selected`, `Applied`, `Expired`,
   `SafeActionStarted`, `SafeRegionReached`, `ResponseObserved`. In P0 these are
-  **simulation model values**, never physical actuation. Its checked constructor
+  **simulation model values**, never physical actuation. Expiry-triggered safe-action
+  events retain the exact expired-command correlation as their cause; that does not
+  make the plant-owned safe action a Gate command. Its checked constructor
   enforces hard evidence and retired-epoch bounds. A semantic receiver rejection
   atomically records `Received` + `Rejected`; a local capacity, allocation, time,
   or fixed-point arithmetic failure returns a typed error without changing
@@ -53,17 +58,25 @@ identity, publisher worker, process manager, delivery, remote cleanup, or a prod
 
 ## Digest domains are separated
 
-`DigestDomain` prefixes each hash input so `raw_envelope`, `payload`,
-`semantic_intent`, `output_frame`, and `state_snapshot` digests cannot collide
-across domains (`haldir-contracts/src/digest.rs`).
+`DigestDomain` length-prefixes each hash input with its object domain, so
+`raw_envelope`, `payload`, `semantic_intent`, `output_frame`, and
+`state_snapshot` occupy distinct preimage namespaces. SHA-256 provides
+computational collision resistance; domain separation is not a mathematical
+claim that collisions cannot exist (`haldir-contracts/src/digest.rs`).
 
 ## The evidence spool
 
 `haldir-evidence::EvidenceSpool` is a bounded, digest-chained append-only spool.
-It detects a tampered completed record or a broken tail. When full it drops export
+It detects a tampered retained record or mismatched local link metadata. A
+coordinated truncation to an earlier valid prefix is detectable only through
+`verify_chain_against` and a count/head checkpoint protected outside the spool;
+the in-process chain cannot witness its own missing suffix. When full it drops export
 copies and counts the loss (safety-first profile): **an evidence outage can never
 turn a DENY into an ALLOW** (F2/B14), and command authorization never blocks on a
-remote collector. The spool is not a lossy transport plane.
+remote collector. The spool is not a lossy transport plane. Callers can iterate
+the exact retained bytes in append order through the read-only `records()` view
+and observe their aggregate size through `retained_bytes()`; neither accessor
+permits mutation or truncation of the spool.
 
 The Unix directory manager can opt in to a separately count/byte-bounded snapshot
 of verifier-accepted opaque records grouped by authenticated segment in exact journal
@@ -109,11 +122,14 @@ off-by-default `live-zenoh` feature, the concrete method exists only on a Called
 descended from a live coordinator that consumed the private startup capability and
 cross-checked the retained declared-live profile plus exact wire selection before clock
 sampling. Exact reference, copied-report, and modeled-actor paths cannot create that type.
-The concrete production publisher path borrows the frame only after the strict publisher's
+The concrete declared-live publisher path borrows the frame only after the strict publisher's
 exact route matches the route derived from the actor realm/session; mismatch is terminally
 recorded before frame access or invocation. For a match, the frame is borrowed for one awaited
 invocation. `returned_ok` means that publisher
-returned local `Ok` and the terminal append synced; it is not delivery.
+returned local `Ok` and the terminal append synced; it is not delivery. On the declared-live
+path this result is terminal: the service and publisher are consumed, no action-history
+interval is committed, and restart remains blocked. NCP v0.8 starts `ttl_ms` from the
+plant's local arrival time, which this transport does not observe or bound.
 `returned_error` covers both definite strict-publisher preflight rejection and a
 delivery-ambiguous local transport error, and yields neither a replacement runtime nor the
 publisher capability. If the await is cancelled, no return result was observed, so the
@@ -125,30 +141,36 @@ drops the bound runtime, publisher, and permit and reopens as one linked Unknown
 ReturnedError. An explicit local publisher error or definite Gate rejection can take that
 terminal path.
 
-The public `DeclaredLiveGateKernel` and `LiveIntentRouteBoundGate` narrow the production call
-surface before publisher binding. The kernel consumes the startup-marked coordinator plus one bounded
-caller-supplied initial state/challenge/signed-lease bundle. Signed lease verification and
-admission binding precede canonical `realm/session/controller` intent-route equality, and that
-route check precedes challenge consumption, durable term commit, revision change, and Active.
-Failure returns no runtime owner. This does not authenticate how the caller obtained or delivered
-the state, nonce, or lease and provides no ongoing control/state/revocation path.
+The public `DeclaredLiveGateKernel`, `IssuedLiveGateChallenge`, and
+`LiveIntentRouteBoundGate` narrow the declared-live call surface before publisher binding. The
+kernel consumes the startup-marked coordinator to construct, Gate-sign, and locally register a
+startup-entropy-derived nonce. Only `IssuedLiveGateChallenge` can consume the bounded
+caller-supplied initial state and matching signed lease. The initial state and source-replay
+position are installed before the one-shot challenge or durable lease term is consumed. Signed
+lease verification and admission binding precede canonical `realm/session/controller` intent-route
+equality, and that route/source check precedes challenge consumption, durable term commit, revision
+change, and Active.
+Failure returns no runtime owner. The Gate signature authenticates the challenge payload, but
+this does not authenticate how the caller obtained or delivered the state or lease. The later service and Zenoh aggregate have a consuming local
+state-update transition with Gate-clock/source-replay validation; it is not an authenticated state
+transport and there is still no ongoing lease/revocation control path (`CL-STATE-INGRESS-01`).
 
-`DeclaredLiveGateService::bind` then consumes only the route-bound capability and one
-already-created concrete publisher, checks its exact final-command route, and creates a private
-fixed one-slot pool. `process_one` consumes the service and one raw, publicly constructible
-`IntentIngressEvent`; it rejects an oversized
+The crate-private lower service facade then consumes only the route-bound capability and one
+internally created concrete publisher, checks its exact final-command route, and creates a private
+fixed one-slot pool. Its internal raw-event transition rejects an oversized
 envelope or actual-key field before capacity, clock, actor, journal, or publisher work, and
 returns the exact event with the service. It otherwise returns the service only for a
-no-publication decision, a pre-Called rejection, pre-mutation unavailability, or local
-publisher `Ok` followed by a confirmed terminal append. Fatal coordinator errors, a publisher
-error, a terminal-boundary failure, cancellation, or unwind return no service/publisher
-capability. Cold-dropping this outer future before its first poll performs no decision and
+no-publication decision, a pre-Called rejection, or pre-mutation unavailability. Once the
+live publisher is invoked, no outcome returns a service or publisher: local `Ok` is reported
+as application-unobserved, while errors and terminal-boundary failures retain their narrower
+diagnostics. Cancellation or unwind likewise returns no capability. Cold-dropping this outer future before its first poll performs no decision and
 creates no Called record; dropping after it reaches a pending publisher leaves Called for
-restart classification. This service does not open or exclusively own the shared Zenoh
-session and does not own ingress; its publisher retains a shared session handle, while a
+restart classification. This lower facade does not open or exclusively own the shared Zenoh
+session; its publisher retains a shared session handle, while a
 caller-held session can still create other publishers or close the session. The service does
-not authenticate package/control choice or stop lower-level public publisher/session APIs
-elsewhere.
+not authenticate package/control choice or stop lower-level public actor,
+publisher, ingress, or session APIs elsewhere. External `haldir-gate` callers
+cannot construct this lower facade or inject a raw event through it.
 
 `DeclaredLiveGateZenohService::bind` is the narrower owned-I/O composition. It accepts no caller
 controller, route, keys, publisher, or event; re-derives the retained accepted-controller route
@@ -174,14 +196,15 @@ handle and awaiting the transition. Polling gives an already-observable request 
 request check and receive are not one atomic wall-clock action: if a concurrent event is selected
 first, that event completes normally and the request applies to the next returned owner.
 
-Explicit shutdown orders undeclare/drain before dropping the lower service and closing the
-wrapper. Neither the request handle nor the shutdown-aware method supplies a timeout, an OS-signal
+Explicit shutdown orders undeclare/drain, retains the lower service and Gate instance lock through
+the session-close attempt, and then drops the service. Neither the request handle nor the
+shutdown-aware method supplies a timeout, an OS-signal
 runner or process manager, durable-journal footer/finalization, or proof of remote session retirement;
 it is not graceful production shutdown. Public transport borrowing constructors may already have
-minted other handles, and the lower raw-event service remains public. Fake-only tests establish
+minted other handles, while the lower raw-event Gate service is crate-private. Fake-only tests establish
 prior-request preservation, return before a private retry, in-flight publication completion and
 request latching, shutdown-aware-future cancellation/drop, ownership, and explicit local cleanup
-ordering without a broker. The production
+ordering without a broker. The declared-live
 receive race is unit-tested to wake after a later request, but no live broker test exercises it.
 This evidence does not establish concrete session/subscriber invocation, credentials, transport
 principal, ACL delivery, remote cleanup, or supervision, and it does not establish complete

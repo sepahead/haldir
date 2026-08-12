@@ -1,6 +1,6 @@
 [package]
 name = "haldir-reference-plant"
-description = "Haldir Gate — haldir-reference-plant"
+description = "Fail-closed in-memory reference consumer for exact Haldir NCP commands"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,7 +14,4 @@ workspace = true
 
 [dependencies]
 haldir-contracts.workspace = true
-haldir-core.workspace = true
-
-[dev-dependencies]
-
+haldir-ncp08.workspace = true

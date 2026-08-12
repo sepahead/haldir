@@ -7,7 +7,8 @@
 
 use crate::anti_rollback::{AntiRollbackError, AntiRollbackStore};
 use crate::challenge::ChallengeTable;
-use haldir_contracts::cbor::{CanonicalValue, CborWriter};
+use core::num::NonZeroU32;
+use haldir_contracts::cbor::{CanonicalValue, CborWriter, Validate};
 use haldir_contracts::digest::DigestV1;
 use haldir_contracts::ids::{GateBootId, GateId, GateOutputEpoch, VehicleId};
 use haldir_contracts::lease::MissionLeaseV1;
@@ -23,6 +24,8 @@ const LEASE_TERM_SCOPE_DOMAIN: &[u8] = b"haldir.state.lease-term-scope.v1\0";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum LeaseAcceptError {
+    /// The candidate failed the supported lease schema/semantic validation.
+    InvalidLease,
     /// Gate id or boot id did not match the current Gate incarnation.
     GateBootMismatch,
     /// Realm/vehicle/session/output-epoch scope mismatch.
@@ -33,10 +36,15 @@ pub enum LeaseAcceptError {
     AdmissionMismatch,
     /// The referenced challenge was absent, expired, or already used.
     ChallengeInvalid,
+    /// A challenge verified pending but could not be consumed after the durable
+    /// term commit under the same exclusive owner and monotonic sample.
+    ChallengeCommitInvariant,
     /// The lease term did not strictly advance the anti-rollback high-water.
     TermRollback,
     /// The term store could not durably commit an otherwise valid lease.
     TermStoreUnavailable,
+    /// The locally anchored monotonic deadline was not representable.
+    DeadlineOverflow,
 }
 
 impl LeaseAcceptError {
@@ -44,12 +52,15 @@ impl LeaseAcceptError {
     #[must_use]
     pub const fn reason_code(self) -> DecisionReasonCodeV1 {
         match self {
+            Self::InvalidLease => DecisionReasonCodeV1::DenyMalformed,
             Self::GateBootMismatch => DecisionReasonCodeV1::DenyGateBootMismatch,
             Self::ScopeMismatch => DecisionReasonCodeV1::DenyScopeMismatch,
             Self::PolicyMismatch => DecisionReasonCodeV1::DenyPolicyDiagnostic,
             Self::AdmissionMismatch => DecisionReasonCodeV1::DenyAdmissionMismatch,
             Self::ChallengeInvalid | Self::TermRollback => DecisionReasonCodeV1::DenyLeaseAbsent,
-            Self::TermStoreUnavailable => DecisionReasonCodeV1::ErrorInternalFault,
+            Self::ChallengeCommitInvariant
+            | Self::TermStoreUnavailable
+            | Self::DeadlineOverflow => DecisionReasonCodeV1::ErrorInternalFault,
         }
     }
 }
@@ -104,8 +115,8 @@ pub struct LeaseAcceptContext {
     pub policy_snapshot_digest: DigestV1,
     /// The admitted controller resolved by the admission snapshot.
     pub controller: AdmittedControllerSnapshot,
-    /// The local cap on active duration (ms).
-    pub local_cap_ms: u32,
+    /// The nonzero local cap on active duration (ms).
+    pub local_cap_ms: NonZeroU32,
 }
 
 /// Build the persistent lease-term namespace for a logical issuer and vehicle.
@@ -156,6 +167,12 @@ pub fn accept_lease(
     anti_rollback: &mut dyn LeaseTermStore,
     now: MonoInstant,
 ) -> Result<ActiveMissionLeaseSnapshot, LeaseAcceptError> {
+    // Keep the public state boundary sound even for direct callers that did not
+    // obtain this value through `verify_and_decode`. Validation must precede
+    // every authority lookup or mutation.
+    lease
+        .validate()
+        .map_err(|_| LeaseAcceptError::InvalidLease)?;
     // The nonce table is authority state for one exact session. Reject a stale
     // or unbound table before consulting the term store or mutating either state.
     if challenges.session() != Some(&ctx.session) {
@@ -186,7 +203,20 @@ pub fn accept_lease(
     {
         return Err(LeaseAcceptError::AdmissionMismatch);
     }
-    // 5. Term anti-rollback check (peek before any commit).
+    // 5. Anchor the deadline before consulting or mutating authority state. A
+    //    trusted monotonic counter near exhaustion is an internal fault, not a
+    //    successfully accepted, immediately expired lease. In particular, it
+    //    must not spend the lease term or one-shot challenge.
+    let cap_ms = u64::from(
+        lease
+            .max_active_duration_ms
+            .get()
+            .min(ctx.local_cap_ms.get()),
+    );
+    let expires_at = now
+        .checked_add_ms(cap_ms)
+        .ok_or(LeaseAcceptError::DeadlineOverflow)?;
+    // 6. Term anti-rollback check (peek before any commit).
     let scope = canonical_term_scope(&lease.issuer_id, &lease.vehicle_id);
     // Compatibility read: older snapshots keyed terms with an ambiguous
     // colon-delimited encoding. Taking the maximum prevents an upgrade from
@@ -200,12 +230,12 @@ pub fn accept_lease(
     if lease.lease_term.get() <= highest_term {
         return Err(LeaseAcceptError::TermRollback);
     }
-    // 6. Verify the challenge without consuming it. The per-vehicle actor lock
-    //    prevents a concurrent consume between this check and step 8.
+    // 7. Verify the challenge without consuming it. The per-vehicle actor lock
+    //    prevents a concurrent consume between this check and step 9.
     if !challenges.is_pending(&lease.challenge_nonce, now) {
         return Err(LeaseAcceptError::ChallengeInvalid);
     }
-    // 7. Commit the accepted-term high-water BEFORE consuming the one-shot
+    // 8. Commit the accepted-term high-water BEFORE consuming the one-shot
     //    challenge or exposing the lease. A failure leaves the challenge usable;
     //    a crash after a successful commit conservatively spends the term.
     anti_rollback
@@ -214,18 +244,16 @@ pub fn accept_lease(
             LeaseTermStoreError::Rollback => LeaseAcceptError::TermRollback,
             LeaseTermStoreError::Unavailable => LeaseAcceptError::TermStoreUnavailable,
         })?;
-    // 8. Consume the challenge after durable commit. Unexpected failure is safe:
-    //    the term remains spent but no lease becomes active.
+    // 9. Consume the challenge after durable commit. With the actor's exclusive
+    //    owner, the same `now`, and no intervening challenge mutation, a failure
+    //    here is an internal invariant breach. The term remains conservatively
+    //    spent and no lease becomes active.
     if !challenges.consume(&lease.challenge_nonce, now) {
-        return Err(LeaseAcceptError::ChallengeInvalid);
+        return Err(LeaseAcceptError::ChallengeCommitInvariant);
     }
-    // 9. Anchor the deadline to local monotonic time.
-    let cap_ms = u64::from(lease.max_active_duration_ms.get()).min(u64::from(ctx.local_cap_ms));
-    let expires_at = now.checked_add_ms(cap_ms).unwrap_or(now);
-
     Ok(ActiveMissionLeaseSnapshot {
         lease_id: lease.lease_id,
-        lease_term: lease.lease_term.get(),
+        lease_term: lease.lease_term,
         controller_id: lease.controller_id.clone(),
         mission_id: lease.mission_id.clone(),
         mission_phase: lease.mission_phase.clone(),
@@ -234,20 +262,15 @@ pub fn accept_lease(
         session: lease.ncp_session.clone(),
         gate_output_epoch: lease.gate_output_epoch,
         controller: ctx.controller.clone(),
-        controller_intent_key: lease.controller_intent_key.as_str().to_owned(),
+        controller_intent_key: lease.controller_intent_key.clone(),
         controller_intent_signing_key_id: lease.controller_intent_signing_key_id.clone(),
         policy_snapshot_digest: lease.policy_snapshot_digest,
-        allowed_actions: lease.allowed_actions.as_slice().to_vec(),
-        allowed_frames: lease.allowed_frames.as_slice().to_vec(),
-        allowed_source_keys: lease
-            .allowed_source_keys
-            .as_slice()
-            .iter()
-            .map(|k| k.as_str().to_owned())
-            .collect(),
+        allowed_actions: lease.allowed_actions.clone(),
+        allowed_frames: lease.allowed_frames.clone(),
+        allowed_source_keys: lease.allowed_source_keys.clone(),
         limits: lease.limits.clone(),
-        max_intent_rate_millihz: lease.max_intent_rate_millihz.get(),
-        max_total_intents: lease.max_total_intents.get(),
+        max_intent_rate_millihz: lease.max_intent_rate_millihz,
+        max_total_intents: lease.max_total_intents,
         accepted_at_mono: now,
         expires_at_mono: expires_at,
     })

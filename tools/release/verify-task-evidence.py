@@ -18,6 +18,8 @@ CORE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CORE)
 
 GENERATED_RECORD = re.compile(r"^t[0-9]{3}-generated-verification\.json$")
+CURRENT_KIND = "generated_exact_commit_verification"
+HISTORICAL_KIND = "historical_generated_exact_commit_verification"
 
 
 def reconcile_all(repo: Path) -> list[dict[str, object]]:
@@ -34,7 +36,7 @@ def reconcile_all(repo: Path) -> list[dict[str, object]]:
     tasks = requirements.get("tasks")
     if not isinstance(tasks, list):
         raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_TASKS_INVALID")
-    entries: dict[str, dict[str, object]] = {}
+    entries: dict[str, tuple[dict[str, object], bool]] = {}
     t002_status: object = None
     task_ids: set[str] = set()
     for task in tasks:
@@ -54,10 +56,15 @@ def reconcile_all(repo: Path) -> list[dict[str, object]]:
                 raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_ITEM_INVALID")
             path = item.get("path")
             generated_path = isinstance(path, str) and "-generated-" in Path(path).name
-            if item.get("kind") != "generated_exact_commit_verification":
+            kind = item.get("kind")
+            if kind not in {CURRENT_KIND, HISTORICAL_KIND}:
                 if generated_path:
-                    raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_GENERATED_KIND_INVALID")
+                    raise CORE.EvidenceGenerationError(
+                        "EVIDENCE_LEDGER_GENERATED_KIND_INVALID"
+                    )
                 continue
+            historical = kind == HISTORICAL_KIND
+            expected_status = "implemented" if historical else "verified"
             if (
                 set(item)
                 != {"kind", "path", "implementation_commit", "evidence_tool_commit"}
@@ -67,10 +74,12 @@ def reconcile_all(repo: Path) -> list[dict[str, object]]:
                 or CORE.HEX40.fullmatch(str(item.get("implementation_commit"))) is None
                 or CORE.HEX40.fullmatch(str(item.get("evidence_tool_commit"))) is None
                 or path in entries
-                or task.get("status") != "verified"
+                or task.get("status") != expected_status
             ):
-                raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_GENERATED_ENTRY_INVALID")
-            entries[path] = item
+                raise CORE.EvidenceGenerationError(
+                    "EVIDENCE_LEDGER_GENERATED_ENTRY_INVALID"
+                )
+            entries[path] = (item, historical)
     t002_path = f"{CORE.EVIDENCE_DIRECTORY}/t002-generated-verification.json"
     if t002_status not in {"implemented", "verified"}:
         raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_T002_STATE_INVALID")
@@ -83,26 +92,47 @@ def reconcile_all(repo: Path) -> list[dict[str, object]]:
         for path in evidence_directory.iterdir()
         if "-generated-" in path.name
     }
-    actual_records = {path for path in actual_generated if GENERATED_RECORD.fullmatch(Path(path).name)}
+    actual_records = {
+        path for path in actual_generated if GENERATED_RECORD.fullmatch(Path(path).name)
+    }
     if actual_records != set(entries):
-        raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_RECORD_RECONCILIATION_FAILED")
+        raise CORE.EvidenceGenerationError(
+            "EVIDENCE_LEDGER_RECORD_RECONCILIATION_FAILED"
+        )
 
     records: list[dict[str, object]] = []
     expected_files = set(entries)
     for path in sorted(entries):
-        record = CORE.verify_generated_record(repo, repo / path)
-        item = entries[path]
+        item, historical = entries[path]
+        record = CORE.verify_generated_record(
+            repo,
+            repo / path,
+            enforce_current_worktree=not historical,
+        )
         if (
             record["implementation"]["commit"] != item["implementation_commit"]
             or record["evidence_tool"]["commit"] != item["evidence_tool_commit"]
         ):
-            raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_GENERATED_COMMIT_MISMATCH")
+            raise CORE.EvidenceGenerationError(
+                "EVIDENCE_LEDGER_GENERATED_COMMIT_MISMATCH"
+            )
         expected_files.add(record["github_ci"]["log"]["path"])
         expected_files.add(record["github_formal"]["log"]["path"])
         records.append(record)
     if actual_generated != expected_files:
         raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_GENERATED_FILE_STALE")
     return records
+
+
+def reconcile_task(repo: Path, task_id: str) -> dict[str, object]:
+    """Verify one ledger-classified record without weakening historical semantics."""
+
+    matches = [
+        record for record in reconcile_all(repo) if record.get("task_id") == task_id
+    ]
+    if len(matches) != 1:
+        raise CORE.EvidenceGenerationError("EVIDENCE_LEDGER_TASK_RECORD_MISSING")
+    return matches[0]
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -121,19 +151,17 @@ def main() -> int:
         if CORE.TASK_ID.fullmatch(task) is None:
             print("verify-task-evidence: FAIL: invalid task id", file=sys.stderr)
             return 1
-        records = [
-            repo
-            / CORE.EVIDENCE_DIRECTORY
-            / f"{task.lower()}-generated-verification.json"
-        ]
-    else:
-        records = []
     try:
         if arguments.all_present:
             verified = reconcile_all(repo)
         else:
-            verified = [CORE.verify_generated_record(repo, record) for record in records]
-    except (CORE.EvidenceGenerationError, OSError, UnicodeDecodeError, ValueError) as error:
+            verified = [reconcile_task(repo, task)]
+    except (
+        CORE.EvidenceGenerationError,
+        OSError,
+        UnicodeDecodeError,
+        ValueError,
+    ) as error:
         print(f"verify-task-evidence: FAIL: {error}", file=sys.stderr)
         return 1
     print(f"verify-task-evidence: OK: {len(verified)} generated record(s)")

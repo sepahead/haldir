@@ -1,11 +1,13 @@
 //! `haldir-admission` — deterministic controller/backend admission records,
 //! cumulative admission levels, and an immutable admission snapshot.
 //!
-//! No neural runtime is executed here or in the Gate: the Gate loads only
-//! verified signed admission snapshots and checks exact digest equality
-//! (spec Phase 4). Backend behavioural conformance (running NEST/Norse/Rockpool)
-//! is performed by offline tools outside this crate and is **not** part of the P0
-//! deliverable (see `docs/LIMITATIONS.md`).
+//! No neural runtime is executed here or in the Gate. This crate validates the
+//! supported record schema and checks exact admission bindings, but it does not
+//! verify record signatures, authenticate a snapshot loader, establish snapshot
+//! freshness, or earn an admission level. A deployment must supply those
+//! properties before inserting records. Backend behavioural conformance
+//! (running NEST/Norse/Rockpool) is outside this crate and is **not** part of the
+//! P0 deliverable (see `docs/LIMITATIONS.md`).
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -30,7 +32,10 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub use error::{AdmissionError, AdmissionSnapshotError};
 pub use manifest::ControllerBundleManifestV1;
 pub use record::AdmissionRecordV1;
-pub use snapshot::{AdmissionClaim, AdmissionRelation, AdmissionSnapshot};
+pub use snapshot::{
+    ADMISSION_SNAPSHOT_DIGEST_SCHEMA_V1, AdmissionClaim, AdmissionRelation, AdmissionSnapshot,
+    MAX_ADMISSION_RECORDS, MAX_REVOKED_ADMISSIONS,
+};
 pub use types::{AdmissionLevelV1, ArtifactRefV1};
 
 #[cfg(test)]
@@ -103,6 +108,12 @@ mod tests {
         conflicting.backend_profile_digest =
             DigestV1::compute(DigestDomain::BackendProfile, b"norse-2.0");
         conflicting
+    }
+
+    fn admission_id(index: u64) -> AdmissionId {
+        let mut bytes = [0_u8; 16];
+        bytes[8..].copy_from_slice(&index.to_be_bytes());
+        AdmissionId::new(bytes)
     }
 
     #[test]
@@ -237,6 +248,12 @@ mod tests {
             snap.verify_admission(&claim, true).err(),
             Some(AdmissionError::Unknown)
         );
+        snap.revoke(&other, 1).unwrap();
+        assert_eq!(
+            snap.verify_admission(&claim, true).err(),
+            Some(AdmissionError::Revoked),
+            "a retained revocation must not depend on an active record"
+        );
 
         // digest mismatch
         let claim = AdmissionClaim {
@@ -269,7 +286,7 @@ mod tests {
         );
 
         // revoked
-        snap.revoke(&aid, 1);
+        snap.revoke(&aid, 2).unwrap();
         assert_eq!(
             snap.verify_admission(&claim, false).err(),
             Some(AdmissionError::Revoked)
@@ -291,6 +308,43 @@ mod tests {
             (&relation.record, relation.digest),
             (&record, expected_digest)
         );
+    }
+
+    #[test]
+    fn try_insert_rejects_invalid_record_without_mutating_snapshot() {
+        let mut snapshot = AdmissionSnapshot::new();
+        let valid = semantic_record();
+        snapshot.try_insert(valid.clone()).unwrap();
+        let before = snapshot.resolve(&valid.admission_id).unwrap().digest;
+
+        let mut invalid = valid.clone();
+        invalid.schema_minor = 1;
+        assert_eq!(
+            snapshot.try_insert(invalid),
+            Err(AdmissionSnapshotError::InvalidRecord)
+        );
+        assert_eq!(
+            snapshot.resolve(&valid.admission_id).unwrap().digest,
+            before
+        );
+
+        let mut invalid_new_id = valid;
+        invalid_new_id.admission_id = admission_id(99);
+        invalid_new_id.schema_major = 2;
+        assert_eq!(
+            snapshot.try_insert(invalid_new_id.clone()),
+            Err(AdmissionSnapshotError::InvalidRecord)
+        );
+        assert!(snapshot.resolve(&invalid_new_id.admission_id).is_none());
+
+        let mut unevidenced = semantic_record();
+        unevidenced.admission_id = admission_id(100);
+        unevidenced.conformance_run_digest = None;
+        assert_eq!(
+            snapshot.try_insert(unevidenced.clone()),
+            Err(AdmissionSnapshotError::InvalidRecord)
+        );
+        assert!(snapshot.resolve(&unevidenced.admission_id).is_none());
     }
 
     #[test]
@@ -328,38 +382,99 @@ mod tests {
     }
 
     #[test]
-    fn insert_compatibility_shim_never_overwrites_same_id() {
-        let record = semantic_record();
-        let admission_id = record.admission_id;
-        let expected_digest = record.admission_digest();
-        let conflict = conflicting_record(&record);
+    fn admission_snapshot_error_reason_code_and_display_are_stable() {
+        for (error, code) in [
+            (
+                AdmissionSnapshotError::InvalidRecord,
+                "ADMISSION_SNAPSHOT_INVALID_RECORD",
+            ),
+            (
+                AdmissionSnapshotError::ConflictingAdmissionId,
+                "ADMISSION_SNAPSHOT_CONFLICTING_ADMISSION_ID",
+            ),
+            (
+                AdmissionSnapshotError::RecordCapacityExceeded,
+                "ADMISSION_SNAPSHOT_RECORD_CAPACITY_EXCEEDED",
+            ),
+            (
+                AdmissionSnapshotError::RevocationEpochNotAdvanced,
+                "ADMISSION_SNAPSHOT_REVOCATION_EPOCH_NOT_ADVANCED",
+            ),
+            (
+                AdmissionSnapshotError::RevocationCapacityExceeded,
+                "ADMISSION_SNAPSHOT_REVOCATION_CAPACITY_EXCEEDED",
+            ),
+        ] {
+            assert_eq!(error.reason_code(), code);
+            assert_eq!(error.to_string(), code);
+        }
+    }
+
+    #[test]
+    fn admission_record_capacity_is_exact_and_failure_is_atomic() {
+        let template = semantic_record();
         let mut snapshot = AdmissionSnapshot::new();
+        for index in 1..=u64::try_from(MAX_ADMISSION_RECORDS).unwrap() {
+            let mut record = template.clone();
+            record.admission_id = admission_id(index);
+            snapshot.try_insert(record).unwrap();
+        }
 
-        snapshot.insert(record.clone());
-        snapshot.insert(conflict);
-
-        let relation = snapshot.resolve(&admission_id).unwrap();
+        let mut rejected = template.clone();
+        rejected.admission_id = admission_id(u64::try_from(MAX_ADMISSION_RECORDS + 1).unwrap());
         assert_eq!(
-            (&relation.record, relation.digest),
-            (&record, expected_digest),
-            "legacy insertion must retain the first authority binding"
+            snapshot.try_insert(rejected.clone()),
+            Err(AdmissionSnapshotError::RecordCapacityExceeded)
+        );
+        assert!(snapshot.resolve(&rejected.admission_id).is_none());
+
+        let existing_id = admission_id(1);
+        let existing = snapshot.resolve(&existing_id).unwrap().record.clone();
+        snapshot.try_insert(existing).unwrap();
+        let conflict = conflicting_record(&snapshot.resolve(&existing_id).unwrap().record);
+        assert_eq!(
+            snapshot.try_insert(conflict),
+            Err(AdmissionSnapshotError::ConflictingAdmissionId)
         );
     }
 
     #[test]
-    fn insert_compatibility_signature_is_retained() {
-        let _: fn(&mut AdmissionSnapshot, AdmissionRecordV1) = AdmissionSnapshot::insert;
-    }
-
-    #[test]
-    fn admission_snapshot_error_reason_code_and_display_are_stable() {
-        let error = AdmissionSnapshotError::ConflictingAdmissionId;
+    fn admission_revocations_are_bounded_strictly_versioned_and_atomic() {
+        let first = admission_id(1);
+        let second = admission_id(2);
+        let mut snapshot = AdmissionSnapshot::new();
+        snapshot.revoke(&first, 1).unwrap();
         assert_eq!(
-            (error.reason_code(), error.to_string()),
-            (
-                "ADMISSION_SNAPSHOT_CONFLICTING_ADMISSION_ID",
-                "ADMISSION_SNAPSHOT_CONFLICTING_ADMISSION_ID".to_owned()
-            )
+            snapshot.revoke(&second, 1),
+            Err(AdmissionSnapshotError::RevocationEpochNotAdvanced)
+        );
+        assert_eq!(snapshot.revocation_epoch(), 1);
+        snapshot.revoke(&first, 0).unwrap();
+        assert_eq!(snapshot.revocation_epoch(), 1);
+        snapshot.revoke(&first, 3).unwrap();
+        assert_eq!(snapshot.revocation_epoch(), 3);
+        assert_eq!(
+            snapshot.revoke(&second, 2),
+            Err(AdmissionSnapshotError::RevocationEpochNotAdvanced)
+        );
+        snapshot.revoke(&second, 4).unwrap();
+        assert_eq!(snapshot.revocation_epoch(), 4);
+
+        let mut full = AdmissionSnapshot::new();
+        for epoch in 1..=u64::try_from(MAX_REVOKED_ADMISSIONS).unwrap() {
+            full.revoke(&admission_id(epoch), epoch).unwrap();
+        }
+        let rejected = admission_id(u64::try_from(MAX_REVOKED_ADMISSIONS + 1).unwrap());
+        assert_eq!(
+            full.revoke(
+                &rejected,
+                u64::try_from(MAX_REVOKED_ADMISSIONS + 1).unwrap()
+            ),
+            Err(AdmissionSnapshotError::RevocationCapacityExceeded)
+        );
+        assert_eq!(
+            full.revocation_epoch(),
+            u64::try_from(MAX_REVOKED_ADMISSIONS).unwrap()
         );
     }
 

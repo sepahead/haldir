@@ -159,6 +159,22 @@ mod codec_tests {
     }
 
     #[test]
+    fn reader_finish_rejects_an_unmatched_container_close() {
+        let mut reader = CborReader::new(&[0x01], Limits::DEFAULT);
+        reader.end_container();
+        assert_eq!(reader.read_uint(), Ok(1));
+        assert_eq!(reader.finish(), Err(DecodeError::ContainerBalanceInvalid));
+    }
+
+    #[test]
+    fn reader_finish_rejects_an_unclosed_container() {
+        let mut reader = CborReader::new(&[0x81, 0x01], Limits::DEFAULT);
+        assert_eq!(reader.read_array_len(), Ok(1));
+        assert_eq!(reader.read_uint(), Ok(1));
+        assert_eq!(reader.finish(), Err(DecodeError::ContainerBalanceInvalid));
+    }
+
+    #[test]
     fn direct_reader_enforces_the_total_byte_limit_at_finish() {
         let bytes = [0x42, 0xaa, 0xbb];
         let limits = Limits {

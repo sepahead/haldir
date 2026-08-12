@@ -170,6 +170,9 @@ impl PublicationStageReducer {
         receipt: &DecisionReceiptV1,
         envelope_bytes: &[u8],
     ) -> Result<(), PublicationReductionError> {
+        receipt
+            .validate()
+            .map_err(|_| PublicationReductionError::InvalidPreparedReceipt)?;
         if receipt.decision != DecisionOutcomeV1::Allow
             || receipt.publish_stage != PublishStageV1::OutputPrepared
             || receipt.reason_codes.as_slice() != [DecisionReasonCodeV1::AllowPrepared]
@@ -395,15 +398,18 @@ mod tests {
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::digest::{DigestDomain, DigestV1};
     use haldir_contracts::ids::{
-        DecisionId, GateBootId, GateId, GateOutputEpoch, OutputSeq, VehicleId,
+        ControllerId, DecisionId, GateBootId, GateId, GateOutputEpoch, IntentEpoch, IntentSeq,
+        MissionId, MissionLeaseId, OutputSeq, SourceSeq, VehicleId,
     };
     use haldir_contracts::publication::PublicationStageEventV1;
     use haldir_contracts::receipt::{
         DecisionOutcomeV1, DecisionReasonCodeV1, DecisionReceiptV1, PublishStageV1,
         TransformationRelationV1,
     };
-    use haldir_contracts::scalar::{AsciiId, BoundedVec, CanonicalUuidV4String};
-    use haldir_contracts::session::{NcpSessionIdentityV1, NcpStreamPositionV1};
+    use haldir_contracts::scalar::{AsciiId, BoundedAscii, BoundedVec, CanonicalUuidV4String};
+    use haldir_contracts::session::{
+        HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1,
+    };
 
     const PREPARED_ENVELOPE: &[u8] = b"signed-prepared";
     const CALLED_ENVELOPE: &[u8] = b"signed-called";
@@ -428,18 +434,28 @@ mod tests {
             gate_id: GateId::new("gate-1").unwrap(),
             gate_boot_id: GateBootId::new([2; 16]),
             vehicle_id: VehicleId::new("uav-1").unwrap(),
-            mission_id: None,
+            mission_id: Some(MissionId::new("mission-1").unwrap()),
             ncp_session: session(),
-            received_key_digest: DigestV1::compute(DigestDomain::Payload, b"key"),
+            received_key_digest: DigestV1::compute(DigestDomain::TransportKey, b"key"),
             raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, b"intent"),
-            payload_digest: None,
-            semantic_intent_digest: None,
-            controller_id: None,
-            controller_intent_position: None,
-            mission_lease_id: None,
-            admission_digest: None,
-            source: None,
-            state_snapshot_digest: None,
+            payload_digest: Some(DigestV1::compute(DigestDomain::Payload, b"intent-payload")),
+            semantic_intent_digest: Some(DigestV1::compute(
+                DigestDomain::SemanticIntent,
+                b"intent-semantics",
+            )),
+            controller_id: Some(ControllerId::new("controller-1").unwrap()),
+            controller_intent_position: Some(HaldirIntentPositionV1 {
+                epoch: IntentEpoch::new([5; 16]),
+                seq: IntentSeq::new(NonZeroU64::new(1).unwrap()),
+            }),
+            mission_lease_id: Some(MissionLeaseId::new([6; 16])),
+            admission_digest: Some(DigestV1::compute(DigestDomain::Admission, b"admission")),
+            source: Some(NcpSourceRefV1 {
+                source_key: BoundedAscii::new("range-a/session/sess-1/sensor/pose").unwrap(),
+                stream_epoch: CanonicalUuidV4String::from_random_bytes([7; 16]),
+                stream_seq: SourceSeq::new(NonZeroU64::new(1).unwrap()),
+            }),
+            state_snapshot_digest: Some(DigestV1::compute(DigestDomain::StateSnapshot, b"state")),
             policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
             decision: DecisionOutcomeV1::Allow,
             reason_codes: BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPrepared]).unwrap(),
@@ -851,6 +867,12 @@ mod tests {
         );
         malformed = receipt();
         malformed.received_mono_ns = 101;
+        assert_eq!(
+            reducer.register_prepared(&malformed, PREPARED_ENVELOPE),
+            Err(PublicationReductionError::InvalidPreparedReceipt)
+        );
+        malformed = receipt();
+        malformed.semantic_intent_digest = None;
         assert_eq!(
             reducer.register_prepared(&malformed, PREPARED_ENVELOPE),
             Err(PublicationReductionError::InvalidPreparedReceipt)

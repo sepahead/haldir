@@ -3,13 +3,17 @@
 use std::path::PathBuf;
 
 #[cfg(unix)]
+use rustix::fs::{AtFlags, Mode, OFlags, open, openat, renameat, unlinkat};
+#[cfg(unix)]
+use rustix::io::Errno;
+#[cfg(unix)]
 use std::ffi::OsString;
 #[cfg(unix)]
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 #[cfg(unix)]
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Read, Write};
 #[cfg(unix)]
-use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+use std::os::unix::fs::MetadataExt;
 #[cfg(unix)]
 use std::path::Path;
 #[cfg(unix)]
@@ -30,10 +34,15 @@ static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 /// old-or-new replacement boundary for process crashes when the destination is
 /// on a local filesystem with ordinary POSIX rename semantics.
 ///
-/// This type does not lock writers, prevent an external rollback, or promise
-/// power-loss durability. Callers must provide exclusive-writer coordination
-/// and an [`crate::AnchorProtection::ExternalNonRewindable`] generation anchor
-/// when protection from local rewind is required.
+/// Each operation first verifies and opens the parent directory, then performs
+/// every leaf open/create/rename/unlink relative to that retained descriptor.
+/// Replacing the parent pathname during that operation therefore cannot redirect
+/// its leaf I/O. This type does not lock writers, prevent an external rollback,
+/// defend against ancestor replacement before an operation or between
+/// operations, or promise power-loss durability. Callers must provide
+/// exclusive-writer coordination, trusted ancestry, and an
+/// [`crate::AnchorProtection::ExternalNonRewindable`] generation anchor when
+/// protection from local rewind is required.
 #[derive(Debug, Clone)]
 pub struct AtomicFileSnapshot {
     path: PathBuf,
@@ -66,7 +75,19 @@ impl AtomicFileSnapshot {
             return Err(DurableError::Storage);
         }
 
-        let directory = File::open(parent).map_err(|_| DurableError::Storage)?;
+        let directory = File::from(
+            open(
+                parent,
+                OFlags::RDONLY
+                    | OFlags::DIRECTORY
+                    | OFlags::CLOEXEC
+                    | OFlags::NOFOLLOW
+                    | OFlags::NONBLOCK
+                    | OFlags::NOCTTY,
+                Mode::empty(),
+            )
+            .map_err(|_| DurableError::Storage)?,
+        );
         let opened_metadata = directory.metadata().map_err(|_| DurableError::Storage)?;
         if path_metadata.dev() != opened_metadata.dev()
             || path_metadata.ino() != opened_metadata.ino()
@@ -77,27 +98,43 @@ impl AtomicFileSnapshot {
     }
 
     #[cfg(unix)]
-    fn temp_path(&self) -> Result<PathBuf, DurableError> {
+    fn target_name(&self) -> Result<&std::ffi::OsStr, DurableError> {
+        self.path.file_name().ok_or(DurableError::Storage)
+    }
+
+    #[cfg(unix)]
+    fn temp_name(&self) -> Result<OsString, DurableError> {
         let target_name = self.path.file_name().ok_or(DurableError::Storage)?;
         let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
         let mut temp_name = OsString::from(".");
         temp_name.push(target_name);
         temp_name.push(format!(".tmp.{}.{sequence}", std::process::id()));
-        Ok(self.parent().join(temp_name))
+        Ok(temp_name)
     }
 
     #[cfg(unix)]
-    fn create_temp(&self) -> Result<(File, TempCleanup), DurableError> {
+    fn create_temp<'parent>(
+        &self,
+        parent: &'parent File,
+    ) -> Result<(File, TempCleanup<'parent>), DurableError> {
         for _ in 0..TEMP_CREATE_ATTEMPTS {
-            let path = self.temp_path()?;
-            match OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .mode(0o600)
-                .open(&path)
-            {
-                Ok(file) => return Ok((file, TempCleanup::new(path))),
-                Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
+            let name = self.temp_name()?;
+            match openat(
+                parent,
+                &name,
+                OFlags::WRONLY
+                    | OFlags::CREATE
+                    | OFlags::EXCL
+                    | OFlags::CLOEXEC
+                    | OFlags::NOFOLLOW
+                    | OFlags::NONBLOCK
+                    | OFlags::NOCTTY,
+                Mode::RUSR | Mode::WUSR,
+            ) {
+                Ok(descriptor) => {
+                    return Ok((File::from(descriptor), TempCleanup::new(parent, name)));
+                }
+                Err(Errno::EXIST) => {}
                 Err(_) => return Err(DurableError::Storage),
             }
         }
@@ -105,24 +142,19 @@ impl AtomicFileSnapshot {
     }
 
     #[cfg(unix)]
-    fn load_unix(&self) -> Result<Option<Vec<u8>>, DurableError> {
-        let path_metadata = match fs::symlink_metadata(&self.path) {
-            Ok(metadata) => metadata,
-            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
+    fn load_from_parent(&self, parent: &File) -> Result<Option<Vec<u8>>, DurableError> {
+        let file = match openat(
+            parent,
+            self.target_name()?,
+            OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::NOCTTY,
+            Mode::empty(),
+        ) {
+            Ok(descriptor) => File::from(descriptor),
+            Err(Errno::NOENT) => return Ok(None),
             Err(_) => return Err(DurableError::Storage),
         };
-        if !path_metadata.file_type().is_file() {
-            return Err(DurableError::Storage);
-        }
-
-        let file = OpenOptions::new()
-            .read(true)
-            .open(&self.path)
-            .map_err(|_| DurableError::Storage)?;
         let opened_metadata = file.metadata().map_err(|_| DurableError::Storage)?;
-        if path_metadata.dev() != opened_metadata.dev()
-            || path_metadata.ino() != opened_metadata.ino()
-        {
+        if !opened_metadata.file_type().is_file() {
             return Err(DurableError::Storage);
         }
 
@@ -141,22 +173,34 @@ impl AtomicFileSnapshot {
     }
 
     #[cfg(unix)]
-    fn replace_unix(&self, bytes: &[u8]) -> Result<(), DurableError> {
+    fn load_unix(&self) -> Result<Option<Vec<u8>>, DurableError> {
+        let parent = self.open_parent()?;
+        self.load_from_parent(&parent)
+    }
+
+    #[cfg(unix)]
+    fn replace_in_parent(&self, parent: &File, bytes: &[u8]) -> Result<(), DurableError> {
         if bytes.len() > self.max_snapshot_bytes {
             return Err(DurableError::Storage);
         }
 
-        let parent = self.open_parent()?;
-        let (mut temp_file, mut cleanup) = self.create_temp()?;
+        let (mut temp_file, mut cleanup) = self.create_temp(parent)?;
         temp_file
             .write_all(bytes)
             .map_err(|_| DurableError::Storage)?;
         temp_file.sync_all().map_err(|_| DurableError::Storage)?;
         drop(temp_file);
 
-        fs::rename(cleanup.path(), &self.path).map_err(|_| DurableError::Storage)?;
+        renameat(parent, cleanup.name(), parent, self.target_name()?)
+            .map_err(|_| DurableError::Storage)?;
         cleanup.disarm();
         parent.sync_all().map_err(|_| DurableError::Storage)
+    }
+
+    #[cfg(unix)]
+    fn replace_unix(&self, bytes: &[u8]) -> Result<(), DurableError> {
+        let parent = self.open_parent()?;
+        self.replace_in_parent(&parent, bytes)
     }
 }
 
@@ -187,19 +231,24 @@ impl SnapshotStorage for AtomicFileSnapshot {
 }
 
 #[cfg(unix)]
-struct TempCleanup {
-    path: PathBuf,
+struct TempCleanup<'parent> {
+    parent: &'parent File,
+    name: OsString,
     armed: bool,
 }
 
 #[cfg(unix)]
-impl TempCleanup {
-    fn new(path: PathBuf) -> Self {
-        Self { path, armed: true }
+impl<'parent> TempCleanup<'parent> {
+    fn new(parent: &'parent File, name: OsString) -> Self {
+        Self {
+            parent,
+            name,
+            armed: true,
+        }
     }
 
-    fn path(&self) -> &Path {
-        &self.path
+    fn name(&self) -> &std::ffi::OsStr {
+        &self.name
     }
 
     fn disarm(&mut self) {
@@ -208,10 +257,10 @@ impl TempCleanup {
 }
 
 #[cfg(unix)]
-impl Drop for TempCleanup {
+impl Drop for TempCleanup<'_> {
     fn drop(&mut self) {
         if self.armed {
-            let _ = fs::remove_file(&self.path);
+            let _ = unlinkat(self.parent, &self.name, AtFlags::empty());
         }
     }
 }
@@ -278,6 +327,30 @@ mod tests {
     }
 
     #[test]
+    fn leaf_io_stays_bound_to_the_verified_parent_descriptor() {
+        let directory = TestDirectory::new();
+        let trusted_path = directory.path().join("trusted");
+        let relocated_path = directory.path().join("relocated");
+        fs::create_dir(&trusted_path).unwrap();
+        let storage = AtomicFileSnapshot::new(trusted_path.join("snapshot"), 16);
+        let verified_parent = storage.open_parent().unwrap();
+
+        fs::rename(&trusted_path, &relocated_path).unwrap();
+        fs::create_dir(&trusted_path).unwrap();
+        storage
+            .replace_in_parent(&verified_parent, b"bound")
+            .unwrap();
+
+        assert_eq!(
+            storage.load_from_parent(&verified_parent).unwrap(),
+            Some(b"bound".to_vec())
+        );
+        assert_eq!(fs::read(relocated_path.join("snapshot")).unwrap(), b"bound");
+        assert!(!trusted_path.join("snapshot").exists());
+        assert_eq!(storage.load().unwrap(), None);
+    }
+
+    #[test]
     fn load_rejects_a_file_larger_than_the_bound() {
         let directory = TestDirectory::new();
         let path = directory.path().join("snapshot");
@@ -326,5 +399,32 @@ mod tests {
         let storage = AtomicFileSnapshot::new(link, 16);
 
         assert_eq!(storage.load().unwrap_err(), DurableError::Storage);
+    }
+
+    #[test]
+    fn load_rejects_a_fifo_without_waiting_for_a_writer() {
+        use std::sync::mpsc;
+        use std::thread;
+        use std::time::Duration;
+
+        let directory = TestDirectory::new();
+        let path = directory.path().join("snapshot");
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&path)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let storage = AtomicFileSnapshot::new(path, 16);
+        let (sender, receiver) = mpsc::channel();
+        let worker = thread::spawn(move || sender.send(storage.load()).unwrap());
+
+        let result = receiver
+            .recv_timeout(Duration::from_secs(2))
+            .expect("FIFO snapshot open exceeded the nonblocking deadline");
+        worker.join().unwrap();
+
+        assert_eq!(result.unwrap_err(), DurableError::Storage);
     }
 }

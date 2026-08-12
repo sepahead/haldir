@@ -7,7 +7,7 @@
   },
   "normative_document": {
     "path": "docs/release/0.9.0/PROTECTION-MODEL.md",
-    "sha256": "c707fba70d255575a7529f91270f7f7d8f742b47b905b38ddd2cd1ae84529029"
+    "sha256": "c37423bb5013573ac202329f1637c1b551b61d5d70e441d75efb2e1108ace036"
   },
   "scope": {
     "profile_id": "haldir-secure-reference-v1",
@@ -191,6 +191,7 @@
       "GATE_APPLICATION",
       "CONTROLLER_INTENT",
       "MISSION_AUTHORITY",
+      "TRUST_AUTHORITY",
       "ADMISSION_AUTHORITY",
       "POLICY_AUTHORITY",
       "REVOCATION_AUTHORITY",
@@ -270,6 +271,24 @@
         "implementation_status": "LEASE_ACTIVE_REVOCATION_DECLARED_ROLE_DOMAIN"
       },
       {
+        "role": "TRUST_AUTHORITY",
+        "allowed_key_classes": [
+          "ASSURANCE"
+        ],
+        "signed_objects": [
+          {
+            "rust_type": "AuthoritySnapshotApprovalV1",
+            "kind": "haldir.authority_snapshot_approval",
+            "schema_major": 1,
+            "content_type": "application/haldir-authority_snapshot_approval+cbor",
+            "external_aad": "haldir.authority_snapshot_approval.v1",
+            "subject_binding": "AuthoritySnapshotApprovalV1.kind_TRUST_and_issuer_id_equals_KeyRecord.subject"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "DEPLOYMENT_SNAPSHOT_APPROVAL_DOMAIN"
+      },
+      {
         "role": "ADMISSION_AUTHORITY",
         "allowed_key_classes": [
           "ASSURANCE"
@@ -290,6 +309,14 @@
             "content_type": "application/haldir-authority_revocation+cbor",
             "external_aad": "haldir.authority_revocation.v1",
             "subject_binding": "AuthorityRevocationV1.issuer_id_equals_KeyRecord.subject"
+          },
+          {
+            "rust_type": "AuthoritySnapshotApprovalV1",
+            "kind": "haldir.authority_snapshot_approval",
+            "schema_major": 1,
+            "content_type": "application/haldir-authority_snapshot_approval+cbor",
+            "external_aad": "haldir.authority_snapshot_approval.v1",
+            "subject_binding": "AuthoritySnapshotApprovalV1.kind_ADMISSION_and_issuer_id_equals_KeyRecord.subject"
           }
         ],
         "assurance_authority": true,
@@ -300,9 +327,18 @@
         "allowed_key_classes": [
           "ASSURANCE"
         ],
-        "signed_objects": [],
-        "assurance_authority": false,
-        "implementation_status": "ROLE_RESERVED_POLICY_SIGNED_OBJECT_DOMAIN_NOT_IMPLEMENTED"
+        "signed_objects": [
+          {
+            "rust_type": "AuthoritySnapshotApprovalV1",
+            "kind": "haldir.authority_snapshot_approval",
+            "schema_major": 1,
+            "content_type": "application/haldir-authority_snapshot_approval+cbor",
+            "external_aad": "haldir.authority_snapshot_approval.v1",
+            "subject_binding": "AuthoritySnapshotApprovalV1.kind_POLICY_and_issuer_id_equals_KeyRecord.subject"
+          }
+        ],
+        "assurance_authority": true,
+        "implementation_status": "DEPLOYMENT_SNAPSHOT_APPROVAL_DOMAIN"
       },
       {
         "role": "REVOCATION_AUTHORITY",
@@ -317,6 +353,14 @@
             "content_type": "application/haldir-authority_revocation+cbor",
             "external_aad": "haldir.authority_revocation.v1",
             "subject_binding": "AuthorityRevocationV1.issuer_id_equals_KeyRecord.subject"
+          },
+          {
+            "rust_type": "AuthoritySnapshotApprovalV1",
+            "kind": "haldir.authority_snapshot_approval",
+            "schema_major": 1,
+            "content_type": "application/haldir-authority_snapshot_approval+cbor",
+            "external_aad": "haldir.authority_snapshot_approval.v1",
+            "subject_binding": "AuthoritySnapshotApprovalV1.kind_REVOCATION_and_issuer_id_equals_KeyRecord.subject"
           }
         ],
         "assurance_authority": true,
@@ -347,7 +391,7 @@
           }
         ],
         "assurance_authority": true,
-        "implementation_status": "VERIFIER_PRIMITIVE_NOT_GATE_COMPOSED"
+        "implementation_status": "VERIFIER_AND_GATE_STARTUP_COMPOSED_WITH_OPEN_PROVENANCE_GAPS"
       },
       {
         "role": "DEVELOPMENT_ONLY",
@@ -414,6 +458,16 @@
         ],
         "may_grant_or_widen_authority": true,
         "plant_command_role": "BOUNDED_REQUEST_AUTHORITY_ONLY"
+      },
+      {
+        "subject_id": "trust_authority",
+        "identity_basis": "TRUST_AUTHORITY_key_and_revision_scoped_snapshot_approval",
+        "duties": [
+          "sign",
+          "issue"
+        ],
+        "may_grant_or_widen_authority": true,
+        "plant_command_role": "BOUND_RUNTIME_APPLICATION_TRUST_ONLY"
       },
       {
         "subject_id": "admission_authority",
@@ -581,6 +635,17 @@
         "binding_status": "APPLICATION_SUBJECT_CHECKED_TRANSPORT_BINDING_UNPROVEN"
       },
       {
+        "subject_id": "trust_authority",
+        "transport_principal_ids": [],
+        "application_key_roles": [
+          "TRUST_AUTHORITY"
+        ],
+        "logical_subject_types": [
+          "AuthoritySnapshotApprovalV1.issuer_id"
+        ],
+        "binding_status": "BOOTSTRAP_ROOTED_APPROVAL_NO_PROFILE_ROUTE"
+      },
+      {
         "subject_id": "admission_authority",
         "transport_principal_ids": [
           "admission-authority"
@@ -589,7 +654,8 @@
           "ADMISSION_AUTHORITY"
         ],
         "logical_subject_types": [
-          "AdmissionRecordV1.issuer_id"
+          "AdmissionRecordV1.issuer_id",
+          "AuthoritySnapshotApprovalV1.issuer_id"
         ],
         "binding_status": "APPLICATION_RECORD_CHECKED_TRANSPORT_BINDING_UNPROVEN"
       },
@@ -600,9 +666,9 @@
           "POLICY_AUTHORITY"
         ],
         "logical_subject_types": [
-          "policy_package_signer_subject"
+          "AuthoritySnapshotApprovalV1.issuer_id"
         ],
-        "binding_status": "KEY_ROLE_PRIMITIVE_ONLY_NO_PROFILE_ROUTE"
+        "binding_status": "BOOTSTRAP_ROOTED_APPROVAL_NO_PROFILE_ROUTE"
       },
       {
         "subject_id": "revocation_authority",
@@ -611,9 +677,10 @@
           "REVOCATION_AUTHORITY"
         ],
         "logical_subject_types": [
-          "AuthorityRevocationV1.issuer_id"
+          "AuthorityRevocationV1.issuer_id",
+          "AuthoritySnapshotApprovalV1.issuer_id"
         ],
-        "binding_status": "KEY_ROLE_PRIMITIVE_ONLY_NO_PROFILE_ROUTE"
+        "binding_status": "REVOCATION_AND_BOOTSTRAP_ROOTED_APPROVAL_NO_PROFILE_ROUTE"
       },
       {
         "subject_id": "deployment_authority",
@@ -624,7 +691,7 @@
         "logical_subject_types": [
           "DeploymentPackageV1.deployment_authority_id"
         ],
-        "binding_status": "SIGNED_PACKAGE_PRIMITIVE_NOT_GATE_COMPOSED"
+        "binding_status": "SIGNED_PACKAGE_GATE_STARTUP_COMPOSED_PROVENANCE_UNPROVEN"
       },
       {
         "subject_id": "trusted_state_producer",
@@ -1012,6 +1079,15 @@
         "availability_failure": "NO_MISSION_ISSUANCE_AUTHORITY"
       },
       {
+        "resource_id": "state:trust_authority_signing_secret",
+        "semantic_owner": "trust_authority",
+        "runtime_custodian": "trust_authority",
+        "integrity": "MANDATORY",
+        "freshness": "KEY_LIFECYCLE_BOUND",
+        "confidentiality": "MANDATORY",
+        "availability_failure": "NO_TRUST_SNAPSHOT_APPROVAL_AUTHORITY"
+      },
+      {
         "resource_id": "state:admission_authority_signing_secret",
         "semantic_owner": "admission_authority",
         "runtime_custodian": "admission_authority",
@@ -1134,6 +1210,24 @@
         "runtime_custodian": "gate_application",
         "integrity": "MANDATORY",
         "freshness": "PROVISIONED_SNAPSHOT_LIFECYCLE_BOUND",
+        "confidentiality": "PUBLIC_KEYS_AND_PROTECTED_CONFIGURATION",
+        "availability_failure": "VERIFY_OR_AUTHORIZE_DENY"
+      },
+      {
+        "resource_id": "state:bootstrap_application_revocations",
+        "semantic_owner": "provisioning_operator",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "PROVISIONED_SNAPSHOT_LIFECYCLE_BOUND",
+        "confidentiality": "PUBLIC_METADATA_AND_PROTECTED_CONFIGURATION",
+        "availability_failure": "VERIFY_OR_AUTHORIZE_DENY"
+      },
+      {
+        "resource_id": "state:runtime_application_trust_snapshot",
+        "semantic_owner": "trust_authority",
+        "runtime_custodian": "gate_application",
+        "integrity": "MANDATORY",
+        "freshness": "DEPLOYMENT_REVISION_AND_APPROVAL_BOUND",
         "confidentiality": "PUBLIC_KEYS_AND_PROTECTED_CONFIGURATION",
         "availability_failure": "VERIFY_OR_AUTHORIZE_DENY"
       },
@@ -1634,9 +1728,9 @@
     {
       "root_id": "deployment_acceptance_policy",
       "category": "DEPLOYMENT",
-      "status": "IMPLEMENTED_PRIMITIVE_NOT_GATE_COMPOSED",
-      "authority_scope": "external_exact_authority_gate_realm_vehicle_class_runtime_and_wire_expectations",
-      "not_proven": "mandatory_root_selection_or_gate_startup_consumption_of_resolved_package",
+      "status": "ACTIVE_CALLER_SUPPLIED_GATE_COMPOSED",
+      "authority_scope": "external_exact_identity_execution_profile_and_snapshot_approval_authority_expectations",
+      "not_proven": "protected_or_mandatory_root_selection_and_provenance",
       "derivable_from_controller_fields": false
     },
     {
@@ -1666,9 +1760,9 @@
     {
       "root_id": "configured_authority_snapshots",
       "category": "RUNTIME_STATE",
-      "status": "ACTIVE_CALLER_SUPPLIED",
-      "authority_scope": "policy_admission_session_lease_publication_and_trusted_state_inputs",
-      "not_proven": "authenticated_fresh_ongoing_control_and_state_ingress",
+      "status": "ACTIVE_APPROVED_IDENTITIES_WITH_CALLER_SUPPLIED_OBJECTS",
+      "authority_scope": "independently_approved_trust_admission_revocation_policy_digests_plus_package_bound_session_publication_and_caller_supplied_lease_state",
+      "not_proven": "snapshot_deserialization_protected_acquisition_or_authenticated_fresh_ongoing_control_and_state_ingress",
       "derivable_from_controller_fields": false
     },
     {
@@ -1850,6 +1944,28 @@
         ]
       },
       {
+        "rule_id": "component:trust_objects_only",
+        "subject_id": "trust_authority",
+        "grants": [
+          {
+            "resource_ids": [
+              "state:trust_authority_signing_secret"
+            ],
+            "operations": [
+              "sign"
+            ]
+          },
+          {
+            "resource_ids": [
+              "state:runtime_application_trust_snapshot"
+            ],
+            "operations": [
+              "issue"
+            ]
+          }
+        ]
+      },
+      {
         "rule_id": "component:admission_objects_only",
         "subject_id": "admission_authority",
         "grants": [
@@ -1977,7 +2093,8 @@
           },
           {
             "resource_ids": [
-              "state:bootstrap_application_trust"
+              "state:bootstrap_application_trust",
+              "state:bootstrap_application_revocations"
             ],
             "operations": [
               "observe"
@@ -1987,6 +2104,7 @@
             "resource_ids": [
               "state:revocation_snapshot",
               "state:deployment_package_and_artifacts",
+              "state:runtime_application_trust_snapshot",
               "state:admission_snapshot",
               "state:mission_lease_snapshot",
               "state:policy_snapshot"
@@ -2273,6 +2391,7 @@
               "state:gate_transport_credentials",
               "state:router_transport_trust_and_credentials",
               "state:bootstrap_application_trust",
+              "state:bootstrap_application_revocations",
               "state:storage_mac_key",
               "state:transport_profile_and_acl"
             ],
@@ -2323,6 +2442,8 @@
     "anti_rollback_contract": "crates/haldir-state/src/anti_rollback.rs",
     "policy_contract": "crates/haldir-policy-native/src/decide.rs",
     "deployment_contract": "crates/haldir-deployment/src/verify.rs",
+    "deployment_approval_contract": "crates/haldir-deployment/src/artifact.rs",
+    "deployment_approval_schema": "crates/haldir-deployment/src/contract.rs",
     "durable_contract": "crates/haldir-durable/src/snapshot.rs",
     "local_anchor_contract": "crates/haldir-durable/src/local_anchor.rs",
     "evidence_contract": "crates/haldir-evidence/src/publication.rs",

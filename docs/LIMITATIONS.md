@@ -66,14 +66,20 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   template-startup check and remain outside the internal capability chain. The process-local
   capability is also not authenticated or durable and does not prevent a service from selecting
   `InProcessReference` after restart. A public feature-gated no-network kernel can consume that
-  capability plus one bounded caller-supplied trusted-state/challenge/signed-lease bundle. It
-  derives the canonical intent route from the verified, admission-bound controller and rejects a
+  capability to issue one Gate-signed, startup-entropy-derived challenge whose fixed local
+  lifetime is enforced with Gate monotonic time. Only the resulting move-only challenge state can
+  consume one bounded caller-supplied trusted-state and matching signed-lease bundle. It derives the canonical intent route from the verified, admission-bound controller and rejects a
   differing signed lease route before challenge consumption, durable term commit, revision change,
-  or activation. Only the resulting move-only route-bound capability can bind the lower public
-  service to a preconstructed matched publisher. A separate outer
+  or activation. Only the resulting move-only route-bound capability can bind the crate-private
+  lower service to an internally constructed matched publisher. A separate public outer
   `DeclaredLiveGateZenohService` consumes that same capability, one caller-opened session wrapper,
   and bounded ingress limits; it re-derives the accepted-controller route and internally constructs
-  the publisher and exact ingress from the same supplied session lineage. The separate
+  the publisher and exact ingress from the same supplied session lineage. Both live service layers
+  expose a consuming caller-supplied state-update transition: accepted updates retain the sole
+  owner, ordinary validation/replay rejection returns it unchanged, and clock regression or an
+  otherwise-impossible replay classify/commit disagreement destroys it. This preserves local
+  single-owner ordering but does not authenticate a state producer or
+  provide a state transport. The separate
   `live-gate-dev-smoke` examples use public deterministic fixture keys: an offline target explicitly
   provisions disposable state+journal, while the networked target refuses provisioning, opens that
   existing fixture, performs caller-local activation, consumes a caller-supplied strict-client
@@ -118,10 +124,13 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   (`CL-GATE-LIFECYCLE-01`). Under its off-by-default `live-zenoh` feature, only a coordinator
   descended from the private declared-live startup capability exposes the concrete method.
   Production coordinator code derives the exact pinned command route from the actor
-  realm/session, terminally rejects a mismatched publisher before frame access or invocation, lends the
-  frame only to one awaited call on a matched concrete strict publisher, returns that
-  capability only after local `Ok` plus terminal journal success, and returns neither
-  runtime nor publisher after error. Test-only future cases cover dropping the consuming
+  realm/session, terminally rejects a mismatched publisher before frame access or invocation, and lends the
+  frame only to one awaited call on a matched concrete strict publisher. Every invoked live
+  publication consumes the runtime and publisher. A local `Ok` is durably recorded but is
+  terminally classified as application-unobserved: NCP v0.8 starts `ttl_ms` at plant-local
+  arrival, while this transport supplies neither that arrival time, an enforced in-transit
+  lifetime, nor an authenticated application acknowledgement. Gate therefore commits no
+  fabricated live action interval and cannot authorize a later command. Test-only future cases cover dropping the consuming
   future before its first poll without invoking test publisher code, dropping it after
   `Pending` as an external-timeout model, and catching an unwind from a panic while polling
   the test publisher future. All occur after locally sync-confirmed Called and therefore
@@ -129,16 +138,20 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   publisher error or definite Gate rejection can record ReturnedError. These are not live
   Zenoh tests.
 
-  `DeclaredLiveGateKernel` first consumes the marked coordinator and fail-stop primes an initially
-  inactive actor with one caller-supplied trusted state, challenge, and signed lease. The route
+  `DeclaredLiveGateKernel` first consumes the marked coordinator and issues one Gate-signed,
+  locally expiring challenge. `IssuedLiveGateChallenge` then fail-stop primes an initially
+  inactive actor with one caller-supplied trusted state and matching signed lease. The route
   validator runs after signature/admission checks but before the lease's challenge/term/activation
   commit, and the returned `LiveIntentRouteBoundGate` retains the sealed coordinator and exact
   canonical controller route.
-  This is static local priming, not authenticated state provenance, signed challenge publication,
-  lease delivery, refresh, revocation, or preemption. `DeclaredLiveGateService` consumes only that
-  ready capability plus one preconstructed matched publisher, privately owns one fixed capacity
-  slot, and returns the sole service owner only on safe continuation. Its input event type remains
-  publicly constructible and is not transport provenance evidence; the service enforces only the
+  This proves initial signed challenge construction/registration, but remains static local
+  priming—not authenticated state provenance or lease delivery, refresh, revocation, or
+  preemption. A crate-private lower service consumes only that
+  ready capability plus one internally constructed matched publisher, privately owns one fixed
+  capacity slot, accepts ongoing state only through its consuming local update transition, and
+  returns the sole service owner only on safe continuation. Its raw event type remains
+  publicly constructible in the transport crate and is not transport provenance evidence, but
+  external Gate callers cannot present it through this private facade; the service enforces only the
   hard envelope and route-length bounds before capacity, clock, and actor work. Cold drop before
   the outer service future's first poll performs no decision/clock sample/Called; pending drop
   after publisher polling destroys the owner after Called. Tests compose an initially inactive
@@ -149,7 +162,9 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
 
   The outer Zenoh aggregate accepts no controller, route, publisher, or raw-event override. It
   retains the supplied session wrapper, an internally declared bounded remote-only exact ingress,
-  and the publisher-owning lower service; `process_next` receives from that ingress and keeps a
+  and the publisher-owning lower service. Its consuming state-update transition preserves those
+  handles, the shutdown latch, and any privately pending intent, but still trusts the embedding
+  caller for state provenance. `process_next` receives from the intent ingress and keeps a
   journal-capacity or restart-clearance refusal private for ordered retry. An input/key/output-
   capacity refusal is unreachable through the owned topology and fail-stops as an invariant
   violation. A cloneable process-local stop handle is monotonic, and
@@ -163,13 +178,15 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   owner. There is no timeout for a hung in-flight transport call and no OS-signal runner or
   process manager uses this API yet. Cancelling the consuming future itself still drops the aggregate,
   so a future runner must signal through the handle and await the ownership-returning transition.
-  Its explicit shutdown attempts
-  undeclare/drain, then drops the publisher-owning service, then closes the retained wrapper.
-  That is local transport cleanup, not a durable evidence-journal footer/finalization operation
-  or confirmed remote session retirement. Dropping the service releases its durable instance
-  lock before session close returns. The development bind target adds a separate target-local lock
-  held from before configuration/session setup through its local aggregate-shutdown return; a production package still
-  needs an authenticated, deployment-wide version of that rule.
+  Its explicit shutdown attempts undeclare/drain, then closes the retained session while the
+  publisher-owning service still holds the durable Gate instance lock, and only then drops the
+  service. That closes the orderly local restart-overlap window, but it is still local transport
+  cleanup—not a durable evidence-journal footer/finalization operation or confirmed remote session
+  retirement. Cancelling or aborting the shutdown future can still release local ownership without
+  a confirmed close. The development bind target adds a separate target-local lock held from before
+  configuration/session setup through its local aggregate-shutdown return; a production package
+  still needs an authenticated, deployment-wide supervision and lock rule that covers cancellation
+  and process teardown.
   Offline tests use an explicit fake session/ingress/publisher seam and prove only local
   composition and ownership ordering; no test opens the concrete session, declares the concrete
   subscriber, or invokes the concrete publisher. `SecureZenohSession` is move-only but wraps a
@@ -180,9 +197,9 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   selects it, and no graceful production-shutdown property is established. The development target's
   immediate shutdown is only a local cleanup call. A Called record alone is a
   pre-invocation ambiguity boundary, not evidence that a local transport call began.
-  Lower-level actor frame access, the copyable frame type, the reusable publisher API, and
-  independently constructible session-backed publishers still permit resubmission outside
-  the coordinator binding.
+  Lower-level actor frame access lets a cooperative caller copy exposed bytes, and
+  independently constructible session-backed single-use publishers still permit
+  resubmission outside the coordinator binding.
 
   Restart converts a dangling Called tail to linked `UnknownAfterPublish`, then any
   recovered Called-or-later history blocks decisions indefinitely because no authenticated
@@ -212,9 +229,20 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   values, never physical actuation**. `reference-kinematic-hold-v1` safe action is
   simulation-only and must not be reused as evidence for any real vehicle. The
   model has checked hard bounds for retained evidence and retired epochs and
-  returns typed, transactional failures when time or fixed-point position space
-  is exhausted. It has no durable evidence export, restart/recovery protocol, or
-  physical fault-handling claim.
+  carries signed sub-millimetre integration remainder so low-speed motion is not
+  discarded independently on every tick. It returns typed, transactional
+  failures when time or fixed-point position space is exhausted. It has no
+  durable evidence export, restart/recovery protocol, or physical fault-handling
+  claim.
+- **The native geofence is not physical containment evidence.** Its
+  outward-rounded software projection spans accepted state age plus the
+  candidate command horizon and contains requested and measured±uncertain
+  velocity, with configured position/tracking margins. Haldir does not yet
+  authenticate or bound physical acceleration, braking, overshoot,
+  disturbances, localization error outside the supplied uncertainty, actuator
+  lag, or vehicle geometry. Passing this check therefore proves only the stated
+  deterministic authorization calculation, not a physical reachable set,
+  stopping distance, geofence containment, or safe flight.
 - **Second backend / NIR / neuromorphic hardware.** Not attempted. No
   backend-aware admission research result exists.
 - **Cross-repository plant/controller integration.** A narrow NCP release-tool fix
@@ -224,16 +252,21 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
 - **Performance.** There is no performance/latency campaign. Any timing number is
   "measured on named host/kernel/load; not hard real-time"; **p99/p99.9 on named
   hardware is UNPROVEN**.
-- **TLA+ model scope.** The bounded model now checks green under the SHA-verified
-  TLA+ v1.7.4 jar (`CL-FORMAL-01`, GitHub run `29211573130`). This proves only the
-  registered finite model; the Rust `model` tests remain an independent executable
-  encoding, and neither result proves a wired live service or durable runtime.
-- **`missing_docs` hardening.** Deferred; the workspace does not yet
-  `deny(missing_docs)`. Crate- and item-level docs are written voluntarily.
-- **Deployment-package primitive is not a deployed package loader.** `haldir-deployment`
+- **Coverage-guided fuzzing.** `just parser-property-smoke` runs bounded
+  property tests and named malformed-input regressions. The historical
+  `just fuzz-smoke` name is only a compatibility alias. No persistent
+  libFuzzer/cargo-fuzz corpus, sanitizer campaign, or coverage-growth gate is
+  present, so those stronger forms of parser evidence remain unproven.
+- **TLA+ model scope.** The current bounded model is checked locally under the
+  SHA-verified TLA+ v1.7.4 jar; current exact-subject hosted evidence remains
+  pending (`CL-FORMAL-01`). GitHub run `29211573130` binds an older exact commit,
+  not the corrected current source. Either result proves only its registered
+  finite model; the Rust `model` tests remain an independent executable encoding,
+  and neither proves a wired live service or durable runtime.
+- **Package-bound startup is not a deployed package loader.** `haldir-deployment`
   strictly verifies one canonical v1.0 COSE package against bootstrap trust, revocations, and
-  a separately supplied exact expected deployment authority/Gate/realm/vehicle/class/runtime/
-  NCP-wire policy. The standalone API exact-matches that policy but cannot establish where its
+  separately supplied identity, execution-profile, and authority-approval policies. The standalone
+  API exact-matches those policies but cannot establish where its
   caller obtained it; future Gate glue must source policy from bootstrap state rather than derive
   it from the package. The contract binds distinct nonzero state/journal IDs and one canonical,
   unique logical ID,
@@ -253,20 +286,45 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   custody; special-node open effects can occur before descriptor type rejection; concurrent writes
   can cause rejection; and byte bounds do not impose a wall-clock bound on NFS, FUSE, or stalled
   storage. Other targets return unsupported. Bootstrap-policy provenance, bootstrap-revocation
-  freshness, protected credential opening, semantic parsing/use by the deployment primitive, and
-  correspondence to the running executable remain outside that boundary. Separately,
-  `haldir-ncp08` strictly decodes a supplied canonical compatibility artifact under a 512-byte cap
-  and exact-matches the implemented frozen command-frame subset to the compiled tag/commit/wire/
-  contract/proto/schema/vector/increment/profile/adapter-version pins before returning a
-  private-field proof (`CL-NCP-COMPATIBILITY-01`). That standalone proof is not bound to the signed
-  deployment role or consumed by Gate; it is not a full NCP schema/conformance-set identity and does
-  not establish adapter source/build or running-binary provenance.
-  `GateConfigTemplate` is still
-  caller-constructed, and no Gate startup consumes the resolved typestate or proves verification
-  precedes its entropy, durable, secret, or network effects. The durable v3 state primitive can
-  atomically bind a package revision/payload digest with a fresh boot, but its lower public method
-  accepts neutral values and only a later Gate glue typestate can require that they came from this
-  verifier. This proves `CL-DEPLOYMENT-PRIMITIVE-01`, not `CL-DEPLOYMENT-PACKAGE-01`.
+  freshness, protected credential opening, semantic parsing/use of seven artifact roles, and
+  correspondence to the running executable remain outside that boundary. `haldir-ncp08` strictly
+  decodes a supplied canonical compatibility artifact under a 512-byte cap and exact-matches the
+  implemented frozen command-frame subset to the compiled tag/commit/wire/contract/proto/schema/
+  vector/increment/profile/adapter-version pins before returning a private-field proof
+  (`CL-NCP-COMPATIBILITY-01`). The deployment resolver can consume its exact signed
+  `NcpCompatibility` role and that validator together to return a private-field
+  `NcpValidatedDeploymentPackage`. A second consuming stage strictly decodes the exact signed
+  `GateConfiguration` bytes, cross-binds their redundant package identities, and returns
+  `GateConfigurationValidatedDeploymentPackage`. A third consuming stage interprets the
+  `TrustManifest`, `AdmissionSnapshot`, `RevocationSnapshot`, and `PolicySnapshot` artifacts as
+  separately verified, role-separated, public-key-distinct `AuthoritySnapshotApprovalV1`
+  envelopes. This does not prove separate organizations, operators, or administrative control.
+  Each approval is bound to the
+  exact deployment id/revision, Gate/realm/vehicle, authority kind, externally selected issuer, and
+  corresponding strict configuration digest. Approval verification uses the same bounded bootstrap
+  trust and revocation snapshots retained when the package was verified, so the later stage cannot
+  introduce a second root. `start_deployment_with_backends` consumes and retains the resulting
+  `AuthorityValidatedDeploymentPackage`; it derives the complete trust, revocation, admission, policy,
+  session, publication, local-cap, and Gate-signer identities from the supplied live objects and
+  exact-matches them, together with Gate/realm/vehicle/runtime/wire/state-store/assurance, before
+  entropy or backend access. It then commits the verifier-derived
+  package revision and canonical payload digest atomically with the fresh boot. The package proof
+  remains owned through `RunningGate` and `JournalBoundRunningGate`; publication-journal binding
+  exact-matches the package's typed nonzero journal ID before directory access and every format-v2
+  segment header commits that ID under the segment footer signature. Recovery refuses a different
+  journal ID before closing or extending the retained tail. The cooperative unbound entry point is
+  rejected for `AssuranceExternal`.
+
+  This is still not a full package loader. `GateConfigTemplate` and bootstrap policy remain
+  caller-supplied, although package-bound startup rejects unsigned template drift. The approval
+  artifacts authenticate snapshot identities, not snapshot deserialization or root acquisition; the
+  other seven roles are retained bytes rather than typed runtime inputs. Journal
+  binding is a later explicit step and its filesystem path is neither signed nor stored in the Gate
+  ratchet; the executable role is not compared with the running image; and root provenance, protected
+  credentials, mandatory production selection, and verification-before secret/network effects are
+  absent. Development-local startup can remain unbound. The NCP proof is not a full
+  schema/conformance-set identity and does not establish adapter source/build provenance. This proves
+  the expanded `CL-DEPLOYMENT-PRIMITIVE-01`, not `CL-DEPLOYMENT-PACKAGE-01`.
 - **Durable anti-rollback / restart rollback protection.** The default P0 actor
   constructor still uses an **in-memory** anti-rollback store. A separate recovered
   constructor now accepts only a non-cloneable booted-store capability produced after
@@ -303,15 +361,20 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   behavior under actual crashes. Therefore end-to-end **cross-restart** rollback
   protection of B11/B12 remains **NOT established**.
 - **Filesystem/platform durability scope.** `AtomicFileSnapshot` uses a same-directory
-  `create_new` temporary, file `sync_all`, Unix rename, and parent-directory
+  exclusive temporary, file `sync_all`, Unix rename, and parent-directory
   `sync_all`, and assumes a trusted local POSIX filesystem plus exclusive writer.
-  It is unsupported on Windows, cannot eliminate ancestor-path races using only
-  safe path-based standard-library APIs, and does not claim macOS `F_FULLFSYNC`,
-  power-loss, network/FAT/overlay filesystem, or adversarial directory-rewind
-  guarantees. A same-filesystem anchor cannot close `CL-DURABLE-01`.
+  On Unix it verifies and opens the parent once per operation, performs every
+  leaf open/create/rename/unlink relative to that descriptor, and uses no-follow
+  and nonblocking flags. A symlink or writerless FIFO at the leaf is rejected, and
+  replacing the verified parent pathname during an operation cannot redirect its
+  I/O. It is unsupported on Windows and cannot prevent ancestor replacement before
+  or between operations. It does not claim macOS `F_FULLFSYNC`, power-loss,
+  network/FAT/overlay filesystem, hostile rollback/non-cooperating-writer, or
+  adversarial directory-rewind guarantees. A same-filesystem anchor cannot close
+  `CL-DURABLE-01`.
 - **Durable evidence lifecycle is selected only by the disposable development examples.**
   `haldir-evidence::journal` unit-tests a bounded Unix segment format with
-  CRC32C-framed opaque records, Gate/boot/key/sequence/previous-digest headers,
+  CRC32C-framed opaque records, format-v2 Gate/journal/boot/key/sequence/previous-digest headers,
   checked genesis/successor construction, signed segment-content digests,
   Ed25519 footers, strict completed-corruption rejection,
   and truncation of only an insufficient final record/footer tail
@@ -384,15 +447,17 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
 - **Configuration validation is not a deployment-package/ACL proof.** Gate actor
   construction is fallible and verifies its lease cap, receipt signing identity,
   key binding, and any future NCP lease's session/output epoch (`CL-CONFIG-01`). The
-  startup library additionally permits only the current ACL profile, but it accepts an
-  already-constructed evidence value; it does not load or verify a live ACL package
-  (`CL-DURABLE-STARTUP-DEV-01`).
-  The current ACL-only evidence type carries no session/output epoch or expected
-  route/principal digest, so configuration validation cannot establish runtime final-key
-  exclusivity. `CL-LIVE-TRANSPORT-01` is instead limited to its external synthetic ACL
-  campaign and does not close this startup/service gap.
+  startup library additionally permits only the current ACL profile and, for a
+  declared-live runtime, requires the evidence's transport-key-domain digest to
+  equal the exact pinned-NCP final route derived from the configured realm and
+  session before durable state or I/O. It still accepts an already-constructed
+  evidence value; it does not load or verify a live ACL package, authenticate the
+  named principal/certificate/policy, give the observation timestamp cross-boot
+  meaning, or establish runtime final-key exclusivity
+  (`CL-DURABLE-STARTUP-DEV-01`). `CL-LIVE-TRANSPORT-01` remains limited to its
+  external synthetic ACL campaign and does not close that startup/service gap.
 - **Production status.** Not production ready, certified, airworthy, or safe for
-  deployment. No independent security review has been performed.
+  deployment. No independent external security review has been performed.
 
 ## Independent review record
 

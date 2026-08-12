@@ -195,15 +195,16 @@ class AuthorityModelVerificationTests(unittest.TestCase):
         decoys = (
             f"\n/*\n{marker_text}\n*/\n",
             f'\nlet _authority_pipeline_decoy = r####"\n{marker_text}\n"####;\n',
-            "\nstringify!(let decision = match "
-            "try_decide_validated(&PolicyInput));\n",
+            "\nstringify!(let decision = match try_decide_validated(&PolicyInput));\n",
             "\n#[cfg(any())]\n"
             "{ let decision = match try_decide_validated(&PolicyInput); }\n",
         )
 
         for decoy in decoys:
             with self.subTest(decoy=decoy.splitlines()[1]):
-                mutated = without_real_call[:opening] + decoy + without_real_call[opening:]
+                mutated = (
+                    without_real_call[:opening] + decoy + without_real_call[opening:]
+                )
                 with self.assertRaisesRegex(
                     VERIFY.AuthorityModelError,
                     "AUTHORITY_RUST_GATE_PIPELINE_DRIFT",
@@ -269,9 +270,7 @@ class AuthorityModelVerificationTests(unittest.TestCase):
             code, VERIFY.GATE_PIPELINE_FUNCTION_MARKER
         )
         function_item = actor_source[pipeline_start : body_end + 1]
-        renamed = actor_source.replace(
-            "decide_intent_inner", "evaluate_intent_inner"
-        )
+        renamed = actor_source.replace("decide_intent_inner", "evaluate_intent_inner")
         renamed_start = renamed.index("fn evaluate_intent_inner")
         attribute_start = renamed.rfind(
             "#[allow(clippy::too_many_lines)]", 0, renamed_start

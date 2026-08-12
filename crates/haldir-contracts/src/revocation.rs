@@ -18,8 +18,8 @@ tagged_enum! {
 
 canonical_struct! {
     /// A signed schema v1.0 revocation. Carries an issuer-monotonic
-    /// `revocation_epoch` and either a specific object digest or a
-    /// `revoke_terms_at_or_below` cutoff.
+    /// `revocation_epoch` and exactly one target selector: a specific object
+    /// digest or a `revoke_terms_at_or_below` cutoff.
     pub struct AuthorityRevocationV1 kind "haldir.authority_revocation" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -39,10 +39,17 @@ impl crate::cbor::Validate for AuthorityRevocationV1 {
         if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(crate::error::DecodeError::UnsupportedVersion);
         }
-        // A revocation must name at least one of: a specific object, or a cutoff.
+        // Two simultaneous selectors have no defined union/intersection
+        // semantics. Accept exactly one so every signed record denotes one
+        // unambiguous revocation operation.
         if self.subject_object_digest.is_none() && self.revoke_terms_at_or_below.is_none() {
             return Err(crate::error::DecodeError::SemanticInvalid {
                 code: "REVOCATION_NO_SUBJECT",
+            });
+        }
+        if self.subject_object_digest.is_some() && self.revoke_terms_at_or_below.is_some() {
+            return Err(crate::error::DecodeError::SemanticInvalid {
+                code: "REVOCATION_MULTIPLE_TARGETS",
             });
         }
         Ok(())

@@ -225,7 +225,7 @@
       "dependencies": [
         "T001"
       ],
-      "status": "verified",
+      "status": "implemented",
       "evidence": [
         {
           "kind": "normative_requirement",
@@ -276,7 +276,7 @@
           "path": "release/0.9.0/evidence-specs/t002.json"
         },
         {
-          "kind": "generated_exact_commit_verification",
+          "kind": "historical_generated_exact_commit_verification",
           "path": "release/0.9.0/evidence/t002-generated-verification.json",
           "implementation_commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0",
           "evidence_tool_commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0"
@@ -299,10 +299,10 @@
         }
       ],
       "ten_lens_review": {
-        "correctness_and_invariants": "The model closes exact inventories for five identity namespaces, eight transport principals, nine role/key-class/object/domain bindings, fifteen logical components with exact type mappings, seventeen routes, thirty-five separately custodied state resources, twenty-three protected authority operations, twenty-eight constraints, eight time domains, and twelve roots; every resource owner and custodian resolves to a closed subject.",
+        "correctness_and_invariants": "The evolved model closes exact inventories for five identity namespaces, eight transport principals, ten role/key-class/object/domain bindings, sixteen logical components with exact type mappings, seventeen routes, thirty-eight separately custodied state resources, twenty-three protected authority operations, twenty-eight constraints, eight time domains, and twelve roots; every resource owner and custodian resolves to a closed subject.",
         "safety_and_failure_behavior": "Default deny, no-fallback constraints, fail-closed availability, and the no-retroactive-erasure rule prevent a failed input from becoming authority without pretending that denial cancels a previously exposed command.",
         "security_and_adversarial_behavior": "Executable negatives reject a second final publisher, route confusion, wildcard/default-allow grants, any non-Gate construction/publication escalation, role/object/domain or subject/type drift, final-constraint removal, controller-derived roots, provenance-clock escalation, unknown or drifted resource custody, and unknown references.",
-        "determinism_and_reproducibility": "The canonical JSON mirror is bound to the normative document digest and checked offline against exact profile objects and closed Rust vocabularies. The deterministic generator binds the signed implementation/tool commit, exact successful CI/formal attempts, forty-nine implementation artifacts, and invariant complete logical job logs.",
+        "determinism_and_reproducibility": "The canonical JSON mirror is bound to the normative document digest and checked offline against exact profile objects and closed Rust vocabularies. The prior signed implementation/tool commits and successful CI/formal attempts remain verifiable as a historical baseline, but the evolved model is intentionally reopened until a new exact-commit closure is recorded.",
         "performance_and_bounded_resources": "All verifier inputs, source reads, Git output, and decompressed logs have explicit ceilings; T002 adds no runtime hot-path allocation or timing claim, and later T019 retains the per-operation bounds obligation.",
         "api_schema_and_compatibility": "The model distinguishes runtime profile, transport principal/CN, application key role, logical signed subject, and component label; it preserves NCP v0.8.0 and makes no native NCP 1.0 or wire/API-change claim.",
         "observability_and_provenance": "Every modeled claim names its profile, normative digest, source contracts, exact role/object/domain and logical-type bindings, routes, owner/custodian, final-command constraint set, time semantics, root status, author, migration impact, and stable requirement identifier.",
@@ -315,6 +315,7 @@
         "Gate application and transport identities and credential custody are not proven end to end.",
         "Trusted state and control inputs remain caller-supplied rather than an authenticated ongoing live control plane.",
         "The external generation anchor, plant application boundary, complete mediation, delivery, physical safety, and production security remain unproven.",
+        "The evolved T002 model is implemented but not exact-commit verified; the prior verified record is retained only as historical evidence until a new signed closure is produced.",
         "No independent human review is claimed by this task closure."
       ]
     },

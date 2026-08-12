@@ -73,6 +73,7 @@ fn journal_error_codes_are_stable() {
         JournalError::Unsupported => "EVIDENCE_JOURNAL_UNSUPPORTED",
         JournalError::Storage => "EVIDENCE_JOURNAL_STORAGE_FAILED",
         JournalError::Bounds => "EVIDENCE_JOURNAL_BOUNDS",
+        JournalError::Allocation => "EVIDENCE_JOURNAL_ALLOCATION_FAILED",
         JournalError::RecordTooLarge => "EVIDENCE_JOURNAL_RECORD_TOO_LARGE",
         JournalError::RecordCannotFitSegment => "EVIDENCE_JOURNAL_RECORD_CANNOT_FIT_SEGMENT",
         JournalError::RotationRequired => "EVIDENCE_JOURNAL_ROTATION_REQUIRED",
@@ -120,6 +121,7 @@ fn journal_manager_error_codes_are_stable() {
         JournalManagerError::Fork => "EVIDENCE_JOURNAL_MANAGER_FORK",
         JournalManagerError::MultipleActive => "EVIDENCE_JOURNAL_MANAGER_MULTIPLE_ACTIVE",
         JournalManagerError::GateMismatch => "EVIDENCE_JOURNAL_MANAGER_GATE_MISMATCH",
+        JournalManagerError::JournalMismatch => "EVIDENCE_JOURNAL_MANAGER_JOURNAL_MISMATCH",
         JournalManagerError::TailSignerUnavailable =>
             "EVIDENCE_JOURNAL_MANAGER_TAIL_SIGNER_UNAVAILABLE",
         JournalManagerError::Quiesced => "EVIDENCE_JOURNAL_MANAGER_QUIESCED",

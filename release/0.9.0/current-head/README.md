@@ -1,137 +1,161 @@
 # Current-head 0.9 qualification
 
-This directory records the implementation program derived from the
-`2026-07-14` Haldir current-head maximum-effort handoff. The supplied handoff
-froze commit `9cf56e149a105026b072c9073d7e87b93103966e`. Before this program began,
-`main` had advanced by one documentation checkpoint to
-`2bfcabe5bf9fd6c428f7d50132bd36ec4e147438`; the exact intervening diff is
-therefore part of the updated audit cut rather than being silently accepted.
+This directory records Haldir's current `0.9.0` qualification program. The
+release remains `NO_GO`: no record here grants release, tag, publication,
+deployment, archive, DOI, or physical-use authority.
 
-The release label is `0.9.0`, as requested for external review. The author is
-Sepehr Mahmoudian. No DOI, Zenodo record, or other persistent archive identifier
-is assigned in this release program.
+Historical task and recovery artifacts remain immutable evidence of their own
+stages. They must not be relabelled as proof for a later source head.
 
-Earlier files directly under `release/0.9.0/` are retained as immutable
-historical evidence from the preceding qualification program. Their task IDs
-must not be relabelled as evidence for the current 126-task handoff. Current
-artifacts are bound to their source and requirement identity through
-[`audit-inputs.json`](audit-inputs.json) and the current-head requirement ledger;
-raw logs do not make independent identity claims.
+## Active epoch-19 signed-lineage gate
 
-## Active epoch-18 audit gate
-
-The canonical operator entry point is:
+The operator entry point is:
 
 ```sh
 just verify-current-audit
 ```
 
-The underlying command, also used by the supply-chain CI job and the P0 exit
-gate, is:
+CI invokes the same gate with the exact candidate commit:
 
 ```sh
-/usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc \
-  tools/release/current-audit-gate.sh
+/usr/bin/env -u BASH_ENV -u ENV /bin/bash -p --noprofile --norc \
+  tools/release/current-audit-gate.sh <commit>
 ```
 
-The gate requires CPython `3.14.6`, a `rustup`-managed Cargo `1.96.0`,
-`/usr/bin/git`, and the exact GitHub CLI `2.96.0` executable identity pinned by
-`tools/release/verify-framework-recovery-fr-0017.py`. The pinned GitHub CLI
-artifacts support Linux amd64 and macOS arm64. On macOS, an exact executable at
-a nonstandard path may be selected with `HALDIR_FR0017_GH`; on Linux that
-variable is reserved for the CI runner's pinned extraction path. Tool
-acquisition is outside the gate and may require network access; verification of
-the retained Sigstore bundles is forced offline once the exact executable and
-bundled trust root are present.
+The full gate starts Bash in privileged mode so exported shell functions are not
+imported, then uses CPython 3.11 or newer, `/usr/bin/git`, an explicitly resolved
+Cargo 1.96.0 executable, the immutable signer root in
+`release/0.9.0/allowed-signers`, the current pin verifiers, and the compact
+`tools/release/verify-current-lineage.py` state machine. The formal workflow uses
+the same entry point's `--lineage-only` mode so it verifies its exact subject
+without repeating the full supply-chain suite. Both modes require one-parent
+linear commits, exact author and committer identity, equal author/committer
+timestamps, and the pinned SSH signer. It also checks the candidate diff for
+whitespace errors.
 
-A pass directly verifies the signed FR-0015 active boundary, the intervening
-signed linear milestones, and the signed but unqualified FR-0016 repair
-boundary. It then verifies the exact FR-0017 repair, qualification, and
-activation sequence; commit signatures and linear first-parent ancestry; source
-and CI pins; retained hosted-result attestations; and that checked
-post-activation successors do not change a protected path. It requires the
-checked-out `HEAD` to have exactly one parent and checks the immediate commit
-diff for whitespace errors.
+### Why epoch 19 exists
 
-That result is intentionally narrow. Epoch 18 does not execute the retired task
-verifiers, semantically qualify the implementation in an ordinary successor,
-prove mutable GitHub settings at the current head, or grant release,
-publication, deployment, tag, archive, DOI, or GitHub Release authority. The
-release remains `NO_GO`.
+Epoch 18 was active through signed commit
+`079a8fd227bdf6476d307f792cfcb070d6fc3a8c`. Pull request #19 was then
+squash-merged by GitHub as
+`97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8`. That object is linear and
+GitHub-verified, but it has author email `Sepehr.Mahmoudian@gmail.com`, committer
+`GitHub <noreply@github.com>`, and a GitHub PGP signature. Epoch 18 required
+author and committer `Sepehr Mahmoudian <sepmhn@gmail.com>`, equal timestamps,
+and the pinned SSH signer, so the commit was outside the active authority
+contract.
 
-## Historical CH-T000 input cut and verifier
+Epoch 19 does not rewrite, bless, or disguise that breach. Its signed recovery
+record names the exact breach commit, parent, tree, subject, and classification.
+The recovery commit is the breach's direct child and deliberately bootstraps the
+new reviewed verifier. This is an owner-signed trust-root transition, not an
+independent review.
 
-The retained, checksum-bound CH-T000 inputs include the
-[Haldir handoff](handoff/HALDIR_V1_0_CURRENT_HEAD_MAX_EFFORT_HANDOFF.zip), the
-[cross-repository handoff](handoff/SEPAHEAD_V1_0_CURRENT_HEAD_CROSS_REPO_RECONCILIATION_HANDOFF.zip),
-the master head/index records, the exact local baseline, raw GitHub CI and
-formal-run evidence, and the bounded resource profile.
+### State machine
 
-`tools/release/verify-current-audit.py`, its legacy test suite, and
-`tools/release/current-audit-resource-profile.py` are retained historical
-programs. They are not the active operator entry point and are deliberately
-inert at epoch 18. Historical resource-profile reproduction must write only to
-untracked scratch space, such as `target/`; it must never replace
-`evidence/ch-t000-resource-profile.json` or any other retained evidence file.
+| Stage | Required commit | State | Authority |
+| --- | --- | --- | --- |
+| observed breach | exact `97e0c5d…` GitHub squash object | no active epoch-19 recovery | none |
+| recovery | direct signed child, exact recovery subject and canonical `FR-0019-recovery.json` | `RECOVERED_PENDING_HOSTED_QUALIFICATION` | none |
+| activation | direct signed child adding only canonical `FR-0019-activation.json` | `ACTIVE_NO_RELEASE_AUTHORITY` | none |
+| ordinary successor | signed one-parent child; protected lineage/workflow paths unchanged | active signed lineage | none beyond source succession |
 
-## Retired task-qualification framework
+Activation binds the exact recovery commit/tree, owner-observed successful main
+CI and formal runs, the seven GitHub-Actions-bound required contexts, force-push
+and deletion denial, exact merge settings, and the writer ruleset's main-ref,
+update-rule, repository-source, and sole owner-bypass shape. Those run and
+settings observations are intentionally labelled as mutable external state, not
+cryptographic proof or release authority.
 
-CH-T000 and the later task epochs used a signed `F → I → C → D` lifecycle:
-framework/freeze, implementation, qualification, and data-only activation.
-Their append-only registry walked adjacent signed commits, ran registered task
-verifiers, maintained active claims, and supported a typed `R` revocation
-transition. Registered verifiers were reviewed executable inputs, but their
-structural restrictions and signed identities did not prove their assertions
-semantically honest.
+The previous FR-0017 verifier, tests, result emitter, signer record, and retained
+R/Q/A evidence are frozen historical inputs. They no longer execute on current
+successors. After activation, the epoch-19 gate, verifier, signer/record roots,
+the complete `.github/workflows/` namespace, result emitter, local `just` entry point, normative
+delivery instructions, pin policy/data, cargo-deny installer, and its retained
+adversarial suite are one protected governance boundary; changing that boundary
+requires another explicit signed recovery transition.
 
-That retired framework ran registered programs in a digest-pinned, read-only,
-network-disabled Linux container over an isolated exact Git clone. Its
-clean-Linux reproduction and container-containment statements describe the
-historical CH-T000 protocol only. The epoch-18 bridge instead executes directly
-on the host with a sanitized environment, pinned executable identities, bounded
-subprocess time and output, and protected-worktree checks. It claims no general
-host-resource containment.
+## Hosted workflow authority
 
-The historical task, review, revocation, and active-claim records remain
-evidence of those earlier transitions. They do not establish that epoch-18
-ordinary successors follow the retired lifecycle or have passed its registered
-verifiers.
+Both workflows run on pull requests, `main` pushes, and manual dispatch. Feature
+pushes do not trigger a duplicate run.
 
-## Epoch-18 trust and recovery boundary
+| Event/ref | Substantive checks | Signed lineage subject | Canonical result | OIDC attestation |
+| --- | --- | --- | --- | --- |
+| pull request | GitHub merge ref | exact PR head | no | no |
+| push to `main` | exact pushed commit | exact pushed commit | yes | yes |
+| manual dispatch on `main` | exact selected commit | exact selected commit | yes | no |
+| manual dispatch elsewhere | exact selected ref | exact selected commit | no | no |
 
-Epoch 18 accepts only signed, linear, scoped milestones after activation.
-Protected workflow, signer, recovery, gate, pin, and attestation paths cannot be
-changed by an ordinary successor. A necessary change requires a separately
-reviewed, intentional signed gate and trust-root replacement protocol.
+This split is intentional: testing the merge ref detects integration conflicts,
+while separately verifying the PR head prevents a synthetic GitHub merge object
+from being mistaken for an authorized source commit. Before candidate-tree audit
+tooling runs, each workflow extracts `verify-current-lineage.py` from the exact
+PR base or, for push/manual dispatch, from the candidate's sole parent. That
+predecessor-trusted blob verifies both revisions. Only after it proves protected
+governance paths unchanged may tooling from the candidate checkout run; a
+self-modifying verifier cannot authorize its own change on any ordinary event.
+The one explicit exception is the epoch-19 recovery bootstrap: its exact breach
+parent predates this verifier, and the recovery record already declares that
+owner-signed trust-root transition. Current hosted results use
+`HALDIR_CURRENT_HOSTED_RESULT_V1`, bind exact source/material objects, and grant
+no release or deployment authority.
 
-The retained branch-protection record is a TLS-observed snapshot of mutable
-external state, not durable cryptographic proof. The trusted source signer and
-repository owner remain inside the threat model; owner-account or GitHub
-control-plane compromise is outside the active guarantee.
+## Exact delivery protocol
 
-On suspected signer, owner-account, or GitHub control-plane compromise, stop all
-release, tag, publication, and deployment activity. Preserve existing evidence,
-do not regenerate or re-sign records, and treat gate results as
-non-authoritative until a separately reviewed trust-root replacement protocol
-has established a new boundary.
+GitHub merge buttons are not authorized for this repository. Review occurs in a
+pull request, but delivery is the exact already-reviewed commit object:
+
+1. create a one-parent commit with exact author/committer identity and the pinned
+   SSH signature;
+2. push the feature branch and open the pull request;
+3. let required checks test the merge ref and verify the exact PR head;
+4. manually dispatch both workflows on the feature ref and require every
+   protected context to pass on the exact head;
+5. close the pull request without merging;
+6. fast-forward the exact object with
+   `git push origin <commit>:refs/heads/main`; and
+7. verify `origin/main`, the signature, main CI/formal conclusions, branch
+   protection, repository merge settings, and writer-allowlist ruleset after
+   delivery.
+
+No amend, squash, rebase, cherry-pick, merge commit, or force push is permitted
+between review and delivery. See [CONTRIBUTING.md](../../../CONTRIBUTING.md).
+
+The repository control plane disables merge and squash and retains rebase only
+because GitHub requires at least one merge method. Required signatures, strict
+required checks, linear history, admin enforcement, force-push/deletion denial,
+and the active `main` writer allowlist remain enabled.
+
+GitHub commit-metadata rules are available only for organization-owned
+repositories on GitHub Enterprise. This repository is user-owned, so the hosted
+control plane cannot enforce the exact author/committer email contract. The
+remaining rebase button can therefore synthesize an unauthorized commit if an
+owner ignores this protocol. The exact-head CI check detects that breach but
+cannot prevent the web operation from moving `main`; this is an explicit hosted
+delivery risk, not a control we claim to have closed.
+
+These controls are mutable GitHub state. The signed verifier and delivery
+protocol remain independently reviewable repository truth, but a compromised
+owner, signer, or GitHub control plane remains inside the threat model.
+
+## Historical qualification material
+
+The retained CH-T000 inputs bind the original handoffs, source/dependency/NCP
+identities, requirement ledger, raw hosted evidence, and resource profile.
+`tools/release/verify-current-audit.py` and older recovery/task verifiers are
+historical programs, not the active operator entry point.
+
+Earlier task epochs used signed framework/implementation/qualification/
+activation transitions and isolated registered verifiers. Their records prove
+only their declared historical transitions. Exact inventories and digests prove
+object identity, not semantic correctness or completeness.
 
 ## Review and publication boundary
 
-The current requirement ledger still marks the independent cryptographic,
-formal-methods, secure-deployment, and clean-room review tasks `CH-T115` and
-`CH-T120` as `OPEN`. Final lead review (`CH-T124`) and the signed
-release-authority decision (`CH-T125`) are also `OPEN`. Automated review records
-do not satisfy those human and external-review requirements.
-
-Key separation, deterministic checks, and detached signatures do not establish
-a reviewer's real-world identity, organizational independence, or independence
-from a shared host or operator. Likewise, exact file inventories and digests
-prove object identity, not the semantic correctness or completeness of the
-declared consumers and effects.
-
-The release remains `NO_GO` until the applicable requirements, evidence,
-independent review, cross-repository qualification, and release ceremony are
-truthfully complete or the associated optional claims are explicitly removed.
-No tag or GitHub Release is authorized while that state persists. DOI, Zenodo,
-and other archive fields remain absent or null throughout this 0.9 preparation
-program.
+Independent cryptographic, formal-methods, secure-deployment, clean-room, and
+final lead review requirements remain open. Automated checks do not establish a
+reviewer's real-world identity or organizational independence. No tag or GitHub
+Release is authorized until the current requirements, external review,
+cross-repository qualification, and signed release ceremony are truthfully
+complete or the associated claims are explicitly removed.

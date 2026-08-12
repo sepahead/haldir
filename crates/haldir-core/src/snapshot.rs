@@ -13,8 +13,9 @@ use haldir_contracts::ids::{
     VehicleId,
 };
 use haldir_contracts::limits::MissionLeaseLimitsV1;
-use haldir_contracts::scalar::{AsciiId, BoundedAscii};
+use haldir_contracts::scalar::{AsciiId, BoundedAscii, BoundedSet};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1};
+use std::num::{NonZeroU32, NonZeroU64};
 
 /// Fixed-point kinematic state (integer millimetres / mm-per-second).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,12 +69,12 @@ pub struct TrustedStateSnapshotV1 {
     pub uncertainty: StateUncertaintyFixedV1,
     /// Gate-owned mission phase.
     pub mission_phase: AsciiId<64>,
-    /// Plant mode.
+    /// Gate-owned plant mode used by native policy's mode/action rules.
     pub plant_mode: AsciiId<64>,
 }
 
 impl TrustedStateSnapshotV1 {
-    /// A reproducible domain-separated digest of the policy-relevant fields
+    /// A reproducible domain-separated digest of the decision-relevant fields
     /// (deterministic: fixed field order, no floats, no hash-map iteration).
     #[must_use]
     pub fn canonical_digest(&self) -> DigestV1 {
@@ -136,7 +137,7 @@ pub struct ActiveMissionLeaseSnapshot {
     /// Lease id.
     pub lease_id: MissionLeaseId,
     /// Lease term (monotonic anti-rollback value).
-    pub lease_term: u64,
+    pub lease_term: NonZeroU64,
     /// Controller identifier.
     pub controller_id: ControllerId,
     /// Mission identifier.
@@ -154,23 +155,23 @@ pub struct ActiveMissionLeaseSnapshot {
     /// Admitted controller identity.
     pub controller: AdmittedControllerSnapshot,
     /// Concrete controller intent route.
-    pub controller_intent_key: String,
+    pub controller_intent_key: BoundedAscii<256>,
     /// The controller intent signing key id the intent must be signed under.
     pub controller_intent_signing_key_id: KeyId,
     /// Policy snapshot digest bound into the lease.
     pub policy_snapshot_digest: DigestV1,
     /// Allowed action classes.
-    pub allowed_actions: Vec<ActionClassV1>,
+    pub allowed_actions: BoundedSet<ActionClassV1, 16>,
     /// Allowed coordinate frames.
-    pub allowed_frames: Vec<CoordinateFrameV1>,
+    pub allowed_frames: BoundedSet<CoordinateFrameV1, 8>,
     /// Allowed source keys.
-    pub allowed_source_keys: Vec<String>,
+    pub allowed_source_keys: BoundedSet<BoundedAscii<256>, 8>,
     /// Numeric lease limits.
     pub limits: MissionLeaseLimitsV1,
     /// Maximum intent rate (milli-Hz) the lease authorizes (H-B07).
-    pub max_intent_rate_millihz: u32,
+    pub max_intent_rate_millihz: NonZeroU32,
     /// Maximum total intents the lease authorizes (H-B07).
-    pub max_total_intents: u64,
+    pub max_total_intents: NonZeroU64,
     /// Monotonic acceptance time.
     pub accepted_at_mono: MonoInstant,
     /// Monotonic expiry (min of requested duration and local cap).
@@ -181,27 +182,44 @@ impl ActiveMissionLeaseSnapshot {
     /// Whether the action class is permitted by the lease allowlist.
     #[must_use]
     pub fn permits_action(&self, class: ActionClassV1) -> bool {
-        self.allowed_actions.contains(&class)
+        // These contract enums have a one-to-one semantic/canonical encoding.
+        // Compare the retained values directly so the authorization hot path
+        // does not allocate temporary CBOR buffers for every allowlist entry.
+        self.allowed_actions.as_slice().contains(&class)
     }
 
     /// Whether the coordinate frame is permitted.
     #[must_use]
     pub fn permits_frame(&self, frame: CoordinateFrameV1) -> bool {
-        self.allowed_frames.contains(&frame)
+        self.allowed_frames.as_slice().contains(&frame)
     }
 
     /// Whether the source key is permitted.
     #[must_use]
     pub fn permits_source_key(&self, key: &str) -> bool {
-        self.allowed_source_keys.iter().any(|k| k == key)
+        self.allowed_source_keys
+            .as_slice()
+            .iter()
+            .any(|candidate| candidate.as_str() == key)
     }
 
-    /// Remaining lease time at `now`, or zero if expired/regressed.
+    /// Whole remaining lease milliseconds at `now`, rounded down.
+    ///
+    /// This returns zero both at/after expiry and during the final fractional
+    /// millisecond before expiry. Authorization code that needs the exact expiry
+    /// boundary must use [`Self::is_expired_at`] rather than inferring it from
+    /// this conservative duration projection.
     #[must_use]
     pub fn remaining_ms(&self, now: MonoInstant) -> u64 {
         self.expires_at_mono
             .checked_duration_since(now)
             .map_or(0, |d| d.as_millis())
+    }
+
+    /// Whether the lease has reached its exact monotonic expiry boundary.
+    #[must_use]
+    pub fn is_expired_at(&self, now: MonoInstant) -> bool {
+        now >= self.expires_at_mono
     }
 }
 

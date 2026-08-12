@@ -1,7 +1,7 @@
 # Human-reviewable pin source of truth. `tools/verify-pins.py` enforces these.
 # A branch name or short SHA is never an acceptable pin.
 
-schema_version = 3
+schema_version = 4
 
 [toolchain]
 rust_channel = "1.96.0"
@@ -39,10 +39,11 @@ router_image = "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c3
 
 [dependencies]
 # All pinned in Cargo.lock; justification in docs/DEPENDENCY-RATIONALE.md.
-ed25519-compact = "2.2"
+ed25519-compact = "2.3.1"
+curve25519-dalek = "4.1.3"
 sha2 = "0.10"
 zeroize = "1"
-subtle = "2"
+subtle = "2.6.1"
 getrandom = "0.2"
 proptest = "1"
 rustix = "1.1.4"
@@ -51,6 +52,7 @@ serde_json = "1.0"
 hmac = "0.12.1"
 tokio = "1"
 zenoh = "1.9.0"
+zenoh-transport = "1.9.0@6b93b15d0795748b7f76c72eae07f1cda517e762"
 
 [supply_chain.cargo_deny]
 # Protected CI installs and invokes this release directly; no cargo-deny

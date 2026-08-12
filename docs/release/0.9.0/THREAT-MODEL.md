@@ -93,6 +93,11 @@ No boundary **SHALL** infer authority from a neighboring namespace. A
 certificate principal is not an application signer, a valid signature is not a
 fresh lease, a signed timestamp is not the Gate authority clock, and a
 command-shaped byte string is not evidence of authorization or application.
+The bootstrap and runtime application trust snapshots likewise share one key
+identity namespace at package-bound startup: incompatible reuse of either a
+`kid` or public key fails before startup effects. This prevents a compromised
+private key from gaining another application role solely through cross-snapshot
+aliasing; it does not establish protected provisioning or independent operators.
 
 ### Adversary capabilities
 
@@ -126,9 +131,10 @@ substitution are executable negative cases.
 This mitigates wrong-secret and malformed forgeries within the named local
 boundaries. It does not authenticate the producer of a publicly constructible
 raw event, protect the enrolled private key, or prove that the router principal
-reached the actor. The direct reference `VehicleActor` API hashes receipt
-provenance before its internal oversize branch and is a cooperative API, not a
-hostile transport boundary. Aggregate status: `PARTIAL`.
+reached the actor. The public `VehicleActor` API now requires a private-field
+`BoundedIntentCandidate`, so route/envelope oversize is rejected before hashing;
+it remains a cooperative API, not an authenticated hostile-transport boundary.
+Aggregate status: `PARTIAL`.
 
 ## TH-STOLEN-KEYS — valid-key and credential compromise
 
@@ -162,8 +168,10 @@ Replay domains **SHALL** remain typed and scoped:
   liveness from a duplicate;
 - leases bind the current Gate boot and exact session pair, and terms ratchet
   within issuer/vehicle scope;
-- trusted-state capture time strictly advances within one Gate boot, while
-  source position is correlated to the current cache;
+- trusted-state capture time strictly advances within one Gate boot; source
+  sequence strictly advances inside each source key's active epoch, epoch
+  transitions permanently retire the prior epoch, and bounded tombstones are
+  never evicted;
 - Gate output positions advance within the current output epoch; and
 - publication evidence enforces exact linked transition order and represents a
   dangling call as unknown rather than retryable failure.
@@ -209,11 +217,12 @@ Controller and source timestamps are provenance only and **SHALL NOT** create
 freshness, validity, lease lifetime, or output time. Opaque identifiers are not
 clocks.
 
-The current setter does not authenticate a live state producer, enforce source
-`(stream epoch, sequence)` monotonicity, or reject every impossible relation
-between producer, receive, and capture times. A trusted or compromised caller
-can repackage old truth under a later Gate capture. Sensor truth and end-to-end
-age are external. Aggregate status: `PARTIAL`.
+The current local update seam does not authenticate a live state producer or
+reject every impossible relation between producer time, source contents,
+receive time, and snapshot construction. A trusted or compromised caller can
+invent a new opaque epoch or false state while consuming replay capacity. Sensor
+truth and end-to-end producer authentication remain external. Aggregate status:
+`PARTIAL`.
 
 ## TH-ROLLBACK — state, package, evidence, and deployment rewind
 
@@ -224,13 +233,20 @@ reuse. State is committed before live mutation. Publication recovery converts
 an ambiguous called tail to linked unknown and fail-closes.
 
 These primitives **SHALL NOT** be represented as deployed external anti-rewind.
-The default reference actor uses in-memory state, the local file anchor is in
-the same rewritable failure domain, Gate startup does not yet require a
-verified/resolved deployment package or package-bound boot ratchet, the
-evidence journal lacks an external high-water witness, and power-loss/hostile
+The default reference actor uses in-memory state and the local file anchor is in
+the same rewritable failure domain. Package-bound Gate startup now consumes the
+verified/resolved NCP and strict Gate-configuration stages, four separately verified,
+role-separated, public-key-distinct snapshot approvals under the retained bootstrap trust/revocations,
+plus the package-bound
+boot ratchet, while the unbound entry point is rejected for `AssuranceExternal`;
+however development startup may remain unbound, the other seven package roles
+are not consumed semantically, and journal binding/path
+are not mandatory even though a bound format-v2 chain exact-matches the signed
+journal ID. The evidence journal lacks an external high-water witness, and power-loss/hostile
 filesystem evidence is absent. Rolling back a deployment **SHALL NOT** silently
 reuse an old boot, session, lease, key, output epoch/position, schema identity,
-or evidence namespace.
+or evidence namespace. Role/key separation does not prove separate operators
+or administrative control.
 
 End-to-end deployment rollback resistance and rehearsed recovery are
 `NOT_CLAIMED`. Aggregate status: `PARTIAL`.
@@ -261,15 +277,16 @@ and the plant-local fallback is `NOT_CLAIMED`. Aggregate status: `PARTIAL`.
 
 ## Formal evidence boundary
 
-The current bounded TLA+ run is green for its existing finite model, but it is
-not yet acceptable T003 evidence: `LeaseBindsCurrentIncarnation` presently uses
-weak `<=` comparisons that would not detect a stale nonzero lease, and
-`RetireIntentEpoch` lacks the terminal-fault guard used by the other mutating
-actions. Before T003 closure, the model **SHALL** require exact current
-boot/session equality, consistent zero/nonzero lease fields, terminal fault
-behavior, and a checked temporal property for that terminal behavior.
+The bounded TLA+ model now requires exact current boot/session equality for an
+active lease, consistent zero/nonzero lease fields, guards intent retirement
+after a terminal fault, and checks a temporal property that freezes every
+authority-bearing model variable after the fault-latching transition. These
+source corrections are necessary but are not alone acceptable T003 evidence:
+T003 remains open until the release's exact machine-readable threat entry,
+verifier, adversarial mutation suite, and exact-subject hosted evidence are all
+present and reviewed.
 
-After those corrections, the bounded model may support only the enumerated
+The corrected bounded model may support only the enumerated
 finite lease/boot/session, retired-intent-epoch, current-output-epoch, and fault
 properties. It **SHALL NOT** be cited as evidence for signature security,
 stolen-key custody, route authentication, physical state truth, hostile durable

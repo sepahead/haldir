@@ -48,10 +48,12 @@ GUARDS = [
 AUTHORED_DOCS = [
     "README.md",
     "SECURITY.md",
+    "docs/ARCHITECTURE.md",
     "docs/LIMITATIONS.md",
     "docs/COMPLETION-CHECKLIST.md",
     "docs/ASSURANCE-PROFILES.md",
     "docs/THREAT-MODEL.md",
+    "docs/release/0.9.0/THREAT-MODEL.md",
     "docs/AUTHORITY-GRAPH.md",
     "docs/EVIDENCE-SEMANTICS.md",
     "docs/NCP-COMPATIBILITY.md",
@@ -73,7 +75,7 @@ def main() -> None:
     problems = 0
     for path in FILES:
         if not path.is_file():
-            continue
+            fail(f"declared authored claim surface is missing: {path.relative_to(ROOT)}")
         def norm(s: str) -> str:
             # strip markdown emphasis so "**not**" matches the "not " guard
             return s.lower().replace("*", "").replace("`", "").replace("_", " ")

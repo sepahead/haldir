@@ -34,7 +34,11 @@ pub use cose::{
 pub use error::CryptoError;
 pub use key::{Signature, SigningKey, VerifyingKey};
 pub use role::{KeyClass, KeyRole};
-pub use trust::{KeyRecord, RevocationSnapshot, TrustStore, TrustStoreError};
+pub use trust::{
+    KeyRecord, KeySubject, MAX_REVOKED_KEYS, MAX_TRUSTED_KEYS,
+    REVOCATION_SNAPSHOT_DIGEST_SCHEMA_V1, RevocationError, RevocationSnapshot,
+    TRUST_STORE_DIGEST_SCHEMA_V1, TrustStore, TrustStoreDisjointnessError, TrustStoreError,
+};
 
 use haldir_contracts::cbor::{
     CanonicalMessage, CanonicalValue, Limits, Validate, from_canonical_bytes, to_canonical_bytes,
@@ -63,6 +67,18 @@ pub fn sign_message<T: CanonicalValue>(
     cose::sign_sign1(&payload, kid, &content_type, &aad, sk)
 }
 
+/// Canonically encode and COSE-sign a typed Haldir message under its own fixed
+/// kind and major-version context.
+///
+/// Prefer this entry point in runtime code. Unlike [`sign_message`], it cannot
+/// accidentally sign one message type under another type's protected content
+/// type or external AAD. The lower-level function remains available for
+/// negative conformance vectors that intentionally construct such mismatches.
+#[must_use]
+pub fn sign_typed_message<T: CanonicalMessage>(msg: &T, kid: &KeyId, sk: &SigningKey) -> Vec<u8> {
+    sign_message(msg, T::KIND, T::SCHEMA_MAJOR, kid, sk)
+}
+
 /// Verify a signed envelope and then canonically decode the payload.
 ///
 /// The signature is checked over the exact received payload bytes; the payload
@@ -77,7 +93,7 @@ pub fn verify_and_decode<T: CanonicalMessage + Validate>(
     trust: &TrustStore,
     revocations: &RevocationSnapshot,
     limits: Limits,
-) -> Result<(T, KeyId, Option<String>), CryptoError> {
+) -> Result<(T, KeyId, KeySubject), CryptoError> {
     if ctx.kind != T::KIND || ctx.schema_major != T::SCHEMA_MAJOR {
         return Err(CryptoError::ContentTypeMismatch);
     }
@@ -128,9 +144,20 @@ mod tests {
             kid: k.clone(),
             role,
             verifying_key: sk.verifying_key(),
-            subject: Some("survey-v1".to_owned()),
+            subject: KeySubject::new("survey-v1").unwrap(),
             class,
         }
+    }
+
+    fn assert_key_record_eq(actual: &KeyRecord, expected: &KeyRecord) {
+        assert_eq!(actual.kid, expected.kid);
+        assert_eq!(actual.role, expected.role);
+        assert_eq!(
+            actual.verifying_key.to_bytes(),
+            expected.verifying_key.to_bytes()
+        );
+        assert_eq!(actual.subject, expected.subject);
+        assert_eq!(actual.class, expected.class);
     }
 
     fn intent() -> HaldirIntentV1 {
@@ -175,26 +202,30 @@ mod tests {
     }
 
     fn receipt() -> DecisionReceiptV1 {
+        let intent = intent();
         DecisionReceiptV1 {
             decision_id: DecisionId::new([3; 16]),
             gate_id: GateId::new("gate-1").unwrap(),
             gate_boot_id: GateBootId::new([9; 16]),
             vehicle_id: VehicleId::new("uav-1").unwrap(),
-            mission_id: None,
+            mission_id: Some(intent.mission_id.clone()),
             ncp_session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("sess-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
             },
-            received_key_digest: dig(10),
+            received_key_digest: DigestV1::compute(
+                DigestDomain::TransportKey,
+                intent.actual_intent_key.as_str().as_bytes(),
+            ),
             raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, b"intent"),
-            payload_digest: None,
-            semantic_intent_digest: None,
-            controller_id: None,
-            controller_intent_position: None,
-            mission_lease_id: None,
-            admission_digest: None,
-            source: None,
-            state_snapshot_digest: None,
+            payload_digest: Some(DigestV1::of_value(DigestDomain::Payload, &intent)),
+            semantic_intent_digest: Some(intent.semantic_digest()),
+            controller_id: Some(intent.controller_id.clone()),
+            controller_intent_position: Some(intent.intent_position.clone()),
+            mission_lease_id: Some(intent.mission_lease_id),
+            admission_digest: Some(intent.admission_digest),
+            source: Some(intent.primary_source.clone()),
+            state_snapshot_digest: Some(DigestV1::compute(DigestDomain::StateSnapshot, b"state")),
             policy_snapshot_digest: DigestV1::compute(DigestDomain::PolicySnapshot, b"policy"),
             decision: DecisionOutcomeV1::Allow,
             reason_codes: BoundedVec::from_vec(vec![DecisionReasonCodeV1::AllowPrepared]).unwrap(),
@@ -237,7 +268,7 @@ mod tests {
 
     fn verify_receipt(
         receipt: &DecisionReceiptV1,
-    ) -> Result<(DecisionReceiptV1, KeyId, Option<String>), CryptoError> {
+    ) -> Result<(DecisionReceiptV1, KeyId, KeySubject), CryptoError> {
         let k = kid(7);
         let sk = signer(7);
         let trust = trust_with(&k, &sk, KeyRole::GateApplication, KeyClass::Assurance);
@@ -271,7 +302,8 @@ mod tests {
         let k = kid(1);
         let sk = signer(1);
         let trust = trust_with(&k, &sk, KeyRole::ControllerIntent, KeyClass::Assurance);
-        let env = sign_message(&intent(), KIND, MAJOR, &k, &sk);
+        let env = sign_typed_message(&intent(), &k, &sk);
+        assert_eq!(env, sign_message(&intent(), KIND, MAJOR, &k, &sk));
         let (decoded, signer_kid, subject): (HaldirIntentV1, _, _) = verify_and_decode(
             &env,
             &ctx(),
@@ -282,7 +314,7 @@ mod tests {
         .unwrap();
         assert_eq!(decoded, intent());
         assert_eq!(signer_kid, k);
-        assert_eq!(subject, Some("survey-v1".to_owned()));
+        assert_eq!(subject, KeySubject::new("survey-v1").unwrap());
     }
 
     #[test]
@@ -355,7 +387,7 @@ mod tests {
     }
 
     #[test]
-    fn signed_receipt_rejects_multiple_reasons() {
+    fn signed_receipt_rejects_multiple_allow_reasons() {
         let mut invalid = receipt();
         invalid.reason_codes = BoundedVec::from_vec(vec![
             DecisionReasonCodeV1::AllowPrepared,
@@ -456,7 +488,7 @@ mod tests {
         let sk = signer(1);
         let trust = trust_with(&k, &sk, KeyRole::ControllerIntent, KeyClass::Assurance);
         let mut rev = RevocationSnapshot::new();
-        rev.revoke_key(&k, 1);
+        rev.revoke_key(&k, 1).unwrap();
         let env = sign_message(&intent(), KIND, MAJOR, &k, &sk);
         let res: Result<(HaldirIntentV1, _, _), _> =
             verify_and_decode(&env, &ctx(), &trust, &rev, Limits::LARGE);
@@ -593,13 +625,8 @@ mod tests {
         let sk1 = signer(1);
         let sk2 = signer(2);
         let mut t = TrustStore::new();
-        t.insert(record(
-            &k,
-            &sk1,
-            KeyRole::ControllerIntent,
-            KeyClass::Assurance,
-        ))
-        .unwrap();
+        let original = record(&k, &sk1, KeyRole::ControllerIntent, KeyClass::Assurance);
+        t.insert(original.clone()).unwrap();
         // same kid, different key material -> conflict
         assert_eq!(
             t.insert(record(
@@ -630,6 +657,36 @@ mod tests {
             ))
             .is_ok()
         );
+        assert_eq!(t.len(), 1);
+        assert_key_record_eq(t.resolve(&k).unwrap(), &original);
+    }
+
+    #[test]
+    fn development_only_role_cannot_be_mislabeled_as_assurance() {
+        let key_id = kid(1);
+        let signing_key = signer(1);
+        let mut trust = TrustStore::new();
+
+        assert_eq!(
+            trust.insert(record(
+                &key_id,
+                &signing_key,
+                KeyRole::DevelopmentOnly,
+                KeyClass::Assurance,
+            )),
+            Err(TrustStoreError::InvalidDevelopmentClassification)
+        );
+        assert!(trust.is_empty());
+
+        trust
+            .insert(record(
+                &key_id,
+                &signing_key,
+                KeyRole::DevelopmentOnly,
+                KeyClass::Development,
+            ))
+            .unwrap();
+        assert_eq!(trust.len(), 1);
     }
 
     #[test]
@@ -638,26 +695,516 @@ mod tests {
         let alias_kid = kid(2);
         let shared_key = signer(1);
         let mut trust = TrustStore::new();
-        trust
-            .insert(record(
-                &first_kid,
-                &shared_key,
-                KeyRole::ControllerIntent,
-                KeyClass::Assurance,
-            ))
-            .unwrap();
+        let original = record(
+            &first_kid,
+            &shared_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        trust.insert(original.clone()).unwrap();
 
         assert_eq!(
             trust.insert(record(
                 &alias_kid,
                 &shared_key,
-                KeyRole::MissionAuthority,
+                KeyRole::ControllerIntent,
                 KeyClass::Assurance,
             )),
             Err(TrustStoreError::ConflictingKeyMaterial)
         );
         assert_eq!(trust.len(), 1, "rejected alias must not mutate trust");
         assert!(trust.resolve(&alias_kid).is_none());
+        assert_key_record_eq(trust.resolve(&first_kid).unwrap(), &original);
+
+        // Rejection must not reserve the proposed kid in the primary index.
+        let replacement = record(
+            &alias_kid,
+            &signer(2),
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        trust.insert(replacement.clone()).unwrap();
+        assert_key_record_eq(trust.resolve(&alias_kid).unwrap(), &replacement);
+    }
+
+    #[test]
+    fn duplicate_public_key_across_roles_is_rejected() {
+        let controller_kid = kid(1);
+        let mission_kid = kid(2);
+        let shared_key = signer(1);
+        let controller = record(
+            &controller_kid,
+            &shared_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        let mission_alias = record(
+            &mission_kid,
+            &shared_key,
+            KeyRole::MissionAuthority,
+            KeyClass::Assurance,
+        );
+        let mut trust = TrustStore::new();
+        trust.insert(controller.clone()).unwrap();
+
+        assert_eq!(
+            trust.insert(mission_alias),
+            Err(TrustStoreError::ConflictingKeyMaterial)
+        );
+        assert_eq!(trust.len(), 1);
+        assert_key_record_eq(trust.resolve(&controller_kid).unwrap(), &controller);
+        assert!(trust.resolve(&mission_kid).is_none());
+    }
+
+    #[test]
+    fn duplicate_public_key_across_subjects_is_rejected() {
+        let first_kid = kid(1);
+        let alias_kid = kid(2);
+        let shared_key = signer(1);
+        let mut original = record(
+            &first_kid,
+            &shared_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        original.subject = KeySubject::new("controller-a").unwrap();
+        let mut subject_alias = record(
+            &alias_kid,
+            &shared_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        subject_alias.subject = KeySubject::new("controller-b").unwrap();
+        let mut trust = TrustStore::new();
+        trust.insert(original.clone()).unwrap();
+
+        assert_eq!(
+            trust.insert(subject_alias),
+            Err(TrustStoreError::ConflictingKeyMaterial)
+        );
+        assert_eq!(trust.len(), 1);
+        assert_key_record_eq(trust.resolve(&first_kid).unwrap(), &original);
+        assert!(trust.resolve(&alias_kid).is_none());
+    }
+
+    #[test]
+    fn duplicate_public_key_across_key_classes_is_rejected() {
+        let assurance_kid = kid(1);
+        let development_kid = kid(2);
+        let shared_key = signer(1);
+        let assurance = record(
+            &assurance_kid,
+            &shared_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        let development_alias = record(
+            &development_kid,
+            &shared_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Development,
+        );
+        let mut trust = TrustStore::new();
+        trust.insert(assurance.clone()).unwrap();
+
+        assert_eq!(
+            trust.insert(development_alias),
+            Err(TrustStoreError::ConflictingKeyMaterial)
+        );
+        assert_eq!(trust.len(), 1);
+        assert_key_record_eq(trust.resolve(&assurance_kid).unwrap(), &assurance);
+        assert!(trust.resolve(&development_kid).is_none());
+    }
+
+    #[test]
+    fn duplicate_public_key_rejection_is_insertion_order_independent() {
+        for first_is_controller in [true, false] {
+            let controller_kid = kid(1);
+            let mission_kid = kid(2);
+            let shared_key = signer(1);
+            let mut controller = record(
+                &controller_kid,
+                &shared_key,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            );
+            controller.subject = KeySubject::new("controller-a").unwrap();
+            let mut mission = record(
+                &mission_kid,
+                &shared_key,
+                KeyRole::MissionAuthority,
+                KeyClass::Assurance,
+            );
+            mission.subject = KeySubject::new("mission-authority-a").unwrap();
+            let (accepted, rejected) = if first_is_controller {
+                (controller, mission)
+            } else {
+                (mission, controller)
+            };
+            let accepted_kid = accepted.kid.clone();
+            let rejected_kid = rejected.kid.clone();
+            let mut trust = TrustStore::new();
+
+            trust.insert(accepted.clone()).unwrap();
+            assert_eq!(
+                trust.insert(rejected),
+                Err(TrustStoreError::ConflictingKeyMaterial)
+            );
+            assert_eq!(trust.len(), 1);
+            assert_key_record_eq(trust.resolve(&accepted_kid).unwrap(), &accepted);
+            assert!(trust.resolve(&rejected_kid).is_none());
+        }
+    }
+
+    #[test]
+    fn conflicting_kid_rejection_does_not_reserve_rejected_public_key() {
+        let occupied_kid = kid(1);
+        let second_kid = kid(2);
+        let original_key = signer(1);
+        let rejected_key = signer(2);
+        let original = record(
+            &occupied_kid,
+            &original_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        let mut trust = TrustStore::new();
+        trust.insert(original.clone()).unwrap();
+
+        assert_eq!(
+            trust.insert(record(
+                &occupied_kid,
+                &rejected_key,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            )),
+            Err(TrustStoreError::ConflictingKid)
+        );
+
+        // The failed same-kid attempt must not poison the reverse key index.
+        let second = record(
+            &second_kid,
+            &rejected_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        trust.insert(second.clone()).unwrap();
+        assert_eq!(trust.len(), 2);
+        assert_key_record_eq(trust.resolve(&occupied_kid).unwrap(), &original);
+        assert_key_record_eq(trust.resolve(&second_kid).unwrap(), &second);
+    }
+
+    #[test]
+    fn conflicting_kid_error_precedes_public_key_alias_error() {
+        let first_kid = kid(1);
+        let second_kid = kid(2);
+        let first_key = signer(1);
+        let second_key = signer(2);
+        let first = record(
+            &first_kid,
+            &first_key,
+            KeyRole::ControllerIntent,
+            KeyClass::Assurance,
+        );
+        let second = record(
+            &second_kid,
+            &second_key,
+            KeyRole::MissionAuthority,
+            KeyClass::Assurance,
+        );
+        let mut trust = TrustStore::new();
+        trust.insert(first.clone()).unwrap();
+        trust.insert(second.clone()).unwrap();
+
+        // This conflicts with `first` by kid and aliases `second` by key bytes.
+        assert_eq!(
+            trust.insert(record(
+                &first_kid,
+                &second_key,
+                KeyRole::MissionAuthority,
+                KeyClass::Assurance,
+            )),
+            Err(TrustStoreError::ConflictingKid)
+        );
+        assert_eq!(trust.len(), 2);
+        assert_key_record_eq(trust.resolve(&first_kid).unwrap(), &first);
+        assert_key_record_eq(trust.resolve(&second_kid).unwrap(), &second);
+    }
+
+    #[test]
+    fn trust_store_disjointness_enforces_lifecycle_key_separation() {
+        let first_kid = kid(1);
+        let second_kid = kid(2);
+        let third_kid = kid(3);
+        let first_key = signer(1);
+        let second_key = signer(2);
+        let third_key = signer(3);
+        let first_record = record(
+            &first_kid,
+            &first_key,
+            KeyRole::DeploymentAuthority,
+            KeyClass::Assurance,
+        );
+
+        let mut bootstrap = TrustStore::new();
+        bootstrap.insert(first_record.clone()).unwrap();
+
+        let mut exact_overlap = TrustStore::new();
+        exact_overlap.insert(first_record).unwrap();
+        assert_eq!(
+            bootstrap.validate_disjoint_bindings(&exact_overlap),
+            Err(TrustStoreDisjointnessError::OverlappingKid)
+        );
+        assert_eq!(
+            exact_overlap.validate_disjoint_bindings(&bootstrap),
+            Err(TrustStoreDisjointnessError::OverlappingKid)
+        );
+
+        let mut disjoint = TrustStore::new();
+        disjoint
+            .insert(record(
+                &second_kid,
+                &second_key,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            ))
+            .unwrap();
+        assert_eq!(bootstrap.validate_disjoint_bindings(&disjoint), Ok(()));
+        assert_eq!(disjoint.validate_disjoint_bindings(&bootstrap), Ok(()));
+
+        let mut conflicting_kid = TrustStore::new();
+        conflicting_kid
+            .insert(record(
+                &first_kid,
+                &third_key,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            ))
+            .unwrap();
+        assert_eq!(
+            bootstrap.validate_disjoint_bindings(&conflicting_kid),
+            Err(TrustStoreDisjointnessError::OverlappingKid)
+        );
+        assert_eq!(
+            conflicting_kid.validate_disjoint_bindings(&bootstrap),
+            Err(TrustStoreDisjointnessError::OverlappingKid)
+        );
+
+        let mut aliased_key = TrustStore::new();
+        aliased_key
+            .insert(record(
+                &third_kid,
+                &first_key,
+                KeyRole::MissionAuthority,
+                KeyClass::Development,
+            ))
+            .unwrap();
+        assert_eq!(
+            bootstrap.validate_disjoint_bindings(&aliased_key),
+            Err(TrustStoreDisjointnessError::OverlappingKeyMaterial)
+        );
+        assert_eq!(
+            aliased_key.validate_disjoint_bindings(&bootstrap),
+            Err(TrustStoreDisjointnessError::OverlappingKeyMaterial)
+        );
+    }
+
+    #[test]
+    fn cross_snapshot_kid_conflict_precedes_cross_snapshot_key_alias() {
+        let first_kid = kid(1);
+        let second_kid = kid(2);
+        let first_key = signer(1);
+        let second_key = signer(2);
+        let mut first = TrustStore::new();
+        first
+            .insert(record(
+                &first_kid,
+                &first_key,
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            ))
+            .unwrap();
+        first
+            .insert(record(
+                &second_kid,
+                &second_key,
+                KeyRole::MissionAuthority,
+                KeyClass::Assurance,
+            ))
+            .unwrap();
+
+        let mut second = TrustStore::new();
+        second
+            .insert(record(
+                &first_kid,
+                &second_key,
+                KeyRole::PolicyAuthority,
+                KeyClass::Development,
+            ))
+            .unwrap();
+
+        assert_eq!(
+            first.validate_disjoint_bindings(&second),
+            Err(TrustStoreDisjointnessError::OverlappingKid)
+        );
+        assert_eq!(
+            second.validate_disjoint_bindings(&first),
+            Err(TrustStoreDisjointnessError::OverlappingKid)
+        );
+    }
+
+    #[test]
+    fn trust_store_disjointness_errors_have_stable_non_record_leaking_semantics() {
+        for (error, expected) in [
+            (
+                TrustStoreDisjointnessError::OverlappingKid,
+                "TRUST_STORES_OVERLAPPING_KID",
+            ),
+            (
+                TrustStoreDisjointnessError::OverlappingKeyMaterial,
+                "TRUST_STORES_OVERLAPPING_KEY_MATERIAL",
+            ),
+        ] {
+            assert_eq!(error.reason_code(), expected);
+            assert_eq!(error.to_string(), expected);
+            assert!(std::error::Error::source(&error).is_none());
+        }
+    }
+
+    #[test]
+    fn trust_store_errors_have_stable_non_record_leaking_semantics() {
+        let cases = [
+            (
+                TrustStoreError::ConflictingKid,
+                "TRUST_STORE_CONFLICTING_KID",
+            ),
+            (
+                TrustStoreError::ConflictingKeyMaterial,
+                "TRUST_STORE_PUBLIC_KEY_ALREADY_ENROLLED",
+            ),
+            (
+                TrustStoreError::InvalidDevelopmentClassification,
+                "TRUST_STORE_INVALID_DEVELOPMENT_CLASSIFICATION",
+            ),
+            (
+                TrustStoreError::CapacityExceeded,
+                "TRUST_STORE_CAPACITY_EXCEEDED",
+            ),
+        ];
+
+        for (error, expected) in cases {
+            assert_eq!(error.reason_code(), expected);
+            assert_eq!(error.to_string(), expected);
+            assert!(std::error::Error::source(&error).is_none());
+        }
+    }
+
+    #[test]
+    fn trust_store_capacity_is_exact_and_failure_is_atomic() {
+        let mut trust = TrustStore::new();
+        for seed in 1..=u8::try_from(MAX_TRUSTED_KEYS).unwrap() {
+            let key_id = kid(seed);
+            trust
+                .insert(record(
+                    &key_id,
+                    &signer(seed),
+                    KeyRole::ControllerIntent,
+                    KeyClass::Assurance,
+                ))
+                .unwrap();
+        }
+        assert_eq!(trust.len(), MAX_TRUSTED_KEYS);
+
+        let rejected_kid = kid(u8::try_from(MAX_TRUSTED_KEYS + 1).unwrap());
+        assert_eq!(
+            trust.insert(record(
+                &rejected_kid,
+                &signer(u8::try_from(MAX_TRUSTED_KEYS + 1).unwrap()),
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            )),
+            Err(TrustStoreError::CapacityExceeded)
+        );
+        assert_eq!(trust.len(), MAX_TRUSTED_KEYS);
+        assert!(trust.resolve(&rejected_kid).is_none());
+
+        let existing_kid = kid(1);
+        assert_eq!(
+            trust.insert(record(
+                &existing_kid,
+                &signer(2),
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            )),
+            Err(TrustStoreError::ConflictingKid)
+        );
+        assert_eq!(
+            trust.insert(record(
+                &rejected_kid,
+                &signer(1),
+                KeyRole::ControllerIntent,
+                KeyClass::Assurance,
+            )),
+            Err(TrustStoreError::ConflictingKeyMaterial)
+        );
+    }
+
+    #[test]
+    fn revocation_updates_are_bounded_strictly_versioned_and_atomic() {
+        let first = kid(1);
+        let second = kid(2);
+        let mut revocations = RevocationSnapshot::new();
+        revocations.revoke_key(&first, 1).unwrap();
+
+        assert_eq!(
+            revocations.revoke_key(&second, 1),
+            Err(RevocationError::EpochNotAdvanced)
+        );
+        assert_eq!(revocations.epoch(), 1);
+        assert!(!revocations.is_key_revoked(&second));
+        revocations.revoke_key(&first, 0).unwrap();
+        assert_eq!(revocations.epoch(), 1);
+        revocations.revoke_key(&first, 3).unwrap();
+        assert_eq!(revocations.epoch(), 3);
+        assert_eq!(
+            revocations.revoke_key(&second, 2),
+            Err(RevocationError::EpochNotAdvanced)
+        );
+        revocations.revoke_key(&second, 4).unwrap();
+        assert_eq!(revocations.epoch(), 4);
+
+        let mut full = RevocationSnapshot::new();
+        for epoch in 1..=u64::try_from(MAX_REVOKED_KEYS).unwrap() {
+            let key_id = KeyId::new(epoch.to_be_bytes().to_vec()).unwrap();
+            full.revoke_key(&key_id, epoch).unwrap();
+        }
+        let rejected = KeyId::new(
+            u64::try_from(MAX_REVOKED_KEYS + 1)
+                .unwrap()
+                .to_be_bytes()
+                .to_vec(),
+        )
+        .unwrap();
+        assert_eq!(
+            full.revoke_key(&rejected, u64::try_from(MAX_REVOKED_KEYS + 1).unwrap()),
+            Err(RevocationError::CapacityExceeded)
+        );
+        assert_eq!(full.epoch(), u64::try_from(MAX_REVOKED_KEYS).unwrap());
+        assert!(!full.is_key_revoked(&rejected));
+
+        for (error, code) in [
+            (
+                RevocationError::EpochNotAdvanced,
+                "REVOCATION_EPOCH_NOT_ADVANCED",
+            ),
+            (
+                RevocationError::CapacityExceeded,
+                "REVOCATION_CAPACITY_EXCEEDED",
+            ),
+        ] {
+            assert_eq!(error.reason_code(), code);
+            assert_eq!(error.to_string(), code);
+        }
     }
 
     #[test]

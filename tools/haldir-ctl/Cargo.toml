@@ -17,6 +17,5 @@ name = "haldir-ctl"
 path = "src/main.rs"
 
 [dependencies]
-haldir-contracts.workspace = true
-haldir-crypto.workspace = true
-haldir-evidence.workspace = true
+haldir-ncp08.workspace = true
+rustix.workspace = true

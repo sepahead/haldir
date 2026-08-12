@@ -4,8 +4,10 @@ use haldir_contracts::digest::DigestV1;
 use haldir_contracts::scalar::AsciiId;
 
 haldir_contracts::tagged_enum! {
-    /// Cumulative admission levels. A higher label without the required lower
-    /// evidence is invalid. `OpaqueController` is never a semantic admission.
+    /// Cumulative admission-authority labels. The enum records the asserted
+    /// level; this crate does not prove that the evidence needed to earn it was
+    /// run or bind a complete evidence chain. `OpaqueController` is never a
+    /// semantic admission.
     pub enum AdmissionLevelV1 {
         A0ProvenanceOnly = 0 => "A0_PROVENANCE_ONLY",
         A1SemanticReconstruction = 1 => "A1_SEMANTIC_RECONSTRUCTION",
@@ -26,6 +28,19 @@ impl AdmissionLevelV1 {
             self,
             Self::A1SemanticReconstruction
                 | Self::A2ReferenceConformance
+                | Self::A3ActionRelation
+                | Self::A4TrajectorySafetyRelation
+                | Self::A5HardwareConstrainedSimulation
+                | Self::A6PhysicalHardwareAttested
+        )
+    }
+
+    /// Whether this cumulative level includes reference-conformance evidence.
+    #[must_use]
+    pub const fn requires_conformance_run(self) -> bool {
+        matches!(
+            self,
+            Self::A2ReferenceConformance
                 | Self::A3ActionRelation
                 | Self::A4TrajectorySafetyRelation
                 | Self::A5HardwareConstrainedSimulation

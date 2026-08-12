@@ -14,5 +14,6 @@ workspace = true
 
 [dependencies]
 hmac.workspace = true
+rustix.workspace = true
 sha2.workspace = true
 zeroize.workspace = true

@@ -107,6 +107,7 @@ StartIntentEpoch(e) ==
                   lastOutputSeq, publishedPositions, faultLatched >>
 
 RetireIntentEpoch ==
+  /\ ~faultLatched
   /\ activeIntentEpoch # 0
   /\ retiredIntentEpochs' = retiredIntentEpochs \cup { activeIntentEpoch }
   /\ activeIntentEpoch' = 0
@@ -153,12 +154,20 @@ NoOutputReuse == publishedPositions = (1..lastOutputSeq)
 
 \* An active lease always binds the current boot and session (stale leases cannot be
 \* active; restart/reopen clears them).
+LeaseFieldsConsistent == (leaseBoot = 0) <=> (leaseSession = 0)
+
 LeaseBindsCurrentIncarnation ==
-  (leaseBoot # 0) => (leaseBoot <= gateBoot /\ leaseSession <= sessionGen)
+  (leaseBoot # 0) => (leaseBoot = gateBoot /\ leaseSession = sessionGen)
+
+\* Once the fault latch is visible, every authority-bearing variable is frozen.
+\* The step that first raises the latch is permitted; every later step must be a
+\* stutter. This is a temporal property rather than merely a state invariant.
+TerminalFaultBehavior == [][faultLatched => UNCHANGED vars]_vars
 
 Safety ==
   /\ TypeOK
   /\ RetiredNeverActive
   /\ NoOutputReuse
+  /\ LeaseFieldsConsistent
   /\ LeaseBindsCurrentIncarnation
 ================================================================================

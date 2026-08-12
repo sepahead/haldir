@@ -12,39 +12,45 @@
 //! itself prove power-loss durability, collector delivery, external availability,
 //! or Gate crash semantics; Gate selection and child-process fault injection are
 //! separate integration gates. It assumes one exclusive writer and a trusted
-//! local parent directory; path-based safe standard-library APIs cannot close
-//! ancestor-directory replacement races.
+//! local parent directory. Final file components are opened no-follow and
+//! nonblocking, but path-based operations cannot close ancestor-directory
+//! replacement races.
 
 use core::{fmt, num::NonZeroU64};
-use haldir_contracts::ids::{GateBootId, GateId, KeyId};
+use haldir_contracts::ids::{GateBootId, GateId, JournalId, KeyId};
 use haldir_crypto::{SigningKey, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
+#[cfg(unix)]
+use rustix::fs::{Mode, OFlags, open};
+#[cfg(unix)]
+use rustix::io::Errno;
 #[cfg(all(test, unix))]
 use std::cell::Cell;
 #[cfg(unix)]
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 #[cfg(unix)]
 use std::io::{ErrorKind, Read, Write};
 #[cfg(unix)]
-use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+use std::os::unix::fs::MetadataExt;
 #[cfg(unix)]
 use std::path::Path;
 
-const SEGMENT_MAGIC: &[u8; 8] = b"HLDRJNL1";
-const RECORD_MAGIC: &[u8; 4] = b"EVR1";
-const FOOTER_MAGIC: &[u8; 8] = b"HLDRFTR1";
-const FORMAT_VERSION: u16 = 1;
-const MAX_HEADER_LEN: usize = 244;
+const SEGMENT_MAGIC: &[u8; 8] = b"HLDRJNL2";
+const RECORD_MAGIC: &[u8; 4] = b"EVR2";
+const FOOTER_MAGIC: &[u8; 8] = b"HLDRFTR2";
+const FORMAT_VERSION: u16 = 2;
+const MIN_HEADER_LEN: usize = 134;
+const MAX_HEADER_LEN: usize = 260;
 const RECORD_PREFIX_LEN: usize = 10;
 const RECORD_SUFFIX_LEN: usize = 4;
 const FOOTER_LEN: usize = 8 + 2 + 8 + 32 + 32 + 64 + 4;
-const RECORD_FIXED_PREFIX: &[u8; 6] = b"EVR1\0\x01";
-const FOOTER_FIXED_PREFIX: &[u8; 10] = b"HLDRFTR1\0\x01";
-const RECORD_CHAIN_DOMAIN: &[u8] = b"haldir.evidence.record-chain.v1\0";
-const SEGMENT_DIGEST_DOMAIN: &[u8] = b"haldir.evidence.segment-digest.v1\0";
-const FOOTER_SIGNATURE_DOMAIN: &[u8] = b"haldir.evidence.segment-footer-signature.v1\0";
+const RECORD_FIXED_PREFIX: &[u8; 6] = b"EVR2\0\x02";
+const FOOTER_FIXED_PREFIX: &[u8; 10] = b"HLDRFTR2\0\x02";
+const RECORD_CHAIN_DOMAIN: &[u8] = b"haldir.evidence.record-chain.v2\0";
+const SEGMENT_DIGEST_DOMAIN: &[u8] = b"haldir.evidence.segment-digest.v2\0";
+const FOOTER_SIGNATURE_DOMAIN: &[u8] = b"haldir.evidence.segment-footer-signature.v2\0";
 pub(crate) const PENDING_CREATION_PREFIX: &str = ".haldir-evidence.pending-";
 
 #[cfg(all(test, unix))]
@@ -76,6 +82,8 @@ pub enum JournalError {
     Storage,
     /// Configured or encoded sizes exceed a declared bound.
     Bounds,
+    /// A bounded in-memory journal buffer could not be allocated.
+    Allocation,
     /// One record can never fit the configured record-size bound.
     RecordTooLarge,
     /// The record-size bound permits it, but no empty segment can fit it.
@@ -113,6 +121,7 @@ impl JournalError {
             Self::Unsupported => "EVIDENCE_JOURNAL_UNSUPPORTED",
             Self::Storage => "EVIDENCE_JOURNAL_STORAGE_FAILED",
             Self::Bounds => "EVIDENCE_JOURNAL_BOUNDS",
+            Self::Allocation => "EVIDENCE_JOURNAL_ALLOCATION_FAILED",
             Self::RecordTooLarge => "EVIDENCE_JOURNAL_RECORD_TOO_LARGE",
             Self::RecordCannotFitSegment => "EVIDENCE_JOURNAL_RECORD_CANNOT_FIT_SEGMENT",
             Self::RotationRequired => "EVIDENCE_JOURNAL_ROTATION_REQUIRED",
@@ -146,7 +155,10 @@ pub struct JournalBounds {
 }
 
 impl JournalBounds {
-    /// Construct nonzero bounds with enough space for a header and footer.
+    /// Construct nonzero numeric bounds.
+    ///
+    /// The identity-specific header/footer fit is checked before a segment is
+    /// created or recovered.
     ///
     /// # Errors
     /// Returns [`JournalError::Bounds`] for an unusable configuration.
@@ -189,6 +201,9 @@ impl JournalBounds {
 pub struct SegmentIdentity {
     /// Gate that authored the segment.
     pub gate_id: GateId,
+    /// Logical journal chain selected by the signed deployment or explicit
+    /// development configuration.
+    pub journal_id: JournalId,
     /// Gate process incarnation that opened the segment.
     pub gate_boot_id: GateBootId,
     /// Strictly positive sequence within this journal chain.
@@ -418,6 +433,7 @@ impl ActiveEvidenceSegment {
             .checked_add(1)
             .ok_or(JournalError::ChainMismatch)?;
         if identity.gate_id != previous.identity.gate_id
+            || identity.journal_id != previous.identity.journal_id
             || identity.segment_sequence.get() != expected_sequence
             || identity.previous_completed_digest != previous.segment_digest
         {
@@ -444,15 +460,20 @@ impl ActiveEvidenceSegment {
         {
             let parent = checked_parent(&path)?;
             let pending_path = pending_creation_path(&path)?;
-            let mut file = match OpenOptions::new()
-                .read(true)
-                .append(true)
-                .create_new(true)
-                .mode(0o600)
-                .open(&pending_path)
-            {
-                Ok(file) => file,
-                Err(error) if error.kind() == ErrorKind::AlreadyExists => {
+            let mut file = match open(
+                &pending_path,
+                OFlags::RDWR
+                    | OFlags::APPEND
+                    | OFlags::CREATE
+                    | OFlags::EXCL
+                    | OFlags::CLOEXEC
+                    | OFlags::NOFOLLOW
+                    | OFlags::NONBLOCK
+                    | OFlags::NOCTTY,
+                Mode::RUSR | Mode::WUSR,
+            ) {
+                Ok(descriptor) => File::from(descriptor),
+                Err(Errno::EXIST) => {
                     return Err(JournalError::AlreadyExists);
                 }
                 Err(_) => return Err(JournalError::Storage),
@@ -540,18 +561,7 @@ impl ActiveEvidenceSegment {
         #[cfg(unix)]
         {
             let mut file = checked_open_existing(&path, bounds.max_segment_bytes, false)?;
-            let mut bytes = Vec::new();
-            (&mut file)
-                .take(
-                    u64::try_from(bounds.max_segment_bytes)
-                        .unwrap_or(u64::MAX)
-                        .saturating_add(1),
-                )
-                .read_to_end(&mut bytes)
-                .map_err(|_| JournalError::Storage)?;
-            if bytes.len() > bounds.max_segment_bytes {
-                return Err(JournalError::Bounds);
-            }
+            let bytes = read_bounded_file(&mut file, bounds.max_segment_bytes)?;
             decode_header(&bytes).map(|(identity, _)| identity)
         }
         #[cfg(not(unix))]
@@ -580,18 +590,7 @@ impl ActiveEvidenceSegment {
         #[cfg(unix)]
         {
             let mut file = checked_open_existing(&path, bounds.max_segment_bytes, true)?;
-            let mut bytes = Vec::new();
-            (&mut file)
-                .take(
-                    u64::try_from(bounds.max_segment_bytes)
-                        .unwrap_or(u64::MAX)
-                        .saturating_add(1),
-                )
-                .read_to_end(&mut bytes)
-                .map_err(|_| JournalError::Storage)?;
-            if bytes.len() > bounds.max_segment_bytes {
-                return Err(JournalError::Bounds);
-            }
+            let bytes = read_bounded_file(&mut file, bounds.max_segment_bytes)?;
             let (identity, header_len) = decode_header(&bytes)?;
             if &identity != expected {
                 return Err(JournalError::IdentityMismatch);
@@ -684,6 +683,22 @@ impl ActiveEvidenceSegment {
         let frame_len = self.preflight_append(record.len())?;
         let frame = encode_record(record)?;
         debug_assert_eq!(frame.len(), frame_len);
+        let next_record_count = self
+            .record_count
+            .checked_add(1)
+            .ok_or(JournalError::Bounds)?;
+        let next_segment_bytes = self
+            .segment_bytes
+            .checked_add(frame_len)
+            .ok_or(JournalError::Bounds)?;
+        let mut retained_record = Vec::new();
+        retained_record
+            .try_reserve_exact(record.len())
+            .map_err(|_| JournalError::Allocation)?;
+        retained_record.extend_from_slice(record);
+        self.records
+            .try_reserve(1)
+            .map_err(|_| JournalError::Allocation)?;
 
         #[cfg(unix)]
         {
@@ -696,21 +711,20 @@ impl ActiveEvidenceSegment {
                 .map_err(|_| JournalError::CommitAmbiguous)?;
             self.content_hasher.update(&frame);
             self.final_record_digest = record_link(&self.final_record_digest, record);
-            self.records.push(record.to_vec());
-            self.record_count = self
-                .record_count
-                .checked_add(1)
-                .ok_or(JournalError::Bounds)?;
-            self.segment_bytes = self
-                .segment_bytes
-                .checked_add(frame.len())
-                .ok_or(JournalError::Bounds)?;
+            self.records.push(retained_record);
+            self.record_count = next_record_count;
+            self.segment_bytes = next_segment_bytes;
             self.poisoned = false;
             Ok(())
         }
         #[cfg(not(unix))]
         {
-            let _ = frame;
+            let _ = (
+                frame,
+                retained_record,
+                next_record_count,
+                next_segment_bytes,
+            );
             Err(JournalError::Unsupported)
         }
     }
@@ -827,7 +841,7 @@ fn encode_header(identity: &SegmentIdentity) -> Result<Vec<u8>, JournalError> {
         .checked_add(2)
         .and_then(|n| n.checked_add(2))
         .and_then(|n| n.checked_add(2 + gate.len()))
-        .and_then(|n| n.checked_add(16 + 8 + 32 + 8))
+        .and_then(|n| n.checked_add(16 + 16 + 8 + 32 + 8))
         .and_then(|n| n.checked_add(2 + kid.len()))
         .and_then(|n| n.checked_add(32))
         .and_then(|n| n.checked_add(4))
@@ -838,12 +852,15 @@ fn encode_header(identity: &SegmentIdentity) -> Result<Vec<u8>, JournalError> {
     let header_len_u16 = u16::try_from(header_len).map_err(|_| JournalError::Bounds)?;
     let gate_len = u16::try_from(gate.len()).map_err(|_| JournalError::Bounds)?;
     let kid_len = u16::try_from(kid.len()).map_err(|_| JournalError::Bounds)?;
-    let mut out = Vec::with_capacity(header_len);
+    let mut out = Vec::new();
+    out.try_reserve_exact(header_len)
+        .map_err(|_| JournalError::Allocation)?;
     out.extend_from_slice(SEGMENT_MAGIC);
     out.extend_from_slice(&FORMAT_VERSION.to_be_bytes());
     out.extend_from_slice(&header_len_u16.to_be_bytes());
     out.extend_from_slice(&gate_len.to_be_bytes());
     out.extend_from_slice(gate);
+    out.extend_from_slice(identity.journal_id.as_bytes());
     out.extend_from_slice(identity.gate_boot_id.as_bytes());
     out.extend_from_slice(&identity.segment_sequence.get().to_be_bytes());
     out.extend_from_slice(&identity.previous_completed_digest);
@@ -862,13 +879,14 @@ fn decode_header(bytes: &[u8]) -> Result<(SegmentIdentity, usize), JournalError>
         return Err(JournalError::CorruptHeader);
     }
     let header_len = usize::from(cursor.u16()?);
-    if header_len > bytes.len() || header_len < 86 {
+    if !(MIN_HEADER_LEN..=MAX_HEADER_LEN).contains(&header_len) || header_len > bytes.len() {
         return Err(JournalError::CorruptHeader);
     }
     let gate_len = usize::from(cursor.u16()?);
     let gate_bytes = cursor.take(gate_len)?;
     let gate_text = core::str::from_utf8(gate_bytes).map_err(|_| JournalError::CorruptHeader)?;
     let gate_id = GateId::new(gate_text).map_err(|_| JournalError::CorruptHeader)?;
+    let journal_id = JournalId::new(cursor.array()?).map_err(|_| JournalError::CorruptHeader)?;
     let gate_boot_id = GateBootId::new(cursor.array()?);
     let segment_sequence = NonZeroU64::new(cursor.u64()?).ok_or(JournalError::CorruptHeader)?;
     let previous_completed_digest = cursor.array()?;
@@ -892,6 +910,7 @@ fn decode_header(bytes: &[u8]) -> Result<(SegmentIdentity, usize), JournalError>
     Ok((
         SegmentIdentity {
             gate_id,
+            journal_id,
             gate_boot_id,
             segment_sequence,
             previous_completed_digest,
@@ -909,7 +928,10 @@ fn encode_record(record: &[u8]) -> Result<Vec<u8>, JournalError> {
         .checked_add(record.len())
         .and_then(|n| n.checked_add(RECORD_SUFFIX_LEN))
         .ok_or(JournalError::Bounds)?;
-    let mut frame = Vec::with_capacity(capacity);
+    let mut frame = Vec::new();
+    frame
+        .try_reserve_exact(capacity)
+        .map_err(|_| JournalError::Allocation)?;
     frame.extend_from_slice(RECORD_MAGIC);
     frame.extend_from_slice(&FORMAT_VERSION.to_be_bytes());
     frame.extend_from_slice(&len.to_be_bytes());
@@ -1091,7 +1113,15 @@ fn scan_content(
             return Err(JournalError::CorruptRecord);
         }
         final_record_digest = record_link(&final_record_digest, record);
-        records.push(record.to_vec());
+        let mut retained_record = Vec::new();
+        retained_record
+            .try_reserve_exact(record.len())
+            .map_err(|_| JournalError::Allocation)?;
+        retained_record.extend_from_slice(record);
+        records
+            .try_reserve(1)
+            .map_err(|_| JournalError::Allocation)?;
+        records.push(retained_record);
         record_count = record_count.checked_add(1).ok_or(JournalError::Bounds)?;
         position = position
             .checked_add(frame_len)
@@ -1236,7 +1266,19 @@ fn checked_parent(path: &Path) -> Result<File, JournalError> {
     if !path_metadata.file_type().is_dir() {
         return Err(JournalError::Storage);
     }
-    let directory = File::open(parent_path).map_err(|_| JournalError::Storage)?;
+    let directory = File::from(
+        open(
+            parent_path,
+            OFlags::RDONLY
+                | OFlags::DIRECTORY
+                | OFlags::CLOEXEC
+                | OFlags::NOFOLLOW
+                | OFlags::NONBLOCK
+                | OFlags::NOCTTY,
+            Mode::empty(),
+        )
+        .map_err(|_| JournalError::Storage)?,
+    );
     let opened_metadata = directory.metadata().map_err(|_| JournalError::Storage)?;
     if path_metadata.dev() != opened_metadata.dev() || path_metadata.ino() != opened_metadata.ino()
     {
@@ -1263,6 +1305,46 @@ fn remove_unpublished(path: &Path, parent: &File) -> Result<(), JournalError> {
 }
 
 #[cfg(unix)]
+fn read_bounded_file(file: &mut File, max_bytes: usize) -> Result<Vec<u8>, JournalError> {
+    let observed_len_u64 = file.metadata().map_err(|_| JournalError::Storage)?.len();
+    if observed_len_u64 > u64::try_from(max_bytes).unwrap_or(u64::MAX) {
+        return Err(JournalError::Bounds);
+    }
+    let observed_len = usize::try_from(observed_len_u64).map_err(|_| JournalError::Bounds)?;
+    let mut bytes = Vec::new();
+    bytes
+        .try_reserve_exact(observed_len)
+        .map_err(|_| JournalError::Allocation)?;
+    bytes.resize(observed_len, 0);
+
+    let mut filled = 0usize;
+    while filled < observed_len {
+        let destination = bytes.get_mut(filled..).ok_or(JournalError::Bounds)?;
+        match file.read(destination) {
+            Ok(0) => {
+                bytes.truncate(filled);
+                break;
+            }
+            Ok(read) => {
+                filled = filled.checked_add(read).ok_or(JournalError::Bounds)?;
+            }
+            Err(error) if error.kind() == ErrorKind::Interrupted => {}
+            Err(_) => return Err(JournalError::Storage),
+        }
+    }
+
+    let mut sentinel = [0u8; 1];
+    loop {
+        match file.read(&mut sentinel) {
+            Ok(0) => return Ok(bytes),
+            Ok(_) => return Err(JournalError::Bounds),
+            Err(error) if error.kind() == ErrorKind::Interrupted => {}
+            Err(_) => return Err(JournalError::Storage),
+        }
+    }
+}
+
+#[cfg(unix)]
 fn checked_open_existing(
     path: &Path,
     max_bytes: usize,
@@ -1276,11 +1358,19 @@ fn checked_open_existing(
     if !path_metadata.file_type().is_file() {
         return Err(JournalError::Storage);
     }
-    let file = OpenOptions::new()
-        .read(true)
-        .append(append)
-        .open(path)
-        .map_err(|_| JournalError::Storage)?;
+    let access = if append {
+        OFlags::RDWR | OFlags::APPEND
+    } else {
+        OFlags::RDONLY
+    };
+    let file = File::from(
+        open(
+            path,
+            access | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::NOCTTY,
+            Mode::empty(),
+        )
+        .map_err(|_| JournalError::Storage)?,
+    );
     let opened_metadata = file.metadata().map_err(|_| JournalError::Storage)?;
     if path_metadata.dev() != opened_metadata.dev() || path_metadata.ino() != opened_metadata.ino()
     {
@@ -1295,6 +1385,7 @@ fn checked_open_existing(
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    use std::fs::OpenOptions;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -1323,6 +1414,7 @@ mod tests {
         let signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
         SegmentIdentity {
             gate_id: GateId::new("gate-1").unwrap(),
+            journal_id: JournalId::new([7; 16]).unwrap(),
             gate_boot_id: GateBootId::new([9; 16]),
             segment_sequence: NonZeroU64::new(1).unwrap(),
             previous_completed_digest: [0; 32],
@@ -1356,8 +1448,56 @@ mod tests {
                 encode_header(&longest).unwrap().len(),
                 ActiveEvidenceSegment::maximum_header_bytes(),
             ),
-            (244, 244)
+            (260, 260)
         );
+    }
+
+    #[test]
+    fn inspection_rejects_a_fifo_without_waiting_for_a_writer() {
+        use std::sync::mpsc;
+        use std::thread;
+        use std::time::Duration;
+
+        let directory = TestDirectory::new();
+        let path = directory.0.join("segment");
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&path)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let (sender, receiver) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            sender
+                .send(ActiveEvidenceSegment::inspect_identity(path, bounds()))
+                .unwrap();
+        });
+
+        let result = receiver
+            .recv_timeout(Duration::from_secs(2))
+            .expect("FIFO segment open exceeded the nonblocking deadline");
+        worker.join().unwrap();
+
+        assert_eq!(result.unwrap_err(), JournalError::Storage);
+    }
+
+    #[test]
+    fn decoder_rejects_a_declared_header_above_the_format_bound() {
+        let oversized_len = ActiveEvidenceSegment::maximum_header_bytes() + 1;
+        let mut bytes = vec![0; oversized_len];
+        bytes[..8].copy_from_slice(SEGMENT_MAGIC);
+        bytes[8..10].copy_from_slice(&FORMAT_VERSION.to_be_bytes());
+        bytes[10..12].copy_from_slice(
+            &u16::try_from(oversized_len)
+                .expect("test header length fits u16")
+                .to_be_bytes(),
+        );
+
+        assert!(matches!(
+            decode_header(&bytes),
+            Err(JournalError::CorruptHeader)
+        ));
     }
 
     #[test]
@@ -1616,6 +1756,18 @@ mod tests {
         .unwrap();
         drop(second);
 
+        let mut other_journal = second_identity.clone();
+        other_journal.journal_id = JournalId::new([8; 16]).unwrap();
+        assert!(matches!(
+            ActiveEvidenceSegment::create_next(
+                directory.0.join("other-journal"),
+                other_journal,
+                bounds(),
+                &first,
+            ),
+            Err(JournalError::ChainMismatch)
+        ));
+
         let mut gap = second_identity;
         gap.segment_sequence = NonZeroU64::new(3).unwrap();
         assert!(matches!(
@@ -1663,12 +1815,12 @@ mod tests {
             ("garbage", vec![0x99; 5], JournalError::CorruptRecord),
             (
                 "record-version",
-                [RECORD_MAGIC.as_slice(), &[0, 2]].concat(),
+                [RECORD_MAGIC.as_slice(), &[0, 1]].concat(),
                 JournalError::CorruptRecord,
             ),
             (
                 "footer-version",
-                [FOOTER_MAGIC.as_slice(), &[0, 2]].concat(),
+                [FOOTER_MAGIC.as_slice(), &[0, 1]].concat(),
                 JournalError::CorruptFooter,
             ),
         ] {

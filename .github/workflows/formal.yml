@@ -2,8 +2,9 @@ name: formal
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 concurrency:
@@ -45,6 +46,60 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify signed candidate lineage
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        env:
+          EPOCH19_BREACH_SHA: 97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          export GIT_CONFIG_GLOBAL=/dev/null
+          export GIT_CONFIG_NOSYSTEM=1
+          export GIT_NO_REPLACE_OBJECTS=1
+          export LC_ALL=C
+          CANDIDATE_SHA="$GITHUB_SHA"
+          TRUSTED_BASE_SHA=""
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]
+          then
+            CANDIDATE_SHA="$PR_HEAD_SHA"
+            TRUSTED_BASE_SHA="$PR_BASE_SHA"
+          fi
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          /usr/bin/git cat-file -e "${CANDIDATE_SHA}^{commit}"
+          if [[ -z "$TRUSTED_BASE_SHA" ]]
+          then
+            TRUSTED_BASE_SHA="$(/usr/bin/git show -s --format=%P "$CANDIDATE_SHA")"
+          fi
+          [[ "$TRUSTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          /usr/bin/git cat-file -e "${TRUSTED_BASE_SHA}^{commit}"
+          if /usr/bin/git cat-file -e \
+            "${TRUSTED_BASE_SHA}:tools/release/verify-current-lineage.py" \
+            2>/dev/null
+          then
+            TRUSTED_VERIFIER_BYTES="$(/usr/bin/git cat-file -s \
+              "${TRUSTED_BASE_SHA}:tools/release/verify-current-lineage.py")"
+            [[ "$TRUSTED_VERIFIER_BYTES" =~ ^[0-9]+$ ]]
+            (( TRUSTED_VERIFIER_BYTES > 0 && TRUSTED_VERIFIER_BYTES <= 131072 ))
+            TRUSTED_LINEAGE_VERIFIER="$(/usr/bin/mktemp \
+              "${RUNNER_TEMP}/haldir-base-lineage-verifier.XXXXXXXX.py")"
+            /usr/bin/git cat-file blob \
+              "${TRUSTED_BASE_SHA}:tools/release/verify-current-lineage.py" \
+              > "$TRUSTED_LINEAGE_VERIFIER"
+            [[ "$(/usr/bin/stat --format=%s "$TRUSTED_LINEAGE_VERIFIER")" == \
+              "$TRUSTED_VERIFIER_BYTES" ]]
+            /usr/bin/test -f "$TRUSTED_LINEAGE_VERIFIER"
+            /usr/bin/test ! -L "$TRUSTED_LINEAGE_VERIFIER"
+            /usr/bin/chmod 0400 "$TRUSTED_LINEAGE_VERIFIER"
+            python3 -I -B -S -W error "$TRUSTED_LINEAGE_VERIFIER" \
+              --commit "$TRUSTED_BASE_SHA"
+            python3 -I -B -S -W error "$TRUSTED_LINEAGE_VERIFIER" \
+              --commit "$CANDIDATE_SHA"
+          else
+            [[ "$GITHUB_EVENT_NAME" != pull_request ]]
+            [[ "$TRUSTED_BASE_SHA" == "$EPOCH19_BREACH_SHA" ]]
+          fi
+          /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc -p \
+            tools/release/current-audit-gate.sh --lineage-only "$CANDIDATE_SHA"
       - name: Fetch and install pinned Temurin JRE
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
@@ -308,6 +363,11 @@ jobs:
       - name: Model-check HaldirAuthority
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         run: |
+          TLC_LOG="$(/usr/bin/mktemp \
+            "${RUNNER_TEMP}/haldir-tlc.XXXXXXXX.log")"
+          /usr/bin/test -f "$TLC_LOG"
+          /usr/bin/test ! -L "$TLC_LOG"
+          printf 'TLC_LOG=%s\n' "$TLC_LOG" >> "$GITHUB_ENV"
           /usr/bin/env \
             -u JAVA_TOOL_OPTIONS \
             -u _JAVA_OPTIONS \
@@ -319,42 +379,49 @@ jobs:
             -workers auto \
             -config formal/HaldirAuthority.cfg \
             formal/HaldirAuthority.tla \
-            | /usr/bin/tee tlc.log
+            | /usr/bin/tee "$TLC_LOG"
           /usr/bin/grep -Fq \
             "Model checking completed. No error has been found." \
-            tlc.log
-      # Pull requests execute TLC and retain its diagnostic log, but only
-      # trusted push/dispatch events emit and upload the canonical result.
-      - name: Emit canonical epoch-18 formal result
-        if: github.event_name != 'pull_request'
-        id: emit-audit-result
-        shell: /bin/bash --noprofile --norc -euo pipefail {0}
-        run: |
-          python3 -I -B tools/release/framework_recovery_fr_0017_result.py \
-            --workflow formal \
-            --output "epoch-18-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
-          RESULT_SHA256="$(/usr/bin/sha256sum \
-            "epoch-18-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
-          RESULT_SHA256="${RESULT_SHA256%% *}"
-          [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
-      - name: Upload canonical epoch-18 formal result
-        if: github.event_name != 'pull_request'
-        id: upload-audit-result
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          path: epoch-18-formal-result-attempt-${{ github.run_attempt }}.json
-          archive: false
-          if-no-files-found: error
-          overwrite: false
-          retention-days: 90
+            "$TLC_LOG"
       - name: Upload TLC log
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: tlc-log-attempt-${{ github.run_attempt }}
-          path: tlc.log
-
+          path: ${{ env.TLC_LOG }}
+          archive: false
+          if-no-files-found: error
+      # Pull requests and non-main manual dispatches execute TLC and retain its
+      # diagnostic log, but only an exact main subject emits a provenance result.
+      - name: Emit canonical current formal result
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch')
+        id: emit-audit-result
+        shell: /bin/bash --noprofile --norc -euo pipefail {0}
+        run: |
+          python3 -I -B tools/release/current_audit_result.py \
+            --workflow formal \
+            --output "current-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_SHA256="$(/usr/bin/sha256sum \
+            "current-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json")"
+          RESULT_SHA256="${RESULT_SHA256%% *}"
+          [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          printf 'sha256=%s\n' "$RESULT_SHA256" >> "$GITHUB_OUTPUT"
+      - name: Upload canonical current formal result
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch')
+        id: upload-audit-result
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: current-formal-result-attempt-${{ github.run_attempt }}.json
+          archive: false
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
   attest-formal-audit-result:
     if: >-
       github.repository == 'sepahead/haldir' &&
@@ -383,7 +450,7 @@ jobs:
           [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RESULT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARTIFACT_DIGEST" == "$RESULT_SHA256" ]]
-          RESULT_PATH="attested-formal-result/epoch-18-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
+          RESULT_PATH="attested-formal-result/current-formal-result-attempt-${GITHUB_RUN_ATTEMPT}.json"
           [[ -f "$RESULT_PATH" ]]
           [[ ! -L "$RESULT_PATH" ]]
           [[ "$(/usr/bin/find attested-formal-result -mindepth 1 -maxdepth 1 \
@@ -395,4 +462,4 @@ jobs:
       - name: Attest exact formal result
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
-          subject-path: attested-formal-result/epoch-18-formal-result-attempt-${{ github.run_attempt }}.json
+          subject-path: attested-formal-result/current-formal-result-attempt-${{ github.run_attempt }}.json

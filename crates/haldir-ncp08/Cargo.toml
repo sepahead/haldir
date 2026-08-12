@@ -1,6 +1,6 @@
 [package]
 name = "haldir-ncp08"
-description = "Haldir Gate — haldir-ncp08"
+description = "Exact NCP v0.8 command adaptation and compatibility validation for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,8 +18,6 @@ real-ncp = ["dep:ncp-core", "dep:serde_json"]
 
 [dependencies]
 haldir-contracts.workspace = true
-haldir-core.workspace = true
-sha2.workspace = true
 ncp-core = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 

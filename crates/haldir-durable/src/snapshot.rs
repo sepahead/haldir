@@ -94,7 +94,10 @@ pub enum AnchorProtection {
     EphemeralTest,
     /// Locally durable but rewritable state in the snapshot host's failure domain.
     LocalRewritable,
-    /// Independently administered monotonic state intended to resist local rewind.
+    /// Implementation-declared external monotonic state intended to resist local rewind.
+    ///
+    /// The enum value is a policy input, not attestation that administration,
+    /// hardware, or failure-domain separation actually exists.
     ExternalNonRewindable,
 }
 
@@ -253,6 +256,13 @@ impl<S: SnapshotStorage, A: GenerationAnchor> AuthenticatedSnapshotStore<S, A> {
         let anchored = anchor
             .read(binding.store_id)?
             .ok_or(DurableError::AnchorMissing)?;
+        // Generation zero is the unprovisioned predecessor sentinel, never a
+        // persisted anchor head. Do not let a malformed/custom anchor backend
+        // turn an ordinary generation-one snapshot into an implicitly
+        // provisioned, recoverable store.
+        if anchored.generation == 0 {
+            return Err(DurableError::Corrupt);
+        }
 
         let status = if anchored == snapshot_head {
             RecoveryStatus::Clean
@@ -374,7 +384,14 @@ fn seal(
     }
     let payload_len = u32::try_from(payload.len()).map_err(|_| DurableError::Storage)?;
     let payload_digest: [u8; 32] = Sha256::digest(payload).into();
-    let mut bytes = Vec::with_capacity(HEADER_LEN + payload.len() + TAG_LEN);
+    let envelope_len = HEADER_LEN
+        .checked_add(payload.len())
+        .and_then(|value| value.checked_add(TAG_LEN))
+        .ok_or(DurableError::Storage)?;
+    let mut bytes = Vec::new();
+    bytes
+        .try_reserve_exact(envelope_len)
+        .map_err(|_| DurableError::Storage)?;
     bytes.extend_from_slice(MAGIC);
     bytes.extend_from_slice(&FORMAT_VERSION.to_be_bytes());
     bytes.extend_from_slice(&binding.store_id.0);
@@ -427,15 +444,26 @@ fn open_envelope(
     if bytes.len() != expected_total {
         return Err(DurableError::Corrupt);
     }
-    let payload = cursor.take(payload_len)?.to_vec();
+    let payload_bytes = cursor.take(payload_len)?;
     let tag = cursor.take(TAG_LEN)?;
-    let authenticated = bytes
-        .get(..HEADER_LEN + payload_len)
-        .ok_or(DurableError::Corrupt)?;
-    key.verify(authenticated, tag)?;
-    if <[u8; 32]>::from(Sha256::digest(&payload)) != expected_payload_digest {
+    if cursor.position != expected_total {
         return Err(DurableError::Corrupt);
     }
+    let authenticated_len = expected_total
+        .checked_sub(TAG_LEN)
+        .ok_or(DurableError::Corrupt)?;
+    let authenticated = bytes
+        .get(..authenticated_len)
+        .ok_or(DurableError::Corrupt)?;
+    key.verify(authenticated, tag)?;
+    if <[u8; 32]>::from(Sha256::digest(payload_bytes)) != expected_payload_digest {
+        return Err(DurableError::Corrupt);
+    }
+    let mut payload = Vec::new();
+    payload
+        .try_reserve_exact(payload_len)
+        .map_err(|_| DurableError::Storage)?;
+    payload.extend_from_slice(payload_bytes);
     let mut hasher = Sha256::new();
     hasher.update(SNAPSHOT_DIGEST_DOMAIN);
     hasher.update(bytes);
@@ -613,7 +641,7 @@ mod tests {
     }
 
     fn key(seed: u8) -> StorageMacKey {
-        StorageMacKey::new([seed; 32])
+        StorageMacKey::new([seed; 32]).expect("nonzero test storage key")
     }
 
     fn provision(
@@ -648,6 +676,25 @@ mod tests {
         assert!(matches!(
             AuthenticatedSnapshotStore::open_existing(storage, anchor, key(7), binding(1), 1024,),
             Err(DurableError::AnchorMissing)
+        ));
+    }
+
+    #[test]
+    fn generation_zero_anchor_is_not_an_implicit_provisioning_predecessor() {
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        drop(provision(storage.clone(), anchor.clone()));
+        anchor.0.borrow_mut().insert(
+            binding(1).store_id(),
+            Anchor {
+                generation: 0,
+                snapshot_digest: ZERO_DIGEST,
+            },
+        );
+
+        assert!(matches!(
+            AuthenticatedSnapshotStore::open_existing(storage, anchor, key(7), binding(1), 1024,),
+            Err(DurableError::Corrupt)
         ));
     }
 

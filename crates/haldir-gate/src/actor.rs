@@ -6,18 +6,22 @@
 //! no output and (from the replay-commit point on) consumes the intent sequence.
 
 use haldir_admission::{AdmissionClaim, AdmissionSnapshot};
-use haldir_contracts::cbor::{CanonicalMessage, Limits};
+use haldir_contracts::cbor::Limits;
+use haldir_contracts::challenge::GateChallengeV1;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::ids::KeyId;
-use haldir_contracts::ids::{DecisionId, GateBootId, GateId, GateOutputEpoch, VehicleId};
+use haldir_contracts::ids::{
+    ChallengeNonce, ChallengeSeq, DecisionId, GateBootId, GateId, GateOutputEpoch, OutputSeq,
+    VehicleId,
+};
 use haldir_contracts::intent::HaldirIntentV1;
 use haldir_contracts::lease::MissionLeaseV1;
+use haldir_contracts::limits::ContractVersion;
 use haldir_contracts::publication::PublicationStageEventV1;
 use haldir_contracts::receipt::{
     DecisionOutcomeV1, DecisionReasonCodeV1 as R, DecisionReceiptV1, PublishStageV1,
-    TransformationRelationV1,
 };
-use haldir_contracts::scalar::{AsciiId, BoundedVec};
+use haldir_contracts::scalar::{AsciiId, BoundedSet, BoundedVec};
 use haldir_contracts::session::{
     HaldirIntentPositionV1, NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1,
 };
@@ -27,31 +31,184 @@ use haldir_core::snapshot::{AdmittedControllerSnapshot, TrustedStateSnapshotV1};
 use haldir_core::time::{MonoDuration, MonoInstant};
 use haldir_crypto::{
     CryptoError, ExpectedContext, KeyClass, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
-    sign_message, verify_and_decode,
+    sign_typed_message, verify_and_decode,
 };
 use haldir_durable::{GenerationAnchor, SnapshotStorage};
 use haldir_evidence::{EvidenceSpool, gate_journal::GateJournalVerifier, manager::JournalSigner};
 use haldir_ncp08::{
     ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter, NcpCommandWireProfile,
-    SelectedNcpCommandAdapter,
+    PlantAction, PlantCommand, SelectedNcpCommandAdapter,
 };
+use haldir_ncp08::{NCP_JSON_SAFE_INTEGER_MAX, NCP_V0_8_0};
 use haldir_policy_native::{
     ActionHistoryError, BoundedActionHistory, MAX_RETAINED_ACTIVE_INTERVALS, NativePolicyError,
     NativePolicySnapshot, PolicyInput, ValidatedNativePolicy, try_decide_validated,
 };
-use haldir_reference_plant::{PlantAction, PlantCommand};
 use haldir_state::{
     AntiRollbackError, AntiRollbackStore, BootedDurableAntiRollbackStore, ChallengeTable,
-    ControllerReplayState, GateOutputStreamState, GateProcessMachine, LeaseAcceptContext,
-    LeaseAcceptError, LeaseTermStore, RevisionCounter, accept_lease,
+    ControllerReplayState, DeploymentBootedDurableAntiRollbackStore, GateOutputStreamState,
+    GateProcessMachine, LeaseAcceptContext, LeaseAcceptError, LeaseTermStore, OutputStreamError,
+    RevisionCounter, SourceReplayClass, SourceStreamReplayState, accept_lease,
 };
-use std::num::NonZeroUsize;
+use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 
 const MAX_RETIRED: usize = 16;
+const MAX_STATE_SOURCE_STREAMS: usize = 64;
 const MAX_PENDING_CHALLENGES: usize = 4;
 const MAX_RETAINED_CHALLENGES: usize = 256;
-const INTENT_SIZE_LIMIT: usize = 16 * 1024;
+/// Fixed local monotonic lifetime of a Gate-issued challenge.
+pub const GATE_CHALLENGE_TTL_MS: u32 = 30_000;
+/// Maximum exact candidate intent-envelope bytes accepted by the actor boundary.
+pub const MAX_INTENT_ENVELOPE_BYTES: usize = Limits::DEFAULT.max_total_bytes;
+/// Maximum observed intent-route bytes accepted by the actor boundary.
+pub const MAX_INTENT_ROUTE_BYTES: usize = 256;
+
+/// A borrowed intent candidate whose hashing and verification work is bounded.
+///
+/// Construction proves only byte-length bounds. It does not authenticate
+/// transport provenance, route ownership, envelope structure, or signature;
+/// [`VehicleActor::decide_bounded_intent`] performs the authorization pipeline.
+/// Private fields prevent a downstream caller from bypassing the O(1) ingress
+/// checks before the actor hashes the exact route and envelope into its receipt.
+#[must_use = "pass the bounded candidate to VehicleActor::decide_bounded_intent"]
+pub struct BoundedIntentCandidate<'candidate> {
+    envelope: &'candidate [u8],
+    actual_key: &'candidate str,
+}
+
+/// Failure to construct a bounded actor input.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum IntentCandidateError {
+    /// The raw candidate envelope exceeds the fixed intent profile bound.
+    EnvelopeTooLarge {
+        /// Inclusive maximum accepted length.
+        maximum_bytes: usize,
+        /// Supplied exact length.
+        actual_bytes: usize,
+    },
+    /// The observed route exceeds the fixed Haldir route bound.
+    ActualKeyTooLong {
+        /// Inclusive maximum accepted length.
+        maximum_bytes: usize,
+        /// Supplied exact length.
+        actual_bytes: usize,
+    },
+}
+
+impl IntentCandidateError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::EnvelopeTooLarge { .. } => "GATE_INTENT_CANDIDATE_ENVELOPE_TOO_LARGE",
+            Self::ActualKeyTooLong { .. } => "GATE_INTENT_CANDIDATE_ACTUAL_KEY_TOO_LONG",
+        }
+    }
+}
+
+impl std::fmt::Display for IntentCandidateError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for IntentCandidateError {}
+
+impl<'candidate> BoundedIntentCandidate<'candidate> {
+    /// Check the two O(1) byte-length bounds before any actor mutation or hashing.
+    ///
+    /// # Errors
+    /// Returns [`IntentCandidateError`] when either input exceeds its fixed
+    /// profile maximum. Envelope length takes precedence when both are invalid.
+    pub const fn new(
+        envelope: &'candidate [u8],
+        actual_key: &'candidate str,
+    ) -> Result<Self, IntentCandidateError> {
+        if envelope.len() > MAX_INTENT_ENVELOPE_BYTES {
+            return Err(IntentCandidateError::EnvelopeTooLarge {
+                maximum_bytes: MAX_INTENT_ENVELOPE_BYTES,
+                actual_bytes: envelope.len(),
+            });
+        }
+        if actual_key.len() > MAX_INTENT_ROUTE_BYTES {
+            return Err(IntentCandidateError::ActualKeyTooLong {
+                maximum_bytes: MAX_INTENT_ROUTE_BYTES,
+                actual_bytes: actual_key.len(),
+            });
+        }
+        Ok(Self {
+            envelope,
+            actual_key,
+        })
+    }
+
+    /// Exact bounded envelope bytes.
+    #[must_use]
+    pub const fn envelope(&self) -> &'candidate [u8] {
+        self.envelope
+    }
+
+    /// Exact bounded observed route.
+    #[must_use]
+    pub const fn actual_key(&self) -> &'candidate str {
+        self.actual_key
+    }
+}
+
+#[cfg(test)]
+mod bounded_intent_candidate_tests {
+    use super::{
+        BoundedIntentCandidate, IntentCandidateError, MAX_INTENT_ENVELOPE_BYTES,
+        MAX_INTENT_ROUTE_BYTES,
+    };
+
+    #[test]
+    fn exact_actor_input_bounds_are_admitted_and_one_byte_over_is_rejected() {
+        let exact_envelope = vec![0_u8; MAX_INTENT_ENVELOPE_BYTES];
+        let exact_key = "k".repeat(MAX_INTENT_ROUTE_BYTES);
+        let candidate = BoundedIntentCandidate::new(&exact_envelope, &exact_key).unwrap();
+        assert_eq!(candidate.envelope().len(), MAX_INTENT_ENVELOPE_BYTES);
+        assert_eq!(candidate.actual_key().len(), MAX_INTENT_ROUTE_BYTES);
+
+        let oversized_envelope = vec![0_u8; MAX_INTENT_ENVELOPE_BYTES + 1];
+        assert!(matches!(
+            BoundedIntentCandidate::new(&oversized_envelope, &exact_key),
+            Err(IntentCandidateError::EnvelopeTooLarge {
+                maximum_bytes: MAX_INTENT_ENVELOPE_BYTES,
+                actual_bytes,
+            }) if actual_bytes == MAX_INTENT_ENVELOPE_BYTES + 1
+        ));
+
+        let oversized_key = "k".repeat(MAX_INTENT_ROUTE_BYTES + 1);
+        assert!(matches!(
+            BoundedIntentCandidate::new(&exact_envelope, &oversized_key),
+            Err(IntentCandidateError::ActualKeyTooLong {
+                maximum_bytes: MAX_INTENT_ROUTE_BYTES,
+                actual_bytes,
+            }) if actual_bytes == MAX_INTENT_ROUTE_BYTES + 1
+        ));
+    }
+
+    #[test]
+    fn envelope_limit_has_stable_precedence_and_errors_are_non_leaking() {
+        let oversized_envelope = vec![0_u8; MAX_INTENT_ENVELOPE_BYTES + 1];
+        let oversized_key = "k".repeat(MAX_INTENT_ROUTE_BYTES + 1);
+        let error = BoundedIntentCandidate::new(&oversized_envelope, &oversized_key)
+            .err()
+            .unwrap();
+        assert!(matches!(
+            error,
+            IntentCandidateError::EnvelopeTooLarge { .. }
+        ));
+        assert_eq!(
+            error.reason_code(),
+            "GATE_INTENT_CANDIDATE_ENVELOPE_TOO_LARGE"
+        );
+        assert_eq!(error.to_string(), error.reason_code());
+    }
+}
 
 fn checked_publication_horizon(
     called_at: MonoInstant,
@@ -60,6 +217,16 @@ fn checked_publication_horizon(
     called_at
         .checked_add_ms(u64::from(effective_validity_ms))
         .ok_or(PublicationError::ArithmeticOverflow)
+}
+
+fn source_replay_reason(class: SourceReplayClass) -> R {
+    match class {
+        SourceReplayClass::ReplayStale | SourceReplayClass::RetiredEpoch => R::DenySourceStale,
+        SourceReplayClass::CapacityExhausted => R::ErrorNamespaceExhausted,
+        SourceReplayClass::FreshSource
+        | SourceReplayClass::FreshContinue
+        | SourceReplayClass::FreshEpoch => R::ErrorInternalFault,
+    }
 }
 
 /// A gate-level error for authority-establishment operations.
@@ -96,8 +263,6 @@ impl<E> From<GateError> for LeaseEnvelopeValidationError<E> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum GateConfigError {
-    /// The local lease-duration cap is zero, so no lease can become useful.
-    LocalCapZero,
     /// The local lease-duration cap cannot cover policy margin plus minimum validity.
     LocalCapTooShort,
     /// The executable native policy snapshot is semantically invalid.
@@ -118,10 +283,8 @@ pub enum GateConfigError {
     GateSignerSubjectMismatch,
     /// The trusted public key does not belong to the configured private key.
     GateSignerPublicKeyMismatch,
-    /// A future NCP authority lease names a different NCP session.
-    PublicationSessionMismatch,
-    /// A future NCP authority lease authorizes a different output epoch.
-    PublicationOutputEpochMismatch,
+    /// The configured publication-authority profile is not executable by this Gate.
+    UnsupportedPublicationAuthorityProfile,
 }
 
 impl GateConfigError {
@@ -129,7 +292,6 @@ impl GateConfigError {
     #[must_use]
     pub const fn reason_code(self) -> &'static str {
         match self {
-            Self::LocalCapZero => "GATE_CONFIG_LOCAL_CAP_ZERO",
             Self::LocalCapTooShort => "GATE_CONFIG_LOCAL_CAP_TOO_SHORT",
             Self::InvalidPolicy(_) => "GATE_CONFIG_INVALID_POLICY",
             Self::ActionHistory(_) => "GATE_CONFIG_ACTION_HISTORY",
@@ -140,8 +302,9 @@ impl GateConfigError {
             Self::GateSignerNotAssurance => "GATE_CONFIG_SIGNER_NOT_ASSURANCE",
             Self::GateSignerSubjectMismatch => "GATE_CONFIG_SIGNER_SUBJECT_MISMATCH",
             Self::GateSignerPublicKeyMismatch => "GATE_CONFIG_SIGNER_PUBLIC_KEY_MISMATCH",
-            Self::PublicationSessionMismatch => "GATE_CONFIG_PUBLICATION_SESSION_MISMATCH",
-            Self::PublicationOutputEpochMismatch => "GATE_CONFIG_PUBLICATION_OUTPUT_EPOCH_MISMATCH",
+            Self::UnsupportedPublicationAuthorityProfile => {
+                "GATE_CONFIG_UNSUPPORTED_PUBLICATION_AUTHORITY_PROFILE"
+            }
         }
     }
 }
@@ -312,9 +475,7 @@ pub struct PreparedPublication {
     captured_revision: u64,
     state_snapshot_digest: DigestV1,
     latest_call_at: MonoInstant,
-    frame: ExactNcpCommandFrame,
     plant_command: PlantCommand,
-    plant_action: PlantAction,
     effective_validity_ms: u32,
 }
 
@@ -333,6 +494,30 @@ impl PreparedPublication {
     #[must_use]
     pub const fn decision_id(&self) -> DecisionId {
         self.decision_id
+    }
+
+    /// Whether one receipt binds the complete opaque publication payload.
+    ///
+    /// The coordinator performs this check before deriving any later publication
+    /// event. Keeping it on the opaque token lets that boundary verify the signed
+    /// evidence against the exact frame without exposing the frame itself.
+    pub(crate) fn receipt_binding_matches(&self, receipt: &DecisionReceiptV1) -> bool {
+        let exact_frame = self.plant_command.exact_frame();
+        let stream_matches = receipt.gate_output_stream.as_ref().is_some_and(|stream| {
+            stream.epoch == self.plant_command.output_epoch()
+                && stream.seq == self.plant_command.output_seq()
+        });
+
+        exact_frame.is_self_consistent()
+            && receipt.decision_id == self.decision_id
+            && &receipt.ncp_session == self.plant_command.session()
+            && receipt.source.as_ref() == Some(self.plant_command.source())
+            && receipt.state_snapshot_digest == Some(self.state_snapshot_digest)
+            && receipt.effective_validity_ms == Some(self.effective_validity_ms)
+            && self.effective_validity_ms == self.plant_command.validity_ms()
+            && stream_matches
+            && receipt.output_frame_digest == Some(self.plant_command.output_frame_digest())
+            && receipt.transformation_relation == Some(exact_frame.transformation())
     }
 }
 
@@ -357,19 +542,18 @@ impl ValidatedPublicationCall {
 
 /// Opaque, non-cloneable proof that the actor entered its pre-side-effect Called state.
 ///
-/// The exact frame is accessible only in this state. After the transport call,
-/// the token must be consumed by `mark_publish_returned_ok` or
-/// `mark_publish_returned_error`. The resolver token cannot be cloned, but the
-/// cooperative caller/publisher remains trusted not to copy and resubmit exposed
-/// bytes; closing that service boundary is a later slice.
+/// The exact frame is accessible only in this state. A synchronous reference
+/// receiver may consume the token through `mark_publish_returned_ok`; a live
+/// transport whose local call merely returned `Ok` must instead use the internal
+/// unobserved-application transition and stop. The resolver token cannot be
+/// cloned, but the cooperative caller/publisher remains trusted not to copy and
+/// resubmit exposed bytes; closing that service boundary is a later slice.
 #[derive(Debug)]
-#[must_use = "a called publication must be resolved as returned-ok or error/timeout"]
+#[must_use = "a called publication must be resolved by its profile-specific terminal transition"]
 pub struct PublishCalledPublication {
     owner: Arc<()>,
     decision_id: DecisionId,
-    frame: ExactNcpCommandFrame,
     plant_command: PlantCommand,
-    plant_action: PlantAction,
     called_at: MonoInstant,
     active_until: MonoInstant,
 }
@@ -384,7 +568,7 @@ impl PublishCalledPublication {
     /// Borrow the exact immutable frame after the actor's Called boundary is crossed.
     #[must_use]
     pub const fn frame(&self) -> &ExactNcpCommandFrame {
-        &self.frame
+        self.plant_command.exact_frame()
     }
 
     /// Borrow the deterministic reference-plant command for simulated receivers.
@@ -484,7 +668,7 @@ pub struct GateConfig {
     /// Gate output epoch.
     pub output_epoch: GateOutputEpoch,
     /// Local cap on lease active duration (ms).
-    pub local_cap_ms: u32,
+    pub local_cap_ms: NonZeroU32,
     /// The Gate application signing key (signs decision receipts, H-B02).
     pub gate_signer: SigningKey,
     /// The Gate application signing key id.
@@ -498,8 +682,7 @@ impl GateConfig {
     /// Returns [`GateConfigError`] when the local lease cap or native policy is
     /// unusable, the policy digest does not identify the executable parameters,
     /// the Gate receipt signer is not bound to its trusted identity and key, or
-    /// a future NCP publication lease is scoped to another session or output
-    /// epoch.
+    /// the publication-authority profile is not implemented by this Gate.
     pub fn validate(&self) -> Result<(), GateConfigError> {
         validate_static_config(
             PolicyBindingValidation {
@@ -516,13 +699,11 @@ impl GateConfig {
             },
         )?;
 
-        if let PlantPublicationAuthorityStateV1::NcpLeaseV1(lease) = &self.publication {
-            if lease.session != self.session {
-                return Err(GateConfigError::PublicationSessionMismatch);
-            }
-            if lease.authorized_output_epoch != self.output_epoch {
-                return Err(GateConfigError::PublicationOutputEpochMismatch);
-            }
+        if matches!(
+            self.publication,
+            PlantPublicationAuthorityStateV1::NcpLeaseV1(_)
+        ) {
+            return Err(GateConfigError::UnsupportedPublicationAuthorityProfile);
         }
 
         Ok(())
@@ -532,7 +713,7 @@ impl GateConfig {
 pub(crate) struct PolicyBindingValidation<'a> {
     pub(crate) policy: &'a NativePolicySnapshot,
     pub(crate) expected_digest: &'a DigestV1,
-    pub(crate) local_cap_ms: u32,
+    pub(crate) local_cap_ms: NonZeroU32,
 }
 
 pub(crate) struct GateSignerValidation<'a> {
@@ -547,17 +728,18 @@ pub(crate) fn validate_static_config(
     policy_binding: PolicyBindingValidation<'_>,
     signer: GateSignerValidation<'_>,
 ) -> Result<(), GateConfigError> {
-    if policy_binding.local_cap_ms == 0 {
-        return Err(GateConfigError::LocalCapZero);
-    }
     let required_local_cap = policy_binding
         .policy
         .publication_safety_margin_ms
         .checked_add(policy_binding.policy.min_useful_validity_ms)
         .ok_or(GateConfigError::LocalCapTooShort)?;
-    if policy_binding.local_cap_ms < required_local_cap {
+    if policy_binding.local_cap_ms.get() < required_local_cap {
         return Err(GateConfigError::LocalCapTooShort);
     }
+    policy_binding
+        .policy
+        .validate_for_evaluation()
+        .map_err(GateConfigError::InvalidPolicy)?;
     let computed_policy_digest = policy_binding
         .policy
         .canonical_digest()
@@ -579,7 +761,7 @@ pub(crate) fn validate_static_config(
     if signer_record.class != KeyClass::Assurance {
         return Err(GateConfigError::GateSignerNotAssurance);
     }
-    if signer_record.subject.as_deref() != Some(signer.gate_id.as_str()) {
+    if signer_record.subject.as_str() != signer.gate_id.as_str() {
         return Err(GateConfigError::GateSignerSubjectMismatch);
     }
     if signer_record.verifying_key.to_bytes() != signer.signing_key.verifying_key().to_bytes() {
@@ -605,23 +787,34 @@ pub struct VehicleActor {
     output_epoch: GateOutputEpoch,
     output_stream: GateOutputStreamState,
     challenges: ChallengeTable,
+    next_challenge_seq: Option<NonZeroU64>,
     anti_rollback: Box<dyn LeaseTermStore>,
     lease: Option<ActiveMissionLeaseSnapshot>,
     replay: ControllerReplayState,
     history: BoundedActionHistory,
+    source_replay: SourceStreamReplayState,
     trusted_state: Option<TrustedStateSnapshotV1>,
     fault: haldir_state::FaultLatch,
     revision: RevisionCounter,
     process: GateProcessMachine,
     next_decision: u64,
+    decision_namespace_exhausted: bool,
     terminal_decision: Option<TerminalDecisionRecord>,
     publication_state: PublicationState,
     publication_owner: Arc<()>,
-    local_cap_ms: u32,
+    local_cap_ms: NonZeroU32,
     last_seen_mono: Option<MonoInstant>,
     gate_signer: GateApplicationSigner,
     lease_usage: Option<LeaseUsage>,
     evidence: EvidenceSpool,
+    #[cfg(test)]
+    force_replay_commit_conflict: bool,
+    #[cfg(test)]
+    force_source_replay_commit_conflict: bool,
+    #[cfg(test)]
+    force_authorization_revision_change_before_recheck: bool,
+    #[cfg(test)]
+    force_output_stream_exhaustion: bool,
 }
 
 /// Single owner of the Gate application private key after configuration has
@@ -634,29 +827,88 @@ struct GateApplicationSigner {
 
 impl GateApplicationSigner {
     fn sign_receipt(&self, receipt: &DecisionReceiptV1) -> Vec<u8> {
-        sign_message(
-            receipt,
-            DecisionReceiptV1::KIND,
-            DecisionReceiptV1::SCHEMA_MAJOR,
-            &self.kid,
-            &self.key,
-        )
+        sign_typed_message(receipt, &self.kid, &self.key)
     }
 
     fn sign_publication_stage(&self, event: &PublicationStageEventV1) -> Vec<u8> {
-        sign_message(
-            event,
-            PublicationStageEventV1::KIND,
-            PublicationStageEventV1::SCHEMA_MAJOR,
-            &self.kid,
-            &self.key,
-        )
+        sign_typed_message(event, &self.kid, &self.key)
+    }
+
+    fn sign_challenge(&self, challenge: &GateChallengeV1) -> Vec<u8> {
+        sign_typed_message(challenge, &self.kid, &self.key)
     }
 
     const fn journal_signer(&self) -> JournalSigner<'_> {
         JournalSigner::new(&self.kid, &self.key)
     }
 }
+
+/// One Gate-authored challenge payload and its exact COSE signature envelope.
+///
+/// The local monotonic expiry remains in the issuing actor's bounded challenge
+/// table and is intentionally absent from the externally signed contract.
+#[must_use = "deliver the signed challenge to the lease authority before it expires"]
+pub struct SignedGateChallenge {
+    challenge: GateChallengeV1,
+    signed_envelope: Vec<u8>,
+}
+
+impl SignedGateChallenge {
+    /// Exact canonical challenge payload signed by Gate.
+    #[must_use]
+    pub const fn challenge(&self) -> &GateChallengeV1 {
+        &self.challenge
+    }
+
+    /// Exact COSE envelope for independent Gate-signature verification.
+    #[must_use]
+    pub fn signed_envelope(&self) -> &[u8] {
+        &self.signed_envelope
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    pub(crate) fn into_parts(self) -> (GateChallengeV1, Vec<u8>) {
+        (self.challenge, self.signed_envelope)
+    }
+}
+
+/// Failure to issue and locally register a signed Gate challenge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum GateChallengeIssueError {
+    /// The per-actor nonzero challenge sequence is exhausted.
+    SequenceExhausted,
+    /// The fixed local challenge lifetime overflowed monotonic time.
+    DeadlineOverflow,
+    /// The operating-system CSPRNG failed to fill a fresh nonce.
+    EntropyUnavailable,
+    /// The fixed supported-contract set could not be constructed.
+    ContractConstruction,
+    /// Actor fault, time, duplicate, or bounded-table checks rejected registration.
+    RegistrationRejected,
+}
+
+impl GateChallengeIssueError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::SequenceExhausted => "GATE_CHALLENGE_SEQUENCE_EXHAUSTED",
+            Self::DeadlineOverflow => "GATE_CHALLENGE_DEADLINE_OVERFLOW",
+            Self::EntropyUnavailable => "GATE_CHALLENGE_ENTROPY_UNAVAILABLE",
+            Self::ContractConstruction => "GATE_CHALLENGE_CONTRACT_CONSTRUCTION",
+            Self::RegistrationRejected => "GATE_CHALLENGE_REGISTRATION_REJECTED",
+        }
+    }
+}
+
+impl std::fmt::Display for GateChallengeIssueError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for GateChallengeIssueError {}
 
 /// Bound on retained decision-receipt evidence records (in-process P0 spool).
 const MAX_EVIDENCE_RECORDS: usize = 4096;
@@ -667,27 +919,31 @@ const MAX_EVIDENCE_BYTES: usize = 8 * 1024 * 1024;
 /// bucket (H-B07 / runbook Phase 3F). Tokens are micro-intents; the bucket
 /// replenishes from monotonic time only (never on a regression).
 struct LeaseUsage {
-    accepted_intents: u64,
+    charged_intents: u64,
     max_total: u64,
     rate_millihz: u32,
     tokens_micro: u64,
     capacity_micro: u64,
+    refill_remainder: u64,
     last_refill: MonoInstant,
 }
 
 const TOKEN_SCALE: u64 = 1_000_000;
+const REFILL_DENOMINATOR: u128 = 1_000_000;
 
 impl LeaseUsage {
     fn new(max_total: u64, rate_millihz: u32, now: MonoInstant) -> Self {
         // Burst capacity = one second of authorized intents (>= 1 intent).
         let per_second = u64::from(rate_millihz) / 1000;
-        let capacity_micro = per_second.max(1).saturating_mul(TOKEN_SCALE);
+        // `rate_millihz` is u32, so this product is below 2^64.
+        let capacity_micro = per_second.max(1) * TOKEN_SCALE;
         Self {
-            accepted_intents: 0,
+            charged_intents: 0,
             max_total,
             rate_millihz,
             tokens_micro: capacity_micro,
             capacity_micro,
+            refill_remainder: 0,
             last_refill: now,
         }
     }
@@ -695,25 +951,52 @@ impl LeaseUsage {
     /// Consume one intent's quota (total + rate). Called once a correctly-signed,
     /// correctly-scoped intent is accepted for evaluation.
     fn try_consume(&mut self, now: MonoInstant) -> Result<(), R> {
-        if self.accepted_intents >= self.max_total {
+        if self.charged_intents >= self.max_total {
             return Err(R::DenyTotalIntents);
         }
+        let next_charged = self
+            .charged_intents
+            .checked_add(1)
+            .ok_or(R::DenyTotalIntents)?;
         // Replenish from elapsed monotonic time (no replenishment on regression).
         if let Some(d) = now.checked_duration_since(self.last_refill) {
-            // micro-intents added = rate_millihz * elapsed_ns / 1_000_000
-            let refill = u128::from(self.rate_millihz) * u128::from(d.as_nanos()) / 1_000_000;
-            let refill = u64::try_from(refill).unwrap_or(u64::MAX);
-            self.tokens_micro = self
-                .tokens_micro
-                .saturating_add(refill)
-                .min(self.capacity_micro);
+            // micro-intents added = rate_millihz * elapsed_ns / 1_000_000.
+            // Carry the exact fixed-point remainder across denied calls; moving
+            // `last_refill` while discarding it would let a high-frequency caller
+            // prevent the bucket from ever replenishing.
+            let scaled = u128::from(self.rate_millihz) * u128::from(d.as_nanos())
+                + u128::from(self.refill_remainder);
+            let refill = scaled / REFILL_DENOMINATOR;
+            let available = self.capacity_micro - self.tokens_micro;
+            if refill >= u128::from(available) {
+                self.tokens_micro = self.capacity_micro;
+                // Time accrued beyond a full bucket does not create hidden burst
+                // credit after the next consumption.
+                self.refill_remainder = 0;
+            } else {
+                // This conversion is exact because `refill < available <= u64::MAX`.
+                let refill = u64::try_from(refill).map_err(|_| R::DenyRateLimit)?;
+                let refill_remainder =
+                    u64::try_from(scaled % REFILL_DENOMINATOR).map_err(|_| R::DenyRateLimit)?;
+                let tokens_micro = self
+                    .tokens_micro
+                    .checked_add(refill)
+                    .ok_or(R::DenyRateLimit)?;
+                self.tokens_micro = tokens_micro;
+                self.refill_remainder = refill_remainder;
+            }
             self.last_refill = now;
         }
+        // Every fresh, authenticated, correctly scoped position that reaches
+        // this stage consumes one unit of the lease's finite total—even when
+        // the rate bucket refuses it. Otherwise an authorized flood could spend
+        // unbounded replay positions and verification work while never reaching
+        // `max_total_intents`.
+        self.charged_intents = next_charged;
         if self.tokens_micro < TOKEN_SCALE {
             return Err(R::DenyRateLimit);
         }
         self.tokens_micro -= TOKEN_SCALE;
-        self.accepted_intents = self.accepted_intents.saturating_add(1);
         Ok(())
     }
 }
@@ -773,18 +1056,40 @@ impl ReceiptDraft {
 }
 
 impl VehicleActor {
+    /// Process one length-bounded candidate intent.
+    ///
+    /// The candidate type ensures the actor never hashes or verifies an
+    /// attacker-sized route or envelope. An ingress that cannot construct the
+    /// candidate must drop/reject it outside the decision pipeline; because the
+    /// exact bytes were not admitted, no `DecisionReceiptV1` is minted for that
+    /// ingress rejection.
+    #[must_use = "a decision may contain a prepared publication that must be resolved"]
+    pub fn decide_bounded_intent(
+        &mut self,
+        candidate: BoundedIntentCandidate<'_>,
+        now: MonoInstant,
+    ) -> DecisionRecord {
+        self.decide_intent(candidate.envelope, candidate.actual_key, now)
+    }
+
     /// Selected command-wire construction profile for this runtime.
     #[must_use]
     pub const fn ncp_command_wire_profile(&self) -> NcpCommandWireProfile {
         self.adapter.wire_profile()
     }
 
-    /// Validate configuration and construct a session-bound actor.
+    /// Validate configuration and construct a session-bound actor with an
+    /// **ephemeral, process-local** anti-rollback store.
+    ///
+    /// This constructor is suitable for tests and development-only embeddings.
+    /// It cannot preserve the lease-term high-water mark across a crash or
+    /// restart. A deployment that requires crash-surviving anti-rollback must
+    /// durably begin a boot and call [`Self::new_recovered`] instead.
     ///
     /// # Errors
     /// Returns [`GateStartupError`] if configuration validation, anti-rollback
     /// initialization, or an explicit startup state transition fails.
-    pub fn new(cfg: GateConfig) -> Result<Self, GateStartupError> {
+    pub fn new_ephemeral(cfg: GateConfig) -> Result<Self, GateStartupError> {
         cfg.validate()?;
 
         let mut anti_rollback = AntiRollbackStore::new_empty();
@@ -808,6 +1113,39 @@ impl VehicleActor {
     pub fn new_recovered<S, A>(
         cfg: GateConfig,
         term_store: BootedDurableAntiRollbackStore<S, A>,
+    ) -> Result<Self, GateStartupError>
+    where
+        S: SnapshotStorage + Send + 'static,
+        A: GenerationAnchor + Send + 'static,
+    {
+        if !term_store.is_bound_to_gate(&cfg.gate_id) {
+            return Err(GateStartupError::StoreGateMismatch);
+        }
+        cfg.validate()?;
+        if cfg.gate_boot_id != term_store.boot_context().gate_boot_id {
+            return Err(GateStartupError::BootContextMismatch);
+        }
+
+        Self::from_validated_config(cfg, Box::new(term_store))
+    }
+
+    /// Construct an actor from a store whose deployment package and fresh boot
+    /// were committed atomically by startup orchestration.
+    ///
+    /// The configured Gate and boot ID must match the authenticated store and
+    /// the non-cloneable context returned by `begin_deployment_boot`. Package
+    /// signature, artifact, and runtime-profile validation remain the startup
+    /// orchestrator's responsibility; this boundary preserves the already
+    /// committed package ratchet while installing the store as the lease-term
+    /// authority.
+    ///
+    /// # Errors
+    /// Returns [`GateStartupError`] if the store belongs to another Gate,
+    /// configuration validation fails, the boot context differs, or a startup
+    /// transition is rejected.
+    pub fn new_deployment_recovered<S, A>(
+        cfg: GateConfig,
+        term_store: DeploymentBootedDurableAntiRollbackStore<S, A>,
     ) -> Result<Self, GateStartupError>
     where
         S: SnapshotStorage + Send + 'static,
@@ -872,15 +1210,18 @@ impl VehicleActor {
             output_epoch: cfg.output_epoch,
             output_stream: GateOutputStreamState::new(cfg.output_epoch, MAX_RETIRED),
             challenges,
+            next_challenge_seq: Some(NonZeroU64::MIN),
             anti_rollback,
             lease: None,
             replay: ControllerReplayState::new(MAX_RETIRED),
             history,
+            source_replay: SourceStreamReplayState::new(MAX_STATE_SOURCE_STREAMS),
             trusted_state: None,
             fault,
             revision: RevisionCounter::new(),
             process,
             next_decision: 0,
+            decision_namespace_exhausted: false,
             terminal_decision: None,
             publication_state: PublicationState::Idle,
             publication_owner: Arc::new(()),
@@ -892,14 +1233,25 @@ impl VehicleActor {
             },
             lease_usage: None,
             evidence: EvidenceSpool::new(MAX_EVIDENCE_RECORDS, MAX_EVIDENCE_BYTES),
+            #[cfg(test)]
+            force_replay_commit_conflict: false,
+            #[cfg(test)]
+            force_source_replay_commit_conflict: false,
+            #[cfg(test)]
+            force_authorization_revision_change_before_recheck: false,
+            #[cfg(test)]
+            force_output_stream_exhaustion: false,
         })
     }
 
     /// The digest-chained decision-receipt evidence spool (read-only). The chain
     /// head commits every appended signed receipt in order; `verify_chain`
-    /// detects a truncated tail or a mutated completed record. The spool is
-    /// in-process and lossy on overflow — a durable, crash-surviving journal is
-    /// out of P0 (see `CL-DURABLE-01`).
+    /// detects mutated retained records or mismatched local link metadata. Tail
+    /// truncation requires an externally protected count/head checkpoint. The spool is
+    /// in-process and lossy on overflow. The composed lifecycle coordinator can
+    /// additionally make a selected durable journal part of its decision and
+    /// publication ordering, but this direct actor accessor does not by itself
+    /// provide crash durability (see `CL-DURABLE-01`).
     #[must_use]
     pub fn evidence(&self) -> &EvidenceSpool {
         &self.evidence
@@ -956,6 +1308,7 @@ impl VehicleActor {
     pub(crate) fn journal_verifier(&self, max_envelope_bytes: NonZeroUsize) -> GateJournalVerifier {
         GateJournalVerifier::new(
             self.gate_id.clone(),
+            self.vehicle_id.clone(),
             self.trust.clone(),
             self.revocations.clone(),
             max_envelope_bytes,
@@ -1074,9 +1427,7 @@ impl VehicleActor {
         Ok(PublishCalledPublication {
             owner: prepared.owner,
             decision_id,
-            frame: prepared.frame,
             plant_command: prepared.plant_command,
-            plant_action: prepared.plant_action,
             called_at: exposure_at,
             active_until,
         })
@@ -1089,6 +1440,13 @@ impl VehicleActor {
     ) -> Result<MonoInstant, PublicationError> {
         if self.fault.is_latched() || !self.mono_ok(observed_at) {
             return Err(PublicationError::Faulted);
+        }
+        if self.expire_active_lease_if_needed(observed_at) {
+            return if self.fault.is_latched() {
+                Err(PublicationError::Faulted)
+            } else {
+                Err(PublicationError::DeadlineElapsed)
+            };
         }
         if self.revision.get() != prepared.captured_revision {
             return Err(PublicationError::AuthorizationChanged);
@@ -1152,8 +1510,10 @@ impl VehicleActor {
         let history_result = expected_window.and_then(|expected_window| {
             self.history
                 .validate_for_policy(called.called_at, expected_window)?;
-            match called.plant_action {
-                PlantAction::Hold => self.history.record_hold(called.called_at),
+            match called.plant_command.action() {
+                PlantAction::Hold => self
+                    .history
+                    .record_hold(called.called_at, called.active_until),
                 PlantAction::Velocity(velocity) => {
                     self.history
                         .record_velocity(velocity, called.called_at, called.active_until)
@@ -1169,6 +1529,47 @@ impl VehicleActor {
         if !self.mono_ok(returned_at) {
             return Err(PublicationError::Faulted);
         }
+        self.expire_active_lease_if_needed(returned_at);
+        if self.fault.is_latched() {
+            return Err(PublicationError::Faulted);
+        }
+        Ok(())
+    }
+
+    /// Record a live publisher's local `Ok` without pretending the plant arrival
+    /// time or application interval is known.
+    ///
+    /// NCP v0.8 starts `ttl_ms` from the receiver's local arrival time. A local
+    /// Zenoh return supplies neither that time nor a bounded in-transit lifetime,
+    /// so charging `[called_at, called_at + ttl)` would end the possible plant
+    /// interval too early. This transition therefore commits no action history,
+    /// retains the called slot, and fault-latches the actor. The surrounding live
+    /// service must be consumed and restart recovery must require authenticated
+    /// external clearance.
+    ///
+    /// # Errors
+    /// Returns [`PublicationError::StateMismatch`] if the token does not own the
+    /// called slot, or [`PublicationError::Faulted`] if `returned_at` regresses the
+    /// actor's monotonic clock. Either failure leaves the actor unusable.
+    #[cfg(feature = "live-zenoh")]
+    pub(crate) fn mark_live_publish_returned_ok_unobserved(
+        &mut self,
+        called: PublishCalledPublication,
+        returned_at: MonoInstant,
+    ) -> Result<(), PublicationError> {
+        if !Arc::ptr_eq(&self.publication_owner, &called.owner)
+            || self.publication_state
+                != (PublicationState::PublishCalled {
+                    decision_id: called.decision_id,
+                })
+        {
+            self.latch_fault("LIVE_PUBLISH_RETURNED_OK_STATE_MISMATCH");
+            return Err(PublicationError::StateMismatch);
+        }
+        if !self.mono_ok(returned_at) {
+            return Err(PublicationError::Faulted);
+        }
+        self.latch_fault("LIVE_PUBLISH_APPLICATION_UNOBSERVED");
         Ok(())
     }
 
@@ -1224,19 +1625,31 @@ impl VehicleActor {
         true
     }
 
-    /// Revoke the active mission lease (an authorization invalidation): clears the
-    /// lease, retires the controller replay epoch, and bumps the authorization
-    /// revision. After this, decisions DENY with `DENY_LEASE_ABSENT` until a fresh
-    /// lease is accepted.
-    pub fn revoke_active_lease(&mut self) {
+    /// Materialize the time-driven end of an active lease after the caller has
+    /// accepted `now` through [`Self::mono_ok`]. The exact expiry instant ends
+    /// authority; the final fractional millisecond before it does not.
+    fn expire_active_lease_if_needed(&mut self, now: MonoInstant) -> bool {
+        if !self.process.is_active()
+            || !self
+                .lease
+                .as_ref()
+                .is_some_and(|lease| lease.is_expired_at(now))
+        {
+            return false;
+        }
+        self.retire_active_lease("LEASE_EXPIRY_TRANSITION");
+        true
+    }
+
+    fn retire_active_lease(&mut self, transition_fault: &'static str) {
         self.lease = None;
         self.lease_usage = None;
-        // The revoked mission's last-published velocity must not seed the next
-        // lease's slew reference (its authority has ended).
+        // A completed mission must not seed the next lease's slew reference.
         self.history.clear_slew_reference();
         // A tombstone-full replay retirement is an invariant/resource failure (H-H07).
         if self.replay.retire_active().is_err() {
             self.latch_fault("REPLAY_TOMBSTONE_FULL");
+            return;
         }
         if self.revision.bump().is_none() {
             self.latch_fault("AUTHORIZATION_REVISION_EXHAUSTED");
@@ -1247,8 +1660,25 @@ impl VehicleActor {
             .transition(GateProcessStateV1::SessionBound)
             .is_err()
         {
-            self.latch_fault("REVOKE_TRANSITION");
+            self.latch_fault(transition_fault);
         }
+    }
+
+    /// Revoke the active mission lease (an authorization invalidation): clears the
+    /// lease, retires the controller replay epoch, and bumps the authorization
+    /// revision. After this, decisions DENY with `DENY_LEASE_ABSENT` until a fresh
+    /// lease is accepted. Repeating the call after authority is already absent is
+    /// an idempotent no-op; it cannot turn a harmless duplicate control-plane
+    /// notification into a process fault.
+    pub fn revoke_active_lease(&mut self) {
+        if self.fault.is_latched() || !self.process.is_active() {
+            return;
+        }
+        if self.lease.is_none() {
+            self.latch_fault("ACTIVE_LEASE_MISSING");
+            return;
+        }
+        self.retire_active_lease("REVOKE_TRANSITION");
     }
 
     /// The current process state.
@@ -1283,8 +1713,96 @@ impl VehicleActor {
     }
 
     #[cfg(test)]
+    pub(crate) fn force_replay_commit_conflict_for_test(&mut self) {
+        self.force_replay_commit_conflict = true;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_source_replay_commit_conflict_for_test(&mut self) {
+        self.force_source_replay_commit_conflict = true;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_output_stream_exhaustion_for_test(&mut self) {
+        self.force_output_stream_exhaustion = true;
+    }
+
+    fn allocate_output_sequence(&mut self) -> Result<OutputSeq, OutputStreamError> {
+        #[cfg(test)]
+        if core::mem::take(&mut self.force_output_stream_exhaustion) {
+            return Err(OutputStreamError::Exhausted);
+        }
+        let next = self
+            .output_stream
+            .peek_next_seq()
+            .ok_or(OutputStreamError::Exhausted)?;
+        if !output_sequence_is_wire_representable(next) {
+            return Err(OutputStreamError::Exhausted);
+        }
+        self.output_stream.allocate()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_missing_lease_usage_for_test(&mut self) {
+        self.lease_usage = None;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_authorization_revision_change_before_recheck_for_test(&mut self) {
+        self.force_authorization_revision_change_before_recheck = true;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn force_authorization_revision_exhaustion_for_test(&mut self) {
+        self.revision = RevisionCounter::from_nonzero(std::num::NonZeroU64::MAX);
+    }
+
+    fn apply_authorization_revision_test_hook(&mut self) {
+        #[cfg(test)]
+        if core::mem::take(&mut self.force_authorization_revision_change_before_recheck) {
+            let bumped = self.revision.bump();
+            debug_assert!(bumped.is_some());
+        }
+    }
+
+    fn commit_replay_position(
+        &mut self,
+        position: &HaldirIntentPositionV1,
+    ) -> Result<(), haldir_state::ReplayClass> {
+        #[cfg(test)]
+        if core::mem::take(&mut self.force_replay_commit_conflict) {
+            let seeded = self
+                .replay
+                .commit_consume(position.epoch, position.seq.get());
+            debug_assert!(seeded.is_ok());
+        }
+        self.replay
+            .commit_consume(position.epoch, position.seq.get())
+    }
+
+    fn commit_source_replay_position(
+        &mut self,
+        source: &NcpSourceRefV1,
+    ) -> Result<(), SourceReplayClass> {
+        #[cfg(test)]
+        if core::mem::take(&mut self.force_source_replay_commit_conflict) {
+            let seeded = self.source_replay.commit(source);
+            debug_assert!(seeded.is_ok());
+        }
+        self.source_replay.commit(source)
+    }
+
+    #[cfg(test)]
     pub(crate) const fn history_for_test(&self) -> &BoundedActionHistory {
         &self.history
+    }
+
+    #[cfg(test)]
+    pub(crate) fn intent_epoch_is_retired_for_test(
+        &self,
+        epoch: haldir_contracts::ids::IntentEpoch,
+    ) -> bool {
+        self.replay.is_retired(epoch)
     }
 
     #[cfg(test)]
@@ -1292,20 +1810,116 @@ impl VehicleActor {
         self.fault.reason()
     }
 
-    /// Register a pending challenge nonce (issued out of band by the orchestrator).
-    pub fn register_challenge(
+    /// Issue a fresh OS-random, Gate-signed challenge under the fixed local TTL.
+    ///
+    /// This lower actor API supports reference embeddings without exposing raw
+    /// nonce registration. The declared-live service uses startup-provisioned
+    /// entropy so failure occurs before its durable boot boundary.
+    ///
+    /// ```compile_fail
+    /// use haldir_contracts::ids::ChallengeNonce;
+    /// use haldir_core::time::MonoInstant;
+    /// use haldir_gate::VehicleActor;
+    ///
+    /// fn caller_cannot_register_a_nonce(actor: &mut VehicleActor, now: MonoInstant) {
+    ///     actor.register_challenge(ChallengeNonce::new([7; 32]), now, now);
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    /// Returns when the challenge sequence or local deadline is exhausted, OS
+    /// entropy is unavailable, contract construction fails, or actor state
+    /// rejects registration.
+    pub fn issue_challenge(
+        &mut self,
+        now: MonoInstant,
+    ) -> Result<SignedGateChallenge, GateChallengeIssueError> {
+        let expires_at = now
+            .checked_add_ms(u64::from(GATE_CHALLENGE_TTL_MS))
+            .ok_or(GateChallengeIssueError::DeadlineOverflow)?;
+        let mut nonce = [0_u8; 32];
+        getrandom::getrandom(&mut nonce)
+            .map_err(|_| GateChallengeIssueError::EntropyUnavailable)?;
+        self.issue_challenge_with_nonce(ChallengeNonce::new(nonce), expires_at, now)
+    }
+
+    /// Construct, sign, and register the sole initial declared-live challenge.
+    #[cfg(feature = "live-zenoh")]
+    pub(crate) fn issue_live_activation_challenge(
+        &mut self,
+        nonce: ChallengeNonce,
+        expires_at: MonoInstant,
+        now: MonoInstant,
+    ) -> Result<SignedGateChallenge, GateChallengeIssueError> {
+        self.issue_challenge_with_nonce(nonce, expires_at, now)
+    }
+
+    fn issue_challenge_with_nonce(
+        &mut self,
+        nonce: ChallengeNonce,
+        expires_at: MonoInstant,
+        now: MonoInstant,
+    ) -> Result<SignedGateChallenge, GateChallengeIssueError> {
+        let challenge_seq = self
+            .next_challenge_seq
+            .ok_or(GateChallengeIssueError::SequenceExhausted)?;
+        let accepted_contract_versions =
+            BoundedSet::from_iter_checked([ContractVersion { major: 1, minor: 0 }])
+                .map_err(|_| GateChallengeIssueError::ContractConstruction)?;
+        let challenge = GateChallengeV1 {
+            schema_major: 1,
+            schema_minor: 0,
+            gate_id: self.gate_id.clone(),
+            gate_boot_id: self.gate_boot_id,
+            challenge_nonce: nonce,
+            challenge_seq: ChallengeSeq::new(challenge_seq),
+            realm: self.realm.clone(),
+            vehicle_id: self.vehicle_id.clone(),
+            ncp_session: self.session.clone(),
+            gate_output_epoch: self.output_epoch,
+            gate_key_id: self.gate_signer.kid.clone(),
+            policy_snapshot_digest: self.policy.canonical_digest(),
+            accepted_contract_versions,
+            ncp_compatibility_id: NCP_V0_8_0.compatibility_id(),
+        };
+        let signed_envelope = self.gate_signer.sign_challenge(&challenge);
+        if !self.register_challenge(nonce, expires_at, now) {
+            return Err(GateChallengeIssueError::RegistrationRejected);
+        }
+        self.next_challenge_seq = challenge_seq.get().checked_add(1).and_then(NonZeroU64::new);
+        Ok(SignedGateChallenge {
+            challenge,
+            signed_envelope,
+        })
+    }
+
+    /// Register a pending challenge nonce issued by a trusted embedding.
+    ///
+    /// The declared-live service does not expose this lower-level path: it
+    /// generates, signs, and registers its challenge through a private
+    /// feature-gated issuer.
+    pub(crate) fn register_challenge(
         &mut self,
         nonce: haldir_contracts::ids::ChallengeNonce,
         expires_at: MonoInstant,
         now: MonoInstant,
     ) -> bool {
+        if self.fault.is_latched() || !self.mono_ok(now) {
+            return false;
+        }
+        self.expire_active_lease_if_needed(now);
+        if self.fault.is_latched() {
+            return false;
+        }
         self.challenges.insert(nonce, expires_at, now)
     }
 
     /// Validate and set the current trusted-state snapshot (H-B05). Rejects a
     /// snapshot that is not for this vehicle/session, whose causal source is not in
     /// this session, that is flagged invalid, or whose capture time does not
-    /// strictly advance the currently held snapshot — a blind setter would let
+    /// strictly advance the currently held snapshot, or whose source position
+    /// replays/regresses a boot-local source stream. `observed_at` is sampled by
+    /// the Gate clock and bounds both receive and capture time — a blind setter would let
     /// whichever task can call it author the causal truth Gate relies on, and
     /// without the monotonicity check a producer could roll the vehicle back to an
     /// older-but-still-fresh favourable snapshot and flip a geofence/phase DENY to
@@ -1314,23 +1928,66 @@ impl VehicleActor {
     ///
     /// # Errors
     /// Returns a stable reason code on any ingress-validation failure.
-    pub fn set_trusted_state(&mut self, state: TrustedStateSnapshotV1) -> Result<(), R> {
-        self.validate_trusted_state(&state)?;
+    pub fn set_trusted_state(
+        &mut self,
+        state: TrustedStateSnapshotV1,
+        observed_at: MonoInstant,
+    ) -> Result<(), R> {
+        if !self.mono_ok(observed_at) {
+            return Err(R::ErrorStateTransition);
+        }
+        self.expire_active_lease_if_needed(observed_at);
+        if self.fault.is_latched() {
+            return Err(R::ErrorStateTransition);
+        }
+        self.validate_trusted_state(&state, observed_at)?;
+        if let Err(class) = self.commit_source_replay_position(&state.primary_source.source) {
+            if class == SourceReplayClass::CapacityExhausted {
+                return Err(R::ErrorNamespaceExhausted);
+            }
+            // Validation classified this exact position as fresh under the same
+            // exclusive actor owner. A different commit result is an internal
+            // state-machine disagreement, not a recoverable producer replay.
+            self.latch_fault("SOURCE_REPLAY_CLASSIFY_COMMIT_INVARIANT");
+            return Err(R::ErrorInternalFault);
+        }
         self.trusted_state = Some(state);
         Ok(())
     }
 
-    pub(crate) fn validate_trusted_state(&self, state: &TrustedStateSnapshotV1) -> Result<(), R> {
+    pub(crate) fn validate_trusted_state(
+        &self,
+        state: &TrustedStateSnapshotV1,
+        observed_at: MonoInstant,
+    ) -> Result<(), R> {
+        if self.fault.is_latched()
+            || !matches!(
+                self.process.state(),
+                GateProcessStateV1::SessionBound | GateProcessStateV1::Active
+            )
+        {
+            return Err(R::ErrorStateTransition);
+        }
         if state.vehicle_id != self.vehicle_id {
             return Err(R::DenyStateProducer);
         }
         if state.session != self.session || state.primary_source.session != self.session {
             return Err(R::DenyStateStale);
         }
+        if self.lease.as_ref().is_some_and(|lease| {
+            !lease.permits_source_key(state.primary_source.source.source_key.as_str())
+        }) {
+            return Err(R::DenySourceUnknown);
+        }
         if !state.primary_source.valid {
             return Err(R::DenyStateStale);
         }
-        if state.primary_source.receive_mono > state.captured_mono {
+        if state.primary_source.source.stream_seq.get() > NCP_JSON_SAFE_INTEGER_MAX {
+            return Err(R::DenySourceUnrepresentable);
+        }
+        if state.primary_source.receive_mono > state.captured_mono
+            || state.captured_mono > observed_at
+        {
             return Err(R::DenyStateStale);
         }
         if state.uncertainty.position_mm.iter().any(|&value| value < 0)
@@ -1350,6 +2007,10 @@ impl VehicleActor {
         {
             return Err(R::DenyStateStale);
         }
+        let source_class = self.source_replay.classify(&state.primary_source.source);
+        if !source_class.is_fresh() {
+            return Err(source_replay_reason(source_class));
+        }
         Ok(())
     }
 
@@ -1364,12 +2025,40 @@ impl VehicleActor {
         Some((&lease.controller_id, lease.controller_intent_key.as_str()))
     }
 
+    fn validate_controller_signer_binding(&self, lease: &MissionLeaseV1) -> Result<(), GateError> {
+        let record = self
+            .trust
+            .resolve(&lease.controller_intent_signing_key_id)
+            .ok_or_else(|| GateError::Crypto(CryptoError::KidUnknown.reason_code()))?;
+        if record.role != KeyRole::ControllerIntent {
+            return Err(GateError::Crypto(CryptoError::WrongRole.reason_code()));
+        }
+        if record.class != KeyClass::Assurance {
+            return Err(GateError::Crypto(
+                CryptoError::DevelopmentKeyInAssurance.reason_code(),
+            ));
+        }
+        if self
+            .revocations
+            .is_key_revoked(&lease.controller_intent_signing_key_id)
+        {
+            return Err(GateError::Crypto(CryptoError::KeyRevoked.reason_code()));
+        }
+        if record.subject.as_str() != lease.controller_id.as_str() {
+            return Err(GateError::Crypto(CryptoError::WrongRole.reason_code()));
+        }
+        Ok(())
+    }
+
     /// Accept a signed mission lease and become ACTIVE.
     ///
     /// # Errors
     /// Returns a [`GateError`] if the lifecycle is not session-bound, a
     /// publication slot is unresolved, or signature, admission, or acceptance
-    /// validation fails.
+    /// validation fails. The lease-nominated controller key must already resolve
+    /// to an unrevoked assurance-class `ControllerIntent` record whose subject
+    /// matches the admitted controller; that preflight precedes durable term and
+    /// one-shot challenge mutation.
     pub fn accept_lease_env(&mut self, env: &[u8], now: MonoInstant) -> Result<(), GateError> {
         match self
             .accept_lease_env_with_validator(env, now, |_| Ok::<(), core::convert::Infallible>(()))
@@ -1395,11 +2084,31 @@ impl VehicleActor {
         if self.publication_state != PublicationState::Idle {
             return Err(GateError::PublicationPending.into());
         }
-        if self.process.state() != GateProcessStateV1::SessionBound {
+        // Reject an ordinary replacement while ACTIVE before observing the
+        // candidate call's clock value. Besides preserving a true no-op, this
+        // prevents an invalid lifecycle call from advancing the monotonic
+        // high-water or turning a later valid observation into a false clock
+        // regression. The one exception is an exactly expired active lease:
+        // materialize that time-driven transition below so a previously issued,
+        // still-pending challenge can establish its successor.
+        if self.process.state() != GateProcessStateV1::SessionBound
+            && !(self.process.is_active()
+                && self
+                    .lease
+                    .as_ref()
+                    .is_some_and(|lease| lease.is_expired_at(now)))
+        {
             return Err(GateError::NotSessionBound.into());
         }
         if !self.mono_ok(now) {
             return Err(GateError::Faulted.into());
+        }
+        self.expire_active_lease_if_needed(now);
+        if self.fault.is_latched() {
+            return Err(GateError::Faulted.into());
+        }
+        if self.process.state() != GateProcessStateV1::SessionBound {
+            return Err(GateError::NotSessionBound.into());
         }
         let ctx = ExpectedContext {
             kind: MissionLeaseV1::KIND,
@@ -1417,7 +2126,7 @@ impl VehicleActor {
         if kid != lease.issuer_key_id {
             return Err(GateError::Crypto("DENY_WRONG_ROLE").into());
         }
-        if sub.as_deref() != Some(lease.issuer_id.as_str()) {
+        if sub.as_str() != lease.issuer_id.as_str() {
             return Err(GateError::Crypto("DENY_WRONG_ROLE").into());
         }
 
@@ -1442,6 +2151,12 @@ impl VehicleActor {
             admission_id: rel.record.admission_id,
             admission_digest: rel.digest,
         };
+        // The mission authority may select only an immediately usable,
+        // assurance-class controller signing identity. Rejecting this before
+        // `accept_lease` prevents a false-success activation from spending the
+        // durable term and one-shot challenge for a key that could never
+        // authenticate an intent under this runtime snapshot.
+        self.validate_controller_signer_binding(&lease)?;
         let lctx = LeaseAcceptContext {
             gate_id: self.gate_id.clone(),
             gate_boot_id: self.gate_boot_id,
@@ -1453,6 +2168,14 @@ impl VehicleActor {
             controller,
             local_cap_ms: self.local_cap_ms,
         };
+        // Every fallible local activation prerequisite must be checked before
+        // the durable term high-water or one-shot challenge is consumed. The
+        // actor is single-owned, so a successful preflight guarantees the later
+        // bump cannot race another mutation.
+        if self.revision.is_exhausted() {
+            self.latch_fault("AUTHORIZATION_REVISION_EXHAUSTED");
+            return Err(GateError::Faulted.into());
+        }
         validate(&lease).map_err(LeaseEnvelopeValidationError::ValidatorRejected)?;
         let snap = accept_lease(
             &lease,
@@ -1467,9 +2190,21 @@ impl VehicleActor {
                 self.latch_fault("LEASE_TERM_STORE_UNAVAILABLE");
                 return Err(GateError::Faulted.into());
             }
+            Err(LeaseAcceptError::DeadlineOverflow) => {
+                self.latch_fault("LEASE_DEADLINE_OVERFLOW");
+                return Err(GateError::Faulted.into());
+            }
+            Err(LeaseAcceptError::ChallengeCommitInvariant) => {
+                self.latch_fault("LEASE_CHALLENGE_COMMIT_INVARIANT");
+                return Err(GateError::Faulted.into());
+            }
             Err(error) => return Err(GateError::Lease(error.reason_code().code()).into()),
         };
-        let usage = LeaseUsage::new(snap.max_total_intents, snap.max_intent_rate_millihz, now);
+        let usage = LeaseUsage::new(
+            snap.max_total_intents.get(),
+            snap.max_intent_rate_millihz.get(),
+            now,
+        );
         self.lease = Some(snap);
         self.lease_usage = Some(usage);
         self.replay = ControllerReplayState::new(MAX_RETIRED);
@@ -1495,6 +2230,10 @@ impl VehicleActor {
                 // Counter zero is reserved for the one terminal exhaustion
                 // receipt. Subsequent calls return that exact cached decision,
                 // rather than presenting repeated ids as distinct decisions.
+                // Track exhaustion independently from the first-fault latch:
+                // another fault may already own that latch reason, but it must
+                // not suppress terminal receipt caching and reopen counter zero.
+                self.decision_namespace_exhausted = true;
                 self.latch_fault("DECISION_ID_EXHAUSTED");
                 self.next_decision = 0;
             }
@@ -1516,7 +2255,7 @@ impl VehicleActor {
         } else {
             DecisionOutcomeV1::Deny
         };
-        receipt.reason_codes = BoundedVec::from_vec(vec![reason]).unwrap_or_default();
+        receipt.reason_codes = BoundedVec::singleton(reason);
         receipt.decided_mono_ns = now.as_nanos();
         receipt.publish_stage = if is_err {
             PublishStageV1::DecidedError
@@ -1536,12 +2275,47 @@ impl VehicleActor {
         }
     }
 
-    /// Process one intent and append its signed receipt to the digest-chained
+    /// Build and sign one policy denial without discarding independently true
+    /// reasons. The evaluator and receipt schema share the hard bound of 32;
+    /// malformed evaluator output is an actor invariant failure, not a partial
+    /// receipt that happens to retain the first reason.
+    fn respond_policy_denial(
+        &self,
+        draft: &ReceiptDraft,
+        reasons: Vec<R>,
+        now: MonoInstant,
+    ) -> Option<DecisionRecord> {
+        if reasons.is_empty()
+            || reasons.len() > 32
+            || reasons.iter().any(|reason| !reason.is_deny())
+            || reasons
+                .iter()
+                .enumerate()
+                .any(|(index, reason)| reasons.iter().take(index).any(|prior| prior == reason))
+        {
+            return None;
+        }
+        let reason_codes = BoundedVec::from_vec(reasons).ok()?;
+        let mut receipt = draft.base();
+        receipt.decision = DecisionOutcomeV1::Deny;
+        receipt.reason_codes = reason_codes;
+        receipt.decided_mono_ns = now.as_nanos();
+        receipt.publish_stage = PublishStageV1::DecidedDeny;
+        let signed_receipt = self.sign_receipt(&receipt);
+        Some(DecisionRecord {
+            receipt,
+            signed_receipt,
+            outcome: DecisionOutcomeV1::Deny,
+            prepared_publication: None,
+        })
+    }
+
+    /// Process one already length-bounded crate-internal intent and append its signed receipt to the digest-chained
     /// evidence spool. Journaling never changes the decision: an ALLOW is already
     /// committed to the returned frame, and a full spool drops only the export
     /// copy (a spool outage can never turn a DENY into an ALLOW).
     #[must_use = "a decision may contain a prepared publication that must be resolved"]
-    pub fn decide_intent(
+    pub(crate) fn decide_intent(
         &mut self,
         env: &[u8],
         actual_key: &str,
@@ -1552,7 +2326,7 @@ impl VehicleActor {
         }
         let record = self.decide_intent_inner(env, actual_key, now);
         let _ = self.evidence.append(&record.signed_receipt);
-        if self.fault.reason() == Some("DECISION_ID_EXHAUSTED") {
+        if self.decision_namespace_exhausted {
             self.terminal_decision = Some(TerminalDecisionRecord::from_record(&record));
         }
         record
@@ -1573,7 +2347,10 @@ impl VehicleActor {
             gate_boot_id: self.gate_boot_id,
             vehicle_id: self.vehicle_id.clone(),
             session: self.session.clone(),
-            received_key_digest: DigestV1::compute(DigestDomain::Payload, actual_key.as_bytes()),
+            received_key_digest: DigestV1::compute(
+                DigestDomain::TransportKey,
+                actual_key.as_bytes(),
+            ),
             raw_envelope_digest: DigestV1::compute(DigestDomain::RawEnvelope, env),
             policy_snapshot_digest: self.policy.canonical_digest(),
             received_mono_ns: now.as_nanos(),
@@ -1595,10 +2372,17 @@ impl VehicleActor {
         if !self.mono_ok(now) {
             return self.respond(&draft, R::ErrorInternalFault, now);
         }
+        if self.expire_active_lease_if_needed(now) {
+            return if self.fault.is_latched() {
+                self.respond(&draft, R::ErrorInternalFault, now)
+            } else {
+                self.respond(&draft, R::DenyLeaseExpired, now)
+            };
+        }
         if !self.process.is_active() {
             return self.respond(&draft, R::DenyLeaseAbsent, now);
         }
-        if env.len() > INTENT_SIZE_LIMIT {
+        if env.len() > MAX_INTENT_ENVELOPE_BYTES || actual_key.len() > MAX_INTENT_ROUTE_BYTES {
             return self.respond(&draft, R::DenyOversize, now);
         }
 
@@ -1615,8 +2399,7 @@ impl VehicleActor {
                 Err(e) => return self.respond(&draft, crypto_reason(&e), now),
             };
         draft.payload_digest = Some(DigestV1::of_value(DigestDomain::Payload, &intent));
-        draft.semantic_intent_digest =
-            Some(DigestV1::of_value(DigestDomain::SemanticIntent, &intent));
+        draft.semantic_intent_digest = Some(intent.semantic_digest());
         draft.controller_id = Some(intent.controller_id.clone());
         draft.controller_intent_position = Some(intent.intent_position.clone());
         draft.mission_id = Some(intent.mission_id.clone());
@@ -1633,7 +2416,7 @@ impl VehicleActor {
 
         // Stage 3 — identity / routing binding
         if actual_key != intent.actual_intent_key.as_str()
-            || actual_key != lease.controller_intent_key
+            || actual_key != lease.controller_intent_key.as_str()
         {
             return self.respond(&draft, R::DenyWrongActualKey, now);
         }
@@ -1653,7 +2436,7 @@ impl VehicleActor {
         }
         if intent.mission_id != lease.mission_id
             || intent.mission_lease_id != lease.lease_id
-            || intent.mission_lease_term.get() != lease.lease_term
+            || intent.mission_lease_term != lease.lease_term
         {
             return self.respond(&draft, R::DenyScopeMismatch, now);
         }
@@ -1668,19 +2451,15 @@ impl VehicleActor {
         // controller, the verified signer key, and the signer's registered
         // trust-store subject (H-H02 / punch-list BUG-4): the key that produced
         // this signature must itself be enrolled to this controller, not merely
-        // hold the ControllerIntent role. A key with no bound subject fails
-        // closed (`None != Some(..)`). These are equality-checked consistency
-        // claims, not trusted evidence content.
+        // hold the ControllerIntent role. Every trust record has a mandatory,
+        // bounded subject, and that subject must exact-match here. These are
+        // equality-checked consistency claims, not trusted evidence content.
         if intent.controller_id != lease.controller.controller_id
             || intent.controller_signing_key_id != signer_kid
-            || signer_subject.as_deref() != Some(intent.controller_id.as_str())
+            || signer_subject.as_str() != intent.controller_id.as_str()
         {
             return self.respond(&draft, R::DenyScopeMismatch, now);
         }
-        if lease.remaining_ms(now) == 0 {
-            return self.respond(&draft, R::DenyLeaseExpired, now);
-        }
-
         // Stage 6 — controller replay (two-phase): classify (no consume) then commit
         let cls = self.replay.classify(
             intent.intent_position.epoch,
@@ -1689,10 +2468,13 @@ impl VehicleActor {
         if !cls.is_fresh() {
             return self.respond(&draft, replay_reason(cls), now);
         }
-        let _ = self.replay.commit_consume(
-            intent.intent_position.epoch,
-            intent.intent_position.seq.get(),
-        );
+        if self
+            .commit_replay_position(&intent.intent_position)
+            .is_err()
+        {
+            self.latch_fault("REPLAY_CLASSIFY_COMMIT_INVARIANT");
+            return self.respond(&draft, R::ErrorInternalFault, now);
+        }
 
         // Stage 6b — lease usage: total-intent ceiling + fixed-point rate bucket
         // (H-B07). Charged only for fresh, correctly-scoped intents that have
@@ -1700,7 +2482,13 @@ impl VehicleActor {
         // that still spends the sequence (no output, no retry of this position).
         let usage_result = match self.lease_usage.as_mut() {
             Some(usage) => usage.try_consume(now),
-            None => Err(R::ErrorInternalFault),
+            None => {
+                // ACTIVE with no usage state cannot be produced by the public
+                // transition API. Treat it as a terminal actor invariant breach,
+                // not as a recoverable refusal for this one intent.
+                self.latch_fault("ACTIVE_LEASE_USAGE_INVARIANT");
+                return self.respond(&draft, R::ErrorInternalFault, now);
+            }
         };
         if let Err(reason) = usage_result {
             return self.respond(&draft, reason, now);
@@ -1743,17 +2531,22 @@ impl VehicleActor {
         let effective_validity_ms = match decision.effective_validity_ms() {
             Some(v) => v,
             None => {
-                let reason = decision
-                    .reasons
-                    .first()
-                    .copied()
-                    .unwrap_or(R::DenyPolicyDiagnostic);
-                return self.respond(&draft, reason, now);
+                let Some(record) = self.respond_policy_denial(&draft, decision.reasons, now) else {
+                    self.latch_fault("POLICY_DENIAL_REASONS_INVARIANT");
+                    return self.respond(&draft, R::ErrorInternalFault, now);
+                };
+                return record;
             }
         };
 
         // Stage 12 — output allocation, after a TOCTOU re-check (B1)
+        self.apply_authorization_revision_test_hook();
         if self.revision.get() != captured_rev {
+            // `decide_intent` owns `&mut self`, so an in-decision revision change
+            // is impossible under the current public API. If a future embedding
+            // or refactor violates that assumption, fail-stop instead of allowing
+            // the next intent to proceed from a potentially inconsistent actor.
+            self.latch_fault("AUTHORIZATION_REVISION_CHANGED_DURING_DECISION");
             return self.respond(&draft, R::ErrorInternalFault, now);
         }
         if !self.publication.authorizes_acl_only_publication() {
@@ -1767,12 +2560,19 @@ impl VehicleActor {
         )) else {
             return self.respond(&draft, R::DenyArithmeticOverflow, now);
         };
-        let out_seq = match self.output_stream.allocate() {
+        let allocation = self.allocate_output_sequence();
+        let out_seq = match allocation {
             Ok(s) => s,
-            Err(_) => return self.respond(&draft, R::DenyOverload, now),
+            Err(_) => {
+                // Unlike a busy publication slot, sequence exhaustion cannot
+                // recover within this output epoch. Continuing to report an
+                // active actor would misclassify a permanent namespace failure
+                // as transient load and spend later intent positions uselessly.
+                self.latch_fault("OUTPUT_STREAM_EXHAUSTED");
+                return self.respond(&draft, R::ErrorNamespaceExhausted, now);
+            }
         };
         let build_input = GateCommandBuildInputV1 {
-            decision_id,
             session: self.session.clone(),
             stream: NcpStreamPositionV1 {
                 epoch: self.output_stream.current_epoch(),
@@ -1804,35 +2604,24 @@ impl VehicleActor {
         // Stage 13 — prepare an opaque publication token and emit ALLOW receipt.
         // Published-command history is intentionally untouched until the caller
         // reports a successful return from the modeled publication side effect.
-        let plant_action = if frame.is_hold() {
-            PlantAction::Hold
-        } else {
-            PlantAction::Velocity(frame.decoded_velocity_mm_s())
+        let plant_command = match PlantCommand::from_exact_frame(decision_id, frame) {
+            Ok(command) => command,
+            Err(_) => {
+                self.latch_fault("REFERENCE_PLANT_COMMAND_BUILD_FAILED");
+                return self.respond(&draft, R::ErrorInternalFault, now);
+            }
         };
-        let plant_command = PlantCommand {
-            decision_id,
-            session: self.session.clone(),
-            output_epoch: build_input.stream.epoch,
-            output_seq: out_seq,
-            source: state.primary_source.source.clone(),
-            action: plant_action,
-            validity_ms: effective_validity_ms,
-            output_frame_digest: frame.digest(),
-        };
+        let output_frame_digest = plant_command.output_frame_digest();
         let mut receipt = draft.base();
         receipt.decision = DecisionOutcomeV1::Allow;
         // AllowPrepared, not AllowPublished: the Gate authorized and prepared the
         // exact output frame, but publication to NCP happens downstream — the
         // Gate does not claim delivery it did not observe (H-H10 honesty).
-        receipt.reason_codes = BoundedVec::from_vec(vec![R::AllowPrepared]).unwrap_or_default();
+        receipt.reason_codes = BoundedVec::singleton(R::AllowPrepared);
         receipt.effective_validity_ms = Some(effective_validity_ms);
         receipt.gate_output_stream = Some(build_input.stream.clone());
-        receipt.output_frame_digest = Some(frame.digest());
-        receipt.transformation_relation = Some(if frame.is_hold() {
-            TransformationRelationV1::Identity
-        } else {
-            TransformationRelationV1::FixedPointToNcpFloatV1
-        });
+        receipt.output_frame_digest = Some(output_frame_digest);
+        receipt.transformation_relation = Some(plant_command.exact_frame().transformation());
         receipt.decided_mono_ns = now.as_nanos();
         // Gate signs only what it observed: it prepared the exact output bytes.
         receipt.publish_stage = PublishStageV1::OutputPrepared;
@@ -1849,13 +2638,15 @@ impl VehicleActor {
                 captured_revision: captured_rev,
                 state_snapshot_digest: state.canonical_digest(),
                 latest_call_at,
-                frame,
                 plant_command,
-                plant_action,
                 effective_validity_ms,
             }),
         }
     }
+}
+
+fn output_sequence_is_wire_representable(sequence: OutputSeq) -> bool {
+    sequence.get() <= NCP_JSON_SAFE_INTEGER_MAX
 }
 
 fn derive_decision_id(gate_boot_id: &GateBootId, counter: u64) -> DecisionId {
@@ -1872,6 +2663,27 @@ fn derive_decision_id(gate_boot_id: &GateBootId, counter: u64) -> DecisionId {
     let mut id = [0u8; 16];
     id.copy_from_slice(truncated);
     DecisionId::new(id)
+}
+
+#[cfg(test)]
+mod output_sequence_wire_bound_tests {
+    use super::output_sequence_is_wire_representable;
+    use core::num::NonZeroU64;
+    use haldir_contracts::ids::OutputSeq;
+    use haldir_ncp08::NCP_JSON_SAFE_INTEGER_MAX;
+
+    #[test]
+    fn implemented_wire_namespace_ends_at_the_json_safe_integer_limit() {
+        let at_limit = NonZeroU64::new(NCP_JSON_SAFE_INTEGER_MAX)
+            .map(OutputSeq::new)
+            .expect("the fixed positive limit constructs");
+        let over_limit = NonZeroU64::new(NCP_JSON_SAFE_INTEGER_MAX + 1)
+            .map(OutputSeq::new)
+            .expect("the fixed positive successor constructs");
+
+        assert!(output_sequence_is_wire_representable(at_limit));
+        assert!(!output_sequence_is_wire_representable(over_limit));
+    }
 }
 
 fn crypto_reason(e: &CryptoError) -> R {
@@ -1978,6 +2790,17 @@ mod lease_usage_tests {
     }
 
     #[test]
+    fn rate_denials_still_consume_the_finite_total_intent_budget() {
+        let t0 = MonoInstant::from_nanos(0);
+        let mut usage = LeaseUsage::new(3, 1_000, t0);
+
+        assert_eq!(usage.try_consume(t0), Ok(()));
+        assert_eq!(usage.try_consume(t0), Err(R::DenyRateLimit));
+        assert_eq!(usage.try_consume(t0), Err(R::DenyRateLimit));
+        assert_eq!(usage.try_consume(t0), Err(R::DenyTotalIntents));
+    }
+
+    #[test]
     fn no_refill_on_clock_regression() {
         // rate 1000 milli-Hz = 1 intent/s => capacity 1 token.
         let t0 = MonoInstant::from_nanos(1_000_000_000);
@@ -1990,5 +2813,26 @@ mod lease_usage_tests {
         // Real forward progress still refills relative to the original anchor.
         let later = MonoInstant::from_nanos(1_000_000_000 + 1_000_000_000);
         assert_eq!(u.try_consume(later), Ok(()));
+    }
+
+    #[test]
+    fn denied_sub_quantum_calls_preserve_fractional_refill_credit() {
+        let t0 = MonoInstant::from_nanos(0);
+        let mut usage = LeaseUsage::new(100, 500_000, t0);
+        usage.tokens_micro = 0;
+
+        assert_eq!(
+            usage.try_consume(MonoInstant::from_nanos(1)),
+            Err(R::DenyRateLimit)
+        );
+        assert_eq!(usage.tokens_micro, 0);
+        assert_eq!(usage.refill_remainder, 500_000);
+
+        assert_eq!(
+            usage.try_consume(MonoInstant::from_nanos(2)),
+            Err(R::DenyRateLimit)
+        );
+        assert_eq!(usage.tokens_micro, 1);
+        assert_eq!(usage.refill_remainder, 0);
     }
 }

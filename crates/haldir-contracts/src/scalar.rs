@@ -58,8 +58,13 @@ impl<const N: usize> CanonicalValue for AsciiId<N> {
     }
 }
 
-/// A bounded printable-ASCII string (graphic bytes `0x21..=0x7E`), used for
-/// routing keys where `/`, `*`-free concrete paths appear. Non-empty, `<= N`.
+/// A bounded printable-ASCII string (graphic bytes `0x21..=0x7E`). Non-empty,
+/// `<= N` bytes.
+///
+/// This is an opaque string bound, not a route-syntax or wildcard-safety proof:
+/// characters such as `/`, `*`, and `?` are accepted. Code using this type for
+/// routing must separately construct or validate the exact route grammar at its
+/// trust boundary.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct BoundedAscii<const N: usize>(String);
 
@@ -262,6 +267,17 @@ impl<T, const N: usize> BoundedVec<T, N> {
         Ok(Self(v))
     }
 
+    /// Construct a one-element vector when the type-level bound is nonzero.
+    ///
+    /// The const assertion is evaluated while monomorphizing a call, so code
+    /// attempting `BoundedVec<T, 0>::singleton(_)` fails to compile rather than
+    /// producing an invalid value or adding an impossible runtime error path.
+    #[must_use]
+    pub fn singleton(value: T) -> Self {
+        const { assert!(N > 0, "a singleton requires a nonzero bound") };
+        Self(vec![value])
+    }
+
     /// Borrow the elements.
     #[must_use]
     pub fn as_slice(&self) -> &[T] {
@@ -321,19 +337,34 @@ impl<T: CanonicalValue, const N: usize> BoundedSet<T, N> {
         Self(Vec::new())
     }
 
-    /// Build a canonical set from any iterator, sorting by canonical bytes and
-    /// removing duplicates.
+    /// Build a canonical set from at most `N` input items, sorting by canonical
+    /// bytes and removing duplicates.
     ///
     /// # Errors
-    /// Returns [`DecodeError::BoundExceeded`] if the deduplicated set exceeds `N`.
+    /// Returns [`DecodeError::BoundExceeded`] if the iterator yields more than
+    /// `N` items. Bounding consumed items, rather than only distinct output,
+    /// prevents an unbounded duplicate stream from creating unbounded work.
     pub fn from_iter_checked<I: IntoIterator<Item = T>>(items: I) -> Result<Self, DecodeError> {
-        let mut v: Vec<T> = items.into_iter().collect();
-        v.sort_by_key(to_canonical_bytes);
-        v.dedup_by(|a, b| to_canonical_bytes(a) == to_canonical_bytes(b));
-        if v.len() > N {
-            return Err(DecodeError::BoundExceeded);
+        // Maintain canonical order and uniqueness incrementally. Collecting the
+        // whole iterator before enforcing `N` would let an otherwise bounded
+        // contract constructor retain attacker-sized transient input.
+        let mut canonical: Vec<(Vec<u8>, T)> = Vec::new();
+        let mut remaining = N;
+        for item in items {
+            if remaining == 0 {
+                return Err(DecodeError::BoundExceeded);
+            }
+            remaining -= 1;
+            let bytes = to_canonical_bytes(&item);
+            match canonical.binary_search_by(|(existing, _)| existing.cmp(&bytes)) {
+                Ok(_) => {}
+                Err(index) => {
+                    debug_assert!(canonical.len() < N);
+                    canonical.insert(index, (bytes, item));
+                }
+            }
         }
-        Ok(Self(v))
+        Ok(Self(canonical.into_iter().map(|(_, item)| item).collect()))
     }
 
     /// Borrow the (sorted, unique) elements.

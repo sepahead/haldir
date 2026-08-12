@@ -9,17 +9,10 @@ use crate::{
     NcpCommandAdapter, NcpCompatibilityRecordV1,
 };
 
+pub use crate::adapter::NcpCommandWireProfile;
+
 #[cfg(feature = "real-ncp")]
 use crate::RealNcp08Adapter;
-
-/// Observable wire profile selected for one Gate runtime.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NcpCommandWireProfile {
-    /// Dependency-light deterministic semantic bytes used by the P0 model.
-    ModeledP0,
-    /// Upstream-validated compact NCP v0.8.0 JSON.
-    ExactNcpV0_8Json,
-}
 
 #[derive(Debug, Clone)]
 enum SelectedAdapterInner {
@@ -107,13 +100,12 @@ mod tests {
     use super::*;
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
 
     fn input() -> GateCommandBuildInputV1 {
         GateCommandBuildInputV1 {
-            decision_id: DecisionId::new([1; 16]),
             session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("sess-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),

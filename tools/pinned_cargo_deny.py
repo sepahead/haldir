@@ -17,15 +17,19 @@ import datetime as dt
 import hashlib
 import hmac
 import io
+import math
 import os
 import platform
 import re
 import runpy
+import selectors
 import shutil
+import signal
 import stat
 import subprocess
 import sys
 import tarfile
+import time
 import tomllib
 import zlib
 from collections.abc import Mapping, Sequence
@@ -33,7 +37,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN_SCHEMA_VERSION = 3
+PIN_SCHEMA_VERSION = 4
 MAX_POLICY_BYTES = 64 * 1024
 MAX_WORKFLOW_BYTES = 1024 * 1024
 MAX_FORMAL_ASSET_BYTES = 4_000_000
@@ -49,6 +53,7 @@ MAX_ADVISORY_MEMBERS = 4_096
 MAX_ADVISORY_MEMBER_BYTES = 64 * 1024
 MAX_ADVISORY_WORKTREE_BYTES = 2_000_000
 MAX_GIT_OUTPUT_BYTES = 16 * 1024
+MAX_PROCESS_INPUT_BYTES = 64 * 1024
 GIT_TIMEOUT_SECONDS = 30
 VERSION_TIMEOUT_SECONDS = 10
 CHECKSUM = re.compile(r"[0-9a-f]{64}")
@@ -118,6 +123,7 @@ TABLE_KEYS = {
     "dependencies": frozenset(
         {
             "ed25519-compact",
+            "curve25519-dalek",
             "sha2",
             "zeroize",
             "subtle",
@@ -129,6 +135,7 @@ TABLE_KEYS = {
             "hmac",
             "tokio",
             "zenoh",
+            "zenoh-transport",
         }
     ),
     "supply_chain": frozenset({"cargo_deny"}),
@@ -248,11 +255,235 @@ class CargoDenyPolicy(NamedTuple):
         return matches[0]
 
 
+class BoundedProcessResult(NamedTuple):
+    """Captured result from one isolated, byte-bounded process group."""
+
+    returncode: int
+    stdout: bytes
+    stderr: bytes
+
+
 def require(condition: bool, message: str) -> None:
     """Raise :class:`PinPolicyError` when ``condition`` is false."""
 
     if not condition:
         raise PinPolicyError(message)
+
+
+def _kill_and_reap(process: subprocess.Popen[bytes]) -> bool:
+    """Best-effort kill of one process group followed by bounded leader reaping."""
+
+    cleanup_ok = True
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass
+        except OSError:
+            cleanup_ok = False
+    try:
+        process.wait(timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        cleanup_ok = False
+    return cleanup_ok
+
+
+def _run_bounded_process(
+    command: tuple[str, ...],
+    *,
+    cwd: Path,
+    environment: Mapping[str, str],
+    timeout_seconds: float,
+    stdout_limit: int,
+    stderr_limit: int,
+    label: str,
+    stdin: bytes | None = None,
+) -> BoundedProcessResult:
+    """Run a command without a shell under process-group, time, and byte bounds."""
+
+    require(
+        command and all(type(part) is str and part for part in command),
+        f"{label} command is invalid",
+    )
+    require(
+        type(timeout_seconds) in {int, float}
+        and math.isfinite(timeout_seconds)
+        and timeout_seconds > 0,
+        f"{label} timeout is invalid",
+    )
+    require(
+        type(stdout_limit) is int
+        and stdout_limit >= 0
+        and type(stderr_limit) is int
+        and stderr_limit >= 0,
+        f"{label} output bound is invalid",
+    )
+    require(
+        stdin is None
+        or (type(stdin) is bytes and len(stdin) <= MAX_PROCESS_INPUT_BYTES),
+        f"{label} input exceeds the bound",
+    )
+    process: subprocess.Popen[bytes] | None = None
+    selector: selectors.BaseSelector | None = None
+    streams: dict[object, tuple[bytearray, int, str]] = {}
+    input_pipe: object | None = None
+    input_view: memoryview | None = None
+    cleanup_ok = True
+    failure: str | None = None
+    returncode: int | None = None
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            env=dict(environment),
+            stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+            start_new_session=True,
+        )
+        if process.stdout is None or process.stderr is None:
+            failure = "missing output pipe"
+        elif stdin is not None:
+            input_pipe = process.stdin
+            if input_pipe is None:
+                failure = "missing input pipe"
+            else:
+                input_view = memoryview(stdin)
+                os.set_blocking(input_pipe.fileno(), False)
+        if failure is None:
+            selector = selectors.DefaultSelector()
+            streams = {
+                process.stdout: (bytearray(), stdout_limit, "stdout"),
+                process.stderr: (bytearray(), stderr_limit, "stderr"),
+            }
+            for stream in streams:
+                selector.register(stream, selectors.EVENT_READ, "output")
+            if input_pipe is not None:
+                if input_view:
+                    selector.register(input_pipe, selectors.EVENT_WRITE, "input")
+                else:
+                    input_pipe.close()
+                    input_pipe = None
+            deadline = time.monotonic() + timeout_seconds
+            group_signaled = False
+            cleanup_deadline: float | None = None
+            while selector.get_map():
+                active_deadline = (
+                    cleanup_deadline if cleanup_deadline is not None else deadline
+                )
+                remaining = active_deadline - time.monotonic()
+                if remaining <= 0:
+                    failure = (
+                        "output pipe remained open after leader exit"
+                        if cleanup_deadline is not None
+                        else "timed out"
+                    )
+                    break
+                events = selector.select(min(remaining, 0.05))
+                for key, _mask in events:
+                    stream = key.fileobj
+                    if key.data == "input":
+                        assert input_view is not None
+                        try:
+                            written = os.write(
+                                stream.fileno(), input_view[: 64 * 1024]
+                            )
+                        except BlockingIOError:
+                            continue
+                        except BrokenPipeError:
+                            failure = "input write failed"
+                            break
+                        if written <= 0:
+                            failure = "incomplete input write"
+                            break
+                        input_view = input_view[written:]
+                        if not input_view:
+                            selector.unregister(stream)
+                            try:
+                                stream.close()
+                            except OSError:
+                                failure = "input close failed"
+                                break
+                            input_pipe = None
+                        continue
+                    buffer, maximum, stream_label = streams[stream]
+                    allowance = maximum - len(buffer)
+                    try:
+                        chunk = os.read(
+                            stream.fileno(), max(1, min(64 * 1024, allowance + 1))
+                        )
+                    except InterruptedError:
+                        continue
+                    if not chunk:
+                        selector.unregister(stream)
+                        continue
+                    accepted = chunk[: max(0, allowance)]
+                    buffer.extend(accepted)
+                    if len(chunk) > len(accepted):
+                        failure = f"{stream_label} exceeds the byte bound"
+                        break
+                if failure is not None:
+                    break
+                if (
+                    process.poll() is not None
+                    and selector.get_map()
+                    and not group_signaled
+                ):
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    except OSError:
+                        cleanup_ok = False
+                    group_signaled = True
+                    cleanup_deadline = min(deadline, time.monotonic() + 1.0)
+            if failure is None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    failure = "timed out"
+                else:
+                    try:
+                        returncode = process.wait(timeout=remaining)
+                    except subprocess.TimeoutExpired:
+                        failure = "timed out"
+    except (OSError, subprocess.SubprocessError) as error:
+        failure = f"launch failed: {error}"
+    finally:
+        # The process owns an isolated group. Always signal that group after the
+        # leader result is known so a descendant cannot escape merely by closing
+        # inherited stdout/stderr before the leader exits.
+        if process is not None:
+            cleanup_ok = _kill_and_reap(process) and cleanup_ok
+            if returncode is None:
+                returncode = process.returncode
+        if selector is not None:
+            try:
+                selector.close()
+            except OSError:
+                cleanup_ok = False
+        for stream in streams:
+            try:
+                stream.close()
+            except OSError:
+                cleanup_ok = False
+        if input_pipe is not None:
+            try:
+                input_pipe.close()
+            except OSError:
+                cleanup_ok = False
+    require(cleanup_ok, f"{label} process-group cleanup failed")
+    require(failure is None, f"{label} {failure}")
+    require(returncode is not None, f"{label} process was not reaped")
+    return BoundedProcessResult(
+        returncode=returncode,
+        stdout=bytes(streams[process.stdout][0]),
+        stderr=bytes(streams[process.stderr][0]),
+    )
 
 
 def _require_exact_keys(value: Any, expected: frozenset[str], label: str) -> None:
@@ -291,6 +522,12 @@ def _bounded_regular_bytes(path: Path, maximum: int, label: str) -> bytes:
             chunks.append(chunk)
             remaining -= len(chunk)
         require(os.read(descriptor, 1) == b"", f"{label} grew while reading")
+        after = os.fstat(descriptor)
+        require(
+            (metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns)
+            == (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns),
+            f"{label} changed while reading",
+        )
         return b"".join(chunks)
     finally:
         os.close(descriptor)
@@ -484,10 +721,17 @@ def parse_policy(pins: Mapping[str, Any]) -> CargoDenyPolicy:
             type(value) is str and 0 < len(value) <= 128,
             f"dependencies.{name} must be a bounded string pin",
         )
-    require(
-        dependencies["rustix"] == "1.1.4",
-        "dependencies.rustix must be the exact direct dependency pin",
-    )
+    exact_dependency_pins = {
+        "ed25519-compact": "2.3.1",
+        "curve25519-dalek": "4.1.3",
+        "subtle": "2.6.1",
+        "rustix": "1.1.4",
+    }
+    for name, expected in exact_dependency_pins.items():
+        require(
+            dependencies[name] == expected,
+            f"dependencies.{name} must be the exact reviewed dependency pin",
+        )
     formal = pins["formal"]
     require(
         isinstance(formal["tla_tools_version"], str)
@@ -942,22 +1186,14 @@ def verify_binary(
         metadata.st_mode & stat.S_IXUSR != 0 and metadata.st_mode & 0o022 == 0,
         "cargo-deny binary must be owner-executable and not group/world-writable",
     )
-    try:
-        completed = subprocess.run(
-            (str(binary_path.absolute()), "--version"),
-            cwd=binary_path.parent,
-            env={"LC_ALL": "C", "PATH": "/usr/bin:/bin"},
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            timeout=VERSION_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired) as error:
-        raise PinPolicyError("cannot execute the exact cargo-deny binary") from error
-    require(
-        len(completed.stdout) <= 1024 and len(completed.stderr) <= 1024,
-        "cargo-deny --version output exceeds the bound",
+    completed = _run_bounded_process(
+        (str(binary_path.absolute()), "--version"),
+        cwd=binary_path.parent,
+        environment={"LC_ALL": "C", "PATH": "/usr/bin:/bin"},
+        timeout_seconds=VERSION_TIMEOUT_SECONDS,
+        stdout_limit=1024,
+        stderr_limit=1024,
+        label="cargo-deny --version",
     )
     require(
         completed.returncode == 0
@@ -1176,7 +1412,7 @@ def _extract_advisory_tree(
 
 
 def _validate_git_executable(git_executable: Path) -> None:
-    """Reject PATH lookup, symlinks, and writable Git executables."""
+    """Reject PATH lookup, symlinks, and group/world-writable Git executables."""
 
     require(git_executable.is_absolute(), "Git executable path must be absolute")
     try:
@@ -1219,25 +1455,15 @@ def _run_git(
         str(repository),
         *arguments,
     )
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=repository.parent,
-            env=environment,
-            input=stdin,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            timeout=GIT_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired) as error:
-        raise PinPolicyError(
-            "cannot execute deterministic Git seed operation"
-        ) from error
-    require(
-        len(completed.stdout) <= MAX_GIT_OUTPUT_BYTES
-        and len(completed.stderr) <= MAX_GIT_OUTPUT_BYTES,
-        "deterministic Git seed output exceeds the bound",
+    completed = _run_bounded_process(
+        command,
+        cwd=repository.parent,
+        environment=environment,
+        stdin=stdin,
+        timeout_seconds=GIT_TIMEOUT_SECONDS,
+        stdout_limit=MAX_GIT_OUTPUT_BYTES,
+        stderr_limit=MAX_GIT_OUTPUT_BYTES,
+        label="deterministic Git seed operation",
     )
     require(
         completed.returncode == 0,

@@ -3,11 +3,16 @@
 Haldir's stable contracts contain semantic Haldir fields, not NCP-generated
 structs. Only `haldir-ncp08` is aware of NCP wire semantics.
 
-## Current provider boundary (checked 2026-08-01)
+## Current provider boundary (checked 2026-08-10)
 
-NCP repository HEAD is the unreleased and release-blocked `1.0.0-rc.1` candidate.
-Its wire is `1.0`, and its compact `CONTRACT_HASH` is `163acc57d8a62b66`. The latest
-immutable NCP release remains `v0.8.0`, which uses a different wire.
+NCP repository `main` at
+`1ffd3bf9a6c52d0279eb31a56e0664e4eec24d68` is the unreleased and
+release-blocked `1.0.0-rc.1` candidate. Its wire is `1.0`, and its compact
+`CONTRACT_HASH` is `163acc57d8a62b66`. Haldir's supported immutable baseline
+remains the annotated `v0.8.0` tag, which uses a different wire. This document
+calls it a tag/baseline rather than GitHub's “latest release”: the Releases API
+currently identifies `v0.5.1`, while the newer protocol baselines are immutable
+annotated tags.
 
 Haldir remains on the exact immutable v0.8 baseline below. Native Haldir 1.0 migration
 and independent qualification are **NOT RUN** and are not dependency-ready in the
@@ -50,11 +55,18 @@ compiled baseline before returning a private-field `ValidatedNcpCompatibilityArt
 Golden vectors, one-field substitutions, hostile shapes, arbitrary bytes, and default/exact-adapter
 identity agreement are tested (`CL-NCP-COMPATIBILITY-01`).
 
-This standalone function validates whichever bytes its caller supplies. It does not establish that
-the bytes came from the signed deployment role, identify the running executable or source tree, or
-select Gate startup. Later private Gate composition must retain the resolved deployment package,
-select its `NcpCompatibility` role internally, and consume this proof before those properties can be
-claimed.
+The standalone function validates whichever bytes its caller supplies. For deployment-package use,
+`ResolvedDeploymentPackage::validate_ncp_compatibility` consumes the resolved package, selects the
+exact signed `NcpCompatibility` role retained by that package, runs this validator, and returns the
+private-field `NcpValidatedDeploymentPackage` composition proof. That stage therefore binds package
+signature and acceptance policy, exact signed-role bytes, and every compiled compatibility pin. It
+does not identify the running executable or source tree or validate the other signed artifact roles.
+The next consuming deployment stage strictly validates the signed Gate configuration; a third
+verifies four separately role-bound, public-key-distinct revision-scoped runtime-snapshot approvals under the same bootstrap
+trust/revocation snapshots retained when the package was accepted. Package-bound Gate startup then
+exact-matches its top-level and live authorization identities and commits the package revision/digest
+with the boot. That still does not make the other seven artifact roles, the running executable, or
+external acquisition trustworthy.
 
 ## Default P0 model, exact conformance adapter, and route boundary
 
@@ -74,13 +86,17 @@ boundaries, Crebain's `velocity_setpoint` vec3/`m/s` profile, and byte/digest/
 transformation tampering. The stable `HaldirIntentV1` contracts do not depend on
 the upstream type.
 
-`frame_id` is copied from the independently validated trusted source state. It is
-part of the trusted-state digest and is never hardcoded: NCP's safety governor
-requires the sensor and command coordinate frames to agree. NCP has no field for
-Haldir's trusted `source_key`, so that key remains evidence/cache metadata while
-`source.{epoch,seq}` is carried on the NCP frame. Nanosecond Gate/source times are
-projected to NCP binary64 seconds; at the full `u64` nanosecond range the tested
-round-trip error bound is 2,048 ns, so this mapping is not byte identity.
+`frame_id` is copied from the independently validated trusted source state only
+after native policy requires exact equality with the frame identifier committed
+by the lease-bound schema-v2 policy digest. It is also part of the trusted-state
+digest and is never hardcoded: NCP's safety governor requires the sensor and
+command coordinate frames to agree, while Haldir must additionally prove that
+the shared label is the configured local-NED interpretation. NCP has no field
+for Haldir's trusted `source_key`, so that key remains evidence/cache metadata
+while `source.{epoch,seq}` is carried on the NCP frame. Nanosecond Gate/source
+times are projected to NCP binary64 seconds; at the full `u64` nanosecond range
+the tested round-trip error bound is 2,048 ns, so this mapping is not byte
+identity.
 
 `haldir-transport-zenoh` always delegates standard command and named-sensor route
 construction to this exact pinned `ncp-core`; its Haldir intent/evidence extensions
@@ -100,8 +116,9 @@ Gate `real-ncp` forwarding feature explicitly enables upstream-validated exact J
 feature unification can also compile that exact constructor, but never changes the stored
 selection. Tests exercise both forwarding paths and carry an exact-selected actor output
 through the Called boundary with its receipt digest intact. The strict
-`FinalCommandPublisher` still deliberately rejects modeled non-JSON bytes and accepts only
-upstream-validated NCP JSON.
+`FinalCommandPublisher` deliberately rejects modeled non-JSON bytes and accepts only
+upstream-validated NCP JSON whose payload and retained exact-frame semantics match the
+publisher's complete `(session_id, session.generation)` binding.
 
 Template startup separately requires an explicit `GateRuntimeProfile`; it is not inferred
 from the selected adapter or compiled Cargo features. `InProcessReference` preserves the P0
@@ -126,10 +143,14 @@ marked live Called type. Exact
 `InProcessReference`, forged-report, and modeled-actor paths cannot construct it.
 Coordinator construction derives the exact pinned command route
 from its actor realm/session; a publisher for any other route is terminally rejected before
-frame access or invocation. A matched publisher capability is returned only after local
-publisher `Ok` and linked terminal journal success; a publisher error is journaled
-conservatively when terminal append and sync succeed and does not return the capability.
-Terminal-boundary failure instead returns an immediate diagnostic and no capabilities.
+frame access or invocation. Every invoked matched publisher consumes both itself and the
+runtime. A local publisher `Ok` is linked to terminal journal success but stops as
+application-unobserved: NCP v0.8 starts `ttl_ms` at plant-local arrival, and this path has no
+enforced in-transit age bound or authenticated application acknowledgement. Gate therefore
+commits no guessed live action interval and returns no capability that could publish again.
+A publisher error is journaled conservatively when terminal append and sync succeed and also
+returns no capability. Terminal-boundary failure returns an immediate diagnostic and no
+capabilities.
 Dropping the future while it is pending
 leaves locally sync-confirmed Called, which the tested restart path closes as
 `UnknownAfterPublish`. Tests exercise the
@@ -144,22 +165,28 @@ after the real terminal append and sync, with reopen respectively producing Unkn
 exact terminal state. These tests do not open a live Zenoh session, execute the concrete
 method, enforce a real deadline, or inject an OS-I/O fault.
 
-The public off-by-default `DeclaredLiveGateKernel` first consumes the marked coordinator plus one
-bounded caller-supplied initial trusted state, challenge, and signed lease. It derives the intent
-route from the verified, admission-bound controller and requires the signed route to equal the
+The public off-by-default `DeclaredLiveGateKernel` first consumes the marked coordinator to issue
+one Gate-signed, startup-entropy-derived challenge with a fixed local monotonic lifetime. Only the
+resulting move-only issued-challenge state can consume one bounded caller-supplied initial trusted
+state and matching signed lease. It derives the intent route from the verified, admission-bound controller and requires the signed route to equal the
 canonical realm/session/controller route before challenge consumption, durable term commit,
-revision change, or activation. Failure returns no owner. `DeclaredLiveGateService` then consumes
-only that move-only route-bound result and one preconstructed route-matched publisher, creating
-one private capacity slot. For each raw, publicly constructible
-`IntentIngressEvent`, it enforces the hard envelope and actual-key-field bounds before capacity,
+revision change, or activation. Failure returns no owner. A crate-private lower service then consumes
+only that move-only route-bound result and one internally constructed route-matched publisher,
+creating one private capacity slot. For each internally supplied raw event, it enforces the hard
+envelope and actual-key-field bounds before capacity,
 clock, or actor access. The key value is caller-supplied at this boundary and is not transport
 provenance. The service privately owns one capacity slot and returns the sole service owner
-only on safe continuation; fatal, cancellation, publisher-error, and
-terminal-boundary-failure paths return no service/publisher capability. Marked-live service
+only before publication or after an ordinary no-publication outcome; fatal, cancellation, publisher-error, and
+terminal-boundary-failure paths return no service/publisher capability. A local publisher
+`Ok` is also terminally surfaced as application-unobserved rather than safe continuation.
+Marked-live service
 tests use a fake publisher seam; the
-production concrete signature compiles but is not invoked. The activation inputs are locally
-caller-supplied rather than authenticated control/state ingress, and no refresh/revocation loop
-exists. A separate `DeclaredLiveGateZenohService` consumes the route capability, one supplied
+production concrete aggregate signature compiles but is not invoked. The lower raw-event service
+is not exposed by `haldir-gate`; the activation inputs are locally
+caller-supplied rather than authenticated control/state ingress. A consuming local state-update
+transition exists and validates Gate time plus bounded source replay, but it does not authenticate
+the producer or provide a transport; no lease/revocation refresh loop exists. A separate
+`DeclaredLiveGateZenohService` consumes the route capability, one supplied
 session wrapper, and bounded limits; it derives the matched publisher and exact accepted-controller-
 route ingress internally from that same session lineage, then exposes only consuming receive/process/
 shutdown paths. A cloneable local handle can latch a request that lets the shutdown-aware method
@@ -198,14 +225,23 @@ Per the release, NCP v0.8.0 defers: plant-issued command authority, transport-bo
 `publisher_id`, and applied-command/stop acknowledgements. Haldir does **not**
 fabricate these as private extension fields. The wire `authority.term`/`lease_id`
 are ABSENT in `NcpCommandFrameV1`; `PlantPublicationAuthorityStateV1` keeps
-`AclExclusiveV1` and the future `NcpLeaseV1` as distinct variants.
+`AclExclusiveV1` and the future `NcpLeaseV1` as distinct variants. The current
+Gate configuration rejects `NcpLeaseV1` at construction: retaining the contract
+shape for a future wire profile must not admit an unimplemented authority mode
+into an ACL-only actor and defer failure until command time.
 
 ## Documentation-drift ledger (to record upstream, not to copy)
 
 The specification records that at review time some NCP prose lagged the tag
 (README quick-start built the deleted top-level `seq`; a `proto/ncp.proto` comment
 still said `"0.7"`; the wire-0.8 design record called the line untagged;
-`NEURO_CYBERNETIC_PROTOCOL.md` retained wire-0.7 sequence prose). Haldir implements
+`NEURO_CYBERNETIC_PROTOCOL.md` retained wire-0.7 sequence prose). Two stale time
+comments are especially hazardous: the protocol overview and the pre-0.8
+`CommandFrame` rustdoc say command `t` echoes the driving sensor. The tagged
+v0.8.0 changelog and frozen wire-0.8 identity design instead define `t` as this
+command publisher's local monotonic creation time and carry the driving sensor's
+time separately in `source_t`; Haldir follows that release definition by mapping
+Gate time to `t` and trusted-source time to `source_t`. Haldir implements
 stream/source/session/time/restart semantics from the tagged proto/schemas/
 changelog/conformance corpus and the typed-identity design record, never from
 stale prose. Upstream issues/PRs are the owner's to file.

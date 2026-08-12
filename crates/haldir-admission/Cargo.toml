@@ -1,6 +1,6 @@
 [package]
 name = "haldir-admission"
-description = "Haldir Gate — haldir-admission"
+description = "Bounded controller-admission manifests and exact snapshot matching for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,5 +14,3 @@ workspace = true
 
 [dependencies]
 haldir-contracts.workspace = true
-
-[dev-dependencies]

@@ -1,6 +1,6 @@
 [package]
 name = "haldir-evidence"
-description = "Haldir Gate — haldir-evidence"
+description = "Bounded signed crash-recoverable publication evidence journals for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,6 +15,5 @@ workspace = true
 [dependencies]
 haldir-contracts.workspace = true
 haldir-crypto.workspace = true
+rustix.workspace = true
 sha2.workspace = true
-
-[dev-dependencies]

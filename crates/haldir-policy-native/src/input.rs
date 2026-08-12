@@ -37,8 +37,12 @@ pub enum ActionHistoryError {
     FutureRecord,
     /// Retained intervals are not covered by the publication high-water mark.
     InconsistentRecordHighWater,
+    /// Burst and Hold-coverage state contradicts the publication high-water mark.
+    InconsistentMotionState,
     /// Exact duration accumulation exceeded its representation.
     ArithmeticOverflow,
+    /// The bounded history could not reserve its fixed insertion workspace.
+    AllocationFailed,
 }
 
 impl ActionHistoryError {
@@ -57,7 +61,9 @@ impl ActionHistoryError {
             Self::FutureSlewReference => "ACTION_HISTORY_FUTURE_SLEW_REFERENCE",
             Self::FutureRecord => "ACTION_HISTORY_FUTURE_RECORD",
             Self::InconsistentRecordHighWater => "ACTION_HISTORY_INCONSISTENT_RECORD_HIGH_WATER",
+            Self::InconsistentMotionState => "ACTION_HISTORY_INCONSISTENT_MOTION_STATE",
             Self::ArithmeticOverflow => "ACTION_HISTORY_ARITHMETIC_OVERFLOW",
+            Self::AllocationFailed => "ACTION_HISTORY_ALLOCATION_FAILED",
         }
     }
 }
@@ -104,8 +110,8 @@ impl PublishedInterval {
     }
 }
 
-/// Bounded history the policy consults for slew and duty. The gate updates it
-/// only after the caller reports modeled publication returned-ok (H7): the slew
+/// Bounded history the policy consults for slew, duty, and motion bursts. Gate
+/// updates it only after the caller reports modeled publication returned-ok (H7): the slew
 /// reference is the last **published** command, never the last
 /// requested/denied/prepared one.
 ///
@@ -125,6 +131,14 @@ pub struct BoundedActionHistory {
     /// Monotonic high-water mark for every recorded publication. Unlike the slew
     /// reference, this survives authority-boundary resets.
     pub(crate) last_recorded_at: Option<MonoInstant>,
+    /// Start of the current motion burst. Silence, command-horizon gaps, and
+    /// authority changes deliberately do not clear it; only a published Hold does.
+    pub(crate) motion_burst_started_at: Option<MonoInstant>,
+    /// Start of continuously covered published-Hold time, when the last published
+    /// action is Hold.
+    pub(crate) hold_started_at: Option<MonoInstant>,
+    /// Exclusive end of the continuously covered published-Hold horizon.
+    pub(crate) hold_active_until: Option<MonoInstant>,
     /// Disjoint, sorted, unioned published non-hold intervals.
     pub(crate) active_intervals: Vec<PublishedInterval>,
     /// Maximum retained disjoint intervals.
@@ -150,11 +164,21 @@ impl BoundedActionHistory {
         if retention_window.as_nanos() == 0 {
             return Err(ActionHistoryError::InvalidRetentionWindow);
         }
+        // Keep one extra slot for a disjoint candidate. At the configured bound,
+        // insertion may temporarily produce `max_intervals + 1` entries before
+        // closest-gap compression folds the set back to the hard limit.
+        let mut active_intervals = Vec::new();
+        active_intervals
+            .try_reserve_exact(max_intervals + 1)
+            .map_err(|_| ActionHistoryError::AllocationFailed)?;
         Ok(Self {
             last_published_velocity_mm_s: None,
             last_published_at: None,
             last_recorded_at: None,
-            active_intervals: Vec::new(),
+            motion_burst_started_at: None,
+            hold_started_at: None,
+            hold_active_until: None,
+            active_intervals,
             max_intervals,
             retention_window,
         })
@@ -176,6 +200,24 @@ impl BoundedActionHistory {
     #[must_use]
     pub const fn last_recorded_at(&self) -> Option<MonoInstant> {
         self.last_recorded_at
+    }
+
+    /// Start of the current non-Hold burst, retained until a Hold is published.
+    #[must_use]
+    pub const fn motion_burst_started_at(&self) -> Option<MonoInstant> {
+        self.motion_burst_started_at
+    }
+
+    /// Start of continuously covered published-Hold time.
+    #[must_use]
+    pub const fn hold_started_at(&self) -> Option<MonoInstant> {
+        self.hold_started_at
+    }
+
+    /// Exclusive end of the current published-Hold coverage.
+    #[must_use]
+    pub const fn hold_active_until(&self) -> Option<MonoInstant> {
+        self.hold_active_until
     }
 
     /// Canonical retained duty intervals.
@@ -214,28 +256,57 @@ impl BoundedActionHistory {
         let interval = PublishedInterval::new(start, end)?;
         let window_start = self.window_start(start);
 
+        self.reserve_insert_workspace()?;
         self.insert_active_interval(interval, window_start);
+        if self.motion_burst_started_at.is_none() {
+            self.motion_burst_started_at = Some(start);
+        }
+        self.hold_started_at = None;
+        self.hold_active_until = None;
         self.last_published_velocity_mm_s = Some(velocity_mm_s);
         self.last_published_at = Some(start);
         self.last_recorded_at = Some(start);
         Ok(())
     }
 
-    /// Record a published hold. The vehicle is commanded to stop, so the slew
-    /// reference becomes zero velocity: a subsequent velocity command must ramp up
+    /// Record a published Hold horizon. The vehicle is commanded to stop, so the
+    /// slew reference becomes zero velocity: a subsequent velocity command must ramp up
     /// from rest within the slew limit, never unconstrained (a prior `None`
     /// reference silently skipped the slew check). A hold contributes no non-hold
-    /// duty, so no active interval is added.
+    /// duty, so no active interval is added. Overlapping or exactly touching Hold
+    /// horizons preserve the original Hold start, while the newest command's end
+    /// replaces the prior end because publication supersedes the prior command. A
+    /// gap starts a new Hold. This prevents either an expired newer Hold or silence
+    /// from satisfying the dwell requirement.
     ///
     /// # Errors
     /// Returns an [`ActionHistoryError`] if retained history is malformed or
-    /// `at` regresses behind its publication high-water. The history is unchanged
-    /// on failure.
-    pub fn record_hold(&mut self, at: MonoInstant) -> Result<(), ActionHistoryError> {
-        self.validate_at(at)?;
+    /// `start` regresses behind its publication high-water, or `start >= end`.
+    /// The history is unchanged on failure.
+    pub fn record_hold(
+        &mut self,
+        start: MonoInstant,
+        end: MonoInstant,
+    ) -> Result<(), ActionHistoryError> {
+        self.validate_at(start)?;
+        let interval = PublishedInterval::new(start, end)?;
+        let (hold_started_at, hold_active_until) =
+            match (self.hold_started_at, self.hold_active_until) {
+                (Some(prior_start), Some(prior_end)) if prior_end >= start => {
+                    // A newer published command supersedes the prior command. Its
+                    // shorter horizon may preserve already-continuous Hold time,
+                    // but it must truncate the authoritative coverage end.
+                    (prior_start, interval.end)
+                }
+                _ => (interval.start, interval.end),
+            };
+
+        self.motion_burst_started_at = None;
+        self.hold_started_at = Some(hold_started_at);
+        self.hold_active_until = Some(hold_active_until);
         self.last_published_velocity_mm_s = Some([0, 0, 0]);
-        self.last_published_at = Some(at);
-        self.last_recorded_at = Some(at);
+        self.last_published_at = Some(start);
+        self.last_recorded_at = Some(start);
         Ok(())
     }
 
@@ -243,11 +314,12 @@ impl BoundedActionHistory {
     /// A new lease must not inherit the previous mission's last-published velocity
     /// as a slew reference — that mission's authority has ended and the vehicle's
     /// true velocity is no longer known to the Gate. The first velocity command of
-    /// the new lease is then bounded by the absolute component/norm/speed caps
-    /// (its slew reference is established by that first published command). The
-    /// duty window is left intact: it reflects conservatively charged,
-    /// locally-reported published-command horizons, which do not vanish at a
-    /// lease boundary. It does not claim downstream acceptance or application.
+    /// the new lease has no command-slew reference, but remains bounded by fresh
+    /// measured-state acceleration and the absolute component/norm/speed caps; it
+    /// establishes the next published-command reference. Duty and motion-burst
+    /// state remain intact because locally reported published-command horizons and
+    /// the requirement for an explicit Hold do not vanish at a lease boundary.
+    /// This does not claim downstream acceptance or application.
     pub fn clear_slew_reference(&mut self) {
         self.last_published_velocity_mm_s = None;
         self.last_published_at = None;
@@ -296,6 +368,18 @@ impl BoundedActionHistory {
             (Some(_), Some(at)) if self.last_recorded_at == Some(at) => {}
             (None, None) => {}
             _ => return Err(ActionHistoryError::InconsistentSlewReference),
+        }
+        match (
+            self.last_recorded_at,
+            self.motion_burst_started_at,
+            self.hold_started_at,
+            self.hold_active_until,
+        ) {
+            (None, None, None, None) => {}
+            (Some(last), Some(burst_start), None, None) if burst_start <= last => {}
+            (Some(last), None, Some(hold_start), Some(hold_end))
+                if hold_start <= last && last < hold_end => {}
+            _ => return Err(ActionHistoryError::InconsistentMotionState),
         }
         if !self.active_intervals.is_empty() && self.last_recorded_at.is_none() {
             return Err(ActionHistoryError::InconsistentRecordHighWater);
@@ -375,6 +459,74 @@ impl BoundedActionHistory {
         Ok(MonoDuration::from_nanos(total_ns))
     }
 
+    /// Exact prospective union of the retained non-Hold representation and a
+    /// candidate interval starting at `now`.
+    ///
+    /// Retained history is clipped at the owned trailing-window start but not at
+    /// `now`: a previously published command may still be active after this
+    /// decision, and its future tail must remain charged even when the new
+    /// candidate is shorter. The candidate is unioned as `[now, now + duration)`;
+    /// overlap with a retained tail is counted once. This is allocation-free and
+    /// exact for the uncompressed retained representation. Retained future tails
+    /// deliberately model publication uncertainty even when a newer command may
+    /// supersede them downstream, and closest-gap compression remains
+    /// conservatively high. The result therefore cannot be read as an exact
+    /// measurement of physical motion or receiver application.
+    ///
+    /// # Errors
+    /// Returns an [`ActionHistoryError`] for malformed history, a mismatched
+    /// window, or any duration/instant arithmetic overflow.
+    pub fn prospective_active_duration(
+        &self,
+        now: MonoInstant,
+        expected_retention_window: MonoDuration,
+        candidate_duration: MonoDuration,
+    ) -> Result<MonoDuration, ActionHistoryError> {
+        self.validate_for_policy(now, expected_retention_window)?;
+        let candidate_end = now
+            .checked_add_duration(candidate_duration)
+            .ok_or(ActionHistoryError::ArithmeticOverflow)?;
+        let window_start = self.window_start(now);
+
+        let mut retained_ns = 0_u128;
+        let mut candidate_overlap_ns = 0_u128;
+        for interval in &self.active_intervals {
+            let retained_start = interval.start.max(window_start);
+            if interval.end > retained_start {
+                retained_ns = retained_ns
+                    .checked_add(u128::from(
+                        interval
+                            .end
+                            .checked_duration_since(retained_start)
+                            .ok_or(ActionHistoryError::ArithmeticOverflow)?
+                            .as_nanos(),
+                    ))
+                    .ok_or(ActionHistoryError::ArithmeticOverflow)?;
+            }
+
+            let overlap_start = interval.start.max(now);
+            let overlap_end = interval.end.min(candidate_end);
+            if overlap_end > overlap_start {
+                candidate_overlap_ns = candidate_overlap_ns
+                    .checked_add(u128::from(
+                        overlap_end
+                            .checked_duration_since(overlap_start)
+                            .ok_or(ActionHistoryError::ArithmeticOverflow)?
+                            .as_nanos(),
+                    ))
+                    .ok_or(ActionHistoryError::ArithmeticOverflow)?;
+            }
+        }
+
+        let total_ns = retained_ns
+            .checked_add(u128::from(candidate_duration.as_nanos()))
+            .and_then(|sum| sum.checked_sub(candidate_overlap_ns))
+            .ok_or(ActionHistoryError::ArithmeticOverflow)?;
+        let total_ns =
+            u64::try_from(total_ns).map_err(|_| ActionHistoryError::ArithmeticOverflow)?;
+        Ok(MonoDuration::from_nanos(total_ns))
+    }
+
     fn window_start(&self, now: MonoInstant) -> MonoInstant {
         MonoInstant::from_nanos(
             now.as_nanos()
@@ -382,24 +534,43 @@ impl BoundedActionHistory {
         )
     }
 
+    /// Restore the constructor's fixed insertion workspace after operations such
+    /// as `Clone` that are permitted to shrink a `Vec`'s spare capacity. This is
+    /// fallible and runs before any semantic mutation, so allocation failure
+    /// cannot leave a partially committed publication history.
+    fn reserve_insert_workspace(&mut self) -> Result<(), ActionHistoryError> {
+        let required_capacity = self.max_intervals + 1;
+        if self.active_intervals.capacity() < required_capacity {
+            self.active_intervals
+                .try_reserve_exact(required_capacity - self.active_intervals.len())
+                .map_err(|_| ActionHistoryError::AllocationFailed)?;
+        }
+        Ok(())
+    }
+
     /// Union one validated interval into the disjoint set after evicting anything
     /// entirely before `window_start`, then enforce the retained bound.
     fn insert_active_interval(&mut self, interval: PublishedInterval, window_start: MonoInstant) {
         self.active_intervals.retain(|i| i.end > window_start);
         let mut merged = interval;
-        let mut disjoint: Vec<PublishedInterval> = Vec::new();
-        for iv in self.active_intervals.drain(..) {
-            // Overlapping or touching intervals fold into `merged`; the rest stay.
-            if iv.end < merged.start || iv.start > merged.end {
-                disjoint.push(iv);
-            } else {
-                merged.start = merged.start.min(iv.start);
-                merged.end = merged.end.max(iv.end);
-            }
+        // Existing intervals are sorted and disjoint. Everything whose end is
+        // strictly before the candidate remains to its left; touching intervals
+        // deliberately union with the candidate.
+        let insert_at = self
+            .active_intervals
+            .partition_point(|existing| existing.end < merged.start);
+        while self
+            .active_intervals
+            .get(insert_at)
+            .is_some_and(|existing| existing.start <= merged.end)
+        {
+            let existing = self.active_intervals.remove(insert_at);
+            merged.start = merged.start.min(existing.start);
+            merged.end = merged.end.max(existing.end);
         }
-        disjoint.push(merged);
-        disjoint.sort_by_key(|i| i.start.as_nanos());
-        self.active_intervals = disjoint;
+        // `reserve_insert_workspace` guaranteed this temporary slot before any
+        // semantic mutation. The insertion therefore cannot allocate here.
+        self.active_intervals.insert(insert_at, merged);
         // Fail-closed bounding: never silently drop an active interval. Merging the
         // smallest-gap pair over-approximates duty (it counts the gap as active),
         // which can only deny more, never allow more (H-B04).

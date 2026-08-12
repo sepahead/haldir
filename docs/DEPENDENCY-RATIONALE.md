@@ -8,13 +8,14 @@ not a routine bump.
 
 | Crate | Version | Why | Where |
 | --- | --- | --- | --- |
-| `ed25519-compact` | 2.2 | Small, self-contained, deterministic Ed25519 (RFC 8032) with minimal transitive deps; no `getrandom`-in-verify surprises. Used for the application-signature profile. | `haldir-crypto` |
+| `ed25519-compact` | exactly 2.3.1 | Small, self-contained, deterministic Ed25519 (RFC 8032) with minimal transitive deps; no `getrandom`-in-verify surprises. Used for the application-signature profile. The provider retains the 32-byte seed plus public key in its 64-byte secret representation. Haldir derives that key once rather than recreating it for every signature, explicitly wipes the retained secret on wrapper drop, and then receives the provider's second drop wipe. Haldir also defends against provider-specific zero-seed and verification behavior, so both the manifest and lockfile bind the exact reviewed release. This does not claim comprehensive erasure of by-value provider/compiler temporaries or process-level copies. | `haldir-crypto` |
+| `curve25519-dalek` | exactly 4.1.3 (default features disabled) | Compressed-point validation at application-key provisioning and signature verification. Haldir requires canonical re-encoding, a non-identity prime-subgroup public key, and a canonical prime-subgroup signature nonce point before invoking the pinned provider. This makes the trust store's reverse byte index point-unique and turns the provider's cofactored verification acceptance into equality inside the prime subgroup. The manifest and lockfile bind the exact reviewed release. | `haldir-crypto` |
 | `sha2` | 0.10 | Vetted SHA-256 (RFC 6234) for domain-separated digests. | `haldir-contracts` (digests) |
-| `zeroize` | 1 | Zeroize the signing-key seed buffer. | `haldir-crypto` |
-| `subtle` | 2 | Constant-time primitives (available for comparison paths). | `haldir-contracts` |
-| `getrandom` | 0.2 | OS CSPRNG for boot ids / nonces / epochs (used by the runtime, not the pure policy). | `haldir-crypto`, `haldir-state` |
+| `zeroize` | 1 | Explicitly zeroize the retained application-signing secret buffer and authenticated durable-storage MAC key buffer. | `haldir-crypto`, `haldir-durable` |
+| `subtle` | exactly 2.6.1 (transitive) | Constant-time selection and comparison support selected by the exact `curve25519-dalek` graph. Haldir does not call it directly, but the closed dependency policy verifies that the lockfile retains the reviewed sole version. | transitive through `curve25519-dalek` and other locked crypto dependencies |
+| `getrandom` | 0.2 | OS CSPRNG behind the Gate startup entropy capability for boot ids, nonces, and epochs; not used by the pure state, crypto-verification, or policy crates. | `haldir-gate` |
 | `proptest` | 1 | Property tests (dev-dependency only). | several crates |
-| `rustix` | exactly 1.1.4 | Race-resistant, file-descriptor-relative filesystem operations for deployment artifacts; default features are disabled and only `std` and `fs` are admitted. | `haldir-deployment` |
+| `rustix` | exactly 1.1.4 | Race-resistant descriptor-relative/no-follow filesystem operations for deployment artifacts plus nonblocking, no-follow file and lock opens at durable-state, evidence, Gate-startup, transport-config, and offline compatibility-input boundaries. These final-component defenses do not remove the documented trusted-parent requirement. Default features are disabled and only `std` and `fs` are admitted. | `haldir-deployment`, `haldir-durable`, `haldir-evidence`, `haldir-gate`, `haldir-transport-zenoh` (live feature), `haldir-ctl` |
 | `ncp-core` | 0.8.0 at `2f5bd586…` | Normative upstream NCP key construction is always used by `haldir-transport-zenoh`; normative wire types/validation are also used by the off-by-default exact conformance adapter. Gate's `real-ncp` feature explicitly forwards that capability; Cargo feature unification may also compile the exact constructor but cannot change Gate's stored closed selection. The immutable git source is checked against `tools/pins.toml` and `.ncp-consumer`. | `haldir-transport-zenoh`; `haldir-ncp08` / `haldir-gate` `real-ncp` features |
 | `serde_json` | 1.0 (locked) | Serialize/decode the upstream NCP JSON frame in the exact conformance adapter, inspect effective Zenoh configuration values in the off-by-default live boundary, and emit bounded result files from the explicitly development-only Gate smoke examples; never used in signed Haldir contracts or policy. | `haldir-ncp08` `real-ncp`; `haldir-transport-zenoh` `live-zenoh`; `haldir-gate` `live-gate-dev-smoke` |
 | `hmac` | 0.12.1 | RustCrypto HMAC with constant-time `verify_slice`, paired with the existing SHA-256 0.10 stack for separately keyed authenticated durable snapshots. Version 0.13 targets the newer digest/SHA-2 generation, so 0.12.1 avoids duplicating the cryptographic hash stack. | `haldir-durable` |
@@ -31,11 +32,10 @@ Zenoh transport backport repositories are allowed, and `rev` is required. The
 workspace manifest pins the backport by its full 40-hex revision, and the
 lockfile resolves the same Git object.
 
-Epoch 18 protects `tools/verify-pins.py` after activation. This ordinary
-dependency remediation does not modify that verifier and does not claim a new
-trust root. Its existing checks continue to bind the NCP pin and TLS-only Zenoh
-feature selection. A future intentional trust-root replacement can add the
-backport's cross-file identity to that protected verifier.
+The epoch-19 recovery protects `tools/verify-pins.py`, `tools/pins.toml`, and the
+cargo-deny installer/policy boundary after activation. Pin schema v4 binds the
+Zenoh transport backport's repository, exact revision, manifest patch, lockfile
+source object, and sole fixed `lz4_flex` selection across those files.
 
 The Zenoh 1.9 TLS graph adds reviewed BSD-2-Clause, ISC, Zlib, MPL-2.0, and
 CDLA-Permissive-2.0 licenses; `deny.toml` remains default-deny and admits exactly
@@ -79,7 +79,7 @@ maintenance notices rather than reported vulnerabilities. The exceptions must
 be removed when the pinned Zenoh baseline permits fixed transitives.
 `cargo deny --all-features check` rejects advisory matches present in the pinned
 RustSec snapshot. A current-database audit is a separate review input for
-advisories published after that immutable snapshot; it is not epoch-18 release
+advisories published after that immutable snapshot; it is not release
 authority.
 
 ## Supply-chain tooling boundary
@@ -123,11 +123,14 @@ plugin-free client feature.
 ## Automated dependency policy
 
 `.github/dependabot.yml` disables routine Cargo and GitHub Actions version-update
-pull requests. Repository vulnerability alerts remain enabled. Automatic
-Dependabot security-fix pull-request creation is separately disabled, so a
-maintainer must reproduce each accepted remediation as a reviewed exact-pin
-change. There is no auto-approval or auto-merge path, no Dependabot registry
-credential, and no reason to expose an Actions secret to dependency-update code.
+pull requests. Repository vulnerability alerts and automatic Dependabot
+security-update pull-request creation are enabled, so an applicable alert can
+produce a remediation proposal despite the zero routine-update limits. Those
+GitHub settings are mutable external state, not established by this YAML or by a
+source-only verifier. A maintainer must still reproduce an accepted remediation
+as a reviewed exact-pin change where the signed-history rules require it. There
+is no auto-approval or auto-merge path, no Dependabot registry credential, and no
+reason to expose an Actions secret to dependency-update code.
 
 If GitHub runs an update-generation job, it uses an Actions runner even when
 repository or organization Actions policy would otherwise disable ordinary
@@ -135,7 +138,7 @@ workflows. That GitHub-managed exception can create a proposal only; it grants
 no merge, release, deployment, or audit authority.
 
 Do not merge a Dependabot commit directly. When the accepted paths are not
-epoch-18 protected, reproduce the reviewed diff in a single-parent maintainer
+protected by the active signed-lineage epoch, reproduce the reviewed diff in a single-parent maintainer
 commit signed by the allowed release principal; the audit chain rejects a
 post-activation commit with another identity or signature. A proposal touching a
 protected path instead requires an intentional signed gate and trust-root
@@ -153,14 +156,14 @@ with the already-present 0.4 line, produced no lockfile change, and failed the
 whole update job. Incompatible-line migrations require a reviewed manifest
 change or an update to the parent crate that owns the requirement. Routine
 Cargo version proposals stay disabled; maintainers can still perform deliberate
-signed lockfile updates. Vulnerability alerts remain enabled; automatic
-security-fix pull-request creation does not.
+signed lockfile updates. Vulnerability alerts and automatic security-update
+proposals remain enabled; neither grants merge or release authority.
 
 A deliberate Actions update must retain a full 40-hex commit SHA and its
 same-line release comment. Reviewers must authenticate the upstream repository,
 tag, and commit, then deliberately update the exact pin constants, tests, and
 protected job hashes. The workflows and their pin-verification boundary are
-epoch-18 protected, so an accepted Actions update cannot land as an ordinary
+protected by active epoch 19, so an accepted Actions update cannot land as an ordinary
 successor: it requires the intentional signed recovery process and a new
 gate/trust root. A candidate that initially fails `tools/verify-ci-pins.py` is a
 review prompt, not permission to relax that verifier. Pull-request workflows
@@ -172,7 +175,9 @@ Dependabot alerts do not cover vulnerable Actions pinned by SHA. Independent
 upstream-advisory monitoring is therefore required; an alert or advisory does
 not prove that a candidate commit is safe. The zero open-PR limits apply only to
 version updates. They do not disable vulnerability alerts. Automatic
-security-fix pull-request creation is disabled by a separate repository setting.
+security-update pull-request creation is enabled by a separate, externally
+mutable repository setting and remains subject to the same review and protected-
+branch controls as any other proposal.
 
 ## Deliberately absent
 

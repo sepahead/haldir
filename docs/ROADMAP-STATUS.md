@@ -27,8 +27,10 @@ A retained clean-source development campaign now proves the narrow strict-sessio
 aggregate-bind, and immediate local-shutdown observation in `CL-LIVE-GATE-DEV-BIND-01`.
 A separate local primitive now verifies strict signed deployment-package bytes, optionally captures
 bounded artifact bytes from a caller-supplied Linux/macOS directory capability without a leaf reopen,
-resolves and retains the exact bytes, and supplies neutral revision/payload-digest values to an
-atomic package-plus-boot ratchet (`CL-DEPLOYMENT-PRIMITIVE-01`). It is not connected to Gate startup.
+resolves and retains the exact bytes, composes the signed NCP role with compiled pins, and supplies
+verifier-derived revision/payload-digest values to an atomic package-plus-boot ratchet. Package-bound
+Gate startup consumes that stage and exact-matches the signed journal ID when its format-v2 evidence
+chain is bound (`CL-DEPLOYMENT-PRIMITIVE-01`).
 The full Haldir project remains incomplete: production durable recovery, authenticated mandatory
 selection of the exact NCP/internal strict transport path, certificate-lifecycle/reconnect and
 bypass proof beyond the retained synthetic ACL subset and narrow development Gate bind/shutdown
@@ -56,12 +58,12 @@ phase, publication, or release authority.
 | 2 — canonical contracts and malformed corpus | Done (P0) | Strict deterministic CBOR, golden vectors, structural limits, and hostile parser tests (`CL-CBOR-01`). |
 | 3 — signatures, roles, trust | Done (P0) | COSE/Ed25519, domain binding, trust conflict handling, role/subject enforcement (`CL-COSE-01`, `CL-TRUST-01`, `CL-IDENTITY-01`). |
 | 4 — controller/backend admission | Partial | Structural digest admission exists; profile reconstruction and behavioral backend equivalence do not (`CL-BACKEND-01`). |
-| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases/revocation, a collision-free lease-term scope with downgrade-safe migration, checked high-water state, classified generation anchors, Unix atomic files, explicit development-local Gate startup, runtime-profile validation before the listed startup-owned calls/accesses, a strict signed deployment-package/owned-artifact verifier with an optional bounded Linux/macOS directory-capability source, and an atomic store-global package-plus-boot ratchet for the store's authenticated Gate binding exist (`CL-DURABLE-PRIMITIVE-01`, `CL-DURABLE-STARTUP-DEV-01`, `CL-DEPLOYMENT-PRIMITIVE-01`). The verifier and ratchet are not connected to Gate startup. An authenticated mandatory runtime package, authenticated/protected artifact-root and credential acquisition, authenticated live control plane, deployed external anchor, cross-store transfer, crash campaign, and live preemption do not (`CL-DEPLOYMENT-PACKAGE-01`, `CL-LIVE-CONTROL-PLANE-01`, `CL-DURABLE-01`, issue #3). |
-| 6 — bounded state and formal model | Done (P0) | Rust state/model tests and the exact pinned TLA+ v1.7.4 workflow are green (`CL-FORMAL-01`). |
-| 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy; exact-nanosecond half-open action-history accounting; typed integrity faults; and boundary/reference-property plus Gate integration tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`, `CL-ERROR-01`). |
-| 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events; it is not physical evidence (`CL-HARDWARE-01`). |
-| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, closed adapter selection, explicit template runtime profile, and pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`). A strict bounded canonical compatibility-artifact decoder exact-matches the implemented frozen command subset—including its schema/vector digests and enabled increment—to every compiled pin before returning a private-field proof (`CL-NCP-COMPATIBILITY-01`). `DeclaredLiveZenoh` requires exact JSON and the live feature before the listed startup-owned effects; successful startup privately mints the live coordinator capability, while reference/copied-report paths cannot. Exact-selected output reaches Called, and valid exact JSON traverses the separate synthetic campaign. The no-network activation capability derives the accepted controller's canonical route before authority commits. The outer aggregate consumes that capability plus one supplied session wrapper, internally derives the matched publisher and exact ingress from the same session lineage, and exposes consuming receive/process/shutdown methods plus a cloneable local safe-boundary request handle (`CL-LIVE-INGRESS-BINDING-01`). The `live-gate-dev-smoke` examples hard-select this exact path: a separate offline provisioner creates a disposable fixture, while the networked target is `OpenExisting`-only and immediately shuts down without processing. A retained clean-source run proves those concrete local calls and returns with zero processing/publication (`CL-LIVE-GATE-DEV-BIND-01`). The package primitive can bind a closed NCP-wire selection and exact compatibility-artifact bytes, but no private Gate path binds that signed role to the standalone semantic proof or selects startup, ongoing controls, or protected credentials (`CL-DEPLOYMENT-PRIMITIVE-01`). Full NCP schema/conformance-set identities and reproducible adapter source/build provenance also remain open. |
-| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, declared-live validation, signed receipts, post-sync-revalidated publication seam, canonical linked stages, bounded locked manager/reservations, assurance replay, and fused restart Unknown emission exist. The coordinator reserves three lifecycle records before mutation, sync-orders receipt/Called/terminal transitions, and blocks after recovered called-or-later history pending external clearance. Only its startup-capability-descended live Called type exposes the concrete publisher method. The public kernel fail-stop primes bounded caller-supplied initial state/challenge/signed-lease input and mints only the canonical accepted-controller route capability. The lower publisher-bound service owns one private output slot and remains a documented raw-event bypass. The non-cloneable Zenoh aggregate accepts no controller/route/publisher/raw-event override, retains one supplied session wrapper plus its internally derived bounded ingress and publisher-owning service, privately retries journal-capacity/restart-clearance refusals, and fail-stops unreachable input/key/output-capacity refusals. Its cloneable monotonic local stop handle latches a request that lets the shutdown-aware consuming method return the owner before a retained retry or wake an idle receive; after event selection it performs no request-driven cancellation of Gate/publication processing and leaves the request latched for the next returned owner. Explicit shutdown orders undeclare/drain before publisher drop and session close (`CL-GATE-LIFECYCLE-01`, `CL-LIVE-INGRESS-BINDING-01`). Offline fake aggregate tests cover the lifecycle; the example pair adds explicit non-overwriting `ProvisionNew`/`OpenExisting` separation and a target-local outer lock held through the immediate local aggregate-shutdown return, and the retained development run proves only that zero-processing bind/local-shutdown path (`CL-LIVE-GATE-DEV-BIND-01`). This remains no in-flight timeout, OS-signal runner, journal footer finalization, confirmed remote session retirement, or graceful production shutdown. Missing gates include authenticated ongoing state/challenge/lease/revocation ingress, Gate glue that consumes the verified/resolved package and package-booted capability, a protected credential opener, a production-wide outer instance lock policy, a separate bounded async publisher worker, canonical journal-path binding, Prepared loss summaries, OS/disk/full/crash/power fault injection, live-session timeout/panic, supervision, reconnect, and authenticated restart clearance (`CL-DEPLOYMENT-PACKAGE-01`, `CL-DURABLE-01`). |
+| 5 — challenges, leases, revocation | Partial | One-shot challenges, signed leases/revocation, a collision-free lease-term scope with downgrade-safe migration, checked high-water state, classified generation anchors, Unix atomic files, explicit development-local Gate startup, runtime-profile validation before the listed startup-owned calls/accesses, a strict signed deployment-package/owned-artifact verifier with an optional bounded Linux/macOS directory-capability source, and an atomic store-global package-plus-boot ratchet for the store's authenticated Gate binding exist (`CL-DURABLE-PRIMITIVE-01`, `CL-DURABLE-STARTUP-DEV-01`, `CL-DEPLOYMENT-PRIMITIVE-01`). Package-bound Gate startup consumes NCP and Gate-configuration stages plus four separately verified, role-separated, public-key-distinct revision-scoped snapshot approvals under the same retained bootstrap trust/revocations; this does not prove independent organizations or operators. It exact-matches every live authorization snapshot/session/publication/cap/signer identity and rejects cross-store `kid` or public-key rebinding before effects, commits the verified package revision/digest with the boot, and exact-matches the signed journal ID when binding format-v2 evidence. An authenticated mandatory runtime package, authenticated/protected artifact-root and credential acquisition, authenticated live control plane, deployed external anchor, cross-store transfer, crash campaign, and live preemption do not (`CL-DEPLOYMENT-PACKAGE-01`, `CL-LIVE-CONTROL-PLANE-01`, `CL-DURABLE-01`, issue #3). |
+| 6 — bounded state and formal model | Partial | Rust state/model tests are green. The corrected finite TLA+ source checks exact active-lease incarnation, consistent lease presence, output allocation, retired epochs, and terminal-fault immutability under the pinned v1.7.4 runner locally; current exact-subject hosted evidence is pending (`CL-FORMAL-01`). |
+| 7 — deterministic native policy | Done (P0) | Fixed-point, bounded, fail-closed policy; measured-state acceleration; an outward-rounded prospective geofence covering exact state age plus the candidate horizon and requested/measured±uncertain velocity; exact-nanosecond half-open action-history accounting; typed integrity faults; and boundary/reference-property plus Gate integration tests (`CL-FIXEDPOINT-01`, `CL-SLEW-01`, `CL-DUTY-01`, `CL-ERROR-01`). |
+| 8 — deterministic reference plant | Done (model only) | One-ingress integer simulation distinguishes accepted/applied/observed model events and carries exact signed sub-millimetre integration remainder across ticks; it is not physical evidence (`CL-HARDWARE-01`). |
+| 9 — NCP v0.8.0 adapter | Partial | The immutable baseline, modeled adapter, opt-in exact `ncp-core` JSON/frozen-corpus differential path, closed adapter selection, explicit template runtime profile, and pinned-NCP route builders are tested (`CL-NCP-REAL-01`, `CL-TRANSPORT-BOUNDARY-01`). A strict bounded canonical compatibility-artifact decoder exact-matches the implemented frozen command subset—including its schema/vector digests and enabled increment—to every compiled pin before returning a private-field proof (`CL-NCP-COMPATIBILITY-01`). The deployment resolver consumes that validator together with its exact signed role bytes into `NcpValidatedDeploymentPackage`, then strictly validates the signed Gate configuration; package-bound Gate startup consumes and retains the stronger stage while exact-matching runtime/wire/store and all live configuration identities and atomically ratcheting the verified package with its boot (`CL-DEPLOYMENT-PRIMITIVE-01`). `DeclaredLiveZenoh` requires exact JSON and the live feature before the listed startup-owned effects; successful startup privately mints the live coordinator capability, while reference/copied-report paths cannot. Exact-selected output reaches Called, and valid exact JSON traverses the separate synthetic campaign. The no-network activation capability derives the accepted controller's canonical route before authority commits. The outer aggregate consumes that capability plus one supplied session wrapper, internally derives the matched publisher and exact ingress from the same session lineage, and exposes consuming receive/process/shutdown methods plus a cloneable local safe-boundary request handle (`CL-LIVE-INGRESS-BINDING-01`). The `live-gate-dev-smoke` examples hard-select this exact path: a separate offline provisioner creates a disposable fixture, while the networked target is `OpenExisting`-only and immediately shuts down without processing. A retained clean-source run proves those concrete local calls and returns with zero processing/publication (`CL-LIVE-GATE-DEV-BIND-01`). Full NCP schema/conformance-set identities and reproducible adapter source/build provenance also remain open. |
+| 10 — Gate runtime, queues, journal, receipts | Partial | The 13-stage actor, fallible configuration, boot/store-bound startup, declared-live validation, signed receipts, post-sync revalidation, canonical linked publication stages, bounded journal reservations, assurance replay, and fused restart Unknown emission exist. Package-bound startup consumes NCP and strict Gate-configuration stages plus four separately verified role/key-separated snapshot identities rooted in the retained bootstrap verifier state; it exact-matches every runtime snapshot/session/publication/cap/signer identity before effects, atomically commits the package revision/digest with the boot, retains the proof through journal binding, exact-matches the signed journal ID, and rejects unbound assurance startup. The coordinator sync-orders receipt/Called/terminal transitions and blocks after recovered called-or-later history pending external clearance. Live ownership, bounded ingress, consuming state updates, safe-boundary shutdown, and local session cleanup are implemented and tested at their stated library boundary (`CL-STATE-INGRESS-01`, `CL-GATE-LIFECYCLE-01`, `CL-LIVE-GATE-DEV-BIND-01`). This remains no authenticated state/control producer, in-flight timeout, OS-signal runner, journal finalization, confirmed remote retirement, or graceful production daemon. Missing gates include authenticated ongoing challenge/lease/revocation/state delivery, semantic consumption of the other seven deployment roles, mandatory journal/path and running-image binding, protected credential opening, process-wide supervision/locking, bounded asynchronous publication, Prepared loss summaries, OS/disk/crash/power fault injection, reconnect, and authenticated restart clearance (`CL-DEPLOYMENT-PACKAGE-01`, `CL-DURABLE-01`). |
 | 11 — secure Zenoh and ACL proof | Partial | Exact routes, a TLS-only Zenoh 1.9 boundary, bounded ingress, typed exact-command publication, and an immutable-image/default-deny/direction-specific ACL package are statically tested (`CL-TRANSPORT-BOUNDARY-01`). The retained ephemeral-PKI campaign receiver-observes the fixed final-command/controller-intent subset across all configured principals (`CL-LIVE-TRANSPORT-01`), and a separate retained development campaign proves one strict Gate session/aggregate bind and immediate local shutdown with zero processing/publication (`CL-LIVE-GATE-DEV-BIND-01`). Certificate lifecycle/reconnect, the full operation/route matrix, production credential custody, peer identity, remote retirement, and bypass inventory remain open. |
 | 12 — Crebain sole plant owner | Not started in Haldir evidence | Current Crebain work is outside this repository; bypass closure and accepted/applied evidence are unproven. |
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
@@ -75,12 +77,15 @@ phase, publication, or release authority.
 | 21 — first experimental release | Partial | Protected CI directly installs exact verified cargo-deny assets, reconstructs the bounded pinned RustSec snapshot, primes locked inputs online, and performs the final audit frozen and network-isolated. Acquisition availability, SBOM, end-to-end provenance, signed tag, reproducible release artifacts, and release evidence remain open (`CL-PRODUCTION-01`). |
 | 22 — future NCP authority increments | Not started / upstream-triggered | NCP v0.8.0 still defers plant authority, publisher binding, and apply/stop acknowledgements. |
 
-## NCP provider boundary update (2026-08-01)
+## NCP provider boundary update (2026-08-10)
 
-NCP repository HEAD is now the unreleased and release-blocked `1.0.0-rc.1`
-candidate. Its wire is `1.0`, and its compact `CONTRACT_HASH` is
-`163acc57d8a62b66`. The latest immutable NCP release remains `v0.8.0`, which
-uses a different wire.
+NCP repository `main` at
+`1ffd3bf9a6c52d0279eb31a56e0664e4eec24d68` is the unreleased and
+release-blocked `1.0.0-rc.1` candidate. Its wire is `1.0`, and its compact
+`CONTRACT_HASH` is `163acc57d8a62b66`. Haldir's supported immutable baseline
+remains the annotated `v0.8.0` tag, which uses a different wire. GitHub's
+Releases API currently identifies `v0.5.1`; the newer protocol baselines are
+annotated tags, so this ledger does not call `v0.8.0` the latest GitHub release.
 
 Haldir remains pinned to the immutable v0.8 baseline. Native Haldir 1.0
 migration and independent qualification are **NOT RUN** and are not
@@ -90,7 +95,8 @@ runtime. The dated historical audit cut below remains unchanged.
 
 ## Ecosystem re-check (2026-07-13)
 
-- NCP `v0.8.0` remains the latest immutable release and the Haldir pin remains correct:
+- NCP `v0.8.0` remains the latest annotated protocol tag in that historical
+  observation, and the Haldir pin remains correct:
   commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`, wire `0.8`, contract
   `d1b50a2d8a265276`, proto digest `6f13b12c…131227`.
 - NCP `main` at the latest audit was
@@ -108,9 +114,10 @@ runtime. The dated historical audit cut below remains unchanged.
   through Called. Successful
   declared-live startup now privately mints the move-only capability required by the live
   coordinator typestate; exact reference and forged-report paths are rejected before clock
-  sampling. The declaration remains process-local. A public no-network activation kernel now
-  validates one bounded local state/challenge/signed-lease bundle and mints an exact intent-route
-  capability only from the verified controller. The outer Zenoh aggregate consumes that result,
+  sampling. The declaration remains process-local. A public no-network kernel now issues one
+  Gate-signed, locally expiring challenge from startup entropy; only its move-only successor can
+  validate one bounded local state and matching signed lease and mint an exact intent-route
+  capability from the verified controller. The outer Zenoh aggregate consumes that result,
   one supplied session wrapper, and validated ingress limits; it internally creates the matched
   publisher and exact accepted-controller-route ingress from the same session lineage. It also
   exposes a local safe-boundary request latch, without an in-flight timeout or signal runner. The
@@ -127,7 +134,7 @@ runtime. The dated historical audit cut below remains unchanged.
   service, lifecycle, trust-union, application, and bypass limitations remain open.
 - Gate's off-by-default live feature now compiles a capability-marked consuming
   coordinator-to-concrete-publisher binding, a no-network initial activation/route typestate,
-  a lower public single-owner service kernel with one private output slot, and an outer
+  a crate-private single-owner raw-event kernel with one private output slot, and an outer public
   non-cloneable session/ingress aggregate with consuming receive/process/shutdown methods and a
   separate cloneable local safe-boundary request handle. Tests start from an
   inactive test-minted marked actor and actual journal manager, exercise bounded caller-supplied local
@@ -139,14 +146,19 @@ runtime. The dated historical audit cut below remains unchanged.
   session-open, aggregate-bind, and immediate local-shutdown path; no authenticated ongoing control
   path exercises processing through the aggregate (`CL-LIVE-GATE-DEV-BIND-01`).
 
-## Next completion slice, reviewed from five lenses
+## Next completion slice, organized as five workstreams
+
+Every change within these workstreams is reviewed against the normative 20-lens
+rubric in `CONTRIBUTING.md`; the five headings below organize delivery rather
+than narrowing that review.
 
 1. **Authority/evidence:** preserve the retained development smoke and the separately proven
    deployment primitives at their narrow claim boundaries (`CL-LIVE-GATE-DEV-BIND-01`,
-   `CL-DEPLOYMENT-PRIMITIVE-01`). Preserve the standalone NCP command-subset decoder at its narrow
-   boundary (`CL-NCP-COMPATIBILITY-01`). Next add authenticated/protected artifact-root and credential
-   acquisition, semantic decoders for the remaining verified artifacts, and private Gate glue that
-   consumes the resolved package plus package-booted capability before startup effects. Then add a
+   `CL-DEPLOYMENT-PRIMITIVE-01`). Preserve the NCP command-subset decoder and the strict signed
+   Gate-configuration composition at their narrow boundaries (`CL-NCP-COMPATIBILITY-01`). Next add
+   authenticated/protected artifact-root and credential acquisition, semantic decoders for the
+   remaining seven verified artifacts, running-image and journal-path binding, and an authenticated runner
+   that makes package-bound Gate startup plus journal binding mandatory. Then add a
    real external anchor and mandatory durable evidence-manager selection before authority can
    become active. The full deployment-package/control-plane claims remain unproven until those gates.
 2. **Wire/ecosystem:** make an authenticated service package select the now-tested

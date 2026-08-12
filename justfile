@@ -3,9 +3,20 @@
 # Java-dependent TLA+ recipes are explicit and intentionally separate.
 # If `just` is unavailable, run the underlying command directly.
 
-set shell := ["/usr/bin/env", "-u", "BASH_ENV", "-u", "ENV", "/bin/bash", "--noprofile", "--norc", "-uc"]
+set shell := ["/usr/bin/env", "-u", "BASH_ENV", "-u", "ENV", "/bin/bash", "--noprofile", "--norc", "-p", "-uc"]
 
 default: ci
+
+# Bounded, non-installing prerequisite check; Cargo resolution is locked/offline.
+doctor:
+    python3 -I -B tools/doctor.py
+
+# Add the Java-major prerequisite probe for the separate TLA+ lane.
+doctor-formal:
+    python3 -I -B tools/doctor.py --formal
+
+doctor-test:
+    python3 -I -B -W error tools/test_doctor.py
 
 fmt:
     cargo fmt --all
@@ -53,56 +64,58 @@ formal-offline:
 
 # Hermetic adversarial tests for acquisition, caching, Java, and TLC handling.
 formal-runner-test:
-    python3 -I -B tools/test_run_formal.py
+    python3 -I -B -W error tools/test_run_formal.py
 
-fuzz-smoke:
-    # Bounded property-based parser smoke checks plus named malformed regressions.
-    # This is not a replacement for a time-bounded libFuzzer/sanitizer campaign.
+parser-property-smoke:
+    # Bounded property-based parser checks plus named malformed regressions.
     cargo test -p haldir-contracts --locked -- decoder_never_panics_on_arbitrary_bytes
     cargo test -p haldir-ncp08 --all-features --locked -- arbitrary_artifact_bytes_never_panic
     cargo test --workspace --locked -- malformed
+
+# Compatibility alias only. This recipe is not coverage-guided fuzzing.
+fuzz-smoke: parser-property-smoke
 
 range-reference:
     cargo test -p haldir-range --locked
 
 verify-generated:
-    python3 tools/verify-generated.py
+    python3 -I -B tools/verify-generated.py
 
 verify-evidence:
-    python3 tools/verify-evidence.py
+    python3 -I -B tools/verify-evidence.py
 
 verify-pins:
-    python3 tools/verify-pins.py
+    python3 -I -B tools/verify-pins.py
 
 verify-ci-pins:
-    python3 tools/verify-ci-pins.py
+    python3 -I -B tools/verify-ci-pins.py
 
 verify-claims:
-    python3 tools/verify-claims.py
+    python3 -I -B tools/verify-claims.py
 
 verify-release-audit:
-    python3 -m unittest tools/release/test_verify_audit_inputs.py
-    python3 tools/release/verify-audit-inputs.py
+    python3 -I -B tools/release/test_verify_audit_inputs.py
+    python3 -I -B tools/release/verify-audit-inputs.py
 
 verify-current-audit:
-    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/release/current-audit-gate.sh
+    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc -p tools/release/current-audit-gate.sh
 
 verify-release-authority:
-    python3 -m unittest tools/release/test_verify_authority_model.py
-    python3 tools/release/verify-authority-model.py
+    python3 -I -B tools/release/test_verify_authority_model.py
+    python3 -I -B tools/release/verify-authority-model.py
 
 verify-release-protection:
-    python3 -m unittest tools/release/test_generate_task_evidence.py
-    python3 tools/release/verify-task-evidence.py --all-present
-    python3 -m unittest tools/release/test_verify_protection_model.py
-    python3 tools/release/verify-protection-model.py
+    python3 -I -B tools/release/test_generate_task_evidence.py
+    python3 -I -B tools/release/verify-task-evidence.py --all-present
+    python3 -I -B tools/release/test_verify_protection_model.py
+    python3 -I -B tools/release/verify-protection-model.py
 
 interop:
-    tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT; cargo run -q -p haldir-crypto --example emit_interop_vectors >"$tmp"; diff -u tools/interop/vectors.json "$tmp"; python3 tools/interop/verify_cose.py tools/interop/vectors.json
+    tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT; cargo run -q -p haldir-crypto --example emit_interop_vectors --locked >"$tmp"; diff -u tools/interop/vectors.json "$tmp"; python3 -I -B tools/interop/verify_cose.py tools/interop/vectors.json
 
 diff-check:
     git diff --check
 
-# Canonical offline P0 gate; excludes the Java-dependent formal recipes.
+# Canonical local P0 gate; excludes the Java-dependent formal recipes.
 ci:
-    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc tools/p0r-exit-gate.sh
+    /usr/bin/env -u BASH_ENV -u ENV /bin/bash --noprofile --norc -p tools/p0r-exit-gate.sh

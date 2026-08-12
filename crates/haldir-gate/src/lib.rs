@@ -1,17 +1,23 @@
-//! `haldir-gate` — composition of the pure Haldir subsystems into one one-vehicle
+//! `haldir-gate` — composition of the pure Haldir subsystems into one-vehicle
 //! authorization runtime with explicit side-effect boundaries.
 //!
 //! The end-to-end path is: trusted state + signed controller intent -> the
-//! 13-stage [`actor::VehicleActor::decide_intent`] pipeline -> opaque prepared
-//! output -> explicit modeled publication call -> deterministic reference plant ->
-//! staged evidence. This is the P0
-//! `assurance-reference-v1` profile: in-process, deterministic, no live transport,
-//! no neural runtime, no physical hardware (see `docs/LIMITATIONS.md`). The
-//! off-by-default `live-zenoh` feature additionally exposes single-owner local
-//! kernels and an optional caller-session-backed ingress aggregate. The stricter
+//! 13-stage [`actor::VehicleActor::decide_bounded_intent`] pipeline -> opaque prepared
+//! output -> an explicit publication call -> staged evidence. The default P0
+//! `assurance-reference-v1` profile publishes to the deterministic in-process
+//! reference plant; it has no live transport, neural runtime, or physical hardware
+//! (see `docs/LIMITATIONS.md`). The off-by-default `live-zenoh` feature additionally
+//! exposes single-owner local kernels and an optional caller-session-backed ingress
+//! aggregate with exact NCP-v0.8 JSON publication. The stricter
 //! `live-gate-dev-smoke` feature adds separate disposable-fixture provisioning and
 //! OpenExisting-only bind/immediate-shutdown examples; no authenticated or
-//! supervised production package selects the aggregate here.
+//! supervised production runner selects the aggregate here. Package-bound
+//! startup consumes signed NCP and strict Gate-configuration stages plus four
+//! role-separated, public-key-distinct snapshot approvals rooted in the package's retained
+//! bootstrap trust, enforces bootstrap/runtime key disjointness, exact-matches
+//! the live authorization configuration before effects, and atomically ratchets
+//! the package revision/digest with the boot.
+//! The other seven artifact roles and live control plane remain explicitly incomplete.
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
@@ -31,24 +37,28 @@ pub mod startup;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub use actor::{
-    DecisionRecord, GateConfig, GateConfigError, GateError, GateStartupError, PreparedPublication,
-    PublicationError, PublicationState, PublishCalledPublication, VehicleActor,
+    BoundedIntentCandidate, DecisionRecord, GATE_CHALLENGE_TTL_MS, GateChallengeIssueError,
+    GateConfig, GateConfigError, GateError, GateStartupError, IntentCandidateError,
+    MAX_INTENT_ENVELOPE_BYTES, MAX_INTENT_ROUTE_BYTES, PreparedPublication, PublicationError,
+    PublicationState, PublishCalledPublication, SignedGateChallenge, VehicleActor,
 };
 #[cfg(feature = "live-zenoh")]
 pub use startup::{
-    DeclaredLiveGateKernel, DeclaredLiveGateService, DeclaredLiveGateZenohService,
-    LiveDecisionUnavailable, LiveIntentActivationError, LiveIntentActivationInput,
-    LiveIntentActivationInputError, LiveIntentRouteBoundGate, LiveKernelStartError,
-    LivePublisherError, LiveServiceBindError, LiveServiceFatal, LiveServiceOutcome,
-    LiveServiceStop, LiveServiceTransition, LiveZenohServiceBindError, LiveZenohServiceBindFailure,
-    LiveZenohServiceStop, LiveZenohServiceTransition, LiveZenohShutdownError,
-    LiveZenohShutdownHandle, LiveZenohShutdownReport, MAX_LIVE_LEASE_ENVELOPE_BYTES,
+    DeclaredLiveGateKernel, DeclaredLiveGateZenohService, IssuedLiveGateChallenge,
+    LIVE_ACTIVATION_CHALLENGE_TTL_MS, LiveDecisionUnavailable, LiveIntentActivationError,
+    LiveIntentActivationInput, LiveIntentActivationInputError, LiveIntentRouteBoundGate,
+    LiveKernelStartError, LivePublisherError, LiveServiceBindError, LiveServiceFatal,
+    LiveServiceOutcome, LiveServiceStop, LiveZenohActivityTransition, LiveZenohServiceBindError,
+    LiveZenohServiceBindFailure, LiveZenohServiceStop, LiveZenohServiceTransition,
+    LiveZenohShutdownError, LiveZenohShutdownHandle, LiveZenohShutdownReport,
+    LiveZenohStateUpdateTransition, MAX_LIVE_LEASE_ENVELOPE_BYTES,
 };
 pub use startup::{
-    DurableGateStartupError, EntropyError, EntropySource, GateConfigTemplate, GateRuntimeProfile,
-    JournalBindingError, JournalBoundRunningGate, LocalStartupConfig, OsEntropy,
-    PublicationJournalConfigError, PublicationJournalStartupConfig, RunningGate, StartupProfile,
-    StartupReport, StartupStateConfig, StateOpenMode, start_local, start_with_backends,
+    DeploymentGateBindingError, DurableGateStartupError, EntropyError, EntropySource,
+    GateConfigTemplate, GateRuntimeProfile, JournalBindingError, JournalBoundRunningGate,
+    LocalStartupConfig, OsEntropy, PublicationJournalConfigError, PublicationJournalStartupConfig,
+    RunningGate, StartupProfile, StartupReport, StartupStateConfig, StateOpenMode,
+    start_deployment_with_backends, start_local, start_with_backends,
 };
 
 #[cfg(test)]
@@ -66,13 +76,15 @@ mod e2e {
     };
     #[cfg(feature = "live-zenoh")]
     use crate::startup::{
-        TestDeclaredLiveGateService, TestDeclaredLiveGateZenohService, TestLiveServiceTransition,
+        DeclaredLiveGateService, LiveServiceTransition, TestDeclaredLiveGateService,
+        TestDeclaredLiveGateZenohService, TestLiveServiceTransition, TestLiveStateUpdateTransition,
         TestLiveZenohServiceTransition, finish_zenoh_shutdown, unavailable_is_owned_io_invariant,
     };
     use core::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
     use haldir_admission::{AdmissionLevelV1, AdmissionRecordV1, AdmissionSnapshot};
     use haldir_contracts::action::{ActionClassV1, CoordinateFrameV1, RequestedActionV1};
-    use haldir_contracts::cbor::Limits;
+    use haldir_contracts::cbor::{CanonicalMessage, Limits};
+    use haldir_contracts::challenge::GateChallengeV1;
     use haldir_contracts::digest::{DigestDomain, DigestV1};
     use haldir_contracts::ids::*;
     use haldir_contracts::intent::HaldirIntentV1;
@@ -94,8 +106,8 @@ mod e2e {
     };
     use haldir_core::time::{MonoDuration, MonoInstant, MonotonicClock};
     use haldir_crypto::{
-        ExpectedContext, KeyClass, KeyRecord, KeyRole, RevocationSnapshot, SigningKey, TrustStore,
-        sign_message, verify_and_decode,
+        ExpectedContext, KeyClass, KeyRecord, KeyRole, KeySubject, RevocationSnapshot, SigningKey,
+        TrustStore, sign_message, verify_and_decode,
     };
     use haldir_durable::{
         Anchor, AnchorProtection, DurableError, GenerationAnchor, SnapshotBinding, SnapshotStorage,
@@ -108,8 +120,9 @@ mod e2e {
     };
     use haldir_evidence::publication::PublicationTraceState;
     use haldir_policy_native::{
-        ActionHistoryError, BoundedActionHistory, GeofenceBoxV1, MAX_RETAINED_ACTIVE_INTERVALS,
-        NativePolicyError, NativePolicySnapshot, PhaseRuleV1,
+        ActionHistoryError, BoundedActionHistory, GeofenceBoxV1, LocallyAdmittedMotionEnvelopeV2,
+        MAX_RETAINED_ACTIVE_INTERVALS, NativePolicyError, NativePolicySnapshot, PhaseRuleV1,
+        PlantModeRuleV2,
     };
     use haldir_reference_plant::{PlantAction, PlantConfig, PlantEventKind, ReferencePlant};
     use haldir_state::{BootedDurableAntiRollbackStore, DurableAntiRollbackStore};
@@ -316,6 +329,17 @@ mod e2e {
             },
             duty_window_ms: 10_000,
             max_active_ms_in_window: 6000,
+            motion_envelope_v2: Some(LocallyAdmittedMotionEnvelopeV2 {
+                local_ned_frame_id: BoundedAscii::new("map").unwrap(),
+                max_linear_accel_mm_s2: 1_000_000,
+                max_linear_slew_mm_s2: 100_000,
+                max_continuous_motion_ms: 60_000,
+                minimum_hold_between_bursts_ms: 0,
+                plant_mode_rules: vec![PlantModeRuleV2 {
+                    plant_mode: AsciiId::new("NOMINAL").unwrap(),
+                    allowed: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
+                }],
+            }),
             phase_rules: vec![PhaseRuleV1 {
                 phase: "INSPECTION".to_owned(),
                 allowed: vec![ActionClassV1::Hold, ActionClassV1::VelocityLocalNed],
@@ -342,7 +366,7 @@ mod e2e {
             admission_id: AdmissionId::new([4; 16]),
             controller_id: ControllerId::new("survey-v1").unwrap(),
             admission_profile_id: AsciiId::new("fixed-weight-lif-control-v1").unwrap(),
-            level: AdmissionLevelV1::A2ReferenceConformance,
+            level: AdmissionLevelV1::A1SemanticReconstruction,
             controller_bundle_digest: DigestV1::compute(DigestDomain::Bundle, b"bundle"),
             backend_profile_digest: DigestV1::compute(DigestDomain::BackendProfile, b"nest-3.9"),
             codec_digest: DigestV1::compute(DigestDomain::Payload, b"codec"),
@@ -382,19 +406,20 @@ mod e2e {
             ])
             .unwrap(),
             allowed_frames: BoundedSet::from_iter_checked([CoordinateFrameV1::LocalNed]).unwrap(),
-            allowed_source_keys: BoundedVec::from_vec(vec![
-                BoundedAscii::new("veh/uav-1/state/pose").unwrap(),
-            ])
+            allowed_source_keys: BoundedSet::from_iter_checked([BoundedAscii::new(
+                "veh/uav-1/state/pose",
+            )
+            .unwrap()])
             .unwrap(),
             limits: MissionLeaseLimitsV1 {
                 max_output_validity_ms: NonZeroU32::new(500).unwrap(),
                 max_linear_speed_mm_s: NonZeroU32::new(3000).unwrap(),
-                max_linear_accel_mm_s2: NonZeroU32::new(2000).unwrap(),
+                max_linear_accel_mm_s2: NonZeroU32::new(1_000_000).unwrap(),
                 max_linear_slew_mm_s2: NonZeroU32::new(100_000).unwrap(),
                 max_source_age_ms: NonZeroU32::new(200).unwrap(),
                 max_state_age_ms: NonZeroU32::new(200).unwrap(),
-                max_continuous_motion_ms: NonZeroU32::new(2000).unwrap(),
-                minimum_hold_between_bursts_ms: 500,
+                max_continuous_motion_ms: NonZeroU32::new(60_000).unwrap(),
+                minimum_hold_between_bursts_ms: 0,
             },
             max_active_duration_ms: NonZeroU32::new(60_000).unwrap(),
             max_intent_rate_millihz: NonZeroU32::new(50_000).unwrap(),
@@ -469,7 +494,7 @@ mod e2e {
     fn acl_publication() -> PlantPublicationAuthorityStateV1 {
         PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
             gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
-            final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
+            final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
             certificate_fingerprint: DigestV1::compute(DigestDomain::Payload, b"cert"),
             acl_policy_digest: DigestV1::compute(DigestDomain::Payload, b"acl"),
             verified_at_mono_ns: 900,
@@ -504,7 +529,7 @@ mod e2e {
                 kid: kid(1),
                 role: KeyRole::ControllerIntent,
                 verifying_key: ctrl_sk.verifying_key(),
-                subject: Some("survey-v1".to_owned()),
+                subject: KeySubject::new("survey-v1").unwrap(),
                 class: KeyClass::Assurance,
             })
             .unwrap();
@@ -513,7 +538,7 @@ mod e2e {
                 kid: kid(2),
                 role: KeyRole::MissionAuthority,
                 verifying_key: mission_sk.verifying_key(),
-                subject: Some("mission-authority".to_owned()),
+                subject: KeySubject::new("mission-authority").unwrap(),
                 class: KeyClass::Assurance,
             })
             .unwrap();
@@ -524,7 +549,7 @@ mod e2e {
                 kid: kid(3),
                 role: KeyRole::GateApplication,
                 verifying_key: gate_sk.verifying_key(),
-                subject: Some("gate-1".to_owned()),
+                subject: KeySubject::new("gate-1").unwrap(),
                 class: KeyClass::Assurance,
             })
             .unwrap();
@@ -550,7 +575,7 @@ mod e2e {
             ncp_adapter: haldir_ncp08::SelectedNcpCommandAdapter::modeled_p0(),
             publication,
             output_epoch: GateOutputEpoch::new(uuid(5)),
-            local_cap_ms: 30_000,
+            local_cap_ms: NonZeroU32::new(30_000).unwrap(),
             gate_signer: gate_sk,
             gate_signer_kid: kid(3),
         };
@@ -617,7 +642,7 @@ mod e2e {
         let store = DurableAntiRollbackStore::provision_new(
             storage,
             GateMemoryAnchor::default(),
-            StorageMacKey::new([7; 32]),
+            StorageMacKey::new([7; 32]).expect("nonzero test storage key"),
             SnapshotBinding::new(StoreId::new([1; 16]), gate_id.as_str().as_bytes()),
             4096,
         )
@@ -628,7 +653,7 @@ mod e2e {
     fn gate_only_trust(
         signing_seed: u8,
         role: KeyRole,
-        subject: Option<&str>,
+        subject: &str,
         class: KeyClass,
     ) -> TrustStore {
         let mut trust = TrustStore::new();
@@ -639,7 +664,7 @@ mod e2e {
                 verifying_key: SigningKey::from_seed([signing_seed; 32])
                     .expect("nonzero test seed")
                     .verifying_key(),
-                subject: subject.map(str::to_owned),
+                subject: KeySubject::new(subject).unwrap(),
                 class,
             })
             .unwrap();
@@ -652,7 +677,7 @@ mod e2e {
     ) -> PlantPublicationAuthorityStateV1 {
         PlantPublicationAuthorityStateV1::NcpLeaseV1(NcpLeaseEvidenceV1 {
             gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
-            final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
+            final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
             session,
             authority_term: NonZeroU64::new(1).unwrap(),
             lease_id: AuthorityLeaseId::new([8; 16]),
@@ -669,23 +694,69 @@ mod e2e {
     }
 
     #[test]
+    fn public_actor_issues_signed_scoped_challenges_with_monotonic_sequences() {
+        let mut actor = VehicleActor::new_ephemeral(valid_config(acl_publication())).unwrap();
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let first = actor.issue_challenge(now).unwrap();
+        let second = actor.issue_challenge(now).unwrap();
+        let context = ExpectedContext {
+            kind: GateChallengeV1::KIND,
+            schema_major: GateChallengeV1::SCHEMA_MAJOR,
+            required_role: KeyRole::GateApplication,
+            assurance_profile: true,
+        };
+        let trust = gate_only_trust(3, KeyRole::GateApplication, "gate-1", KeyClass::Assurance);
+
+        let (first_decoded, first_kid, first_subject): (GateChallengeV1, _, _) = verify_and_decode(
+            first.signed_envelope(),
+            &context,
+            &trust,
+            &RevocationSnapshot::new(),
+            Limits::LARGE,
+        )
+        .unwrap();
+        let (second_decoded, _, _): (GateChallengeV1, _, _) = verify_and_decode(
+            second.signed_envelope(),
+            &context,
+            &trust,
+            &RevocationSnapshot::new(),
+            Limits::LARGE,
+        )
+        .unwrap();
+
+        assert_eq!(first_decoded, *first.challenge());
+        assert_eq!(second_decoded, *second.challenge());
+        assert_eq!(first_kid, kid(3));
+        assert_eq!(first_subject.as_str(), "gate-1");
+        assert_eq!(first.challenge().challenge_seq.get(), 1);
+        assert_eq!(second.challenge().challenge_seq.get(), 2);
+        assert_eq!(first.challenge().gate_boot_id, GateBootId::new([9; 16]));
+        assert_eq!(first.challenge().ncp_session, sess());
+        assert_eq!(first.challenge().policy_snapshot_digest, policy_digest());
+    }
+
+    #[test]
+    fn actor_challenge_deadline_overflow_spends_no_sequence() {
+        let mut actor = VehicleActor::new_ephemeral(valid_config(acl_publication())).unwrap();
+
+        let error = match actor.issue_challenge(MonoInstant::from_nanos(u64::MAX)) {
+            Err(error) => error,
+            Ok(_) => panic!("overflowing challenge deadline was accepted"),
+        };
+        let issued = actor
+            .issue_challenge(MonoInstant::from_nanos(1_000_000_000))
+            .unwrap();
+
+        assert_eq!(error, GateChallengeIssueError::DeadlineOverflow);
+        assert_eq!(error.reason_code(), "GATE_CHALLENGE_DEADLINE_OVERFLOW");
+        assert_eq!(issued.challenge().challenge_seq.get(), 1);
+    }
+
+    #[test]
     fn vehicle_actor_remains_send_for_threaded_runtimes() {
         fn assert_send<T: Send>() {}
 
         assert_send::<VehicleActor>();
-    }
-
-    #[test]
-    fn vehicle_actor_new_rejects_zero_local_cap() {
-        let mut cfg = valid_config(acl_publication());
-        cfg.local_cap_ms = 0;
-
-        let result = VehicleActor::new(cfg);
-
-        assert!(matches!(
-            result,
-            Err(GateStartupError::Config(GateConfigError::LocalCapZero))
-        ));
     }
 
     #[test]
@@ -744,6 +815,87 @@ mod e2e {
     }
 
     #[test]
+    fn lease_deadline_overflow_fault_latches_the_actor() {
+        const LOCAL_CAP_MS: u64 = 30_000;
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+        let now = MonoInstant::from_nanos(u64::MAX - LOCAL_CAP_MS * 1_000_000 + 1);
+        let (cfg, rec, admission_digest) =
+            gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        let mut actor = VehicleActor::new_ephemeral(cfg).expect("valid Gate configuration");
+        assert!(actor.register_challenge(
+            ChallengeNonce::new([7; 32]),
+            MonoInstant::from_nanos(u64::MAX),
+            now,
+        ));
+        let lease_env = sign_message(
+            &build_lease(admission_digest, &rec),
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &mission_sk,
+        );
+
+        assert_eq!(
+            actor.accept_lease_env(&lease_env, now),
+            Err(GateError::Faulted)
+        );
+        assert_eq!(
+            actor.fault_reason_for_test(),
+            Some("LEASE_DEADLINE_OVERFLOW")
+        );
+        assert_eq!(actor.process_state(), GateProcessStateV1::FaultLatched);
+        assert_eq!(
+            actor.accept_lease_env(&lease_env, now),
+            Err(GateError::Faulted)
+        );
+    }
+
+    #[test]
+    fn lease_revision_exhaustion_faults_before_validator_or_authority_acceptance() {
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let (cfg, record, admission_digest) =
+            gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        let mut actor = VehicleActor::new_ephemeral(cfg).expect("valid Gate configuration");
+        assert!(actor.register_challenge(
+            ChallengeNonce::new([7; 32]),
+            MonoInstant::from_nanos(u64::MAX),
+            now,
+        ));
+        let lease_env = sign_message(
+            &build_lease(admission_digest, &record),
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &mission_sk,
+        );
+        actor.force_authorization_revision_exhaustion_for_test();
+        let validator_calls = AtomicUsize::new(0);
+
+        let result = actor.accept_lease_env_with_validator(&lease_env, now, |_| {
+            validator_calls.fetch_add(1, Ordering::SeqCst);
+            Ok::<(), ()>(())
+        });
+
+        assert_eq!(
+            result,
+            Err(crate::actor::LeaseEnvelopeValidationError::Gate(
+                GateError::Faulted
+            ))
+        );
+        assert_eq!(validator_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            actor.fault_reason_for_test(),
+            Some("AUTHORIZATION_REVISION_EXHAUSTED")
+        );
+        assert_eq!(actor.process_state(), GateProcessStateV1::FaultLatched);
+    }
+
+    #[test]
     fn lease_validator_route_rejection_preserves_challenge_and_term_for_retry() {
         let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
         let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
@@ -751,7 +903,7 @@ mod e2e {
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (cfg, rec, admission_digest) =
             gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
-        let mut actor = VehicleActor::new(cfg).expect("valid Gate configuration");
+        let mut actor = VehicleActor::new_ephemeral(cfg).expect("valid Gate configuration");
         assert!(actor.register_challenge(
             ChallengeNonce::new([7; 32]),
             MonoInstant::from_nanos(u64::MAX),
@@ -782,6 +934,92 @@ mod e2e {
     }
 
     #[test]
+    fn unusable_controller_key_rejects_before_challenge_or_term_is_spent() {
+        for (case, expected) in [
+            ("unknown", GateError::Crypto("DENY_SIGNATURE_INVALID")),
+            ("wrong-role", GateError::Crypto("DENY_WRONG_ROLE")),
+            ("development", GateError::Crypto("DENY_WRONG_ROLE")),
+            ("wrong-subject", GateError::Crypto("DENY_WRONG_ROLE")),
+            ("revoked", GateError::Crypto("DENY_KEY_REVOKED")),
+        ] {
+            let controller_signer = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+            let mission_signer = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+            let gate_signer = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+            let alternate_signer = SigningKey::from_seed([4; 32]).expect("nonzero test seed");
+            let now = MonoInstant::from_nanos(1_000_000_000);
+            let (mut cfg, record, admission_digest) = gate_config(
+                acl_publication(),
+                &controller_signer,
+                &mission_signer,
+                gate_signer,
+            );
+            let nominated_kid = match case {
+                "unknown" => kid(99),
+                "wrong-role" => kid(2),
+                "development" | "wrong-subject" | "revoked" => {
+                    let alternate_kid = kid(4);
+                    cfg.trust
+                        .insert(KeyRecord {
+                            kid: alternate_kid.clone(),
+                            role: KeyRole::ControllerIntent,
+                            verifying_key: alternate_signer.verifying_key(),
+                            subject: KeySubject::new(if case == "wrong-subject" {
+                                "another-controller"
+                            } else {
+                                "survey-v1"
+                            })
+                            .unwrap(),
+                            class: if case == "development" {
+                                KeyClass::Development
+                            } else {
+                                KeyClass::Assurance
+                            },
+                        })
+                        .unwrap();
+                    if case == "revoked" {
+                        cfg.revocations.revoke_key(&alternate_kid, 1).unwrap();
+                    }
+                    alternate_kid
+                }
+                _ => panic!("unknown test case"),
+            };
+            let mut actor = VehicleActor::new_ephemeral(cfg).unwrap();
+            assert!(actor.register_challenge(
+                ChallengeNonce::new([7; 32]),
+                MonoInstant::from_nanos(u64::MAX),
+                now,
+            ));
+            let mut invalid = build_lease(admission_digest, &record);
+            invalid.controller_intent_signing_key_id = nominated_kid;
+            let invalid_envelope =
+                sign_message(&invalid, MissionLeaseV1::KIND, 1, &kid(2), &mission_signer);
+
+            assert_eq!(
+                actor.accept_lease_env(&invalid_envelope, now),
+                Err(expected),
+                "case {case}"
+            );
+            assert_eq!(
+                actor.process_state(),
+                GateProcessStateV1::SessionBound,
+                "case {case}"
+            );
+
+            let valid_envelope = sign_message(
+                &build_lease(admission_digest, &record),
+                MissionLeaseV1::KIND,
+                1,
+                &kid(2),
+                &mission_signer,
+            );
+            actor
+                .accept_lease_env(&valid_envelope, now)
+                .expect("rejected controller binding must not spend challenge or term");
+            assert_eq!(actor.process_state(), GateProcessStateV1::Active);
+        }
+    }
+
+    #[test]
     fn gate_rejects_validly_signed_lease_with_nonzero_schema_minor() {
         let controller_signer = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
         let mission_signer = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
@@ -793,7 +1031,7 @@ mod e2e {
             &mission_signer,
             gate_signer,
         );
-        let mut actor = VehicleActor::new(cfg).unwrap();
+        let mut actor = VehicleActor::new_ephemeral(cfg).unwrap();
         assert!(actor.register_challenge(
             ChallengeNonce::new([7; 32]),
             MonoInstant::from_nanos(u64::MAX),
@@ -831,6 +1069,78 @@ mod e2e {
     }
 
     #[test]
+    fn gate_rejects_signed_v1_intent_with_undefined_input_watermark() {
+        let mut fixture = setup();
+        let record = admission_record();
+        let mut intent = build_intent(fixture.admission_digest, &record, 1, velocity(1, 400));
+        intent.input_watermarks = BoundedVec::from_vec(vec![source()]).unwrap();
+        let envelope = sign_intent(&fixture.ctrl_sk, &intent);
+
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(
+            decision.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::DenyNonCanonical]
+        );
+        assert!(!decision.has_prepared_publication());
+    }
+
+    #[test]
+    fn signed_deny_receipt_preserves_every_distinct_policy_reason() {
+        let mut fixture = setup();
+        let record = admission_record();
+        let intent = build_intent(fixture.admission_digest, &record, 1, velocity(1, i32::MAX));
+        let envelope = sign_intent(&fixture.ctrl_sk, &intent);
+
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(
+            decision.receipt.reason_codes.as_slice(),
+            &[
+                DecisionReasonCodeV1::DenyCommandRange,
+                DecisionReasonCodeV1::DenyNormBound,
+                DecisionReasonCodeV1::DenyAcceleration,
+                DecisionReasonCodeV1::DenyGeofence,
+            ]
+        );
+        assert!(!decision.has_prepared_publication());
+
+        let mut trust = TrustStore::new();
+        trust
+            .insert(KeyRecord {
+                kid: kid(3),
+                role: KeyRole::GateApplication,
+                verifying_key: SigningKey::from_seed([3; 32])
+                    .expect("nonzero test seed")
+                    .verifying_key(),
+                subject: KeySubject::new("gate-1").unwrap(),
+                class: KeyClass::Assurance,
+            })
+            .unwrap();
+        let context = ExpectedContext {
+            kind: DecisionReceiptV1::KIND,
+            schema_major: 1,
+            required_role: KeyRole::GateApplication,
+            assurance_profile: true,
+        };
+        let (decoded, _, _): (DecisionReceiptV1, _, _) = verify_and_decode(
+            &decision.signed_receipt,
+            &context,
+            &trust,
+            &RevocationSnapshot::new(),
+            Limits::DEFAULT,
+        )
+        .expect("multi-reason Gate denial verifies");
+        assert_eq!(decoded.reason_codes, decision.receipt.reason_codes);
+    }
+
+    #[test]
     fn active_actor_rejects_replacement_before_clock_term_or_challenge_mutation() {
         let controller_signer = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
         let mission_signer = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
@@ -843,7 +1153,7 @@ mod e2e {
             &mission_signer,
             gate_signer,
         );
-        let mut actor = VehicleActor::new(cfg).unwrap();
+        let mut actor = VehicleActor::new_ephemeral(cfg).unwrap();
 
         let first_nonce = ChallengeNonce::new([7; 32]);
         assert!(actor.register_challenge(first_nonce, MonoInstant::from_nanos(u64::MAX), now));
@@ -894,6 +1204,39 @@ mod e2e {
     }
 
     #[test]
+    fn exactly_expired_actor_can_accept_a_prestaged_successor_lease() {
+        let mut fixture = setup();
+        let mission_signer = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let successor_nonce = ChallengeNonce::new([8; 32]);
+        assert!(fixture.actor.register_challenge(
+            successor_nonce,
+            MonoInstant::from_nanos(u64::MAX),
+            fixture.now,
+        ));
+
+        let record = admission_record();
+        let mut successor = build_lease(fixture.admission_digest, &record);
+        successor.lease_id = MissionLeaseId::new([3; 16]);
+        successor.lease_term = NonZeroU64::new(11).unwrap();
+        successor.challenge_nonce = successor_nonce;
+        let envelope = sign_message(
+            &successor,
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &mission_signer,
+        );
+        let exact_expiry = fixture.now.checked_add_ms(30_000).unwrap();
+
+        fixture
+            .actor
+            .accept_lease_env(&envelope, exact_expiry)
+            .expect("exact expiry must retire the old lease before accepting its successor");
+
+        assert_eq!(fixture.actor.process_state(), GateProcessStateV1::Active);
+    }
+
+    #[test]
     fn gate_config_rejects_unknown_gate_signer_kid() {
         let mut cfg = valid_config(acl_publication());
         cfg.trust = TrustStore::new();
@@ -904,7 +1247,7 @@ mod e2e {
     #[test]
     fn gate_config_rejects_revoked_gate_signer_kid() {
         let mut cfg = valid_config(acl_publication());
-        cfg.revocations.revoke_key(&kid(3), 1);
+        cfg.revocations.revoke_key(&kid(3), 1).unwrap();
 
         assert_eq!(cfg.validate(), Err(GateConfigError::GateSignerKidRevoked));
     }
@@ -912,12 +1255,7 @@ mod e2e {
     #[test]
     fn gate_config_rejects_wrong_gate_signer_role() {
         let mut cfg = valid_config(acl_publication());
-        cfg.trust = gate_only_trust(
-            3,
-            KeyRole::ControllerIntent,
-            Some("gate-1"),
-            KeyClass::Assurance,
-        );
+        cfg.trust = gate_only_trust(3, KeyRole::ControllerIntent, "gate-1", KeyClass::Assurance);
 
         assert_eq!(cfg.validate(), Err(GateConfigError::GateSignerRoleMismatch));
     }
@@ -925,12 +1263,7 @@ mod e2e {
     #[test]
     fn gate_config_rejects_development_gate_signer() {
         let mut cfg = valid_config(acl_publication());
-        cfg.trust = gate_only_trust(
-            3,
-            KeyRole::GateApplication,
-            Some("gate-1"),
-            KeyClass::Development,
-        );
+        cfg.trust = gate_only_trust(3, KeyRole::GateApplication, "gate-1", KeyClass::Development);
 
         assert_eq!(cfg.validate(), Err(GateConfigError::GateSignerNotAssurance));
     }
@@ -938,12 +1271,7 @@ mod e2e {
     #[test]
     fn gate_config_rejects_gate_signer_for_another_subject() {
         let mut cfg = valid_config(acl_publication());
-        cfg.trust = gate_only_trust(
-            3,
-            KeyRole::GateApplication,
-            Some("gate-2"),
-            KeyClass::Assurance,
-        );
+        cfg.trust = gate_only_trust(3, KeyRole::GateApplication, "gate-2", KeyClass::Assurance);
 
         assert_eq!(
             cfg.validate(),
@@ -954,12 +1282,7 @@ mod e2e {
     #[test]
     fn gate_config_rejects_gate_signer_public_key_mismatch() {
         let mut cfg = valid_config(acl_publication());
-        cfg.trust = gate_only_trust(
-            4,
-            KeyRole::GateApplication,
-            Some("gate-1"),
-            KeyClass::Assurance,
-        );
+        cfg.trust = gate_only_trust(4, KeyRole::GateApplication, "gate-1", KeyClass::Assurance);
 
         assert_eq!(
             cfg.validate(),
@@ -978,6 +1301,19 @@ mod e2e {
             ))
         );
 
+        let mut legacy_digest_only = valid_config(acl_publication());
+        legacy_digest_only.policy.motion_envelope_v2 = None;
+        legacy_digest_only.policy_snapshot_digest = legacy_digest_only
+            .policy
+            .canonical_digest()
+            .expect("legacy policy remains canonically digestible");
+        assert_eq!(
+            legacy_digest_only.validate(),
+            Err(GateConfigError::InvalidPolicy(
+                NativePolicyError::MotionEnvelopeV2Required
+            ))
+        );
+
         let mut mismatched = valid_config(acl_publication());
         mismatched.policy_snapshot_digest =
             DigestV1::compute(DigestDomain::PolicySnapshot, b"different-policy");
@@ -987,35 +1323,25 @@ mod e2e {
         );
 
         let mut too_short = valid_config(acl_publication());
-        too_short.local_cap_ms = too_short
-            .policy
-            .publication_safety_margin_ms
-            .saturating_add(too_short.policy.min_useful_validity_ms)
-            .saturating_sub(1);
+        too_short.local_cap_ms = NonZeroU32::new(
+            too_short
+                .policy
+                .publication_safety_margin_ms
+                .saturating_add(too_short.policy.min_useful_validity_ms)
+                .saturating_sub(1),
+        )
+        .unwrap();
         assert_eq!(too_short.validate(), Err(GateConfigError::LocalCapTooShort));
     }
 
     #[test]
-    fn gate_config_rejects_publication_for_another_session() {
-        let mut other_session = sess();
-        other_session.generation = uuid(9);
-        let publication = ncp_publication(other_session, GateOutputEpoch::new(uuid(5)));
+    fn gate_config_rejects_the_unimplemented_future_publication_profile() {
+        let publication = ncp_publication(sess(), GateOutputEpoch::new(uuid(5)));
         let cfg = valid_config(publication);
 
         assert_eq!(
             cfg.validate(),
-            Err(GateConfigError::PublicationSessionMismatch)
-        );
-    }
-
-    #[test]
-    fn gate_config_rejects_publication_for_another_output_epoch() {
-        let publication = ncp_publication(sess(), GateOutputEpoch::new(uuid(9)));
-        let cfg = valid_config(publication);
-
-        assert_eq!(
-            cfg.validate(),
-            Err(GateConfigError::PublicationOutputEpochMismatch)
+            Err(GateConfigError::UnsupportedPublicationAuthorityProfile)
         );
     }
 
@@ -1036,7 +1362,7 @@ mod e2e {
         mission_sk: SigningKey,
         now: MonoInstant,
     ) -> Fixture {
-        let mut actor = VehicleActor::new(cfg).expect("valid Gate configuration");
+        let mut actor = VehicleActor::new_ephemeral(cfg).expect("valid Gate configuration");
         actor.register_challenge(
             ChallengeNonce::new([7; 32]),
             MonoInstant::from_nanos(u64::MAX),
@@ -1059,7 +1385,7 @@ mod e2e {
         let initial_capture = MonoInstant::from_nanos(now.as_nanos() - 1_000_000);
         initial.captured_mono = initial_capture;
         initial.primary_source.receive_mono = initial_capture;
-        actor.set_trusted_state(initial).unwrap();
+        actor.set_trusted_state(initial, now).unwrap();
 
         Fixture {
             actor,
@@ -1261,7 +1587,7 @@ mod e2e {
         let (mut cfg, admission_record, admission_digest) =
             gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
         cfg.ncp_adapter = haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
-        let actor = VehicleActor::new(cfg).expect("valid inactive Gate configuration");
+        let actor = VehicleActor::new_ephemeral(cfg).expect("valid inactive Gate configuration");
         let parts = journal_bound_fixture(
             max_recovery_records,
             None,
@@ -1292,8 +1618,18 @@ mod e2e {
         state: TrustedStateSnapshotV1,
     ) -> LiveIntentActivationInput {
         let signed_lease_envelope = live_signed_lease_envelope(fixture, intent_route);
-        LiveIntentActivationInput::new(state, ChallengeNonce::new([7; 32]), signed_lease_envelope)
-            .unwrap()
+        LiveIntentActivationInput::new(state, signed_lease_envelope).unwrap()
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    fn activate_live_kernel(
+        kernel: DeclaredLiveGateKernel<SharedClock>,
+        activation: LiveIntentActivationInput,
+    ) -> Result<LiveIntentRouteBoundGate<SharedClock>, LiveIntentActivationError> {
+        kernel
+            .issue_activation_challenge()
+            .expect("deterministic test challenge must be issuable")
+            .activate(activation)
     }
 
     #[cfg(feature = "live-zenoh")]
@@ -1331,6 +1667,7 @@ mod e2e {
         .unwrap();
         let options = JournalOpenOptions::new(
             fixture.actor.gate_id().clone(),
+            JournalId::new([2; 16]).unwrap(),
             fixture.actor.gate_boot_id(),
             fixture.now.as_nanos(),
             limits,
@@ -1463,10 +1800,11 @@ mod e2e {
         let (mut config, _, _) = gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
         config.gate_boot_id = GateBootId::new([10; 16]);
         config.output_epoch = GateOutputEpoch::new(uuid(6));
-        let actor = VehicleActor::new(config).unwrap();
+        let actor = VehicleActor::new_ephemeral(config).unwrap();
         let restart_at = MonoInstant::from_nanos(2_000_000_000);
         let options = JournalOpenOptions::new(
             actor.gate_id().clone(),
+            JournalId::new([2; 16]).unwrap(),
             actor.gate_boot_id(),
             restart_at.as_nanos(),
             coordinator_journal_limits(),
@@ -1850,6 +2188,9 @@ mod e2e {
             Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed { .. })) => {
                 panic!("terminal error record unexpectedly failed")
             }
+            Poll::Ready(Err(PublishOnceError::ApplicationUnobserved { .. })) => {
+                panic!("publisher error became an unobserved success")
+            }
             Poll::Ready(Ok(_)) => panic!("publisher error became success"),
             Poll::Pending => panic!("ready publisher error did not complete"),
         };
@@ -2159,6 +2500,9 @@ mod e2e {
             Poll::Ready(Err(PublishOnceError::TerminalBoundaryFailed { .. })) => {
                 panic!("route-mismatch terminal record unexpectedly failed")
             }
+            Poll::Ready(Err(PublishOnceError::ApplicationUnobserved { .. })) => {
+                panic!("route mismatch became an unobserved success")
+            }
             Poll::Ready(Ok(_)) => panic!("wrong route became publisher success"),
             Poll::Pending => panic!("route rejection unexpectedly waited on publisher"),
         };
@@ -2423,7 +2767,7 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
-    fn journaled_test_success_preserves_the_declared_live_typestate() {
+    fn declared_live_local_ok_is_journaled_but_consumes_the_runtime_as_unobserved() {
         let fixture = declared_live_coordinator_fixture(64);
         let envelope = signed_coordinator_intent(&fixture, 1);
         let output_pool = fixture.output_pool.clone();
@@ -2450,19 +2794,20 @@ mod e2e {
                     std::future::ready(Ok::<(), haldir_transport_zenoh::SecureZenohError>(()))
                 }),
             );
-        let (returned, publisher) = match poll_once(publish.as_mut()) {
-            Poll::Ready(Ok(returned)) => returned,
-            _ => panic!("matched test publisher must return synchronously"),
+        let returned = match poll_once(publish.as_mut()) {
+            Poll::Ready(Err(PublishOnceError::ApplicationUnobserved { journaled })) => *journaled,
+            _ => panic!("matched live publisher Ok must stop as application-unobserved"),
         };
-        let (coordinator, _, _, permit) = returned.into_parts();
-        fn assert_live(_: &PublicationCoordinator<SharedClock, DeclaredLiveZenohPublication>) {}
-        assert_live(&coordinator);
+        let (decision, terminal_digest, permit) = returned.into_parts();
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
+        assert_ne!(
+            terminal_digest,
+            DigestV1::compute(DigestDomain::RawEnvelope, b"")
+        );
         assert_eq!(calls.load(Ordering::SeqCst), 1);
-        assert_eq!(drops.load(Ordering::SeqCst), 0);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
         assert_eq!(output_pool.available(), 0);
-        drop(publisher);
         drop(permit);
-        drop(coordinator);
         assert_eq!(drops.load(Ordering::SeqCst), 1);
         assert_eq!(output_pool.available(), 1);
     }
@@ -2622,12 +2967,10 @@ mod e2e {
         let now = MonoInstant::from_nanos(1_000_000_000);
         let at_limit = LiveIntentActivationInput::new(
             trusted_state(now),
-            ChallengeNonce::new([7; 32]),
             vec![0; MAX_LIVE_LEASE_ENVELOPE_BYTES],
         );
         let result = LiveIntentActivationInput::new(
             trusted_state(now),
-            ChallengeNonce::new([7; 32]),
             vec![0; MAX_LIVE_LEASE_ENVELOPE_BYTES + 1],
         );
 
@@ -2639,6 +2982,129 @@ mod e2e {
                 actual_bytes,
             }) if actual_bytes == MAX_LIVE_LEASE_ENVELOPE_BYTES + 1
         ));
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_kernel_issues_a_verifiable_exactly_bound_gate_challenge() {
+        let fixture = unactivated_live_fixture();
+        let expected_boot = fixture.bound.report().gate_boot_id;
+        let expected_output_epoch = fixture.bound.report().output_epoch;
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+
+        let issued = kernel.issue_activation_challenge().unwrap();
+        let challenge = issued.challenge().clone();
+        let context = ExpectedContext {
+            kind: GateChallengeV1::KIND,
+            schema_major: GateChallengeV1::SCHEMA_MAJOR,
+            required_role: KeyRole::GateApplication,
+            assurance_profile: true,
+        };
+        let (decoded, signer_kid, signer_subject): (GateChallengeV1, _, _) = verify_and_decode(
+            issued.signed_challenge_envelope(),
+            &context,
+            &gate_only_trust(3, KeyRole::GateApplication, "gate-1", KeyClass::Assurance),
+            &RevocationSnapshot::new(),
+            Limits::LARGE,
+        )
+        .unwrap();
+
+        assert_eq!(decoded, challenge);
+        assert_eq!(signer_kid, kid(3));
+        assert_eq!(signer_subject.as_str(), "gate-1");
+        assert_eq!(challenge.gate_id.as_str(), "gate-1");
+        assert_eq!(challenge.gate_boot_id, expected_boot);
+        assert_eq!(challenge.challenge_nonce, ChallengeNonce::new([7; 32]));
+        assert_eq!(challenge.challenge_seq.get(), 1);
+        assert_eq!(challenge.realm.as_str(), "range-a");
+        assert_eq!(challenge.vehicle_id.as_str(), "uav-1");
+        assert_eq!(challenge.ncp_session, sess());
+        assert_eq!(challenge.gate_output_epoch, expected_output_epoch);
+        assert_eq!(challenge.gate_key_id, kid(3));
+        assert_eq!(challenge.policy_snapshot_digest, policy_digest());
+        assert_eq!(challenge.accepted_contract_versions.as_slice().len(), 1);
+        assert_eq!(challenge.accepted_contract_versions.as_slice()[0].major, 1);
+        assert_eq!(challenge.accepted_contract_versions.as_slice()[0].minor, 0);
+        assert_eq!(
+            challenge.ncp_compatibility_id,
+            haldir_ncp08::NCP_V0_8_0.compatibility_id()
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_gate_challenge_envelope_rejects_byte_tampering() {
+        let fixture = unactivated_live_fixture();
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+        let issued = kernel.issue_activation_challenge().unwrap();
+        let mut tampered = issued.signed_challenge_envelope().to_vec();
+        let last = tampered.last_mut().expect("challenge envelope is nonempty");
+        *last ^= 1;
+        let context = ExpectedContext {
+            kind: GateChallengeV1::KIND,
+            schema_major: GateChallengeV1::SCHEMA_MAJOR,
+            required_role: KeyRole::GateApplication,
+            assurance_profile: true,
+        };
+
+        let result = verify_and_decode::<GateChallengeV1>(
+            &tampered,
+            &context,
+            &gate_only_trust(3, KeyRole::GateApplication, "gate-1", KeyClass::Assurance),
+            &RevocationSnapshot::new(),
+            Limits::LARGE,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_accepts_challenge_at_exact_local_expiry_boundary() {
+        let fixture = unactivated_live_fixture();
+        let activation_at = fixture
+            .now
+            .checked_add_ms(u64::from(LIVE_ACTIVATION_CHALLENGE_TTL_MS))
+            .unwrap();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(activation_at));
+        let clock = fixture.clock.clone();
+        let issued = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
+            .unwrap();
+        clock.advance_ms(u64::from(LIVE_ACTIVATION_CHALLENGE_TTL_MS));
+
+        let route_bound = issued.activate(activation).unwrap();
+
+        assert_eq!(
+            route_bound.actor().process_state(),
+            GateProcessStateV1::Active
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_activation_rejects_challenge_after_local_expiry() {
+        let fixture = unactivated_live_fixture();
+        let elapsed_ms = u64::from(LIVE_ACTIVATION_CHALLENGE_TTL_MS) + 1;
+        let activation_at = fixture.now.checked_add_ms(elapsed_ms).unwrap();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(activation_at));
+        let clock = fixture.clock.clone();
+        let issued = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
+            .unwrap();
+        clock.advance_ms(elapsed_ms);
+
+        let error = match issued.activate(activation) {
+            Err(error) => error,
+            Ok(_) => panic!("expired challenge minted a route-bound Gate"),
+        };
+
+        assert_eq!(
+            error,
+            LiveIntentActivationError::Lease(GateError::Lease("DENY_LEASE_ABSENT"))
+        );
     }
 
     #[cfg(feature = "live-zenoh")]
@@ -2656,9 +3122,9 @@ mod e2e {
         let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock.clone()).unwrap();
         assert_eq!(fixture.clock.sample_count(), samples_before + 1);
 
-        let route_bound = kernel.activate(activation).unwrap();
+        let route_bound = activate_live_kernel(kernel, activation).unwrap();
 
-        assert_eq!(fixture.clock.sample_count(), samples_before + 2);
+        assert_eq!(fixture.clock.sample_count(), samples_before + 3);
         assert_eq!(route_bound.controller_id().as_str(), "survey-v1");
         assert_eq!(route_bound.intent_route(), expected_route);
         assert_eq!(
@@ -2685,6 +3151,124 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
+    fn declared_live_service_updates_state_without_losing_its_single_owner() {
+        let fixture = unactivated_live_fixture();
+        let start = fixture.now;
+        let clock = fixture.clock.clone();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(start));
+        let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        let final_route = HaldirKeys::try_new("range-a", "sess-1")
+            .unwrap()
+            .final_command()
+            .to_owned();
+        let service = TestDeclaredLiveGateService::bind_route_bound(
+            route_bound,
+            TestPublisher {
+                drops: Arc::new(AtomicUsize::new(0)),
+            },
+            &final_route,
+        )
+        .unwrap();
+
+        clock.advance_ms(1);
+        let first_update_at = start.checked_add_ms(1).unwrap();
+        let mut first_update = trusted_state(first_update_at);
+        first_update.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+        let service = match service.update_trusted_state(first_update) {
+            TestLiveStateUpdateTransition::Updated(service) => service,
+            TestLiveStateUpdateTransition::Rejected { .. } => {
+                panic!("fresh state update was rejected")
+            }
+            TestLiveStateUpdateTransition::Stopped(_) => panic!("fresh state update stopped Gate"),
+        };
+
+        clock.advance_ms(1);
+        let second_update_at = start.checked_add_ms(2).unwrap();
+        let mut replay = trusted_state(second_update_at);
+        replay.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+        let service = match service.update_trusted_state(replay) {
+            TestLiveStateUpdateTransition::Rejected { service, reason } => {
+                assert_eq!(reason, DecisionReasonCodeV1::DenySourceStale);
+                service
+            }
+            TestLiveStateUpdateTransition::Updated(_) => panic!("source replay was accepted"),
+            TestLiveStateUpdateTransition::Stopped(_) => panic!("source replay stopped Gate"),
+        };
+
+        let mut recovery = trusted_state(second_update_at);
+        recovery.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(9).unwrap());
+        let service = match service.update_trusted_state(recovery) {
+            TestLiveStateUpdateTransition::Updated(service) => service,
+            TestLiveStateUpdateTransition::Rejected { .. } => {
+                panic!("fresh state after a rejection was not accepted")
+            }
+            TestLiveStateUpdateTransition::Stopped(_) => {
+                panic!("fresh state after a rejection stopped Gate")
+            }
+        };
+
+        clock.set_ns(start.as_nanos());
+        let mut impossible_after_regression = trusted_state(start);
+        impossible_after_regression.primary_source.source.stream_seq =
+            SourceSeq::new(NonZeroU64::new(10).unwrap());
+        match service.update_trusted_state(impossible_after_regression) {
+            TestLiveStateUpdateTransition::Stopped(error) => {
+                assert_eq!(error, LiveServiceFatal::ClockRegression);
+            }
+            TestLiveStateUpdateTransition::Updated(_) => panic!("clock regression was accepted"),
+            TestLiveStateUpdateTransition::Rejected { .. } => {
+                panic!("clock regression returned a reusable service")
+            }
+        }
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_state_ingress_destroys_owner_on_actor_invariant_fault() {
+        let fixture = unactivated_live_fixture();
+        let start = fixture.now;
+        let clock = fixture.clock.clone();
+        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(start));
+        let mut route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
+            .unwrap()
+            .activate(activation)
+            .unwrap();
+        route_bound
+            .actor_mut_for_test()
+            .force_source_replay_commit_conflict_for_test();
+        let final_route = HaldirKeys::try_new("range-a", "sess-1")
+            .unwrap()
+            .final_command()
+            .to_owned();
+        let service = TestDeclaredLiveGateService::bind_route_bound(
+            route_bound,
+            TestPublisher {
+                drops: Arc::new(AtomicUsize::new(0)),
+            },
+            &final_route,
+        )
+        .unwrap();
+
+        clock.advance_ms(1);
+        let update_at = start.checked_add_ms(1).unwrap();
+        let mut advanced = trusted_state(update_at);
+        advanced.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+
+        assert!(matches!(
+            service.update_trusted_state(advanced),
+            TestLiveStateUpdateTransition::Stopped(LiveServiceFatal::ActorFaultLatched)
+        ));
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
     fn declared_live_activation_rejects_noncanonical_signed_routes_fail_stop() {
         for route in [
             "veh/uav-1/haldir/intent/survey-v1",
@@ -2697,7 +3281,7 @@ mod e2e {
             let kernel =
                 DeclaredLiveGateKernel::start(fixture.bound, fixture.clock.clone()).unwrap();
 
-            let error = match kernel.activate(activation) {
+            let error = match activate_live_kernel(kernel, activation) {
                 Err(error) => error,
                 Ok(_) => panic!("noncanonical route minted a route-bound Gate"),
             };
@@ -2718,15 +3302,12 @@ mod e2e {
             .last_mut()
             .expect("signed lease envelope is nonempty");
         *final_byte ^= 1;
-        let activation = LiveIntentActivationInput::new(
-            trusted_state(fixture.now),
-            ChallengeNonce::new([7; 32]),
-            signed_lease_envelope,
-        )
-        .unwrap();
+        let activation =
+            LiveIntentActivationInput::new(trusted_state(fixture.now), signed_lease_envelope)
+                .unwrap();
         let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
 
-        let error = match kernel.activate(activation) {
+        let error = match activate_live_kernel(kernel, activation) {
             Err(error) => error,
             Ok(_) => panic!("tampered lease minted a route-bound Gate"),
         };
@@ -2739,18 +3320,24 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
-    fn declared_live_activation_rejects_lease_nonce_outside_the_local_input_fail_stop() {
+    fn declared_live_activation_rejects_lease_nonce_outside_the_gate_issued_challenge_fail_stop() {
         let fixture = unactivated_live_fixture();
-        let signed_lease_envelope = live_signed_lease_envelope(&fixture, INTENT_KEY);
-        let activation = LiveIntentActivationInput::new(
-            trusted_state(fixture.now),
-            ChallengeNonce::new([8; 32]),
-            signed_lease_envelope,
-        )
-        .unwrap();
+        let mut lease = build_lease(fixture.admission_digest, &fixture.admission_record);
+        lease.controller_intent_key = BoundedAscii::new(INTENT_KEY).unwrap();
+        lease.challenge_nonce = ChallengeNonce::new([8; 32]);
+        let signed_lease_envelope = sign_message(
+            &lease,
+            MissionLeaseV1::KIND,
+            1,
+            &kid(2),
+            &fixture.mission_sk,
+        );
+        let activation =
+            LiveIntentActivationInput::new(trusted_state(fixture.now), signed_lease_envelope)
+                .unwrap();
         let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
 
-        let error = match kernel.activate(activation) {
+        let error = match activate_live_kernel(kernel, activation) {
             Err(error) => error,
             Ok(_) => panic!("lease with another nonce minted a route-bound Gate"),
         };
@@ -2770,7 +3357,7 @@ mod e2e {
         let activation = live_activation_input(&fixture, INTENT_KEY, wrong_state);
         let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
 
-        let error = match kernel.activate(activation) {
+        let error = match activate_live_kernel(kernel, activation) {
             Err(error) => error,
             Ok(_) => panic!("wrong trusted state minted a route-bound Gate"),
         };
@@ -2782,23 +3369,40 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
-    fn declared_live_activation_clock_regression_is_terminal() {
+    fn declared_live_activation_rejects_state_source_outside_the_signed_lease() {
         let fixture = unactivated_live_fixture();
-        let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
+        let mut wrong_source = trusted_state(fixture.now);
+        wrong_source.primary_source.source.source_key =
+            BoundedAscii::new("veh/uav-1/state/unleased").unwrap();
+        let activation = live_activation_input(&fixture, INTENT_KEY, wrong_source);
+        let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
+
+        let error = match activate_live_kernel(kernel, activation) {
+            Err(error) => error,
+            Ok(_) => panic!("state outside the signed lease minted a route-bound Gate"),
+        };
+
+        assert_eq!(
+            error,
+            LiveIntentActivationError::TrustedState(DecisionReasonCodeV1::DenySourceUnknown)
+        );
+    }
+
+    #[cfg(feature = "live-zenoh")]
+    #[test]
+    fn declared_live_challenge_issue_clock_regression_is_terminal() {
+        let fixture = unactivated_live_fixture();
         fixture.clock.script_samples([
             fixture.now,
             MonoInstant::from_nanos(fixture.now.as_nanos() - 1),
         ]);
         let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
 
-        let error = match kernel.activate(activation) {
+        let error = match kernel.issue_activation_challenge() {
             Err(error) => error,
-            Ok(_) => panic!("clock regression minted a route-bound Gate"),
+            Ok(_) => panic!("clock regression issued a live challenge"),
         };
-        assert_eq!(
-            error,
-            LiveIntentActivationError::Coordinator(LiveServiceFatal::ClockRegression)
-        );
+        assert_eq!(error, LiveServiceFatal::ClockRegression);
     }
 
     #[cfg(feature = "live-zenoh")]
@@ -2834,7 +3438,7 @@ mod e2e {
         let fixture = unactivated_live_fixture();
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let kernel = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock).unwrap();
-        let route_bound = kernel.activate(activation).unwrap();
+        let route_bound = activate_live_kernel(kernel, activation).unwrap();
         let publisher_drops = Arc::new(AtomicUsize::new(0));
 
         let result = TestDeclaredLiveGateService::bind_route_bound(
@@ -2858,6 +3462,8 @@ mod e2e {
         let fixture = unactivated_live_fixture();
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
             .unwrap()
             .activate(activation)
             .unwrap();
@@ -2940,6 +3546,8 @@ mod e2e {
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
             .unwrap()
+            .issue_activation_challenge()
+            .unwrap()
             .activate(activation)
             .unwrap();
         let session_drops = Arc::new(AtomicUsize::new(0));
@@ -2993,6 +3601,8 @@ mod e2e {
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
             .unwrap()
+            .issue_activation_challenge()
+            .unwrap()
             .activate(activation)
             .unwrap();
         let session_drops = Arc::new(AtomicUsize::new(0));
@@ -3024,6 +3634,8 @@ mod e2e {
         let fixture = unactivated_live_fixture();
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
             .unwrap()
             .activate(activation)
             .unwrap();
@@ -3102,6 +3714,8 @@ mod e2e {
         );
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
             .unwrap()
             .activate(activation)
             .unwrap();
@@ -3205,6 +3819,8 @@ mod e2e {
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
             .unwrap()
+            .issue_activation_challenge()
+            .unwrap()
             .activate(activation)
             .unwrap();
         let session_drops = Arc::new(AtomicUsize::new(0));
@@ -3262,30 +3878,18 @@ mod e2e {
         assert_eq!(next_calls.load(Ordering::SeqCst), 1);
         assert_eq!(publisher_polls.load(Ordering::SeqCst), 1);
         assert!(shutdown.request_shutdown());
-        let service = match poll_once(process.as_mut()) {
-            Poll::Ready(TestLiveZenohServiceTransition::Continue {
-                service,
-                outcome: LiveServiceOutcome::PublishReturnedOk { .. },
-            }) => service,
-            _ => panic!("shutdown must not cancel an already in-flight publication"),
-        };
+        assert!(matches!(
+            poll_once(process.as_mut()),
+            Poll::Ready(TestLiveZenohServiceTransition::ApplicationUnobserved { .. })
+        ));
         assert_eq!(publisher_polls.load(Ordering::SeqCst), 2);
-        assert_eq!(session_drops.load(Ordering::SeqCst), 0);
-        assert_eq!(publisher_drops.load(Ordering::SeqCst), 0);
-        assert_eq!(ingress_drops.load(Ordering::SeqCst), 0);
-
-        let mut stop = Box::pin(service.process_next_or_shutdown_with_test_future(|_| {
-            std::future::ready(Ok::<(), TestPublishError>(()))
-        }));
-        let service = match poll_once(stop.as_mut()) {
-            Poll::Ready(TestLiveZenohServiceTransition::ShutdownRequested { service }) => service,
-            _ => panic!("the in-flight request must remain latched for the returned owner"),
-        };
-        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
-        drop(service);
+        // The request did not cancel the in-flight call. Its local Ok is still
+        // application-ambiguous, so the aggregate and every transport capability
+        // are consumed instead of returning an owner that could publish again.
         assert_eq!(session_drops.load(Ordering::SeqCst), 1);
         assert_eq!(publisher_drops.load(Ordering::SeqCst), 1);
         assert_eq!(ingress_drops.load(Ordering::SeqCst), 1);
+        assert_eq!(next_calls.load(Ordering::SeqCst), 1);
     }
 
     #[cfg(feature = "live-zenoh")]
@@ -3356,6 +3960,8 @@ mod e2e {
         };
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
             .unwrap()
             .activate(activation)
             .unwrap();
@@ -3448,7 +4054,7 @@ mod e2e {
                 Ok::<_, SecureZenohError>((ingress.events.len(), zero_ingress_counters()))
             },
             move |session| async move {
-                assert_eq!(close_publisher_drops.load(Ordering::SeqCst), 1);
+                assert_eq!(close_publisher_drops.load(Ordering::SeqCst), 0);
                 close_order.lock().unwrap().push("close");
                 assert_eq!(session.lineage, 29);
                 Ok::<(), SecureZenohError>(())
@@ -3472,6 +4078,8 @@ mod e2e {
         let fixture = unactivated_live_fixture();
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
             .unwrap()
             .activate(activation)
             .unwrap();
@@ -3537,6 +4145,8 @@ mod e2e {
         let fixture = unactivated_live_fixture();
         let activation = live_activation_input(&fixture, INTENT_KEY, trusted_state(fixture.now));
         let route_bound = DeclaredLiveGateKernel::start(fixture.bound, fixture.clock)
+            .unwrap()
+            .issue_activation_challenge()
             .unwrap()
             .activate(activation)
             .unwrap();
@@ -3730,7 +4340,7 @@ mod e2e {
 
     #[cfg(feature = "live-zenoh")]
     #[test]
-    fn declared_live_service_success_returns_the_same_single_owner_after_terminal_journal() {
+    fn declared_live_service_local_ok_stops_without_fabricating_application_history() {
         let fixture = declared_live_coordinator_fixture(64);
         let event = IntentIngressEvent {
             actual_key: INTENT_KEY.to_owned(),
@@ -3759,28 +4369,22 @@ mod e2e {
             Poll::Pending => panic!("ready publisher must complete the service step"),
         };
 
-        let service = match transition {
-            TestLiveServiceTransition::Continue {
-                service,
-                outcome:
-                    LiveServiceOutcome::PublishReturnedOk {
-                        decision,
-                        terminal_envelope_digest: _,
-                    },
+        match transition {
+            TestLiveServiceTransition::ApplicationUnobserved {
+                decision,
+                terminal_envelope_digest: _,
             } => {
                 assert_eq!(decision.outcome, DecisionOutcomeV1::Allow);
-                service
             }
-            _ => panic!("publisher success must return the sole live service owner"),
-        };
+            _ => panic!("local publisher Ok must consume live authority as unobserved"),
+        }
         assert_eq!(calls.load(Ordering::SeqCst), 1);
-        assert_eq!(drops.load(Ordering::SeqCst), 0);
-        assert_eq!(service.available_output_slots(), 1);
+        assert_eq!(drops.load(Ordering::SeqCst), 1);
+        assert_eq!(pool_observer.available(), 1);
         let held_after_success = pool_observer.try_reserve().unwrap();
-        assert_eq!(service.available_output_slots(), 0);
+        assert_eq!(pool_observer.available(), 0);
         drop(held_after_success);
-        assert_eq!(service.available_output_slots(), 1);
-        drop(service);
+        assert_eq!(pool_observer.available(), 1);
         assert_eq!(drops.load(Ordering::SeqCst), 1);
     }
 
@@ -4196,6 +4800,67 @@ mod e2e {
     }
 
     #[test]
+    fn prepared_publication_rejects_drift_in_every_receipt_to_frame_binding() {
+        let mut fixture = setup();
+        let record = admission_record();
+        let intent = build_intent(fixture.admission_digest, &record, 1, velocity(1, 400));
+        let envelope = sign_intent(&fixture.ctrl_sk, &intent);
+        let mut decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+        let prepared = decision
+            .take_prepared_publication()
+            .expect("ALLOW must retain its opaque publication");
+
+        assert!(prepared.receipt_binding_matches(&decision.receipt));
+
+        let mut drifted = decision.receipt.clone();
+        drifted.decision_id = DecisionId::new([0xA5; 16]);
+        assert!(!prepared.receipt_binding_matches(&drifted));
+
+        let mut drifted = decision.receipt.clone();
+        drifted.ncp_session.generation = uuid(42);
+        assert!(!prepared.receipt_binding_matches(&drifted));
+
+        let mut drifted = decision.receipt.clone();
+        drifted.source.as_mut().unwrap().source_key =
+            BoundedAscii::new("veh/uav-1/state/other").unwrap();
+        assert!(!prepared.receipt_binding_matches(&drifted));
+
+        let mut drifted = decision.receipt.clone();
+        drifted.state_snapshot_digest =
+            Some(DigestV1::compute(DigestDomain::Payload, b"different-state"));
+        assert!(!prepared.receipt_binding_matches(&drifted));
+
+        let mut drifted = decision.receipt.clone();
+        drifted.effective_validity_ms = Some(
+            drifted
+                .effective_validity_ms
+                .unwrap()
+                .checked_add(1)
+                .unwrap(),
+        );
+        assert!(!prepared.receipt_binding_matches(&drifted));
+
+        let mut drifted = decision.receipt.clone();
+        let stream = drifted.gate_output_stream.as_mut().unwrap();
+        stream.seq = OutputSeq::new(NonZeroU64::new(stream.seq.get() + 1).unwrap());
+        assert!(!prepared.receipt_binding_matches(&drifted));
+
+        let mut drifted = decision.receipt.clone();
+        drifted.output_frame_digest = Some(DigestV1::compute(
+            DigestDomain::OutputFrame,
+            b"different-frame",
+        ));
+        assert!(!prepared.receipt_binding_matches(&drifted));
+
+        let mut drifted = decision.receipt.clone();
+        drifted.transformation_relation =
+            Some(haldir_contracts::receipt::TransformationRelationV1::Identity);
+        assert!(!prepared.receipt_binding_matches(&drifted));
+    }
+
+    #[test]
     fn end_to_end_allow_drives_reference_plant() {
         let mut f = setup();
         let rec = admission_record();
@@ -4217,10 +4882,10 @@ mod e2e {
             .actor
             .mark_publish_called(prepared, f.now)
             .expect("reference publication called");
-        let cmd = called.reference_plant_command().clone();
+        let cmd = called.reference_plant_command();
 
-        let mut plant =
-            ReferencePlant::new(PlantConfig::default()).expect("valid reference plant config");
+        let mut plant = ReferencePlant::new(PlantConfig::default(), cmd.session().clone())
+            .expect("valid reference plant config");
         plant.ingest(cmd).expect("plant accepts Gate command");
         f.actor
             .mark_publish_returned_ok(called, f.now)
@@ -4270,13 +4935,24 @@ mod e2e {
             .expect("the current authority permits the prepared HOLD command");
         assert!(called.frame().is_hold());
         let command = called.reference_plant_command();
-        assert_eq!(command.action, PlantAction::Hold);
-        assert_eq!(command.action.velocity(), [0, 0, 0]);
-        assert_eq!(command.validity_ms, effective_validity_ms);
+        assert_eq!(command.action(), PlantAction::Hold);
+        assert_eq!(command.action().velocity(), [0, 0, 0]);
+        assert_eq!(command.validity_ms(), effective_validity_ms);
         hold_fixture
             .actor
             .mark_publish_returned_ok(called, hold_fixture.now)
             .unwrap();
+        assert_eq!(
+            hold_fixture.actor.history_for_test().hold_started_at(),
+            Some(hold_fixture.now)
+        );
+        assert_eq!(
+            hold_fixture.actor.history_for_test().hold_active_until(),
+            hold_fixture
+                .now
+                .checked_add_ms(u64::from(effective_validity_ms)),
+            "returned-ok must commit the exact published Hold horizon"
+        );
 
         let mut negative_fixture = setup();
         let denied = negative_fixture
@@ -4347,11 +5023,10 @@ mod e2e {
             .actor
             .mark_publish_called(prepared, f.now)
             .expect("publication called");
-        let mut plant =
-            ReferencePlant::new(PlantConfig::default()).expect("valid reference plant config");
-        plant
-            .ingest(called.reference_plant_command().clone())
-            .expect("reference receiver accepted");
+        let command = called.reference_plant_command();
+        let mut plant = ReferencePlant::new(PlantConfig::default(), command.session().clone())
+            .expect("valid reference plant config");
+        plant.ingest(command).expect("reference receiver accepted");
         f.actor
             .mark_publish_returned_ok(called, f.now)
             .expect("publication returned ok");
@@ -4634,10 +5309,8 @@ mod e2e {
     fn validated_publish_call_keeps_the_slot_prepared_and_frame_opaque() {
         let mut f = setup();
         let rec = admission_record();
-        let env = sign_intent(
-            &f.ctrl_sk,
-            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
-        );
+        let intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 400));
+        let env = sign_intent(&f.ctrl_sk, &intent);
         let prepared = f
             .actor
             .decide_intent(&env, INTENT_KEY, f.now)
@@ -4796,8 +5469,11 @@ mod e2e {
             .now
             .checked_add_ms(1)
             .expect("fixture time is representable");
+        let mut advanced_state = trusted_state(exposure_at);
+        advanced_state.primary_source.source.stream_seq =
+            SourceSeq::new(NonZeroU64::new(8).unwrap());
         f.actor
-            .set_trusted_state(trusted_state(exposure_at))
+            .set_trusted_state(advanced_state, exposure_at)
             .expect("causal state advances during fsync");
 
         let result = f.actor.commit_publish_call(validated, exposure_at);
@@ -4981,9 +5657,12 @@ mod e2e {
             .decide_intent(&env, INTENT_KEY, changed_state.now)
             .into_prepared_publication()
             .expect("output prepared");
+        let mut advanced_state = trusted_state(changed_state.now);
+        advanced_state.primary_source.source.stream_seq =
+            SourceSeq::new(NonZeroU64::new(8).unwrap());
         changed_state
             .actor
-            .set_trusted_state(trusted_state(changed_state.now))
+            .set_trusted_state(advanced_state, changed_state.now)
             .expect("newer causal state");
         assert!(matches!(
             changed_state
@@ -5161,6 +5840,111 @@ mod e2e {
     }
 
     #[test]
+    fn replay_classify_commit_disagreement_fail_stops_before_policy_or_output() {
+        let mut fixture = setup();
+        // If Stage 7+ were reached, this incompatible history window would fault
+        // with a different diagnostic. The injected single-owner invariant breach
+        // must instead stop exactly at replay commit.
+        fixture.actor.force_history_for_test(
+            BoundedActionHistory::new(
+                MAX_RETAINED_ACTIVE_INTERVALS,
+                MonoDuration::checked_from_millis(9_999).unwrap(),
+            )
+            .unwrap(),
+        );
+        fixture.actor.force_replay_commit_conflict_for_test();
+        let record = admission_record();
+        let envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 1, velocity(1, 800)),
+        );
+
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Error);
+        assert!(!decision.has_prepared_publication());
+        assert_eq!(
+            decision.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::ErrorInternalFault]
+        );
+        assert_eq!(
+            fixture.actor.fault_reason_for_test(),
+            Some("REPLAY_CLASSIFY_COMMIT_INVARIANT")
+        );
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+        assert_eq!(fixture.actor.publication_state(), PublicationState::Idle);
+    }
+
+    #[test]
+    fn active_actor_without_lease_usage_fail_stops_before_policy_or_output() {
+        let mut fixture = setup();
+        fixture.actor.force_missing_lease_usage_for_test();
+        let record = admission_record();
+        let envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 1, velocity(1, 800)),
+        );
+
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Error);
+        assert!(!decision.has_prepared_publication());
+        assert_eq!(
+            decision.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::ErrorInternalFault]
+        );
+        assert_eq!(
+            fixture.actor.fault_reason_for_test(),
+            Some("ACTIVE_LEASE_USAGE_INVARIANT")
+        );
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+        assert_eq!(fixture.actor.publication_state(), PublicationState::Idle);
+    }
+
+    #[test]
+    fn in_decision_authorization_revision_change_fail_stops_before_output() {
+        let mut fixture = setup();
+        fixture
+            .actor
+            .force_authorization_revision_change_before_recheck_for_test();
+        let record = admission_record();
+        let envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 1, velocity(1, 800)),
+        );
+
+        let decision = fixture
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, fixture.now);
+
+        assert_eq!(decision.outcome, DecisionOutcomeV1::Error);
+        assert!(!decision.has_prepared_publication());
+        assert_eq!(
+            decision.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::ErrorInternalFault]
+        );
+        assert_eq!(
+            fixture.actor.fault_reason_for_test(),
+            Some("AUTHORIZATION_REVISION_CHANGED_DURING_DECISION")
+        );
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+        assert_eq!(fixture.actor.publication_state(), PublicationState::Idle);
+    }
+
+    #[test]
     fn stale_session_intent_denies() {
         let mut f = setup();
         let rec = admission_record();
@@ -5258,6 +6042,12 @@ mod e2e {
             DecisionOutcomeV1::Allow
         );
         f.actor.revoke_active_lease();
+        f.actor.revoke_active_lease();
+        assert_eq!(
+            f.actor.process_state(),
+            GateProcessStateV1::SessionBound,
+            "a duplicate revocation must be an idempotent no-op"
+        );
         let env2 = sign_intent(
             &f.ctrl_sk,
             &build_intent(f.admission_digest, &rec, 2, velocity(2, 400)),
@@ -5268,6 +6058,138 @@ mod e2e {
     }
 
     #[test]
+    fn exact_lease_expiry_retires_authority_and_controller_epoch() {
+        let mut fixture = setup();
+        let record = admission_record();
+        let first_envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 1, velocity(1, 400)),
+        );
+        let first = fixture
+            .actor
+            .decide_intent(&first_envelope, INTENT_KEY, fixture.now);
+        let prepared = first
+            .into_prepared_publication()
+            .expect("first intent must activate its controller epoch");
+        fixture
+            .actor
+            .cancel_prepared_publication(prepared)
+            .expect("unexposed fixture publication cancels cleanly");
+
+        let expires_at = fixture.now.checked_add_ms(30_000).unwrap();
+        let expired_envelope = sign_intent(
+            &fixture.ctrl_sk,
+            &build_intent(fixture.admission_digest, &record, 2, velocity(2, 400)),
+        );
+        let expired = fixture
+            .actor
+            .decide_intent(&expired_envelope, INTENT_KEY, expires_at);
+
+        assert_eq!(expired.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(
+            expired.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::DenyLeaseExpired]
+        );
+        assert!(!expired.has_prepared_publication());
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::SessionBound
+        );
+        assert!(
+            fixture
+                .actor
+                .intent_epoch_is_retired_for_test(IntentEpoch::new([6; 16]))
+        );
+
+        let after = fixture
+            .actor
+            .decide_intent(&expired_envelope, INTENT_KEY, expires_at);
+        assert_eq!(
+            after.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::DenyLeaseAbsent]
+        );
+    }
+
+    #[test]
+    fn publication_time_observations_materialize_exact_lease_expiry() {
+        let record = admission_record();
+
+        let mut before_exposure = setup();
+        let envelope = sign_intent(
+            &before_exposure.ctrl_sk,
+            &build_intent(
+                before_exposure.admission_digest,
+                &record,
+                1,
+                velocity(1, 400),
+            ),
+        );
+        let prepared = before_exposure
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, before_exposure.now)
+            .into_prepared_publication()
+            .expect("prepared publication");
+        let expires_at = before_exposure.now.checked_add_ms(30_000).unwrap();
+        assert!(matches!(
+            before_exposure
+                .actor
+                .mark_publish_called(prepared, expires_at),
+            Err(PublicationError::DeadlineElapsed)
+        ));
+        assert_eq!(
+            before_exposure.actor.process_state(),
+            GateProcessStateV1::SessionBound
+        );
+        assert_eq!(
+            before_exposure.actor.publication_state(),
+            PublicationState::Idle
+        );
+        assert!(
+            before_exposure
+                .actor
+                .intent_epoch_is_retired_for_test(IntentEpoch::new([6; 16]))
+        );
+
+        let mut after_exposure = setup();
+        let envelope = sign_intent(
+            &after_exposure.ctrl_sk,
+            &build_intent(
+                after_exposure.admission_digest,
+                &record,
+                1,
+                velocity(1, 400),
+            ),
+        );
+        let prepared = after_exposure
+            .actor
+            .decide_intent(&envelope, INTENT_KEY, after_exposure.now)
+            .into_prepared_publication()
+            .expect("prepared publication");
+        let called = after_exposure
+            .actor
+            .mark_publish_called(prepared, after_exposure.now)
+            .expect("publication called before expiry");
+        let expires_at = after_exposure.now.checked_add_ms(30_000).unwrap();
+        after_exposure
+            .actor
+            .mark_publish_returned_ok(called, expires_at)
+            .expect("successful return at expiry retires lease cleanly");
+        assert_eq!(
+            after_exposure.actor.process_state(),
+            GateProcessStateV1::SessionBound
+        );
+        assert_eq!(
+            after_exposure.actor.publication_state(),
+            PublicationState::Idle
+        );
+        assert!(
+            after_exposure
+                .actor
+                .intent_epoch_is_retired_for_test(IntentEpoch::new([6; 16]))
+        );
+    }
+
+    #[test]
     fn mission_phase_mismatch_denies() {
         // H-P04: the lease authorizes exactly one mission phase (INSPECTION). If
         // the Gate-owned trusted state reports a different phase, the lease
@@ -5275,12 +6197,12 @@ mod e2e {
         let mut f = setup();
         let rec = admission_record();
         let mut st = trusted_state(f.now);
+        st.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
         st.mission_phase = AsciiId::new("TRANSIT").unwrap();
-        f.actor.set_trusted_state(st).unwrap();
-        let env = sign_intent(
-            &f.ctrl_sk,
-            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
-        );
+        f.actor.set_trusted_state(st, f.now).unwrap();
+        let mut intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 400));
+        intent.primary_source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+        let env = sign_intent(&f.ctrl_sk, &intent);
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
         assert!(
@@ -5290,6 +6212,31 @@ mod e2e {
                 .contains(&DecisionReasonCodeV1::DenyScopeMismatch)
         );
         assert!(!out.has_prepared_publication());
+    }
+
+    #[test]
+    fn trusted_state_frame_must_match_the_digest_bound_local_ned_profile() {
+        let mut f = setup();
+        let rec = admission_record();
+        let mut st = trusted_state(f.now);
+        st.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+        st.primary_source.frame_id = BoundedAscii::new("body").unwrap();
+        f.actor.set_trusted_state(st, f.now).unwrap();
+
+        let mut intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 400));
+        intent.primary_source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+        let env = sign_intent(&f.ctrl_sk, &intent);
+        let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
+
+        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
+        assert!(
+            out.receipt
+                .reason_codes
+                .as_slice()
+                .contains(&DecisionReasonCodeV1::DenyScopeMismatch)
+        );
+        assert!(!out.has_prepared_publication());
+        assert_eq!(out.receipt.output_frame_digest, None);
     }
 
     #[test]
@@ -5328,17 +6275,42 @@ mod e2e {
     }
 
     #[test]
-    fn future_ncp_lease_does_not_authorize_acl_only_adapter() {
-        let publication = PlantPublicationAuthorityStateV1::NcpLeaseV1(NcpLeaseEvidenceV1 {
-            gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
-            final_route_digest: DigestV1::compute(DigestDomain::Payload, b"route"),
-            session: sess(),
-            authority_term: NonZeroU64::new(1).unwrap(),
-            lease_id: AuthorityLeaseId::new([8; 16]),
-            authorized_output_epoch: GateOutputEpoch::new(uuid(5)),
-            expires_mono_ns: Some(u64::MAX),
-        });
-        let mut f = setup_with_publication(publication);
+    fn decision_id_exhaustion_stays_terminal_after_an_unrelated_fault() {
+        // The fault latch deliberately retains its first reason. Decision-id
+        // terminality must therefore have its own state; otherwise exhaustion
+        // after an earlier fault can be hidden, reopen counter zero, and reuse
+        // identifiers on later error receipts.
+        let mut f = setup();
+        let earlier = MonoInstant::from_nanos(f.now.as_nanos() - 1);
+        assert_eq!(
+            f.actor.set_trusted_state(trusted_state(earlier), earlier),
+            Err(DecisionReasonCodeV1::ErrorStateTransition)
+        );
+        assert_ne!(
+            f.actor.fault_reason_for_test(),
+            Some("DECISION_ID_EXHAUSTED")
+        );
+
+        f.actor.force_next_decision_for_test(u64::MAX);
+        let rec = admission_record();
+        let envelope = sign_intent(
+            &f.ctrl_sk,
+            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
+        );
+        let terminal = f.actor.decide_intent(&envelope, INTENT_KEY, f.now);
+        let retained = f.actor.evidence().len();
+        let repeated = f.actor.decide_intent(&envelope, INTENT_KEY, f.now);
+
+        assert_eq!(terminal.outcome, DecisionOutcomeV1::Error);
+        assert_eq!(repeated.receipt, terminal.receipt);
+        assert_eq!(repeated.signed_receipt, terminal.signed_receipt);
+        assert_eq!(f.actor.evidence().len(), retained);
+    }
+
+    #[test]
+    fn output_sequence_exhaustion_is_a_terminal_namespace_fault() {
+        let mut f = setup();
+        f.actor.force_output_stream_exhaustion_for_test();
         let rec = admission_record();
         let env = sign_intent(
             &f.ctrl_sk,
@@ -5347,14 +6319,46 @@ mod e2e {
 
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
 
-        assert_eq!(out.outcome, DecisionOutcomeV1::Deny);
-        assert!(
-            out.receipt
-                .reason_codes
-                .as_slice()
-                .contains(&DecisionReasonCodeV1::DenyNoPublicationAuthority)
+        assert_eq!(out.outcome, DecisionOutcomeV1::Error);
+        assert_eq!(
+            out.receipt.reason_codes.as_slice(),
+            [DecisionReasonCodeV1::ErrorNamespaceExhausted]
         );
         assert!(!out.has_prepared_publication());
+        assert_eq!(out.receipt.gate_output_stream, None);
+        assert_eq!(out.receipt.output_frame_digest, None);
+        assert_eq!(
+            f.actor.process_state(),
+            haldir_contracts::status::GateProcessStateV1::FaultLatched
+        );
+        assert_eq!(
+            f.actor.fault_reason_for_test(),
+            Some("OUTPUT_STREAM_EXHAUSTED")
+        );
+    }
+
+    #[test]
+    fn future_ncp_lease_cannot_construct_an_acl_only_actor() {
+        let publication = PlantPublicationAuthorityStateV1::NcpLeaseV1(NcpLeaseEvidenceV1 {
+            gate_transport_principal: PrincipalId::new("gate.range-a").unwrap(),
+            final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
+            session: sess(),
+            authority_term: NonZeroU64::new(1).unwrap(),
+            lease_id: AuthorityLeaseId::new([8; 16]),
+            authorized_output_epoch: GateOutputEpoch::new(uuid(5)),
+            expires_mono_ns: Some(u64::MAX),
+        });
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+        let (cfg, _, _) = gate_config(publication, &ctrl_sk, &mission_sk, gate_sk);
+
+        assert!(matches!(
+            VehicleActor::new_ephemeral(cfg),
+            Err(GateStartupError::Config(
+                GateConfigError::UnsupportedPublicationAuthorityProfile
+            ))
+        ));
     }
 
     #[test]
@@ -5368,44 +6372,69 @@ mod e2e {
         let mut wrong_vehicle = trusted_state(f.now);
         wrong_vehicle.vehicle_id = VehicleId::new("uav-2").unwrap();
         assert_eq!(
-            f.actor.set_trusted_state(wrong_vehicle),
+            f.actor.set_trusted_state(wrong_vehicle, f.now),
             Err(DecisionReasonCodeV1::DenyStateProducer)
         );
 
         let mut wrong_session = trusted_state(f.now);
         wrong_session.session.session_id = AsciiId::new("sess-9").unwrap();
         assert_eq!(
-            f.actor.set_trusted_state(wrong_session),
+            f.actor.set_trusted_state(wrong_session, f.now),
             Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+
+        let mut disallowed_source = trusted_state(f.now);
+        disallowed_source.primary_source.source.source_key =
+            BoundedAscii::new("veh/uav-1/state/unleased").unwrap();
+        assert_eq!(
+            f.actor.set_trusted_state(disallowed_source, f.now),
+            Err(DecisionReasonCodeV1::DenySourceUnknown)
         );
 
         let mut invalid = trusted_state(f.now);
         invalid.primary_source.valid = false;
         assert_eq!(
-            f.actor.set_trusted_state(invalid),
+            f.actor.set_trusted_state(invalid, f.now),
             Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+
+        let mut unrepresentable_source = trusted_state(f.now);
+        unrepresentable_source.primary_source.source.stream_seq =
+            SourceSeq::new(NonZeroU64::new(haldir_ncp08::NCP_JSON_SAFE_INTEGER_MAX + 1).unwrap());
+        assert_eq!(
+            f.actor.set_trusted_state(unrepresentable_source, f.now),
+            Err(DecisionReasonCodeV1::DenySourceUnrepresentable)
         );
 
         let mut impossible_order = trusted_state(f.now);
         impossible_order.primary_source.receive_mono =
             MonoInstant::from_nanos(impossible_order.captured_mono.as_nanos() + 1);
         assert_eq!(
-            f.actor.set_trusted_state(impossible_order),
+            f.actor.set_trusted_state(impossible_order, f.now),
             Err(DecisionReasonCodeV1::DenyStateStale)
         );
 
         let mut negative_position_uncertainty = trusted_state(f.now);
         negative_position_uncertainty.uncertainty.position_mm[0] = -1;
         assert_eq!(
-            f.actor.set_trusted_state(negative_position_uncertainty),
+            f.actor
+                .set_trusted_state(negative_position_uncertainty, f.now),
             Err(DecisionReasonCodeV1::DenyUncertainty)
         );
 
         let mut negative_velocity_uncertainty = trusted_state(f.now);
         negative_velocity_uncertainty.uncertainty.velocity_mm_s[1] = -1;
         assert_eq!(
-            f.actor.set_trusted_state(negative_velocity_uncertainty),
+            f.actor
+                .set_trusted_state(negative_velocity_uncertainty, f.now),
             Err(DecisionReasonCodeV1::DenyUncertainty)
+        );
+
+        let mut future_capture = trusted_state(f.now);
+        future_capture.captured_mono = MonoInstant::from_nanos(f.now.as_nanos() + 1);
+        assert_eq!(
+            f.actor.set_trusted_state(future_capture, f.now),
+            Err(DecisionReasonCodeV1::DenyStateStale)
         );
 
         // Anti-rollback: a capture older than the currently held snapshot (set at
@@ -5413,8 +6442,73 @@ mod e2e {
         let mut rolled_back = trusted_state(f.now);
         rolled_back.captured_mono = MonoInstant::from_nanos(f.now.as_nanos() - 2_000_000);
         assert_eq!(
-            f.actor.set_trusted_state(rolled_back),
+            f.actor.set_trusted_state(rolled_back, f.now),
             Err(DecisionReasonCodeV1::DenyStateStale)
+        );
+    }
+
+    #[test]
+    fn trusted_state_source_replay_is_bounded_and_epoch_aware() {
+        let mut f = setup();
+
+        let mut replayed = trusted_state(f.now);
+        replayed.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(7).unwrap());
+        assert_eq!(
+            f.actor.set_trusted_state(replayed, f.now),
+            Err(DecisionReasonCodeV1::DenySourceStale)
+        );
+
+        let later = f.now.checked_add_ms(1).unwrap();
+        let mut advanced = trusted_state(later);
+        advanced.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+        f.actor.set_trusted_state(advanced, later).unwrap();
+
+        let newer_epoch = uuid(12);
+        let later = later.checked_add_ms(1).unwrap();
+        let mut rotated = trusted_state(later);
+        rotated.primary_source.source.stream_epoch = newer_epoch;
+        rotated.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(2).unwrap());
+        f.actor.set_trusted_state(rotated, later).unwrap();
+
+        let later = later.checked_add_ms(1).unwrap();
+        let mut retired = trusted_state(later);
+        retired.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(9).unwrap());
+        assert_eq!(
+            f.actor.set_trusted_state(retired, later),
+            Err(DecisionReasonCodeV1::DenySourceStale)
+        );
+    }
+
+    #[test]
+    fn trusted_state_replay_classify_commit_disagreement_fault_latches() {
+        let mut fixture = setup();
+        let later = fixture.now.checked_add_ms(1).unwrap();
+        let mut advanced = trusted_state(later);
+        advanced.primary_source.source.stream_seq = SourceSeq::new(NonZeroU64::new(8).unwrap());
+        fixture.actor.force_source_replay_commit_conflict_for_test();
+
+        assert_eq!(
+            fixture.actor.set_trusted_state(advanced, later),
+            Err(DecisionReasonCodeV1::ErrorInternalFault)
+        );
+        assert_eq!(
+            fixture.actor.fault_reason_for_test(),
+            Some("SOURCE_REPLAY_CLASSIFY_COMMIT_INVARIANT")
+        );
+        assert_eq!(
+            fixture.actor.process_state(),
+            GateProcessStateV1::FaultLatched
+        );
+
+        let later_again = later.checked_add_ms(1).unwrap();
+        let mut impossible_after_fault = trusted_state(later_again);
+        impossible_after_fault.primary_source.source.stream_seq =
+            SourceSeq::new(NonZeroU64::new(9).unwrap());
+        assert_eq!(
+            fixture
+                .actor
+                .set_trusted_state(impossible_after_fault, later_again),
+            Err(DecisionReasonCodeV1::ErrorStateTransition)
         );
     }
 
@@ -5425,10 +6519,10 @@ mod e2e {
         // independently against a trust store holding only that key.
         let mut f = setup();
         let rec = admission_record();
-        let env = sign_intent(
-            &f.ctrl_sk,
-            &build_intent(f.admission_digest, &rec, 1, velocity(1, 400)),
-        );
+        let intent = build_intent(f.admission_digest, &rec, 1, velocity(1, 400));
+        let expected_payload_digest = DigestV1::of_value(DigestDomain::Payload, &intent);
+        let expected_semantic_digest = intent.semantic_digest();
+        let env = sign_intent(&f.ctrl_sk, &intent);
         let out = f.actor.decide_intent(&env, INTENT_KEY, f.now);
         assert_eq!(out.outcome, DecisionOutcomeV1::Allow);
         assert!(!out.signed_receipt.is_empty());
@@ -5442,7 +6536,7 @@ mod e2e {
                 kid: kid(3),
                 role: KeyRole::GateApplication,
                 verifying_key: gate_vk,
-                subject: Some("gate-1".to_owned()),
+                subject: KeySubject::new("gate-1").unwrap(),
                 class: KeyClass::Assurance,
             })
             .unwrap();
@@ -5461,7 +6555,7 @@ mod e2e {
         )
         .expect("gate receipt verifies");
         assert_eq!(signer_kid, kid(3));
-        assert_eq!(subject, Some("gate-1".to_owned()));
+        assert_eq!(subject, KeySubject::new("gate-1").unwrap());
         assert_eq!(decoded.decision, DecisionOutcomeV1::Allow);
         assert_eq!(decoded.decision_id, out.receipt.decision_id);
         // Honesty (CL-ALLOW-HONEST-01): the ALLOW receipt claims only that output
@@ -5479,6 +6573,15 @@ mod e2e {
                 .contains(&DecisionReasonCodeV1::AllowPublished)
         );
         assert_eq!(decoded.publish_stage, PublishStageV1::OutputPrepared);
+        assert_eq!(
+            decoded.received_key_digest,
+            DigestV1::compute(DigestDomain::TransportKey, INTENT_KEY.as_bytes())
+        );
+        assert_eq!(decoded.payload_digest, Some(expected_payload_digest));
+        assert_eq!(
+            decoded.semantic_intent_digest,
+            Some(expected_semantic_digest)
+        );
         // The exact signed bytes must re-encode from the in-memory receipt.
         assert_eq!(decoded.reason_codes, out.receipt.reason_codes);
     }

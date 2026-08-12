@@ -2,9 +2,12 @@
 //!
 //! Every publisher-owned field of the emitted frame comes from Gate state, never
 //! from controller-authored bytes (spec mapping table / B4): the session, stream
-//! epoch/seq, `t`, and source are taken from the [`GateCommandBuildInputV1`] the
-//! Gate assembled after ALLOW. Plant authority (`authority.term`/`lease_id`) is
-//! ABSENT under `PRE_AUTHORITY_ACL_ONLY` (H8) — it is not a field here.
+//! epoch/seq, `t`, and source stream position are taken from the
+//! [`GateCommandBuildInputV1`] the Gate assembled after ALLOW. The Haldir
+//! `source_key` is carried by the immutable exact-frame correlation object; the
+//! exact NCP v0.8 JSON profile has no corresponding wire field. Plant authority
+//! (`authority.term`/`lease_id`) is ABSENT under `PRE_AUTHORITY_ACL_ONLY` (H8) —
+//! it is not a field here.
 //!
 //! This models the wire semantics without depending on the real `ncp-core`/Zenoh
 //! stack (P0 profile); the compatibility record pins the exact upstream release.
@@ -14,7 +17,6 @@ use crate::conversion::{mm_s_to_ncp_m_s, ncp_m_s_to_mm_s};
 use crate::error::NcpAdapterError;
 use haldir_contracts::action::RequestedActionV1;
 use haldir_contracts::digest::{DigestDomain, DigestV1};
-use haldir_contracts::ids::DecisionId;
 use haldir_contracts::receipt::TransformationRelationV1;
 use haldir_contracts::scalar::BoundedAscii;
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
@@ -25,8 +27,6 @@ pub const NCP_JSON_SAFE_INTEGER_MAX: u64 = 9_007_199_254_740_991;
 /// The fully-approved input the Gate hands the adapter after a decision ALLOW.
 #[derive(Debug, Clone)]
 pub struct GateCommandBuildInputV1 {
-    /// The Gate decision id (correlation only).
-    pub decision_id: DecisionId,
     /// Current session pair (Gate state).
     pub session: NcpSessionIdentityV1,
     /// Gate output stream position (Gate state).
@@ -42,7 +42,21 @@ pub struct GateCommandBuildInputV1 {
     /// The approved semantic action.
     pub action: RequestedActionV1,
     /// The computed effective output validity (ms).
+    ///
+    /// This must not exceed the validity requested by [`Self::action`]. The
+    /// adapter checks that cross-field invariant before constructing any wire
+    /// representation.
     pub effective_validity_ms: u32,
+}
+
+/// Closed encoding used by one immutable exact command frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum NcpCommandWireProfile {
+    /// Dependency-light deterministic semantic bytes used by the P0 model.
+    ModeledP0,
+    /// Upstream-validated compact NCP v0.8.0 JSON.
+    ExactNcpV0_8Json,
 }
 
 /// A modeled NCP `v0.8.0` command frame (Gate-owned publisher fields).
@@ -56,9 +70,14 @@ pub struct NcpCommandFrameV1 {
     pub source: NcpSourceRefV1,
     /// Coordinate frame copied from the trusted source frame.
     pub frame_id: BoundedAscii<128>,
-    /// Gate creation time `t`.
+    /// Gate creation time `t` in the internal nanosecond domain.
+    ///
+    /// Modeled-P0 bytes carry this integer exactly. Exact NCP v0.8 JSON carries
+    /// its deterministic binary64-seconds projection, which is not injective
+    /// over the full `u64` nanosecond domain.
     pub t_ns: u64,
-    /// Source time.
+    /// Source time in the internal nanosecond domain, with the same profile-
+    /// specific projection semantics as [`Self::t_ns`].
     pub source_t_ns: u64,
     /// Whether this is a hold command.
     pub is_hold: bool,
@@ -101,21 +120,29 @@ impl NcpCommandFrameV1 {
     }
 }
 
-/// An immutable prepared output: the frame, its exact bytes, digest, and the
-/// declared transformation relation.
-#[derive(Debug, Clone, PartialEq)]
+/// An immutable prepared output: Gate-owned semantics, exact profile bytes,
+/// their digest, and the declared action transformation.
+///
+/// “Exact” qualifies the serialized bytes. The exact NCP v0.8 JSON profile has
+/// no `source_key` field and projects integer nanosecond times to binary64
+/// seconds, so those semantic values are not all injectively committed by the
+/// byte digest. The profile observability methods and compatibility document
+/// make those projection limits explicit.
+#[derive(Debug, PartialEq)]
 pub struct ExactNcpCommandFrame {
     pub(crate) frame: NcpCommandFrameV1,
     pub(crate) bytes: Vec<u8>,
     pub(crate) digest: DigestV1,
     pub(crate) transformation: TransformationRelationV1,
+    wire_profile: NcpCommandWireProfile,
 }
 
 impl ExactNcpCommandFrame {
-    pub(crate) fn from_parts(
+    fn from_parts(
         frame: NcpCommandFrameV1,
         bytes: Vec<u8>,
         transformation: TransformationRelationV1,
+        wire_profile: NcpCommandWireProfile,
     ) -> Self {
         let digest = DigestV1::compute(DigestDomain::OutputFrame, &bytes);
         Self {
@@ -123,13 +150,75 @@ impl ExactNcpCommandFrame {
             bytes,
             digest,
             transformation,
+            wire_profile,
         }
+    }
+
+    pub(crate) fn from_modeled_parts(
+        frame: NcpCommandFrameV1,
+        bytes: Vec<u8>,
+        transformation: TransformationRelationV1,
+    ) -> Self {
+        Self::from_parts(
+            frame,
+            bytes,
+            transformation,
+            NcpCommandWireProfile::ModeledP0,
+        )
+    }
+
+    #[cfg(feature = "real-ncp")]
+    pub(crate) fn from_exact_json_parts(
+        frame: NcpCommandFrameV1,
+        bytes: Vec<u8>,
+        transformation: TransformationRelationV1,
+    ) -> Self {
+        Self::from_parts(
+            frame,
+            bytes,
+            transformation,
+            NcpCommandWireProfile::ExactNcpV0_8Json,
+        )
     }
 
     /// Borrow the exact serialized bytes.
     #[must_use]
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    /// Encoding against which the semantic frame and exact bytes are checked.
+    #[must_use]
+    pub const fn wire_profile(&self) -> NcpCommandWireProfile {
+        self.wire_profile
+    }
+
+    /// Whether the Haldir `source_key` itself is present in the serialized bytes.
+    ///
+    /// Both profiles bind the source stream epoch and sequence. NCP v0.8 JSON has
+    /// no `source_key` field, so the key remains exact-object/event correlation in
+    /// that profile and is not committed by [`Self::digest`].
+    #[must_use]
+    pub const fn source_key_is_wire_bound(&self) -> bool {
+        matches!(self.wire_profile, NcpCommandWireProfile::ModeledP0)
+    }
+
+    /// Session pair carried by the exact frame.
+    #[must_use]
+    pub const fn session(&self) -> &NcpSessionIdentityV1 {
+        &self.frame.session
+    }
+
+    /// Gate output position carried by the exact frame.
+    #[must_use]
+    pub const fn stream(&self) -> &NcpStreamPositionV1 {
+        &self.frame.stream
+    }
+
+    /// Causal source carried by the exact frame.
+    #[must_use]
+    pub const fn source(&self) -> &NcpSourceRefV1 {
+        &self.frame.source
     }
 
     /// Session id carried by the immutable semantic frame.
@@ -160,16 +249,32 @@ impl ExactNcpCommandFrame {
     }
 
     /// The decoded fixed-point velocity components (mm/s), recovered from the wire.
-    #[must_use]
-    pub fn decoded_velocity_mm_s(&self) -> [i32; 3] {
-        [
-            ncp_m_s_to_mm_s(self.frame.velocity_m_s[0]),
-            ncp_m_s_to_mm_s(self.frame.velocity_m_s[1]),
-            ncp_m_s_to_mm_s(self.frame.velocity_m_s[2]),
-        ]
+    ///
+    /// # Errors
+    /// Returns [`NcpAdapterError::ConversionOutOfRange`] if an internal value
+    /// is not in Haldir's exact fixed-point-to-wire image.
+    pub fn decoded_velocity_mm_s(&self) -> Result<[i32; 3], NcpAdapterError> {
+        Ok([
+            ncp_m_s_to_mm_s(self.frame.velocity_m_s[0])?,
+            ncp_m_s_to_mm_s(self.frame.velocity_m_s[1])?,
+            ncp_m_s_to_mm_s(self.frame.velocity_m_s[2])?,
+        ])
     }
 
-    fn is_self_consistent(&self) -> bool {
+    /// Command validity carried by the exact frame.
+    #[must_use]
+    pub const fn validity_ms(&self) -> u32 {
+        self.frame.validity_ms
+    }
+
+    /// Whether the semantic frame, exact bytes, digest, and transformation still
+    /// form the single immutable output built by the adapter.
+    ///
+    /// This checks the selected profile's deterministic projection. It does not
+    /// make a non-injective profile encoding injective: two distinct internal
+    /// nanosecond values can legitimately rebuild the same NCP v0.8 JSON bytes.
+    #[must_use]
+    pub fn is_self_consistent(&self) -> bool {
         let expected_transformation = if self.frame.is_hold {
             TransformationRelationV1::Identity
         } else {
@@ -181,11 +286,25 @@ impl ExactNcpCommandFrame {
                 .velocity_m_s
                 .iter()
                 .all(|value| value.to_bits() == 0.0f64.to_bits());
-        let serialized = self.frame.wire_bytes();
+        let bytes_match_semantics = match self.wire_profile {
+            NcpCommandWireProfile::ModeledP0 => self.frame.wire_bytes() == self.bytes,
+            NcpCommandWireProfile::ExactNcpV0_8Json => {
+                #[cfg(feature = "real-ncp")]
+                {
+                    crate::real::exact_bytes_match_semantic(&self.frame, &self.bytes)
+                }
+                #[cfg(not(feature = "real-ncp"))]
+                {
+                    false
+                }
+            }
+        };
 
         self.transformation == expected_transformation
             && hold_is_zero
-            && serialized == self.bytes
+            && self.frame.validity_ms != 0
+            && self.decoded_velocity_mm_s().is_ok()
+            && bytes_match_semantics
             && DigestV1::compute(DigestDomain::OutputFrame, &self.bytes) == self.digest
     }
 }
@@ -193,6 +312,11 @@ impl ExactNcpCommandFrame {
 pub(crate) fn build_semantic_frame(
     input: &GateCommandBuildInputV1,
 ) -> Result<(NcpCommandFrameV1, TransformationRelationV1), NcpAdapterError> {
+    if input.effective_validity_ms == 0
+        || input.effective_validity_ms > input.action.requested_validity_ms().get()
+    {
+        return Err(NcpAdapterError::InvalidEffectiveValidity);
+    }
     if input.stream.seq.get() > NCP_JSON_SAFE_INTEGER_MAX
         || input.source.stream_seq.get() > NCP_JSON_SAFE_INTEGER_MAX
     {
@@ -293,7 +417,7 @@ impl NcpCommandAdapter for AclOnlyAdapter {
     ) -> Result<ExactNcpCommandFrame, NcpAdapterError> {
         let (frame, transformation) = build_semantic_frame(input)?;
         let bytes = frame.wire_bytes();
-        Ok(ExactNcpCommandFrame::from_parts(
+        Ok(ExactNcpCommandFrame::from_modeled_parts(
             frame,
             bytes,
             transformation,
@@ -317,12 +441,11 @@ impl NcpCommandAdapter for AclOnlyAdapter {
 mod tests {
     use super::*;
     use core::num::{NonZeroU32, NonZeroU64};
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
 
     fn input(action: RequestedActionV1) -> GateCommandBuildInputV1 {
         GateCommandBuildInputV1 {
-            decision_id: DecisionId::new([1; 16]),
             session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("sess-1").unwrap(),
                 generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
@@ -357,6 +480,7 @@ mod tests {
         let mut exact = adapter.build_command(&input).unwrap();
         exact.frame.is_hold = false;
 
+        assert!(!exact.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&exact, &input),
             Err(NcpAdapterError::ValidatorMismatch)
@@ -370,6 +494,7 @@ mod tests {
         let mut exact = adapter.build_command(&input).unwrap();
         exact.bytes.push(0xff);
 
+        assert!(!exact.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&exact, &input),
             Err(NcpAdapterError::ValidatorMismatch)
@@ -383,6 +508,7 @@ mod tests {
         let mut exact = adapter.build_command(&input).unwrap();
         exact.digest = DigestV1::compute(DigestDomain::OutputFrame, b"tampered");
 
+        assert!(!exact.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&exact, &input),
             Err(NcpAdapterError::ValidatorMismatch)
@@ -396,9 +522,46 @@ mod tests {
         let mut exact = adapter.build_command(&input).unwrap();
         exact.transformation = TransformationRelationV1::FixedPointToNcpFloatV1;
 
+        assert!(!exact.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&exact, &input),
             Err(NcpAdapterError::ValidatorMismatch)
         );
+    }
+
+    #[test]
+    fn effective_validity_cannot_exceed_the_signed_request() {
+        let adapter = AclOnlyAdapter::new();
+        let mut input = hold_input();
+        input.effective_validity_ms = 301;
+
+        assert_eq!(
+            adapter.build_command(&input),
+            Err(NcpAdapterError::InvalidEffectiveValidity)
+        );
+    }
+
+    #[test]
+    fn effective_validity_must_be_nonzero() {
+        let adapter = AclOnlyAdapter::new();
+        let mut input = hold_input();
+        input.effective_validity_ms = 0;
+
+        assert_eq!(
+            adapter.build_command(&input),
+            Err(NcpAdapterError::InvalidEffectiveValidity)
+        );
+    }
+
+    #[test]
+    fn self_consistency_rejects_zero_validity_even_if_all_bytes_are_rebuilt() {
+        let adapter = AclOnlyAdapter::new();
+        let input = hold_input();
+        let mut exact = adapter.build_command(&input).unwrap();
+        exact.frame.validity_ms = 0;
+        exact.bytes = exact.frame.wire_bytes();
+        exact.digest = DigestV1::compute(DigestDomain::OutputFrame, &exact.bytes);
+
+        assert!(!exact.is_self_consistent());
     }
 }

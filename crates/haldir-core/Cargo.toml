@@ -1,6 +1,6 @@
 [package]
 name = "haldir-core"
-description = "Haldir Gate — haldir-core"
+description = "Monotonic time and trusted state-snapshot primitives for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -351,7 +351,7 @@ mod tests {
         let mut snapshots = AuthenticatedSnapshotStore::provision_new(
             AtomicFileSnapshot::new(&snapshot_path, 4096),
             LocalFileGenerationAnchor::new(&anchor_path, store_id),
-            StorageMacKey::new([7; 32]),
+            StorageMacKey::new([7; 32]).expect("nonzero test storage key"),
             binding,
             1024,
             b"one",
@@ -367,7 +367,7 @@ mod tests {
         let (reopened, recovery) = AuthenticatedSnapshotStore::open_existing(
             AtomicFileSnapshot::new(snapshot_path, 4096),
             LocalFileGenerationAnchor::new(anchor_path, store_id),
-            StorageMacKey::new([7; 32]),
+            StorageMacKey::new([7; 32]).expect("nonzero test storage key"),
             binding,
             1024,
         )

@@ -21,6 +21,34 @@ pub enum DurableAntiRollbackError {
     GateBindingMismatch,
 }
 
+impl DurableAntiRollbackError {
+    /// Stable machine-readable failure class.
+    #[must_use]
+    pub const fn reason_code(self) -> &'static str {
+        match self {
+            Self::State(error) => error.as_str(),
+            Self::Durable(error) => error.as_str(),
+            Self::GateBindingMismatch => "DURABLE_ANTI_ROLLBACK_GATE_BINDING_MISMATCH",
+        }
+    }
+}
+
+impl std::fmt::Display for DurableAntiRollbackError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.reason_code())
+    }
+}
+
+impl std::error::Error for DurableAntiRollbackError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::State(error) => Some(error),
+            Self::Durable(error) => Some(error),
+            Self::GateBindingMismatch => None,
+        }
+    }
+}
+
 impl From<AntiRollbackError> for DurableAntiRollbackError {
     fn from(error: AntiRollbackError) -> Self {
         Self::State(error)
@@ -31,6 +59,21 @@ impl From<DurableError> for DurableAntiRollbackError {
     fn from(error: DurableError) -> Self {
         Self::Durable(error)
     }
+}
+
+/// Result of durably presenting a non-rewinding revocation epoch.
+///
+/// Equal epochs are accepted without rewriting the authenticated snapshot or
+/// advancing its generation. Callers that need to correlate a newly committed
+/// durable head must distinguish that case from [`Self::Unchanged`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+#[must_use = "the outcome distinguishes a semantic no-op from a new durable commit"]
+pub enum DurableRevocationUpdate {
+    /// The presented epoch already was the durable high-water.
+    Unchanged,
+    /// The high-water advanced and this receipt identifies the new durable head.
+    Committed(CommitReceipt),
 }
 
 /// Anti-rollback semantics whose live state changes only after snapshot commit.
@@ -250,7 +293,9 @@ impl<S: SnapshotStorage, A: GenerationAnchor> DurableAntiRollbackStore<S, A> {
         Ok(receipt)
     }
 
-    /// Commit a non-rewinding revocation epoch before updating live state.
+    /// Accept a non-rewinding revocation epoch before updating live state.
+    /// Equal epochs return [`DurableRevocationUpdate::Unchanged`] without a
+    /// storage or anchor write.
     ///
     /// # Errors
     /// Returns on rollback or durable commit failure.
@@ -258,11 +303,14 @@ impl<S: SnapshotStorage, A: GenerationAnchor> DurableAntiRollbackStore<S, A> {
         &mut self,
         scope: &[u8],
         epoch: u64,
-    ) -> Result<CommitReceipt, DurableAntiRollbackError> {
+    ) -> Result<DurableRevocationUpdate, DurableAntiRollbackError> {
         let candidate = self.state.candidate_with_revocation_epoch(scope, epoch)?;
+        if candidate == self.state {
+            return Ok(DurableRevocationUpdate::Unchanged);
+        }
         let receipt = self.snapshots.commit(&candidate.to_bytes())?;
         self.state = candidate;
-        Ok(receipt)
+        Ok(DurableRevocationUpdate::Committed(receipt))
     }
 
     /// Return owned backends for shutdown/recovery orchestration.
@@ -297,7 +345,7 @@ impl<S: SnapshotStorage, A: GenerationAnchor> BootedDurableAntiRollbackStore<S, 
         self.store.highest_term(scope)
     }
 
-    /// Commit a non-rewinding revocation epoch before updating live state.
+    /// Accept a non-rewinding revocation epoch before updating live state.
     ///
     /// # Errors
     /// Returns on rollback or durable commit failure.
@@ -305,7 +353,7 @@ impl<S: SnapshotStorage, A: GenerationAnchor> BootedDurableAntiRollbackStore<S, 
         &mut self,
         scope: &[u8],
         epoch: u64,
-    ) -> Result<CommitReceipt, DurableAntiRollbackError> {
+    ) -> Result<DurableRevocationUpdate, DurableAntiRollbackError> {
         self.store.accept_revocation_epoch(scope, epoch)
     }
 
@@ -347,7 +395,7 @@ impl<S: SnapshotStorage, A: GenerationAnchor> DeploymentBootedDurableAntiRollbac
         self.store.highest_term(scope)
     }
 
-    /// Commit a non-rewinding revocation epoch before updating live state.
+    /// Accept a non-rewinding revocation epoch before updating live state.
     ///
     /// # Errors
     /// Returns on rollback or durable commit failure.
@@ -355,7 +403,7 @@ impl<S: SnapshotStorage, A: GenerationAnchor> DeploymentBootedDurableAntiRollbac
         &mut self,
         scope: &[u8],
         epoch: u64,
-    ) -> Result<CommitReceipt, DurableAntiRollbackError> {
+    ) -> Result<DurableRevocationUpdate, DurableAntiRollbackError> {
         self.store.accept_revocation_epoch(scope, epoch)
     }
 
@@ -417,6 +465,26 @@ mod tests {
     use std::collections::BTreeMap;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn durable_wrapper_is_a_stable_standard_error_with_nested_sources() {
+        fn assert_standard_error<E: std::error::Error + Send + Sync + 'static>() {}
+        assert_standard_error::<DurableAntiRollbackError>();
+
+        let state = DurableAntiRollbackError::State(AntiRollbackError::PackageEquivocation);
+        let durable = DurableAntiRollbackError::Durable(DurableError::CommitUncertain);
+        let binding = DurableAntiRollbackError::GateBindingMismatch;
+
+        assert_eq!(state.to_string(), "ANTI_ROLLBACK_PACKAGE_EQUIVOCATION");
+        assert_eq!(durable.to_string(), "DURABLE_COMMIT_UNCERTAIN");
+        assert_eq!(
+            binding.to_string(),
+            "DURABLE_ANTI_ROLLBACK_GATE_BINDING_MISMATCH"
+        );
+        assert!(std::error::Error::source(&state).is_some());
+        assert!(std::error::Error::source(&durable).is_some());
+        assert!(std::error::Error::source(&binding).is_none());
+    }
 
     #[derive(Clone, Default)]
     struct FailureFlag(Arc<AtomicBool>);
@@ -489,7 +557,7 @@ mod tests {
     }
 
     fn key() -> StorageMacKey {
-        StorageMacKey::new([7; 32])
+        StorageMacKey::new([7; 32]).expect("nonzero test storage key")
     }
 
     fn gate_id() -> GateId {
@@ -568,6 +636,53 @@ mod tests {
             Err(DurableAntiRollbackError::Durable(DurableError::Storage))
         );
         assert_eq!(store.highest_term(b"lease"), 0);
+    }
+
+    #[test]
+    fn equal_revocation_epoch_is_a_durable_noop() {
+        let storage = MemoryStorage::default();
+        let anchor = MemoryAnchor::default();
+        let mut store = provision(storage.clone(), anchor.clone());
+
+        let pristine_bytes = storage.bytes.lock().unwrap().clone();
+        let pristine_anchor = anchor.heads.lock().unwrap().clone();
+        storage.fail_replace.set(true);
+        anchor.fail_compare_set.set(true);
+        assert_eq!(
+            store.accept_revocation_epoch(b"authority", 0),
+            Ok(DurableRevocationUpdate::Unchanged)
+        );
+        assert_eq!(*storage.bytes.lock().unwrap(), pristine_bytes);
+        assert_eq!(*anchor.heads.lock().unwrap(), pristine_anchor);
+
+        storage.fail_replace.set(false);
+        anchor.fail_compare_set.set(false);
+        let update = store.accept_revocation_epoch(b"authority", 1).unwrap();
+        assert!(matches!(
+            update,
+            DurableRevocationUpdate::Committed(CommitReceipt { generation: 2, .. })
+        ));
+        let advanced_bytes = storage.bytes.lock().unwrap().clone();
+        let advanced_anchor = anchor.heads.lock().unwrap().clone();
+
+        storage.fail_replace.set(true);
+        anchor.fail_compare_set.set(true);
+        assert_eq!(
+            store.accept_revocation_epoch(b"authority", 1),
+            Ok(DurableRevocationUpdate::Unchanged)
+        );
+        assert_eq!(*storage.bytes.lock().unwrap(), advanced_bytes);
+        assert_eq!(*anchor.heads.lock().unwrap(), advanced_anchor);
+        assert_eq!(store.revocation_epoch(b"authority"), 1);
+
+        storage.fail_replace.set(false);
+        anchor.fail_compare_set.set(false);
+        drop(store);
+        let (reopened, recovery) =
+            DurableAntiRollbackStore::open_existing(storage, anchor, key(), binding(), 4096)
+                .unwrap();
+        assert_eq!(recovery, RecoveryStatus::Clean);
+        assert_eq!(reopened.revocation_epoch(b"authority"), 1);
     }
 
     #[test]
@@ -792,7 +907,10 @@ mod tests {
         assert!(booted.is_bound_to_gate(&gate_id()));
         LeaseTermStore::commit_term(&mut booted, b"lease", 3).unwrap();
         assert_eq!(LeaseTermStore::highest_term(&booted, b"lease"), 3);
-        booted.accept_revocation_epoch(b"authority", 2).unwrap();
+        assert!(matches!(
+            booted.accept_revocation_epoch(b"authority", 2).unwrap(),
+            DurableRevocationUpdate::Committed(_)
+        ));
         let (_storage, _anchor) = booted.into_parts();
     }
 

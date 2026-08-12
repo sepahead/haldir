@@ -33,6 +33,8 @@ pub enum DecodeError {
     },
     /// Nesting depth exceeded the configured maximum.
     DepthExceeded,
+    /// A decoder closed a container that was not open or left one unclosed.
+    ContainerBalanceInvalid,
     /// A map contained more key/value pairs than the configured maximum.
     MapPairsExceeded,
     /// An array contained more elements than the configured maximum.
@@ -108,6 +110,7 @@ impl DecodeError {
             Self::TagNotAllowed => "DECODE_TAG_FORBIDDEN",
             Self::UnexpectedMajorType { .. } => "DECODE_UNEXPECTED_MAJOR",
             Self::DepthExceeded => "DECODE_DEPTH_EXCEEDED",
+            Self::ContainerBalanceInvalid => "DECODE_CONTAINER_BALANCE_INVALID",
             Self::MapPairsExceeded => "DECODE_MAP_PAIRS_EXCEEDED",
             Self::ArrayLenExceeded => "DECODE_ARRAY_LEN_EXCEEDED",
             Self::ByteLenExceeded => "DECODE_BYTE_LEN_EXCEEDED",

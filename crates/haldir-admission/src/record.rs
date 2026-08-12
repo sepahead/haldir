@@ -1,6 +1,7 @@
 //! `AdmissionRecordV1` — the exact backend-specific relation the admission
-//! authority approves. Signed (COSE) by the admission authority; this crate
-//! operates on records whose signature the deployment loader already verified.
+//! authority approves. The payload is intended to be signed (COSE) by the
+//! admission authority, but this crate does not perform that verification or
+//! provide the deployment loader; callers must establish provenance first.
 
 use crate::types::AdmissionLevelV1;
 use core::num::NonZeroU64;
@@ -11,6 +12,10 @@ use haldir_contracts::scalar::AsciiId;
 haldir_contracts::canonical_struct! {
     /// A signed schema v1.0 admission record binding a logical bundle, admission
     /// profile, backend execution profile, codec, and evidence level.
+    ///
+    /// `validity_term` is an issuer-defined generation committed into this
+    /// record's digest. The in-memory snapshot neither compares nor ratchets it;
+    /// an authenticated loader must select the currently authoritative term.
     pub struct AdmissionRecordV1 kind "haldir.admission_record" {
         req 2 schema_major: u16,
         req 3 schema_minor: u16,
@@ -41,7 +46,11 @@ impl haldir_contracts::cbor::Validate for AdmissionRecordV1 {
         if self.schema_major != 1 || self.schema_minor != 0 {
             return Err(haldir_contracts::error::DecodeError::UnsupportedVersion);
         }
-        // A semantic admission requires that the level actually be semantic.
+        if self.level.requires_conformance_run() && self.conformance_run_digest.is_none() {
+            return Err(haldir_contracts::error::DecodeError::SemanticInvalid {
+                code: "ADMISSION_CONFORMANCE_EVIDENCE_REQUIRED",
+            });
+        }
         Ok(())
     }
 }

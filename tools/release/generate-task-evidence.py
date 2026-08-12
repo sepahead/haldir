@@ -17,14 +17,18 @@ import base64
 import binascii
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
+import selectors
+import shutil
+import signal
 import stat
 import subprocess
 import sys
 import tempfile
-import threading
+import time
 import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -56,6 +60,8 @@ MAX_GIT_BYTES = 4 * 1024 * 1024
 MAX_STDERR_BYTES = 512 * 1024
 MAX_ARCHIVE_ENTRIES = 1024
 COMMAND_TIMEOUT_SECONDS = 300
+PROCESS_REAP_TIMEOUT_SECONDS = 1.0
+PROCESS_READ_BYTES = 64 * 1024
 
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -195,14 +201,58 @@ def _canonical_json_bytes(value: Any) -> bytes:
 
 
 def _read_bounded(path: Path, limit: int, label: str) -> bytes:
+    if type(limit) is not int or limit < 0:
+        raise EvidenceGenerationError(f"EVIDENCE_RESOURCE_BOUND:{label}")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    before: os.stat_result | None = None
+    if nofollow:
+        flags |= nofollow
+    else:
+        try:
+            before = path.lstat()
+        except OSError as error:
+            raise EvidenceGenerationError(f"EVIDENCE_READ_FAILED:{label}") from error
+        if not stat.S_ISREG(before.st_mode):
+            raise EvidenceGenerationError(f"EVIDENCE_READ_FAILED:{label}")
     try:
-        with path.open("rb") as handle:
-            payload = handle.read(limit + 1)
+        descriptor = os.open(path, flags)
     except OSError as error:
         raise EvidenceGenerationError(f"EVIDENCE_READ_FAILED:{label}") from error
-    if len(payload) > limit:
-        raise EvidenceGenerationError(f"EVIDENCE_RESOURCE_BOUND:{label}")
-    return payload
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise EvidenceGenerationError(f"EVIDENCE_READ_FAILED:{label}")
+        if before is not None and (before.st_dev, before.st_ino) != (
+            opened.st_dev,
+            opened.st_ino,
+        ):
+            raise EvidenceGenerationError(f"EVIDENCE_READ_CHANGED:{label}")
+        if opened.st_size < 0 or opened.st_size > limit:
+            raise EvidenceGenerationError(f"EVIDENCE_RESOURCE_BOUND:{label}")
+        payload = bytearray()
+        while len(payload) <= limit:
+            allowance = limit + 1 - len(payload)
+            try:
+                chunk = os.read(descriptor, min(64 * 1024, allowance))
+            except InterruptedError:
+                continue
+            if not chunk:
+                break
+            payload.extend(chunk)
+        if len(payload) > limit:
+            raise EvidenceGenerationError(f"EVIDENCE_RESOURCE_BOUND:{label}")
+        after = os.fstat(descriptor)
+        if (
+            (opened.st_dev, opened.st_ino) != (after.st_dev, after.st_ino)
+            or opened.st_size != after.st_size
+            or opened.st_mtime_ns != after.st_mtime_ns
+            or len(payload) != after.st_size
+        ):
+            raise EvidenceGenerationError(f"EVIDENCE_READ_CHANGED:{label}")
+        return bytes(payload)
+    finally:
+        os.close(descriptor)
 
 
 def _regular_repo_file(repo: Path, relative: str, *, must_exist: bool = True) -> Path:
@@ -247,67 +297,189 @@ def _run_bounded(
     label: str,
     *,
     stderr_limit: int = MAX_STDERR_BYTES,
+    environment: dict[str, str] | None = None,
+    timeout_seconds: float = COMMAND_TIMEOUT_SECONDS,
 ) -> tuple[bytes, bytes]:
-    """Run a command while draining both pipes with hard in-memory bounds."""
+    """Run one isolated process group under hard time and output bounds."""
+
+    if (
+        not arguments
+        or any(type(argument) is not str or not argument for argument in arguments)
+        or type(stdout_limit) is not int
+        or stdout_limit < 0
+        or type(stderr_limit) is not int
+        or stderr_limit < 0
+        or isinstance(timeout_seconds, bool)
+        or not isinstance(timeout_seconds, (int, float))
+        or not math.isfinite(timeout_seconds)
+        or timeout_seconds <= 0
+    ):
+        raise EvidenceGenerationError(f"EVIDENCE_COMMAND_CONTRACT:{label}")
 
     try:
         process = subprocess.Popen(
             arguments,
             cwd=cwd,
+            env=dict(os.environ) if environment is None else environment,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            shell=False,
+            start_new_session=True,
         )
-    except OSError as error:
+    except (OSError, ValueError) as error:
         raise EvidenceGenerationError(f"EVIDENCE_COMMAND_FAILED:{label}") from error
-    assert process.stdout is not None and process.stderr is not None
-    output = bytearray()
-    errors = bytearray()
-    overflow: list[str] = []
+    if process.stdout is None or process.stderr is None:
+        _stop_process_group(process)
+        raise EvidenceGenerationError(f"EVIDENCE_COMMAND_PIPE:{label}")
 
-    def drain(stream: Any, destination: bytearray, limit: int, stream_name: str) -> None:
-        while True:
-            chunk = stream.read(64 * 1024)
-            if not chunk:
-                return
-            if len(destination) + len(chunk) > limit:
-                overflow.append(stream_name)
-                try:
-                    process.kill()
-                except OSError:
-                    pass
-                return
-            destination.extend(chunk)
-
-    threads = [
-        threading.Thread(target=drain, args=(process.stdout, output, stdout_limit, "stdout")),
-        threading.Thread(target=drain, args=(process.stderr, errors, stderr_limit, "stderr")),
-    ]
-    for thread in threads:
-        thread.start()
+    streams = {
+        process.stdout: (bytearray(), stdout_limit, "stdout"),
+        process.stderr: (bytearray(), stderr_limit, "stderr"),
+    }
     try:
-        return_code = process.wait(timeout=COMMAND_TIMEOUT_SECONDS)
-    except subprocess.TimeoutExpired as error:
-        process.kill()
-        process.wait()
-        for thread in threads:
-            thread.join()
-        process.stdout.close()
-        process.stderr.close()
-        raise EvidenceGenerationError(f"EVIDENCE_COMMAND_TIMEOUT:{label}") from error
-    for thread in threads:
-        thread.join()
-    process.stdout.close()
-    process.stderr.close()
-    if overflow:
-        raise EvidenceGenerationError(f"EVIDENCE_RESOURCE_BOUND:{label}:{overflow[0]}")
+        selector = selectors.DefaultSelector()
+    except OSError as error:
+        _stop_process_group(process)
+        raise EvidenceGenerationError(f"EVIDENCE_COMMAND_FAILED:{label}") from error
+    failure: str | None = None
+    return_code: int | None = None
+    deadline = time.monotonic() + timeout_seconds
+    cleanup_deadline: float | None = None
+    group_signaled = False
+    try:
+        for stream in streams:
+            selector.register(stream, selectors.EVENT_READ)
+        while selector.get_map():
+            active_deadline = cleanup_deadline or deadline
+            remaining = active_deadline - time.monotonic()
+            if remaining <= 0:
+                failure = (
+                    "descendant pipe timeout"
+                    if cleanup_deadline is not None
+                    else "timeout"
+                )
+                break
+            for key, _mask in selector.select(min(remaining, 0.05)):
+                stream = key.fileobj
+                destination, maximum, stream_name = streams[stream]
+                allowance = maximum + 1 - len(destination)
+                try:
+                    chunk = os.read(
+                        stream.fileno(), min(PROCESS_READ_BYTES, allowance)
+                    )
+                except InterruptedError:
+                    continue
+                if not chunk:
+                    selector.unregister(stream)
+                    stream.close()
+                    continue
+                destination.extend(chunk)
+                if len(destination) > maximum:
+                    failure = f"{stream_name} bound"
+                    break
+            if failure is not None:
+                break
+            if process.poll() is not None and selector.get_map() and not group_signaled:
+                _signal_process_group(process)
+                group_signaled = True
+                cleanup_deadline = min(deadline, time.monotonic() + 1.0)
+        if failure is None:
+            try:
+                return_code = process.wait(
+                    timeout=max(0.0, deadline - time.monotonic())
+                )
+            except subprocess.TimeoutExpired:
+                failure = "timeout"
+    except (OSError, ValueError) as error:
+        failure = "capture"
+        capture_error: BaseException | None = error
+    except BaseException:
+        _stop_process_group(process)
+        raise
+    else:
+        capture_error = None
+    finally:
+        selector.close()
+        for stream in streams:
+            try:
+                stream.close()
+            except OSError:
+                pass
+
+    cleanup_ok = _stop_process_group(process)
+    if not cleanup_ok:
+        raise EvidenceGenerationError(f"EVIDENCE_COMMAND_CLEANUP:{label}")
+    if failure is not None or return_code is None:
+        code = "TIMEOUT" if failure == "timeout" else "FAILED"
+        if failure is not None and failure.endswith("bound"):
+            stream_name = failure.removesuffix(" bound")
+            raise EvidenceGenerationError(
+                f"EVIDENCE_RESOURCE_BOUND:{label}:{stream_name}"
+            ) from capture_error
+        raise EvidenceGenerationError(f"EVIDENCE_COMMAND_{code}:{label}") from (
+            capture_error
+        )
     if return_code != 0:
         raise EvidenceGenerationError(f"EVIDENCE_COMMAND_FAILED:{label}")
-    return bytes(output), bytes(errors)
+    return bytes(streams[process.stdout][0]), bytes(streams[process.stderr][0])
+
+
+def _signal_process_group(process: subprocess.Popen[bytes]) -> None:
+    """Best-effort SIGKILL for the command's isolated process group."""
+
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            process.kill()
+        except OSError:
+            pass
+
+
+def _stop_process_group(process: subprocess.Popen[bytes]) -> bool:
+    """Kill every remaining group member and reap the leader within a bound."""
+
+    _signal_process_group(process)
+    try:
+        process.wait(timeout=PROCESS_REAP_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+            process.wait(timeout=PROCESS_REAP_TIMEOUT_SECONDS)
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+    except OSError:
+        return False
+    return True
+
+
+def _git_environment() -> dict[str, str]:
+    """Return the closed environment for commit and object verification."""
+
+    return {
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+        "LC_ALL": "C",
+        "PATH": "/usr/bin:/bin",
+    }
 
 
 def _git(repo: Path, *arguments: str, limit: int = MAX_GIT_BYTES) -> bytes:
-    return _run_bounded(["git", *arguments], repo, limit, "git")[0]
+    stdout, stderr = _run_bounded(
+        ["/usr/bin/git", "-c", "core.hooksPath=/dev/null", *arguments],
+        repo,
+        limit,
+        "git",
+        environment=_git_environment(),
+    )
+    if stderr:
+        raise EvidenceGenerationError("EVIDENCE_GIT_STDERR")
+    return stdout
 
 
 def _git_blob_info(repo: Path, commit: str, path: str) -> tuple[str, str, bytes]:
@@ -339,19 +511,25 @@ def _commit_identity(repo: Path, commit: str) -> tuple[str, str, str]:
     _require_hex(commit, HEX40, "commit")
     tree = _git(repo, "rev-parse", f"{commit}^{{tree}}").decode("ascii").strip()
     _require_hex(tree, HEX40, "tree")
-    identities = _git(
-        repo,
-        "show",
-        "-s",
-        "--format=%an <%ae>%n%cn <%ce>",
-        commit,
-    ).decode("utf-8").splitlines()
+    identities = (
+        _git(
+            repo,
+            "show",
+            "-s",
+            "--format=%an <%ae>%n%cn <%ce>",
+            commit,
+        )
+        .decode("utf-8")
+        .splitlines()
+    )
     if identities != [AUTHOR, AUTHOR]:
         raise EvidenceGenerationError("EVIDENCE_COMMIT_IDENTITY_INVALID")
     return tree, identities[0], identities[1]
 
 
-def _verify_signed_commit(repo: Path, commit: str, allowed_signers: bytes) -> dict[str, str]:
+def _verify_signed_commit(
+    repo: Path, commit: str, allowed_signers: bytes
+) -> dict[str, str]:
     if allowed_signers != ALLOWED_SIGNERS:
         raise EvidenceGenerationError("EVIDENCE_ALLOWED_SIGNERS_INVALID")
     descriptor, path = tempfile.mkstemp(prefix="haldir-allowed-signers-")
@@ -362,31 +540,36 @@ def _verify_signed_commit(repo: Path, commit: str, allowed_signers: bytes) -> di
             os.fsync(handle.fileno())
         stdout, stderr = _run_bounded(
             [
-                "git",
+                "/usr/bin/git",
+                "-c",
+                "core.hooksPath=/dev/null",
                 "-c",
                 "gpg.format=ssh",
                 "-c",
                 f"gpg.ssh.allowedSignersFile={path}",
+                "-c",
+                f"gpg.ssh.revocationFile={os.devnull}",
+                "-c",
+                "gpg.ssh.program=/usr/bin/ssh-keygen",
                 "verify-commit",
-                "--raw",
                 commit,
             ],
             repo,
             64 * 1024,
             "verify_commit",
             stderr_limit=64 * 1024,
+            environment=_git_environment(),
         )
     finally:
         try:
             os.unlink(path)
         except FileNotFoundError:
             pass
-    verification = (stdout + stderr).decode("utf-8", "strict")
     expected = (
         f'Good "git" signature for {SIGNER_PRINCIPAL} with '
-        f"{SIGNER_KEY_TYPE} key {SIGNER_FINGERPRINT}"
-    )
-    if expected not in verification:
+        f"{SIGNER_KEY_TYPE} key {SIGNER_FINGERPRINT}\n"
+    ).encode("ascii")
+    if stdout or stderr != expected:
         raise EvidenceGenerationError("EVIDENCE_COMMIT_SIGNER_INVALID")
     return {
         "format": "ssh",
@@ -409,13 +592,7 @@ def _commit_record(repo: Path, commit: str, allowed_signers: bytes) -> dict[str,
 
 def _require_ancestor(repo: Path, ancestor: str, descendant: str) -> None:
     try:
-        _run_bounded(
-            ["git", "merge-base", "--is-ancestor", ancestor, descendant],
-            repo,
-            1024,
-            "commit_ancestry",
-            stderr_limit=16 * 1024,
-        )
+        _git(repo, "merge-base", "--is-ancestor", ancestor, descendant, limit=1024)
     except EvidenceGenerationError as error:
         raise EvidenceGenerationError("EVIDENCE_TOOL_HISTORY_INVALID") from error
 
@@ -424,10 +601,7 @@ def _validate_nonempty_strings(value: Any, fields: set[str], label: str) -> None
     if (
         not isinstance(value, dict)
         or set(value) != fields
-        or any(
-            not isinstance(item, str) or not item.strip()
-            for item in value.values()
-        )
+        or any(not isinstance(item, str) or not item.strip() for item in value.values())
     ):
         raise EvidenceGenerationError(f"EVIDENCE_SPEC_{label}_INVALID")
 
@@ -478,7 +652,9 @@ def load_spec_bytes(payload: bytes) -> dict[str, Any]:
         ):
             raise EvidenceGenerationError("EVIDENCE_SPEC_ARTIFACT_PATH_INVALID")
         artifact_paths.append(path)
-    if artifact_paths != sorted(artifact_paths) or len(set(artifact_paths)) != len(artifact_paths):
+    if artifact_paths != sorted(artifact_paths) or len(set(artifact_paths)) != len(
+        artifact_paths
+    ):
         raise EvidenceGenerationError("EVIDENCE_SPEC_ARTIFACT_ORDER_INVALID")
     github = spec.get("github")
     if not isinstance(github, dict) or set(github) != EXPECTED_GITHUB_FIELDS:
@@ -555,10 +731,9 @@ def canonical_gzip(payload: bytes) -> bytes:
             blocks.extend((length ^ 0xFFFF).to_bytes(2, "little"))
             blocks.extend(chunk)
     header = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff"
-    trailer = (
-        binascii.crc32(payload).to_bytes(4, "little")
-        + (len(payload) & 0xFFFFFFFF).to_bytes(4, "little")
-    )
+    trailer = binascii.crc32(payload).to_bytes(4, "little") + (
+        len(payload) & 0xFFFFFFFF
+    ).to_bytes(4, "little")
     return header + bytes(blocks) + trailer
 
 
@@ -625,7 +800,9 @@ def _read_log_zip_entries(archive: bytes) -> dict[str, bytes]:
         with zipfile.ZipFile(__import__("io").BytesIO(archive), "r") as bundle:
             infos = bundle.infolist()
             if not infos or len(infos) > MAX_ARCHIVE_ENTRIES:
-                raise EvidenceGenerationError("EVIDENCE_LOG_ARCHIVE_ENTRY_COUNT_INVALID")
+                raise EvidenceGenerationError(
+                    "EVIDENCE_LOG_ARCHIVE_ENTRY_COUNT_INVALID"
+                )
             total = 0
             for info in infos:
                 name = info.filename
@@ -640,7 +817,8 @@ def _read_log_zip_entries(archive: bytes) -> dict[str, bytes]:
                     or any(part in {"", ".", ".."} for part in pure.parts)
                     or name in entries
                     or info.flag_bits & 0x1
-                    or info.compress_type not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
+                    or info.compress_type
+                    not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
                     or (mode and stat.S_ISLNK(mode))
                 ):
                     raise EvidenceGenerationError("EVIDENCE_LOG_ARCHIVE_ENTRY_INVALID")
@@ -671,7 +849,10 @@ def _canonicalize_log_zip(archive: bytes) -> tuple[bytes, dict[str, bytes]]:
 
 def _parse_canonical_log(payload: bytes) -> dict[str, bytes]:
     document = _load_json_bytes(payload, "canonical_log")
-    if set(document) != {"schema_version", "entries"} or document.get("schema_version") != "1.0.0":
+    if (
+        set(document) != {"schema_version", "entries"}
+        or document.get("schema_version") != "1.0.0"
+    ):
         raise EvidenceGenerationError("EVIDENCE_CANONICAL_LOG_FIELDS_INVALID")
     values = document.get("entries")
     if not isinstance(values, list) or not values or len(values) > MAX_ARCHIVE_ENTRIES:
@@ -681,7 +862,10 @@ def _parse_canonical_log(payload: bytes) -> dict[str, bytes]:
     total = 0
     for value in values:
         if not isinstance(value, dict) or set(value) != {
-            "path", "bytes", "sha256", "content_base64"
+            "path",
+            "bytes",
+            "sha256",
+            "content_base64",
         }:
             raise EvidenceGenerationError("EVIDENCE_CANONICAL_LOG_ENTRY_INVALID")
         name = value.get("path")
@@ -690,12 +874,15 @@ def _parse_canonical_log(payload: bytes) -> dict[str, bytes]:
         try:
             data = base64.b64decode(value.get("content_base64"), validate=True)
         except (TypeError, ValueError, binascii.Error) as error:
-            raise EvidenceGenerationError("EVIDENCE_CANONICAL_LOG_BASE64_INVALID") from error
+            raise EvidenceGenerationError(
+                "EVIDENCE_CANONICAL_LOG_BASE64_INVALID"
+            ) from error
         if (
             not isinstance(value.get("bytes"), int)
             or isinstance(value.get("bytes"), bool)
             or value["bytes"] != len(data)
-            or _require_hex(value.get("sha256"), HEX64, "log_entry.sha256") != _sha256(data)
+            or _require_hex(value.get("sha256"), HEX64, "log_entry.sha256")
+            != _sha256(data)
         ):
             raise EvidenceGenerationError("EVIDENCE_CANONICAL_LOG_DIGEST_INVALID")
         total += len(data)
@@ -703,20 +890,44 @@ def _parse_canonical_log(payload: bytes) -> dict[str, bytes]:
             raise EvidenceGenerationError("EVIDENCE_RESOURCE_BOUND:canonical_entries")
         entries[name] = data
         observed_order.append(name)
-    if observed_order != sorted(observed_order) or _canonical_json_bytes(document) != payload:
+    if (
+        observed_order != sorted(observed_order)
+        or _canonical_json_bytes(document) != payload
+    ):
         raise EvidenceGenerationError("EVIDENCE_CANONICAL_LOG_NONCANONICAL")
     return entries
 
 
 def _gh_api(path: str, repo: Path, limit: int, label: str) -> bytes:
+    executable = shutil.which("gh")
+    if executable is None:
+        raise EvidenceGenerationError("EVIDENCE_GITHUB_CLI_MISSING")
+    try:
+        resolved = Path(executable).resolve(strict=True)
+        metadata = resolved.stat()
+    except OSError as error:
+        raise EvidenceGenerationError("EVIDENCE_GITHUB_CLI_INVALID") from error
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_mode & stat.S_IXUSR == 0
+        or metadata.st_mode & 0o022 != 0
+    ):
+        raise EvidenceGenerationError("EVIDENCE_GITHUB_CLI_INVALID")
     return _run_bounded(
-        ["gh", "api", "--hostname", "github.com", path], repo, limit, label
+        [str(resolved), "api", "--hostname", "github.com", path],
+        repo,
+        limit,
+        label,
     )[0]
 
 
-def _gh_run(repo: Path, run_id: int, attempt: int) -> tuple[dict[str, Any], dict[str, Any], bytes]:
+def _gh_run(
+    repo: Path, run_id: int, attempt: int
+) -> tuple[dict[str, Any], dict[str, Any], bytes]:
     base = f"repos/{REPOSITORY}/actions/runs/{run_id}/attempts/{attempt}"
-    run = _load_json_bytes(_gh_api(base, repo, MAX_METADATA_BYTES, "github_run"), "github_run")
+    run = _load_json_bytes(
+        _gh_api(base, repo, MAX_METADATA_BYTES, "github_run"), "github_run"
+    )
     jobs = _load_json_bytes(
         _gh_api(f"{base}/jobs?per_page=100", repo, MAX_METADATA_BYTES, "github_jobs"),
         "github_jobs",
@@ -725,7 +936,9 @@ def _gh_run(repo: Path, run_id: int, attempt: int) -> tuple[dict[str, Any], dict
     return run, jobs, archive
 
 
-def _normalize_jobs(jobs_metadata: dict[str, Any], expected_jobs: list[str]) -> list[dict[str, Any]]:
+def _normalize_jobs(
+    jobs_metadata: dict[str, Any], expected_jobs: list[str]
+) -> list[dict[str, Any]]:
     jobs = jobs_metadata.get("jobs")
     total = jobs_metadata.get("total_count")
     if (
@@ -802,14 +1015,18 @@ def _is_github_generated_step(name: str) -> bool:
     )
 
 
-def _validate_required_steps(jobs: list[dict[str, Any]], workflow: dict[str, Any]) -> None:
+def _validate_required_steps(
+    jobs: list[dict[str, Any]], workflow: dict[str, Any]
+) -> None:
     required_by_job = workflow["required_steps_by_job"]
     for job in jobs:
         actual = [step["name"] for step in job["steps"]]
         if len(set(actual)) != len(actual):
             raise EvidenceGenerationError("EVIDENCE_RUN_STEP_NAME_DUPLICATE")
         required = required_by_job[job["name"]]
-        non_generated = sorted(name for name in actual if not _is_github_generated_step(name))
+        non_generated = sorted(
+            name for name in actual if not _is_github_generated_step(name)
+        )
         if non_generated != required:
             raise EvidenceGenerationError("EVIDENCE_RUN_REQUIRED_STEP_SET_INVALID")
 
@@ -858,7 +1075,10 @@ def _validate_log_coverage(
             marker_entry = entries[combined[0]]
     if covered != set(entries):
         raise EvidenceGenerationError("EVIDENCE_LOG_UNKNOWN_ENTRY")
-    if marker_entry is None or workflow["success_marker"].encode("utf-8") not in marker_entry:
+    if (
+        marker_entry is None
+        or workflow["success_marker"].encode("utf-8") not in marker_entry
+    ):
         raise EvidenceGenerationError("EVIDENCE_RUN_LOG_MARKER_MISSING")
 
 
@@ -884,9 +1104,7 @@ def _validate_logical_job_logs(
     entries: dict[str, bytes], jobs: list[dict[str, Any]], workflow: dict[str, Any]
 ) -> None:
     expected = {
-        f"{job['name']}/{kind}.log"
-        for job in jobs
-        for kind in ("aggregate", "system")
+        f"{job['name']}/{kind}.log" for job in jobs for kind in ("aggregate", "system")
     }
     if set(entries) != expected:
         raise EvidenceGenerationError("EVIDENCE_LOGICAL_JOB_LOG_SET_INVALID")
@@ -915,7 +1133,9 @@ def _normalize_run(
         or attempt <= 0
     ):
         raise EvidenceGenerationError("EVIDENCE_RUN_ID_INVALID")
-    expected_url = f"https://github.com/{REPOSITORY}/actions/runs/{run_id}/attempts/{attempt}"
+    expected_url = (
+        f"https://github.com/{REPOSITORY}/actions/runs/{run_id}/attempts/{attempt}"
+    )
     actual_html = run_metadata.get("html_url")
     # GitHub omits /attempts/1 from the canonical first-attempt HTML URL.
     base_html = f"https://github.com/{REPOSITORY}/actions/runs/{run_id}"
@@ -939,7 +1159,8 @@ def _normalize_run(
         or not isinstance(repository, dict)
         or repository.get("full_name") != REPOSITORY
         or actual_html not in accepted_html
-        or run_metadata.get("url") != f"https://api.github.com/repos/{REPOSITORY}/actions/runs/{run_id}"
+        or run_metadata.get("url")
+        != f"https://api.github.com/repos/{REPOSITORY}/actions/runs/{run_id}"
         or run_metadata.get("workflow_id") != workflow["workflow_id"]
     ):
         raise EvidenceGenerationError("EVIDENCE_RUN_METADATA_INVALID")
@@ -981,7 +1202,9 @@ def _source_inputs(repo: Path, commit: str) -> dict[str, Any]:
     except (UnicodeDecodeError, tomllib.TOMLDecodeError) as error:
         raise EvidenceGenerationError("EVIDENCE_TOOLCHAIN_TOML_INVALID") from error
     toolchain_table = parsed_toolchain.get("toolchain")
-    channel = toolchain_table.get("channel") if isinstance(toolchain_table, dict) else None
+    channel = (
+        toolchain_table.get("channel") if isinstance(toolchain_table, dict) else None
+    )
     ncp = audit.get("ncp")
     if (
         not isinstance(channel, str)
@@ -1059,7 +1282,9 @@ def _atomic_write(path: Path, payload: bytes) -> None:
         os.close(directory)
 
 
-def _log_record(path: str, uncompressed: bytes, compressed: bytes, entries: int) -> dict[str, Any]:
+def _log_record(
+    path: str, uncompressed: bytes, compressed: bytes, entries: int
+) -> dict[str, Any]:
     return {
         "path": path,
         "format": "github-actions-complete-logical-job-logs-v1",
@@ -1109,12 +1334,18 @@ def generate(
     verifier_blob = _git_blob(root, tool_commit, VERIFIER_PATH)
     if (
         _read_bounded(worktree_spec, MAX_SPEC_BYTES, "spec") != spec_blob
-        or _read_bounded(_regular_repo_file(root, GENERATOR_PATH), MAX_RECORD_BYTES, "generator")
+        or _read_bounded(
+            _regular_repo_file(root, GENERATOR_PATH), MAX_RECORD_BYTES, "generator"
+        )
         != generator_blob
-        or _read_bounded(_regular_repo_file(root, VERIFIER_PATH), MAX_RECORD_BYTES, "verifier")
+        or _read_bounded(
+            _regular_repo_file(root, VERIFIER_PATH), MAX_RECORD_BYTES, "verifier"
+        )
         != verifier_blob
         or _read_bounded(
-            _regular_repo_file(root, ALLOWED_SIGNERS_PATH), MAX_SPEC_BYTES, "allowed_signers"
+            _regular_repo_file(root, ALLOWED_SIGNERS_PATH),
+            MAX_SPEC_BYTES,
+            "allowed_signers",
         )
         != allowed_signers
     ):
@@ -1164,7 +1395,9 @@ def generate(
     formal_gzip = canonical_gzip(formal_log)
     _atomic_write(root / ci_relative, ci_gzip)
     _atomic_write(root / formal_relative, formal_gzip)
-    ci["log"] = _log_record(ci_relative, ci_log, ci_gzip, len(_parse_canonical_log(ci_log)))
+    ci["log"] = _log_record(
+        ci_relative, ci_log, ci_gzip, len(_parse_canonical_log(ci_log))
+    )
     formal["log"] = _log_record(
         formal_relative, formal_log, formal_gzip, len(_parse_canonical_log(formal_log))
     )
@@ -1255,11 +1488,9 @@ def _verify_log_record(
         raise EvidenceGenerationError("EVIDENCE_LOG_RECORD_IDENTITY_INVALID")
     path = _regular_repo_file(repo, expected_path)
     compressed = _read_bounded(path, MAX_LOG_BYTES + 1024, "generated_log")
-    if (
-        record.get("compressed_bytes") != len(compressed)
-        or _require_hex(record.get("compressed_sha256"), HEX64, "compressed_sha256")
-        != _sha256(compressed)
-    ):
+    if record.get("compressed_bytes") != len(compressed) or _require_hex(
+        record.get("compressed_sha256"), HEX64, "compressed_sha256"
+    ) != _sha256(compressed):
         raise EvidenceGenerationError("EVIDENCE_LOG_COMPRESSED_DIGEST_INVALID")
     uncompressed = decode_canonical_gzip(compressed)
     if (
@@ -1388,14 +1619,18 @@ def _verify_artifact_manifest(
     artifact_records: Any,
     implementation_commit: str,
     specifications: list[dict[str, str]],
+    *,
+    enforce_current_worktree: bool = True,
 ) -> None:
     expected_artifacts = _implementation_artifacts(
         repo, implementation_commit, specifications
     )
     if artifact_records != expected_artifacts:
-        raise EvidenceGenerationError("EVIDENCE_RECORD_IMPLEMENTATION_ARTIFACTS_INVALID")
+        raise EvidenceGenerationError(
+            "EVIDENCE_RECORD_IMPLEMENTATION_ARTIFACTS_INVALID"
+        )
     for artifact in expected_artifacts:
-        if artifact["worktree_policy"] == "MUST_MATCH":
+        if enforce_current_worktree and artifact["worktree_policy"] == "MUST_MATCH":
             current_path = _regular_repo_file(repo, artifact["path"])
             current = _read_bounded(
                 current_path,
@@ -1422,14 +1657,27 @@ def _verify_record_identity(record: dict[str, Any], relative: str) -> str:
         or record.get("requirement_id") != f"HALDIR-0.9-{task_id}"
         or record.get("status") != "verified"
         or record.get("generated_by") != GENERATOR_PATH
-        or relative != f"{EVIDENCE_DIRECTORY}/{task_id.lower()}-generated-verification.json"
+        or relative
+        != f"{EVIDENCE_DIRECTORY}/{task_id.lower()}-generated-verification.json"
     ):
         raise EvidenceGenerationError("EVIDENCE_RECORD_IDENTITY_INVALID")
     return task_id
 
 
-def verify_generated_record(repo: Path, record_path: Path) -> dict[str, Any]:
-    """Offline verification of every byte and every locally derivable field."""
+def verify_generated_record(
+    repo: Path,
+    record_path: Path,
+    *,
+    enforce_current_worktree: bool = True,
+) -> dict[str, Any]:
+    """Offline verification of every byte and every locally derivable field.
+
+    ``enforce_current_worktree=False`` is reserved for a ledger record explicitly
+    reclassified as historical after its requirement is reopened. It still
+    verifies the signed implementation/tool commits, exact artifact bytes, and
+    hosted run evidence; only the old specification's live-worktree freeze is no
+    longer asserted for the superseded baseline.
+    """
 
     root = repo.resolve(strict=True)
     relative = record_path.resolve(strict=True).relative_to(root).as_posix()
@@ -1484,6 +1732,7 @@ def verify_generated_record(repo: Path, record_path: Path) -> dict[str, Any]:
         record.get("implementation_artifacts"),
         implementation_commit,
         spec["implementation_artifacts"],
+        enforce_current_worktree=enforce_current_worktree,
     )
     _verify_spec_derived_fields(record, spec)
     _verify_run_record(

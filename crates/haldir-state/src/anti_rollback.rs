@@ -415,6 +415,9 @@ impl AntiRollbackStore {
     }
 
     /// Prepare a revocation-epoch update without mutating the live store.
+    /// An epoch equal to the current high-water is a semantic no-op: in
+    /// particular, `(previously unseen scope, 0)` does not create an entry or
+    /// consume pristine deployment-binding eligibility.
     ///
     /// # Errors
     /// Returns [`AntiRollbackError::Rollback`] when the epoch rewinds, or
@@ -429,6 +432,9 @@ impl AntiRollbackStore {
         let cur = self.revocation_epoch(scope);
         if epoch < cur {
             return Err(AntiRollbackError::Rollback);
+        }
+        if epoch == cur {
+            return Ok(self.clone());
         }
         let mut candidate = self.clone();
         candidate.revocation_epochs.insert(scope.to_vec(), epoch);
@@ -781,6 +787,24 @@ mod tests {
         assert_eq!(s.accept_term(b"lease", 4), Err(AntiRollbackError::Rollback));
         s.accept_term(b"lease", 6).unwrap();
         assert_eq!(s.highest_term(b"lease"), 6);
+    }
+
+    #[test]
+    fn equal_revocation_epoch_is_a_true_noop_for_new_and_existing_scopes() {
+        let mut store = AntiRollbackStore::new_empty();
+        let pristine = store.clone();
+
+        store.accept_revocation_epoch(b"new-scope", 0).unwrap();
+        assert_eq!(store, pristine);
+        assert!(matches!(
+            store.deployment_package,
+            DeploymentPackageRatchet::PristineUnbound
+        ));
+
+        store.accept_revocation_epoch(b"new-scope", 1).unwrap();
+        let advanced = store.clone();
+        store.accept_revocation_epoch(b"new-scope", 1).unwrap();
+        assert_eq!(store, advanced);
     }
 
     #[test]

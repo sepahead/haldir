@@ -2,8 +2,9 @@
 //!
 //! Digests are typed values, not bare hex strings. Distinct digest *domains*
 //! (`raw_envelope`, `payload`, `semantic_intent`, `state_snapshot`, ...) are
-//! domain-separated by a per-kind prefix so two different objects cannot collide
-//! into one digest value (punch-list H10).
+//! domain-separated by a per-kind prefix so distinct object classes do not share
+//! a hash-input namespace (punch-list H10). As with every fixed-size cryptographic
+//! digest, collision resistance is computational rather than mathematical.
 
 use crate::cbor::{CanonicalValue, CborReader, CborWriter};
 use crate::error::DecodeError;
@@ -45,7 +46,8 @@ pub struct DigestV1 {
 }
 
 /// Domains for hashing distinct object classes. The domain byte-string is mixed
-/// into the hash input so digests of different domains never collide.
+/// into the hash input so equal object bytes in different domains have different
+/// preimages; SHA-256 supplies the resulting computational collision resistance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum DigestDomain {
@@ -53,6 +55,8 @@ pub enum DigestDomain {
     RawEnvelope,
     /// Exact canonical payload bytes.
     Payload,
+    /// Exact UTF-8 bytes of one concrete transport key/route.
+    TransportKey,
     /// Canonical typed action and its policy-relevant bindings.
     SemanticIntent,
     /// Exact Gate-created NCP serialization.
@@ -67,6 +71,12 @@ pub enum DigestDomain {
     BackendProfile,
     /// An admission record.
     Admission,
+    /// One complete in-memory trust-store snapshot under its fixed schema.
+    TrustStoreSnapshot,
+    /// One complete in-memory key-revocation snapshot under its fixed schema.
+    RevocationSnapshot,
+    /// One complete in-memory admission snapshot under its fixed schema.
+    AdmissionSnapshot,
     /// Exact bytes of an artifact referenced by a deployment package.
     DeploymentArtifact,
     /// Exact canonical payload bytes of a deployment package.
@@ -82,6 +92,7 @@ impl DigestDomain {
         match self {
             Self::RawEnvelope => b"haldir.digest.raw_envelope.v1",
             Self::Payload => b"haldir.digest.payload.v1",
+            Self::TransportKey => b"haldir.digest.transport_key.v1",
             Self::SemanticIntent => b"haldir.digest.semantic_intent.v1",
             Self::OutputFrame => b"haldir.digest.output_frame.v1",
             Self::StateSnapshot => b"haldir.digest.state_snapshot.v1",
@@ -89,6 +100,9 @@ impl DigestDomain {
             Self::Bundle => b"haldir.digest.bundle.v1",
             Self::BackendProfile => b"haldir.digest.backend_profile.v1",
             Self::Admission => b"haldir.digest.admission.v1",
+            Self::TrustStoreSnapshot => b"haldir.digest.trust_store_snapshot.v1",
+            Self::RevocationSnapshot => b"haldir.digest.revocation_snapshot.v1",
+            Self::AdmissionSnapshot => b"haldir.digest.admission_snapshot.v1",
             Self::DeploymentArtifact => b"haldir.digest.deployment_artifact.v1",
             Self::DeploymentPackage => b"haldir.digest.deployment_package.v1",
             Self::DecisionId => b"haldir.digest.decision_id.v1",

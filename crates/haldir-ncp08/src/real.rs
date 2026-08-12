@@ -108,6 +108,12 @@ impl RealNcp08Adapter {
     }
 }
 
+pub(crate) fn exact_bytes_match_semantic(semantic: &NcpCommandFrameV1, exact_bytes: &[u8]) -> bool {
+    RealNcp08Adapter::to_ncp_frame(semantic)
+        .and_then(|frame| RealNcp08Adapter::validated_bytes(&frame))
+        .is_ok_and(|rebuilt| rebuilt.as_slice() == exact_bytes)
+}
+
 impl Default for RealNcp08Adapter {
     fn default() -> Self {
         Self::new()
@@ -126,7 +132,7 @@ impl NcpCommandAdapter for RealNcp08Adapter {
         let (semantic, transformation) = build_semantic_frame(input)?;
         let ncp = Self::to_ncp_frame(&semantic)?;
         let bytes = Self::validated_bytes(&ncp)?;
-        Ok(ExactNcpCommandFrame::from_parts(
+        Ok(ExactNcpCommandFrame::from_exact_json_parts(
             semantic,
             bytes,
             transformation,
@@ -154,7 +160,7 @@ mod tests {
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
     use haldir_contracts::digest::{DigestDomain, DigestV1};
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
     use haldir_contracts::receipt::TransformationRelationV1;
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
@@ -165,7 +171,6 @@ mod tests {
 
     fn input(seq: u64, action: RequestedActionV1) -> GateCommandBuildInputV1 {
         GateCommandBuildInputV1 {
-            decision_id: DecisionId::new([1; 16]),
             session: NcpSessionIdentityV1 {
                 session_id: AsciiId::new("sess-1").unwrap(),
                 generation: uuid("293279f3-d459-4bfd-aeeb-604799e96925"),
@@ -221,6 +226,12 @@ mod tests {
         let input = input(7, velocity());
         let exact = adapter.build_command(&input).unwrap();
         adapter.validate_exact_command(&exact, &input).unwrap();
+        assert!(exact.is_self_consistent());
+        assert_eq!(
+            exact.wire_profile(),
+            crate::NcpCommandWireProfile::ExactNcpV0_8Json
+        );
+        assert!(!exact.source_key_is_wire_bound());
         let decoded = ncp_core::decode_validated::<CommandFrame>(exact.bytes()).unwrap();
 
         let mut channels = Map::new();
@@ -297,11 +308,18 @@ mod tests {
             Err(NcpAdapterError::ConversionOutOfRange)
         );
 
+        let mut excessive_ttl = input(1, velocity());
+        excessive_ttl.effective_validity_ms = 201;
+        assert_eq!(
+            adapter.build_command(&excessive_ttl),
+            Err(NcpAdapterError::InvalidEffectiveValidity)
+        );
+
         let mut zero_ttl = input(1, velocity());
         zero_ttl.effective_validity_ms = 0;
         assert_eq!(
             adapter.build_command(&zero_ttl),
-            Err(NcpAdapterError::UpstreamValidationFailed)
+            Err(NcpAdapterError::InvalidEffectiveValidity)
         );
     }
 
@@ -312,6 +330,7 @@ mod tests {
 
         let mut bytes = adapter.build_command(&input).unwrap();
         bytes.bytes.push(b' ');
+        assert!(!bytes.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&bytes, &input),
             Err(NcpAdapterError::ValidatorMismatch)
@@ -319,6 +338,7 @@ mod tests {
 
         let mut digest = adapter.build_command(&input).unwrap();
         digest.digest = DigestV1::compute(DigestDomain::OutputFrame, b"tampered");
+        assert!(!digest.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&digest, &input),
             Err(NcpAdapterError::ValidatorMismatch)
@@ -326,6 +346,7 @@ mod tests {
 
         let mut relation = adapter.build_command(&input).unwrap();
         relation.transformation = TransformationRelationV1::Identity;
+        assert!(!relation.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&relation, &input),
             Err(NcpAdapterError::ValidatorMismatch)
@@ -333,6 +354,7 @@ mod tests {
 
         let mut semantic = adapter.build_command(&input).unwrap();
         semantic.frame.frame_id = BoundedAscii::new("odom").unwrap();
+        assert!(!semantic.is_self_consistent());
         assert_eq!(
             adapter.validate_exact_command(&semantic, &input),
             Err(NcpAdapterError::ValidatorMismatch)
@@ -340,12 +362,48 @@ mod tests {
     }
 
     #[test]
-    fn nanosecond_time_projection_is_finite_and_has_a_declared_precision_limit() {
+    fn source_key_is_explicitly_correlation_only_in_exact_ncp_v0_8_json() {
+        let adapter = RealNcp08Adapter::new();
+        let first_input = input(7, velocity());
+        let mut second_input = first_input.clone();
+        second_input.source.source_key = BoundedAscii::new("veh/uav-1/state/alternate").unwrap();
+
+        let first = adapter.build_command(&first_input).unwrap();
+        let second = adapter.build_command(&second_input).unwrap();
+
+        assert_ne!(first.source().source_key, second.source().source_key);
+        assert_eq!(first.bytes(), second.bytes());
+        assert_eq!(first.digest(), second.digest());
+        assert!(first.is_self_consistent());
+        assert!(second.is_self_consistent());
+        assert!(!first.source_key_is_wire_bound());
+        assert!(!second.source_key_is_wire_bound());
+    }
+
+    #[test]
+    fn nanosecond_time_projection_is_non_injective_but_bounded_and_deterministic() {
         for ns in [0, 1, 1_000_000_001, u64::MAX] {
             let seconds = Duration::from_nanos(ns).as_secs_f64();
             assert!(seconds.is_finite());
             let reconstructed = Duration::from_secs_f64(seconds).as_nanos();
             assert!(reconstructed.abs_diff(u128::from(ns)) <= 2_048);
         }
+
+        let adapter = RealNcp08Adapter::new();
+        let mut earlier_input = input(7, velocity());
+        earlier_input.gate_t_ns = u64::MAX - 1;
+        earlier_input.source_t_ns = u64::MAX - 1;
+        let mut later_input = earlier_input.clone();
+        later_input.gate_t_ns = u64::MAX;
+        later_input.source_t_ns = u64::MAX;
+
+        let earlier = adapter.build_command(&earlier_input).unwrap();
+        let later = adapter.build_command(&later_input).unwrap();
+        assert_ne!(earlier.frame.t_ns, later.frame.t_ns);
+        assert_ne!(earlier.frame.source_t_ns, later.frame.source_t_ns);
+        assert_eq!(earlier.bytes(), later.bytes());
+        assert_eq!(earlier.digest(), later.digest());
+        assert!(earlier.is_self_consistent());
+        assert!(later.is_self_consistent());
     }
 }
