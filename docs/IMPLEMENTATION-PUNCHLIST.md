@@ -213,6 +213,15 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **G8** Explicit P0 exit gate = strict subset of the Definition-of-Done.
 - `[x]` **G9** Mission-authority monotonic-term contract + joint restart test.
 - `[~]` **G10** Future `NcpLeaseV1` adapter asserts epoch freshness vs current boot (future profile).
+- `[x]` **G11** Galadriel PID/MI evidence is explicitly outside the Haldir
+  authority graph. The repository has no PID route, principal, policy field, or
+  dependency; the current contract states the stronger fixed-input
+  authorization/trusted-state/plant-command noninterference rule and archives the
+  retired leave-one-out/continuous-PID design without implementing an evidence
+  adapter. Only a future separately authorized audit writer may vary an audit
+  record. Any later record-only schema or automatic restriction proposal is a
+  new separately reviewed profile; see
+  `docs/GALADRIEL-PID-ADVISORY-CONTRACT.md`.
 
 ## 4. Overclaiming risks / honesty
 

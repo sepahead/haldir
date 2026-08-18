@@ -85,6 +85,7 @@ run "live Gate dev verifier tests" python3 -I -B tools/test_live_gate_dev_smoke_
 run "offline Zenoh profile" python3 -I -B -c 'import runpy,sys;sys.path.append("tools");runpy.run_path("tools/verify-secure-zenoh.py",run_name="__main__")'
 run "retained live Zenoh evidence" python3 -I -B tools/verify-live-secure-zenoh.py
 run "retained live Gate dev smoke" python3 -I -B tools/verify-live-gate-dev-smoke.py
+run "claim-boundary tests" python3 -I -B -W error tools/test_verify_claims.py
 run "forbidden claims"    python3 -I -B tools/verify-claims.py
 run "generated vectors"   python3 -I -B tools/verify-generated.py
 run "interop (COSE/CBOR)" interop_gate
