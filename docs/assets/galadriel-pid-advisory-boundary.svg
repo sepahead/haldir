@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1600" viewBox="0 0 1800 1600" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1600" viewBox="0 0 1800 1600" role="img" aria-labelledby="title desc" xml:lang="en" focusable="false">
   <title id="title">Galadriel research evidence stops before Haldir authority</title>
   <desc id="desc">Publication diagram with explicit source-to-method joins. A latent drone scenario produces an ordered pre-fusion sensor row and separately generated targets. NIS, CUSUM, signed correlation, pairwise KSG mutual information, co-information, O-information, and categorical MGW remain distinct methods. Only categorical MGW receives a target. Typed research evidence may reach a future record-only audit writer, but a red stop marks the forbidden edge into trusted state, policy, authorization, or plant commands. Haldir authority remains an independent authenticated conjunction.</desc>
   <defs>
     <style>
-      .background { fill: #ffffff; }
-      .panel { fill: #f8fafc; stroke: #c8d4df; stroke-width: 2; }
+      text { font-family: "Source Sans 3", "Source Sans Pro", Inter, Arial, Helvetica, sans-serif; }
+      .background { fill: #F7F3E9; }
+      .panel { fill: #FCFBF7; stroke: #D2E0E2; stroke-width: 2; }
       .scenario { fill: #e8f2ff; stroke: #1769aa; stroke-width: 2.5; }
       .sensor { fill: #e9f8f1; stroke: #087f5b; stroke-width: 2.5; }
       .method { fill: #f3edff; stroke: #7048e8; stroke-width: 2.3; }
@@ -14,43 +15,41 @@
       .evidence { fill: #eef3f8; stroke: #54708a; stroke-width: 2.5; }
       .authority { fill: #fff5db; stroke: #a86200; stroke-width: 2.5; }
       .firewall { fill: #fff0ef; stroke: #c92a2a; stroke-width: 3; }
-      .title { font: 700 38px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #102a43; }
-      .subtitle { font: 400 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #486581; }
-      .section { font: 700 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 2px; fill: #102a43; }
-      .box-title { font: 700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #102a43; }
-      .method-title { font: 700 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #102a43; }
-      .body { font: 400 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #17324d; }
-      .small { font: 400 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #486581; }
-      .micro { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #486581; letter-spacing: .3px; }
-      .mono { font: 400 17px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #17324d; }
-      .mono-small { font: 400 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #334e68; }
-      .badge { font: 700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #ffffff; }
-      .danger { font: 700 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #9b1c1c; }
-      .edge { fill: none; stroke: #54708a; stroke-width: 2.8; marker-end: url(#arrow); }
-      .scenario-edge { fill: none; stroke: #1769aa; stroke-width: 3; marker-end: url(#arrow-blue); }
-      .method-edge { fill: none; stroke: #7048e8; stroke-width: 2.7; marker-end: url(#arrow-purple); }
-      .authority-edge { fill: none; stroke: #a86200; stroke-width: 3; marker-end: url(#arrow-gold); }
+      .title { font-size: 38px; font-weight: 700; fill: #1F3F60; }
+      .subtitle { font-size: 19px; font-weight: 400; fill: #3F596F; }
+      .section { font-size: 17px; font-weight: 700; letter-spacing: 2px; fill: #1F3F60; }
+      .box-title { font-size: 22px; font-weight: 700; fill: #2C3E50; }
+      .method-title { font-size: 18px; font-weight: 700; fill: #2C3E50; }
+      .body { font-size: 17px; font-weight: 400; fill: #2C3E50; }
+      .small { font-size: 15px; font-weight: 400; fill: #3F596F; }
+      .micro { font-size: 13px; font-weight: 600; fill: #3F596F; letter-spacing: .3px; }
+      .mono { font-family: "IBM Plex Mono", Menlo, Consolas, monospace; font-size: 17px; font-weight: 400; fill: #2C3E50; }
+      .mono-small { font-family: "IBM Plex Mono", Menlo, Consolas, monospace; font-size: 15px; font-weight: 400; fill: #2C3E50; }
+      .badge { font-size: 12px; font-weight: 700; fill: #ffffff; }
+      .danger { font-size: 17px; font-weight: 700; fill: #9b1c1c; }
+      .edge { fill: none; stroke: #54708a; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+      .scenario-edge { fill: none; stroke: #1769aa; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .method-edge { fill: none; stroke: #7048e8; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
+      .authority-edge { fill: none; stroke: #a86200; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .arrowhead { fill: #54708a; }
+      .arrowhead-blue { fill: #1769aa; }
+      .arrowhead-purple { fill: #7048e8; }
+      .arrowhead-gold { fill: #a86200; }
       .bus { fill: none; stroke: #8aa0b4; stroke-width: 2; }
       .dashed { stroke-dasharray: 9 8; }
-      .hairline { stroke: #d9e2ec; stroke-width: 1; }
+      .hairline { stroke: #D2E0E2; stroke-width: 1; }
+      .title-rule { stroke: #916400; stroke-width: 1.6; }
+      .title-rule-accent { stroke: #1F3F60; stroke-width: 3; }
+      .registration-diamond { fill: #F7F3E9; stroke: #916400; stroke-width: 1.8; }
     </style>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#54708a"/>
-    </marker>
-    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1769aa"/>
-    </marker>
-    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7048e8"/>
-    </marker>
-    <marker id="arrow-gold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a86200"/>
-    </marker>
   </defs>
 
   <rect class="background" width="1800" height="1600"/>
   <text class="title" x="60" y="60">Research evidence stops before Haldir authority</text>
   <text class="subtitle" x="60" y="94">Exact question identity, explicit abstention, and a record-only boundary prevent scientific outputs from becoming implicit control.</text>
+  <line x1="60" y1="108" x2="1740" y2="108" class="title-rule" aria-hidden="true"/>
+  <line x1="60" y1="112" x2="260" y2="112" class="title-rule-accent" aria-hidden="true"/>
+  <path d="M1740 102 L1746 108 L1740 114 L1734 108 Z" class="registration-diamond" aria-hidden="true"/>
 
   <rect class="panel" x="45" y="124" width="1710" height="635" rx="22"/>
   <text class="section" x="72" y="158">A · SYNTHETIC LAW AND DISTINCT GALADRIEL QUESTIONS</text>
@@ -81,7 +80,9 @@
   </g>
 
   <path class="scenario-edge" d="M 412 255 H 518" data-edge="scenario-state->sensor-row" data-source="scenario-state" data-target="sensor-row"/>
+  <path class="arrowhead-blue" d="M 518 255 L 504 247 L 504 263 Z" aria-hidden="true"/>
   <path class="scenario-edge" d="M 412 215 H 462 V 167 H 1100 V 255 H 1160" data-edge="scenario-state->target" data-source="scenario-state" data-target="target"/>
+  <path class="arrowhead-blue" d="M 1160 255 L 1146 247 L 1146 263 Z" aria-hidden="true"/>
   <rect x="720" y="151" width="340" height="26" rx="13" fill="#ffffff" stroke="#8fb8dd"/>
   <text class="small" x="740" y="170">same latent law · separate retained identities</text>
 
@@ -141,13 +142,21 @@
   </g>
 
   <path class="edge" d="M 680 326 V 354 H 197 V 471" data-edge="sensor-row->nis" data-source="sensor-row" data-target="nis"/>
+  <path class="arrowhead" d="M 197 471 L 189 457 L 205 457 Z" aria-hidden="true"/>
   <path class="edge" d="M 700 326 V 360 H 421 V 471" data-edge="sensor-row->cusum" data-source="sensor-row" data-target="cusum"/>
+  <path class="arrowhead" d="M 421 471 L 413 457 L 429 457 Z" aria-hidden="true"/>
   <path class="edge" d="M 720 326 V 366 H 646 V 471" data-edge="sensor-row->signed-correlation" data-source="sensor-row" data-target="signed-correlation"/>
+  <path class="arrowhead" d="M 646 471 L 638 457 L 654 457 Z" aria-hidden="true"/>
   <path class="edge" d="M 770 326 V 350 H 1016 V 452" data-edge="sensor-row->ksg-mi" data-source="sensor-row" data-target="ksg-mi"/>
+  <path class="arrowhead" d="M 1016 452 L 1008 438 L 1024 438 Z" aria-hidden="true"/>
   <path class="edge" d="M 790 326 V 344 H 918 V 510" data-edge="sensor-row->co-information" data-source="sensor-row" data-target="co-information"/>
+  <path class="arrowhead" d="M 918 510 L 910 496 L 926 496 Z" aria-hidden="true"/>
   <path class="edge" d="M 810 326 V 338 H 1114 V 510" data-edge="sensor-row->o-information" data-source="sensor-row" data-target="o-information"/>
+  <path class="arrowhead" d="M 1114 510 L 1106 496 L 1122 496 Z" aria-hidden="true"/>
   <path class="method-edge" d="M 860 326 V 348 H 1400 V 388" data-edge="sensor-row->categorical-mgw" data-source="sensor-row" data-target="categorical-mgw"/>
+  <path class="arrowhead-purple" d="M 1400 388 L 1392 374 L 1408 374 Z" aria-hidden="true"/>
   <path class="method-edge" d="M 1444 326 V 388" data-edge="target->categorical-mgw" data-source="target" data-target="categorical-mgw"/>
+  <path class="arrowhead-purple" d="M 1444 388 L 1436 374 L 1452 374 Z" aria-hidden="true"/>
 
   <g id="typed-evidence" data-node="typed-evidence">
     <rect class="evidence" x="72" y="630" width="1656" height="94" rx="16"/>
@@ -157,6 +166,7 @@
   </g>
   <path class="bus" d="M 197 565 V 614 M 421 565 V 614 M 646 565 V 614 M 918 570 V 614 M 1114 570 V 614 M 1494 598 V 614 M 197 614 H 1494"/>
   <path class="edge" d="M 900 614 V 630" data-edge="methods->typed-evidence" data-source="methods" data-target="typed-evidence"/>
+  <path class="arrowhead" d="M 900 630 L 892 616 L 908 616 Z" aria-hidden="true"/>
 
   <rect class="firewall" x="45" y="788" width="1710" height="222" rx="22"/>
   <text class="section" x="72" y="823">B · FIXED-INPUT NONINTERFERENCE</text>
@@ -185,6 +195,7 @@
     <text class="small" x="96" y="1225">NOT IMPLEMENTED · minimized data · no trust label</text>
   </g>
   <path class="edge dashed" d="M 1510 724 V 770 H 24 V 1182 H 72" data-edge="typed-evidence->audit-reference" data-source="typed-evidence" data-target="audit-reference"/>
+  <path class="arrowhead" d="M 72 1182 L 58 1174 L 58 1190 Z" aria-hidden="true"/>
 
   <g id="trusted-state" data-node="trusted-state">
     <rect class="authority" x="650" y="1102" width="300" height="160" rx="17"/>
@@ -208,7 +219,9 @@
     <text class="small" x="1384" y="1227">Final recheck before publication.</text>
   </g>
   <path class="authority-edge" d="M 950 1182 H 990" data-edge="trusted-state->authority-inputs" data-source="trusted-state" data-target="authority-inputs"/>
+  <path class="arrowhead-gold" d="M 990 1182 L 976 1174 L 976 1190 Z" aria-hidden="true"/>
   <path class="authority-edge" d="M 1320 1182 H 1360" data-edge="authority-inputs->gate-decision" data-source="authority-inputs" data-target="gate-decision"/>
+  <path class="arrowhead-gold" d="M 1360 1182 L 1346 1174 L 1346 1190 Z" aria-hidden="true"/>
 
   <line x1="477" y1="1182" x2="590" y2="1182" stroke="#c92a2a" stroke-width="3" stroke-dasharray="9 8"/>
   <circle cx="605" cy="1182" r="24" fill="#c92a2a"/>
@@ -231,6 +244,7 @@
     <text class="small" x="1304" y="1443">No PID/advisory field; otherwise no new output.</text>
   </g>
   <path class="authority-edge" d="M 1544 1262 V 1310" data-edge="gate-decision->plant-command" data-source="gate-decision" data-target="plant-command"/>
+  <path class="arrowhead-gold" d="M 1544 1310 L 1536 1296 L 1552 1296 Z" aria-hidden="true"/>
 
   <text class="small" x="900" y="1563" text-anchor="middle">Solid arrows are exact data or authority joins; the dashed arrow is an unimplemented record-only proposal; the red stop is the forbidden control edge.</text>
 </svg>

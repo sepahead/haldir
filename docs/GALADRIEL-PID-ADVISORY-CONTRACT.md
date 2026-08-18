@@ -139,6 +139,37 @@ an unfavorable atom does not prove deception. The result cannot distinguish an
 attacker from a lone truthful sensor facing a coordinated majority without
 additional assumptions and evidence.
 
+### Selection ownership
+
+Haldir's selected technique is **scientific-method non-selection**. The fixture
+law, thresholds, ordered sources, target, categorical MGW functional, evaluator,
+and primary/exploratory roles belong to the preregistered producer/Galadriel study.
+Haldir neither chooses a preferred PID functional nor recomputes or ranks the
+scientific result. The precise reason is separation of responsibilities: changing
+any of those coordinates changes the scientific question, while Haldir's question
+is only whether independently authenticated authority and deterministic policy
+permit a command.
+
+The considered alternatives are to let Gate infer a method from payload shape,
+select a comparator when the registered evaluator is missing, recompute a result,
+or treat a favorable value as a policy input. They are rejected because they erase
+question identity, collapse unavailable/error status into a different estimand,
+and create an undeclared path from research output to authority. Haldir also does
+not declare one scientific functional universally superior; separately
+preregistered alternatives remain separate records with their own assumptions and
+failures.
+
+The current assumption is simply structural: no such evidence enters Haldir code.
+A future record-only adapter would have to authenticate and bind the complete
+question and execution identity described below. Its only permitted output would
+be a bounded audit reference. Missing, malformed, stale, inapplicable,
+resource-rejected, unavailable, or error evidence would produce no audit success
+and no change to authorization, trusted state, or exact plant-facing bytes. Even a
+well-formed record would establish only what its named producer observed under its
+declared scientific assumptions; Haldir would not thereby validate the functional,
+fixture law, calibration, attack attribution, causal interpretation, or field
+relevance.
+
 ## 4. Method eligibility—no aliases and no fallback chain
 
 | Object and kind | Question answered | Eligible for the exact fixture? | Haldir consequence |

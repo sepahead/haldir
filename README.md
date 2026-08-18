@@ -200,6 +200,7 @@ remain false until that shell and plant-side bypass closure are evidenced.
 ## Key documents
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Architecture decision records](docs/adr/README.md)
 - [Claim ledger](docs/CLAIM-LEDGER.md)
 - [Assurance profiles](docs/ASSURANCE-PROFILES.md)
 - [Limitations](docs/LIMITATIONS.md)
