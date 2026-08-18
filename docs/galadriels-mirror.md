@@ -1,5 +1,14 @@
 # Galadriel's Mirror
 
+> [!IMPORTANT]
+> **Superseded historical design.** The current system and authority boundary is
+> [`GALADRIEL-PID-ADVISORY-CONTRACT.md`](GALADRIEL-PID-ADVISORY-CONTRACT.md).
+> This file retains the earlier leave-one-out/continuous-PID investigation so its
+> reasoning and rejected hypotheses remain auditable; it is not the current
+> Galadriel estimand or a Haldir implementation plan. Current Galadriel uses a
+> symmetric target-free pairwise-MI companion for a distinct question and an
+> offline fixed-target categorical MGW study. Neither enters Haldir authority.
+
 > **Status — non-normative review; component paths exist, qualification does not.**
 > Crebain main commit `d7f3006bfac17a8157d22c6a54a23d00c733851c`
 > contains a component-tested, exact-opt-in producer with sequential-update NIS
