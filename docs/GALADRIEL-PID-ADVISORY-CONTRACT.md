@@ -66,7 +66,7 @@ The bounded fixture is produced by CREBAIN commit
 Galadriel vendors those exact bytes as offline data. CREBAIN does not depend on
 Galadriel, run PID, or accept a PID conclusion.
 
-For external East–North–Up truth \(\mathbf p=(E,N,U)\), the ordered pre-fusion
+For synthetic latent East–North–Up state \(\mathbf p=(E,N,U)\), the ordered pre-fusion
 categorical sources are
 
 \[
@@ -77,8 +77,8 @@ A=\mathbf 1[U_{\mathrm{acoustic}}\le1\,\mathrm m].
 
 The fixture producer derives the targets from its latent ENU scenario state after
 constructing the sensor objects and categorical source symbols, but before fusion.
-The targets are therefore external to the fusion verdict, Galadriel, and PID; they
-are not independently measured field ground truth. They are
+The target branch is dataflow-independent of the fusion verdict, Galadriel, and
+PID. It is not independently measured field ground truth. The targets are
 
 \[
 T_H=\mathbf 1[E\le50\land N\le1],\qquad
@@ -126,8 +126,9 @@ I(V,R;T_H)=
 \]
 
 This gives Galadriel something NIS, CUSUM, correlation, and pairwise MI do not: a
-**measure-relative, source-ordered allocation of information about one external
-target**. It is useful when that allocation is the research question. It is not
+**measure-relative, source-ordered allocation of information about one
+predeclared target with explicit provenance**. It is useful when that allocation
+is the research question. It is not
 automatically useful merely because “synergy” sounds sophisticated.
 
 The atoms are associational/statistical allocations, not causal effects. Source
