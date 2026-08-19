@@ -240,7 +240,7 @@ REQUIRED_JOB_SHA256 = {
         "0eb0a0e75662827088aeb2f57a559e6ca56308a8d67b7ecdd598244b27e35291"
     ),
     "supply-chain": (
-        "ee089907f1eb9f45c262d54997181c87a8b0b345393b5031c6f44959f22f4c86"
+        "38a3e79250a58cd94da502f5dd5b3164c3810767ac3a7b271f59a81c76caa149"
     ),
     "tlc-model-check": (
         "f27dc5ded47c88cf35cee23b147572207e892ab1c540a95a9972f82d104934f8"

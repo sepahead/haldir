@@ -222,7 +222,9 @@ jobs:
           python3 -I -B tools/verify-live-secure-zenoh.py
           python3 -I -B tools/verify-live-gate-dev-smoke.py
       - name: Forbidden-claim drift check
-        run: python3 -I -B tools/verify-claims.py
+        run: |
+          python3 -I -B tools/test_verify_claims.py
+          python3 -I -B tools/verify-claims.py
       - name: Install verified cargo-deny and RustSec snapshot
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         env:
