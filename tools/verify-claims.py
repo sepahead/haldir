@@ -11,6 +11,7 @@ No third-party dependencies.
 """
 from __future__ import annotations
 
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -76,7 +77,10 @@ BOUNDARY_PATHS = {
     "mirror": "docs/galadriels-mirror.md",
     "survey": "docs/pid-security-and-communication.md",
     "svg": "docs/assets/galadriel-pid-advisory-boundary.svg",
+    "ledger": "docs/CLAIM-LEDGER.md",
 }
+
+PID_BOUNDARY_CLAIM_ID = "CL-PID-RECORD-BOUNDARY-01"
 
 REQUIRED_SVG_NODES = {
     "scenario-state",
@@ -108,12 +112,61 @@ REQUIRED_SOURCE_METHOD_EDGES = {
     ("target", "categorical-mgw"),
 }
 
-FORBIDDEN_ADVISORY_TARGETS = {
+REQUIRED_EVIDENCE_EDGES = {
+    ("typed-evidence", "audit-reference"),
+}
+
+AUTHORITY_CONTROL_NODES = {
     "trusted-state",
     "authority-inputs",
     "gate-decision",
     "plant-command",
 }
+
+ALLOWED_AUTHORITY_CONTROL_EDGES = {
+    ("trusted-state", "authority-inputs"),
+    ("authority-inputs", "gate-decision"),
+    ("gate-decision", "plant-command"),
+}
+
+# These are intentionally bounded lexical markers, not a whole-program proof.
+# A new marker forces review of the current "no PID input or adapter" claim.
+RUNTIME_PID_MARKERS = (
+    re.compile(r"\bpid\b", re.IGNORECASE),
+    re.compile(r"\bpid[-_][A-Za-z0-9_]+\b", re.IGNORECASE),
+    re.compile(r"\bPid[A-Z][A-Za-z0-9_]*\b"),
+    re.compile(r"\bGaladriel\b", re.IGNORECASE),
+    re.compile(r"\bAdvisoryEvidence[A-Za-z0-9_]*\b", re.IGNORECASE),
+)
+
+ADVISORY_AUTHORITY_SUBJECT = (
+    r"(?:pid(?:\s+evidence)?|galadriel(?:\s+(?:pid|research))?\s+"
+    r"(?:evidence|output)|research\s+evidence|advisory\s+"
+    r"(?:evidence|object|output)|categorical\s+mgw(?:\s+(?:evidence|output))?)"
+)
+AUTHORITY_VERB = (
+    r"(?:grant|widen|restore|refresh|revoke|restrict|deny|exercise)"
+)
+CONTRADICTORY_AUTHORITY_PATTERNS = (
+    re.compile(
+        rf"\b{ADVISORY_AUTHORITY_SUBJECT}\b\s+(?:itself\s+)?"
+        rf"(?:can|could|may|might|will|shall|does|do)\s+"
+        rf"(?:(?:directly|indirectly|eventually|itself)\s+)*"
+        rf"{AUTHORITY_VERB}\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"\b{ADVISORY_AUTHORITY_SUBJECT}\b\s+"
+        rf"(?:(?:directly|indirectly|itself)\s+)*"
+        r"(?:grants|widens|restores|refreshes|revokes|restricts|denies|exercises)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"\b{ADVISORY_AUTHORITY_SUBJECT}\b\s+(?:is|are)\s+"
+        rf"(?:permitted|allowed|authorized)\s+to\s+{AUTHORITY_VERB}\b",
+        re.IGNORECASE,
+    ),
+)
 
 
 def fail(msg: str) -> None:
@@ -127,6 +180,123 @@ def compact(text: str) -> str:
     return " ".join(text.split())
 
 
+def load_runtime_sources(root: Path = ROOT) -> dict[str, str]:
+    """Load the bounded source/dependency surface for the current absence claim."""
+
+    required = (root / "Cargo.toml", root / "Cargo.lock", root / "crates")
+    for path in required:
+        if not path.exists():
+            raise FileNotFoundError(path.relative_to(root))
+
+    paths = [root / "Cargo.toml", root / "Cargo.lock"]
+    for source_root in (root / "crates", root / "tools" / "haldir-ctl"):
+        if not source_root.is_dir():
+            continue
+        paths.extend(source_root.rglob("Cargo.toml"))
+        paths.extend(source_root.rglob("*.rs"))
+
+    return {
+        path.relative_to(root).as_posix(): path.read_text(encoding="utf-8")
+        for path in sorted(set(paths))
+    }
+
+
+def runtime_pid_source_problems(sources: dict[str, str]) -> list[str]:
+    """Reject known PID/Galadriel markers on the bounded runtime source surface."""
+
+    problems: list[str] = []
+    for relative, source in sorted(sources.items()):
+        for lineno, line in enumerate(source.splitlines(), start=1):
+            for pattern in RUNTIME_PID_MARKERS:
+                if match := pattern.search(line):
+                    problems.append(
+                        "runtime source/dependency violates current PID-absence claim: "
+                        f"{relative}:{lineno} contains {match.group(0)!r}"
+                    )
+                    break
+    return problems
+
+
+def contradictory_authority_problems(documents: dict[str, str]) -> list[str]:
+    """Reject affirmative research-evidence authority clauses in boundary prose."""
+
+    problems: list[str] = []
+    for name, document in documents.items():
+        normalized = compact(document)
+        for pattern in CONTRADICTORY_AUTHORITY_PATTERNS:
+            if match := pattern.search(normalized):
+                problems.append(
+                    f"{name} contains contradictory affirmative PID/advisory "
+                    f"authority prose: {match.group(0)!r}"
+                )
+                break
+    return problems
+
+
+def claim_ledger_problems(ledger: str) -> list[str]:
+    """Keep the mixed current/future PID boundary claim scoped to its evidence."""
+
+    rows = [
+        line
+        for line in ledger.splitlines()
+        if line.startswith(f"| {PID_BOUNDARY_CLAIM_ID} |")
+    ]
+    if len(rows) != 1:
+        return [
+            "claim ledger must contain exactly one dedicated "
+            f"{PID_BOUNDARY_CLAIM_ID} row"
+        ]
+
+    columns = rows[0].split("|")
+    if len(columns) != 6:
+        return [f"claim ledger {PID_BOUNDARY_CLAIM_ID} row violates four-column schema"]
+
+    statement = columns[2].strip()
+    status = columns[3].strip()
+    evidence = columns[4].strip()
+    problems: list[str] = []
+    if status != "PARTIAL":
+        problems.append(
+            f"claim ledger {PID_BOUNDARY_CLAIM_ID} must remain PARTIAL while the "
+            "future adapter is unimplemented"
+        )
+
+    statement_requirements = {
+        "current no-input/adapter scope": "no PID input or adapter",
+        "future record-only authorization obligation": (
+            "future record-only audit route must be separately authorized"
+        ),
+        "future authority noninterference obligation": (
+            "authorization, `TrustedStateSnapshot`, and `PlantCommand` unchanged"
+        ),
+        "future implementation evidence ceiling": (
+            "does not prove runtime noninterference of a future adapter"
+        ),
+    }
+    for label, required in statement_requirements.items():
+        if required not in statement:
+            problems.append(
+                f"claim ledger {PID_BOUNDARY_CLAIM_ID} missing {label}"
+            )
+
+    for pointer in (
+        "`Cargo.toml`",
+        "`Cargo.lock`",
+        "`crates/**/Cargo.toml`",
+        "`crates/**/*.rs`",
+        "`tools/verify-claims.py`",
+        "`tools/test_verify_claims.py`",
+        "`.github/workflows/ci.yml`",
+        "`just verify-claims`",
+    ):
+        if pointer not in evidence:
+            problems.append(
+                f"claim ledger {PID_BOUNDARY_CLAIM_ID} missing evidence pointer "
+                f"{pointer}"
+            )
+    return problems
+
+
 def boundary_contract_problems(
     *,
     contract: str,
@@ -135,6 +305,7 @@ def boundary_contract_problems(
     mirror: str,
     survey: str,
     svg: str,
+    ledger: str,
 ) -> list[str]:
     """Return semantic boundary drift without depending on repository globals."""
 
@@ -142,6 +313,21 @@ def boundary_contract_problems(
     contract_compact = compact(contract)
     authority_compact = compact(authority)
     specification_compact = compact(specification)
+
+    problems.extend(
+        contradictory_authority_problems(
+            {
+                "contract": contract,
+                "authority graph": authority,
+                "specification": specification,
+                "historical mirror": mirror,
+                "historical survey": survey,
+                "authority SVG": svg,
+                "claim ledger": ledger,
+            }
+        )
+    )
+    problems.extend(claim_ledger_problems(ledger))
 
     contract_requirements = {
         "authorization noninterference equation": (
@@ -277,6 +463,11 @@ def boundary_contract_problems(
         problems.append(
             f"authority SVG missing exact source/method edge {source!r}->{target!r}"
         )
+    for source, target in sorted(REQUIRED_EVIDENCE_EDGES - edges):
+        problems.append(
+            "authority SVG missing required record-only evidence edge "
+            f"{source!r}->{target!r}"
+        )
 
     target_edges = {edge for edge in edges if edge[0] == "target"}
     if target_edges != {("target", "categorical-mgw")}:
@@ -285,7 +476,10 @@ def boundary_contract_problems(
         )
 
     for source, target in sorted(edges):
-        if source in {"typed-evidence", "audit-reference"} and target in FORBIDDEN_ADVISORY_TARGETS:
+        if (
+            target in AUTHORITY_CONTROL_NODES
+            and (source, target) not in ALLOWED_AUTHORITY_CONTROL_EDGES
+        ):
             problems.append(
                 f"authority SVG contains forbidden advisory/control edge {source!r}->{target!r}"
             )
@@ -313,6 +507,8 @@ def load_boundary_documents(root: Path = ROOT) -> dict[str, str]:
 
 def main() -> None:
     problems = 0
+    non_boundary_authored_documents: dict[str, str] = {}
+    boundary_relatives = set(BOUNDARY_PATHS.values())
     for path in FILES:
         if not path.is_file():
             fail(f"declared authored claim surface is missing: {path.relative_to(ROOT)}")
@@ -320,7 +516,11 @@ def main() -> None:
             # strip markdown emphasis so "**not**" matches the "not " guard
             return s.lower().replace("*", "").replace("`", "").replace("_", " ")
 
-        lines = path.read_text().splitlines()
+        document = path.read_text(encoding="utf-8")
+        relative = path.relative_to(ROOT).as_posix()
+        if relative not in boundary_relatives:
+            non_boundary_authored_documents[relative] = document
+        lines = document.splitlines()
         for lineno, raw in enumerate(lines, start=1):
             low = norm(raw)
             # A guard on the current OR previous line scopes/negates the phrase
@@ -335,6 +535,9 @@ def main() -> None:
                         file=sys.stderr,
                     )
                     problems += 1
+    for problem in contradictory_authority_problems(non_boundary_authored_documents):
+        print(f"verify-claims: {problem}", file=sys.stderr)
+        problems += 1
     try:
         boundary_documents = load_boundary_documents()
     except FileNotFoundError as exc:
@@ -342,11 +545,19 @@ def main() -> None:
     for problem in boundary_contract_problems(**boundary_documents):
         print(f"verify-claims: {problem}", file=sys.stderr)
         problems += 1
+    try:
+        runtime_sources = load_runtime_sources()
+    except FileNotFoundError as exc:
+        fail(f"declared runtime source/dependency surface is missing: {exc}")
+    for problem in runtime_pid_source_problems(runtime_sources):
+        print(f"verify-claims: {problem}", file=sys.stderr)
+        problems += 1
     if problems:
-        fail(f"{problems} authored-claim or PID-boundary problem(s)")
+        fail(f"{problems} authored-claim, PID-boundary, or source-absence problem(s)")
     print(
         "verify-claims: OK "
-        f"({len(FILES)} authored files + {len(BOUNDARY_PATHS)} PID boundary artifacts)"
+        f"({len(FILES)} authored files + {len(BOUNDARY_PATHS)} PID boundary "
+        f"artifacts + {len(runtime_sources)} runtime source/dependency files)"
     )
 
 

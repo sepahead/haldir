@@ -45,7 +45,8 @@ authority input. The current design has no PID route, principal, policy field, o
 runtime dependency, and PID cannot enter `TrustedStateSnapshot`, grant, revoke,
 restrict, or deny. A future evidence-only reference would require a new,
 separately reviewed schema and separately authorized audit writer; only its audit
-record may vary, and it would still have no policy or command capability.
+record may vary, and it would still have no policy or command capability
+(`CL-PID-RECORD-BOUNDARY-01`).
 
 [![Galadriel research evidence is separated from Haldir's independent command-authorization conjunction by a testable noninterference boundary](docs/assets/galadriel-pid-advisory-boundary.svg)](docs/assets/galadriel-pid-advisory-boundary.svg)
 

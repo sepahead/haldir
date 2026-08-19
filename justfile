@@ -91,6 +91,7 @@ verify-ci-pins:
     python3 -I -B tools/verify-ci-pins.py
 
 verify-claims:
+    python3 -I -B -W error tools/test_verify_claims.py
     python3 -I -B tools/verify-claims.py
 
 verify-release-audit:
