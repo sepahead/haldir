@@ -27,6 +27,7 @@ class PidBoundaryMutationTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.verifier = load_verifier()
         cls.documents = cls.verifier.load_boundary_documents(ROOT)
+        cls.runtime_sources = cls.verifier.load_runtime_sources(ROOT)
 
     def problems_after(self, name: str, old: str, new: str) -> list[str]:
         documents = dict(self.documents)
@@ -44,6 +45,21 @@ class PidBoundaryMutationTests(unittest.TestCase):
         self.assertEqual(
             [], self.verifier.boundary_contract_problems(**self.documents)
         )
+
+    def test_current_runtime_source_absence_passes(self) -> None:
+        self.assertEqual(
+            [], self.verifier.runtime_pid_source_problems(self.runtime_sources)
+        )
+
+    def test_pid_dependency_breaks_current_source_absence(self) -> None:
+        sources = dict(self.runtime_sources)
+        anchor = "[workspace.dependencies]\n"
+        self.assertIn(anchor, sources["Cargo.toml"])
+        sources["Cargo.toml"] = sources["Cargo.toml"].replace(
+            anchor, f'{anchor}pid-core = "0.9.0"\n', 1
+        )
+        problems = self.verifier.runtime_pid_source_problems(sources)
+        self.assert_problem(problems, "current PID-absence claim")
 
     def test_authorize_equation_is_load_bearing(self) -> None:
         problems = self.problems_after(
@@ -128,6 +144,31 @@ class PidBoundaryMutationTests(unittest.TestCase):
         )
         problems = self.problems_after("svg", "</svg>", hostile)
         self.assert_problem(problems, "forbidden advisory/control edge")
+
+    def test_method_edge_into_authority_is_rejected(self) -> None:
+        hostile = (
+            '<path data-edge="categorical-mgw->authority-inputs" '
+            'data-source="categorical-mgw" data-target="authority-inputs"/>\n</svg>'
+        )
+        problems = self.problems_after("svg", "</svg>", hostile)
+        self.assert_problem(problems, "forbidden advisory/control edge")
+
+    def test_affirmative_pid_authority_prose_is_rejected(self) -> None:
+        documents = dict(self.documents)
+        documents["contract"] += "\nPID evidence can grant authority.\n"
+        problems = self.verifier.boundary_contract_problems(**documents)
+        self.assert_problem(
+            problems, "contradictory affirmative PID/advisory authority prose"
+        )
+
+    def test_record_only_evidence_edge_is_required(self) -> None:
+        problems = self.problems_after(
+            "svg",
+            'data-edge="typed-evidence->audit-reference" '
+            'data-source="typed-evidence" data-target="audit-reference"',
+            "",
+        )
+        self.assert_problem(problems, "required record-only evidence edge")
 
     def test_malformed_svg_fails_closed(self) -> None:
         problems = self.problems_after("svg", "</svg>", "")
