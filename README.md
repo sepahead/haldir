@@ -40,6 +40,21 @@ the [limitations](docs/LIMITATIONS.md) and
 | `DeclaredLiveZenoh` library path | Durable startup/journal binding, route-bound activation, bounded exact ingress, single-owner state/intent processing, strict final-route publication, and local shutdown | No production daemon, authenticated control/state producer, supervision, protected secret loader, or delivery/application proof |
 | Package-bound Gate startup | Strict signed-package verification, bounded exact artifact capture, signed-role NCP validation, strict Gate configuration, four separately verified, role-separated, public-key-distinct runtime-snapshot approvals rooted in the same retained bootstrap trust, cross-store rejection of incompatible `kid` or public-key reuse, exact live-object matching, an atomic deployment-revision/boot ratchet, and signed journal-ID enforcement when binding the format-v2 evidence chain | Role/key separation does not prove independent organizations or operators; seven artifact roles remain byte-only; no authenticated artifact-root, running-binary, protected-credential, mandatory-journal, or production-runner proof |
 
+Galadriel's PID and mutual-information research remains outside every Haldir
+authority input. The current design has no PID route, principal, policy field, or
+runtime dependency, and PID cannot enter `TrustedStateSnapshot`, grant, revoke,
+restrict, or deny. A future evidence-only reference would require a new,
+separately reviewed schema and separately authorized audit writer; only its audit
+record may vary, and it would still have no policy or command capability
+(`CL-PID-RECORD-BOUNDARY-01`).
+
+[![Galadriel research evidence is separated from Haldir's independent command-authorization conjunction by a testable noninterference boundary](docs/assets/galadriel-pid-advisory-boundary.svg)](docs/assets/galadriel-pid-advisory-boundary.svg)
+
+[The Galadriel PID advisory contract](docs/GALADRIEL-PID-ADVISORY-CONTRACT.md)
+defines the fixed-target categorical MGW study, method-eligibility matrix,
+authority noninterference equation, reality-facing evidence ladder, twenty-lens
+review, and complete future-work boundary.
+
 The `haldir-gate` executable is intentionally an offline introspection tool. The
 live examples provision or open a disposable development fixture and can bind
 then immediately shut down while processing zero intents. They are evidence
@@ -186,11 +201,13 @@ remain false until that shell and plant-side bypass closure are evidenced.
 ## Key documents
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Architecture decision records](docs/adr/README.md)
 - [Claim ledger](docs/CLAIM-LEDGER.md)
 - [Assurance profiles](docs/ASSURANCE-PROFILES.md)
 - [Limitations](docs/LIMITATIONS.md)
 - [Threat model](docs/release/0.9.0/THREAT-MODEL.md)
 - [Evidence semantics](docs/EVIDENCE-SEMANTICS.md)
+- [Galadriel PID advisory boundary](docs/GALADRIEL-PID-ADVISORY-CONTRACT.md)
 - [NCP compatibility](docs/NCP-COMPATIBILITY.md)
 - [Release migration guide](docs/release/0.9.0/MIGRATION.md)
 - [Roadmap status](docs/ROADMAP-STATUS.md)

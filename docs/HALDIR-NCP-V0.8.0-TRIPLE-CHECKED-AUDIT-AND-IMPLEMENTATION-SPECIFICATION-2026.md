@@ -19,6 +19,21 @@
 **Research focus:** whether mission authorization can be bound to an admitted neural-controller deployment and remain invariant when the execution backend changes
 
 > [!IMPORTANT]
+> **Later Galadriel/PID amendment (2026-08-18).**
+> [`GALADRIEL-PID-ADVISORY-CONTRACT.md`](GALADRIEL-PID-ADVISORY-CONTRACT.md)
+> supersedes this document only where this document places Galadriel/PID evidence
+> inside `TrustedStateSnapshotV1`, gives `AdvisoryEvidenceRefV1` a policy role, or
+> proposes a Phase 16 deny/restrict effect. The current Haldir design has no PID
+> route or policy input. Any future import is record-only, lives outside
+> decision-relevant trusted state, and may vary only audit evidence—not
+> authorization, `TrustedStateSnapshotV1`, or plant-command bytes. Its audit
+> writer and route require separate authorization with no policy capability. PID
+> cannot grant, widen, revoke, restrict, deny, or exercise authority. Any
+> automatic restriction would be a new Haldir-owned policy/profile with its own
+> threat model and qualification. The remainder of this specification retains
+> its stated authority.
+
+> [!IMPORTANT]
 > The NCP baseline changed on the same date as this audit. NCP `v0.8.0` is now an immutable release, not an untagged canary. Any Haldir document or implementation instruction that still says the wire-0.8 line is untagged, pins `a79e6579...`, constructs a top-level `CommandFrame.seq`, lets a controller author the final NCP stream, or reserves a maximum sequence value is obsolete.
 
 > [!IMPORTANT]
@@ -557,18 +572,22 @@ The deployment agent MUST prove one of these conditions:
 
 “Archived on GitHub” is never accepted as evidence of absence.
 
-### Galadriel
+### Galadriel — amended boundary
 
-Galadriel provides fail-closed cross-sensor statistical-consistency monitoring and optional PID/NCP integration. Its current manifest still pins NCP `v0.7.1`. Its own scientific boundary matters: consistency is not truth, a coordinated or consistency-preserving attack can evade a cross-sensor consistency check, and attribution or PID analysis is not plant authorization.
+The current design authority is
+[`GALADRIEL-PID-ADVISORY-CONTRACT.md`](GALADRIEL-PID-ADVISORY-CONTRACT.md).
+Galadriel's operational consistency outputs, pairwise-MI companion, and offline
+PID studies are distinct objects. None is plant authorization, and Haldir has no
+runtime Galadriel/PID input today.
 
-Haldir integration is advisory:
-
-- consume a signed/digested bounded `AdvisoryEvidenceRefV1`;
-- qualify the exact sensors, estimator/configuration, calibration set, time window, and confidence semantics;
-- use the evidence for denial, degradation, or policy tightening only after calibration;
-- do not let Galadriel directly publish plant commands or issue mission leases;
-- do not make its absence a hidden fail-open condition;
-- preserve raw state-quality evidence for offline evaluation.
+Any future Haldir integration starts as record-only audit evidence outside
+`TrustedStateSnapshotV1` and every policy input. It may bind an exact bounded
+reference for offline/operator research through a separately authorized audit
+writer, but it cannot create or revoke a capability, grant, restrict, or deny a
+decision, change a limit, select a command, refresh a watchdog, or alter
+plant-command bytes. A future restrict-only proposal is not part of this adapter;
+it is a new Haldir-owned policy/profile requiring separate authorization,
+plant-safety analysis, and qualification.
 
 Galadriel is not required for the MVP security claim.
 
@@ -587,17 +606,16 @@ Required boundary:
 
 ### pid-rs
 
-`pid-rs` is a scientific information-theory library, not a runtime access-control or authenticity system. Hashes in run logs identify bytes; they do not authenticate who generated them. Haldir may use pid-rs for offline baselines and exploratory dependence analysis only.
-
-A PID-derived result cannot become a runtime policy prerequisite until:
-
-- estimator validity and sample requirements are preregistered;
-- calibration and abstention behavior are measured;
-- a bounded deterministic runtime implementation exists;
-- its false-allow and false-deny effects are tested;
-- an independent policy path can deny safely when the estimator fails.
-
-No such dependency is required for the selected non-PID Gate project.
+`pid-rs` is a scientific information-theory library, not a runtime access-control
+or authenticity system. Hashes in run logs identify bytes; they do not authenticate
+who generated them. Haldir may use pid-rs for offline baselines and exploratory
+dependence analysis only. Under the current record-only boundary a PID-derived
+result cannot become a runtime prerequisite, `TrustedStateSnapshotV1` field,
+grant, restriction, revocation, or denial. A later Haldir-owned safety policy that
+uses any derived observation would be a different programme with its own
+authenticated authority, estimator qualification, false-allow/false-deny analysis,
+plant-safety proof, and recovery semantics; the PID object would still not be the
+authority. No such dependency is required for the selected non-PID Gate project.
 
 ### Engram and NEST
 
@@ -788,7 +806,7 @@ USENIX Security 2025 work on automated discovery of semantic attacks in multi-ro
 1. the sensor/state plane is part of the control threat model;
 2. syntactic validity and simple anomaly thresholds do not establish semantic safety.
 
-Haldir does not attempt to solve arbitrary sensor deception. It requires trusted-state provenance, source freshness, uncertainty, and explicit policy over the evidence used to authorize an action. Galadriel may add advisory consistency evidence, but a consistency monitor cannot make untrusted state true.
+Haldir does not attempt to solve arbitrary sensor deception. It requires trusted-state provenance, source freshness, uncertainty, and explicit policy over the evidence used to authorize an action. A future Galadriel reference may appear only in a separately authorized record-only audit path; neither a consistency monitor nor PID can enter `TrustedStateSnapshotV1`, make untrusted state true, grant, restrict, or deny.
 
 **Primary evidence:** Yeke et al., *Automated Discovery of Semantic Attacks in Multi-Robot Navigation Systems*, USENIX Security 2025, <https://www.usenix.org/conference/usenixsecurity25/presentation/yeke>. The work includes simulation, high-fidelity simulation, and Crazyflie experiments; Haldir uses it to justify source/state threat modeling, not to claim general sensor-attack prevention.
 
@@ -877,7 +895,7 @@ This matrix prevents research citations from becoming decoration. Every source m
 | SpiNNaker2 documentation | Brian2 emulation is available; some hardware-linked dependencies are restricted | reproducible hardware access or hardware validation | optional later profile only; bind dependency/access state and evidence level | clean public install/emulation proof before adoption; silicon results kept separate |
 | Lava archive notice | original Lava repository is read-only and Intel no longer guarantees maintenance | that all Lava forks/successors are unsuitable | do not make archived Lava the default second-backend foundation | candidate matrix must identify maintained owner, security policy, releases, and reproducibility |
 | NEST 3.10 release | NEST 3.10 is current; PyNEST is primary and the SLI intermediary was removed | that the owner's NEST 3.9 controller is unchanged under 3.10 | preserve exact 3.9 reproduction and add an explicit 3.10 migration/compatibility campaign | paired 3.9/3.10 controller traces, timing, cleanup, and held-out plant results |
-| Galadriel results/limitations | statistical consistency evidence can alert or abstain heavily and is not truth | permission to veto or authorize control | advisory/digest-linked evidence only; policy must name any deny-only calibrated profile | disconnect, missingness, false-alert, stale-evidence, and malicious-sidecar tests |
+| Galadriel results/limitations | NIS, CUSUM, signed correlation, pairwise MI, invariants, and fixed-target PID answer distinct questions and are not truth | permission to veto, restrict, deny, or authorize control | no current route; any future reference is record-only, outside trusted state and policy, with typed eligibility/request/outcome | fixed-input authorization/trusted-state/plant-command equality under disconnect, missingness, stale/malformed evidence, every atom sign, unavailable, resource-rejected, and error states; audit record may vary |
 | Prisoma and pid-rs caveats | useful offline analysis exists, with estimator/support limitations and non-authenticating hashes | runtime authorization or evidence authenticity | read-only exports; external signatures/provenance; no runtime Gate dependency | remove tools and show control unaffected; tampered trace fails signature/digest verification |
 
 ### Minimum justification decision rule
@@ -1237,7 +1255,7 @@ Engram/NEST/future backend -- signed semantic intent v
                                                      |
                                              reference plant/SITL
 
-Galadriel -------- advisory evidence ---------> receipts/policy input (not MVP ALLOW)
+Galadriel ---- future record-only reference --> audit spool --X-- Gate policy/state
 Prisoma/pid-rs --- verified offline traces ----> research only
 Cortexel/Rerun -- verified receipt views ------> read-only UI
 crebain-native --- absent or observer-only ------> no plant publication
@@ -2711,7 +2729,6 @@ pub struct TrustedStateSnapshotV1 {
     pub uncertainty: StateUncertaintyFixedV1,
     pub mission_phase: AsciiId<64>,
     pub plant_mode: AsciiId<64>,
-    pub advisory_evidence: BoundedVec<AdvisoryEvidenceRefV1, 16>,
     pub canonical_digest: DigestV1,
 }
 ```
@@ -2731,40 +2748,21 @@ Each `VerifiedSourceStateV1` retains:
 
 Gate constructs the snapshot under the per-vehicle actor from independently ingested state. The controller may name a source position, but cannot supply the state values used for policy. Snapshot construction fails when a required source is absent, stale, wrong-session, wrong-principal, invalid, geometrically incompatible, or outside its bounded conversion domain.
 
-### `AdvisoryEvidenceRefV1`
+Galadriel/PID research evidence is deliberately absent from this decision input.
+A possible future record-only audit reference belongs in a separate bounded audit
+record and cannot participate in this snapshot's canonical digest or policy
+construction.
 
-This type carries Galadriel or another monitor result without granting it authority:
+### `AdvisoryEvidenceRefV1` — retired policy-input proposal
 
-```rust
-pub struct AdvisoryEvidenceRefV1 {
-    pub producer_id: AsciiId<64>,
-    pub evidence_kind: AsciiId<64>,
-    pub evidence_schema: AsciiId<64>,
-    pub evidence_digest: DigestV1,
-    pub source_positions: BoundedVec<NcpSourceRefV1, 8>,
-    pub received_mono_ns: u64,
-    pub status: AdvisoryStatusV1,
-    pub calibrated_for_policy: bool,
-}
-
-pub enum AdvisoryStatusV1 {
-    NominalAdvisory,
-    AttributedInconsistency,
-    BroadDegradation,
-    UnclassifiedAnomaly,
-    InsufficientEvidence,
-    StateUnusable,
-    ProducerError,
-}
-```
-
-Rules:
-
-- `NominalAdvisory` never grants ALLOW or relaxes a limit.
-- `InsufficientEvidence` never converts to nominal.
-- `StateUnusable` may become a deny-only policy input only when `calibrated_for_policy` is true and the signed policy names the producer/profile.
-- unknown statuses, schema drift, bad signature, wrong session/source, or stale evidence are ignored for an optional source and deny for a required source.
-- Gate records the exact evidence digest but does not copy unbounded detector diagnostics into receipts.
+The earlier type and its `StateUnusable`/`calibrated_for_policy` rules are
+superseded and must not be implemented from this document. If a later Haldir
+release admits Galadriel evidence for audit, it must define a new closed
+record-only schema under
+[`GALADRIEL-PID-ADVISORY-CONTRACT.md`](GALADRIEL-PID-ADVISORY-CONTRACT.md).
+That object stays outside `TrustedStateSnapshotV1`, authorization, and the
+plant-command projection. Its audit bytes may reflect the evidence; the decision
+and plant-command bytes may not.
 
 ### `PlantPublicationAuthorityStateV1`
 
@@ -6199,32 +6197,49 @@ range: add PX4-SITL assurance profile
 integration: connect Crebain CommandPlant to PX4-SITL
 ```
 
-## Phase 16 — add Galadriel advisory evidence without control authority
+## Phase 16 — possible record-only Galadriel audit evidence
 
 ### Objective
 
-Use existing cross-sensor work honestly without making an uncalibrated detector a hidden safety controller.
+Preserve an exact bounded research reference for audit without adding any
+Galadriel/PID field to trusted state, authorization, policy, or plant commands.
+This phase is not implemented or authorized by the current release.
 
 ### Steps
 
-1. Pin Galadriel and its NCP compatibility.
-2. Define an exact signed advisory envelope or adapter into `AdvisoryEvidenceRefV1`.
-3. Give Galadriel read-only sensor/observation access and one advisory-output route; no command rights.
-4. Validate session/source positions, producer identity, schema, and freshness.
-5. Record advisory status/digest in decision evidence without changing policy.
-6. Run missing, stale, incompatible, and `InsufficientEvidence` cases.
-7. Add a later experimental policy that denies on `StateUnusable` only after a separate calibration report and policy signature; leave it disabled by default.
-8. Prove `NominalAdvisory` cannot widen limits or create ALLOW.
-9. Publish current false-alert/abstention limitations alongside experiments.
+1. Write a new threat model and closed record-only schema; do not revive
+   `AdvisoryEvidenceRefV1` as a policy input.
+2. Pin exact Galadriel source, build, method, input, output, and limitation
+   identities; keep the evidence principal distinct from every Haldir authority
+   and from CREBAIN plant-evidence identity.
+3. Give any producer only the minimum read-only observation access and a bounded
+   audit-output route; no command or policy rights.
+4. Validate provenance, scientific disposition, bounds, and retention before
+   storing a content-addressed reference. Model eligibility separately from
+   execution request: `Applicable | Inapplicable` and
+   `NotRequested | Requested`. A requested record carries a role and exactly one
+   `Produced | Unavailable | ResourceRejected | Error` outcome. Reject
+   `Inapplicable + Requested`. Gate must not auto-fetch the payload.
+5. Keep the reference outside `TrustedStateSnapshotV1` and every decision input.
+6. Test missing, stale, malformed, replayed, favorable, negative, unavailable,
+   and resource-rejected evidence.
+7. Prove authorization, `TrustedStateSnapshotV1`, and plant-command bytes are
+   identical for fixed authority input across those cases; permit only the
+   separate audit record to vary.
+8. Publish scientific limitations, abstentions, confidentiality/data-minimization
+   boundaries, and operator automation-bias risks.
+9. Treat any automatic restriction as a different future Haldir policy/profile,
+   not as completion of this phase.
 
 ### Exit gate
 
-Galadriel can disappear, fail, or report nominal without granting authority; the MVP decision path remains functionally identical aside from evidence recording.
+Galadriel can disappear, fail, or report any atom without changing authorization
+or plant-command bytes; only a separately bounded audit record may differ.
 
 ### Suggested commit
 
 ```text
-integration: record Galadriel as advisory state evidence
+integration: retain Galadriel record-only audit reference
 ```
 
 ## Phase 17 — export verified traces to Prisoma, pid-rs, Cortexel, and Rerun
@@ -6533,7 +6548,7 @@ Use the following sequence unless evidence requires a narrower split:
 14. Engram/NEST intent emitter and complete artifact export.
 15. Deterministic end-to-end campaign.
 16. Crebain/PX4-SITL profile.
-17. Galadriel advisory adapter.
+17. Galadriel record-only audit adapter.
 18. Offline research/visual exporters.
 19. NEST admission evidence.
 20. Independent backend/NIR experiment.

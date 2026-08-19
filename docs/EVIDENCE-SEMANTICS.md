@@ -38,6 +38,25 @@ not prove authenticated state/control provenance, a protected credential-opening
 identity, publisher worker, process manager, delivery, remote cleanup, or a production transport pipeline
 (`CL-LIVE-INGRESS-BINDING-01`, `CL-LIVE-GATE-DEV-BIND-01`).
 
+## Why the coordinator uses this protocol
+
+[ADR-0010](adr/0010-reserve-before-mutate-publication-coordinator.md) is the
+canonical rationale for the coordinator protocol. It selects three-record logical
+reservation before mutation, one non-cloneable publication slot, a synced Called
+record before exact-byte exposure, consuming typestates, and terminal handling of
+every Called-or-later ambiguity. It rejects incremental reservation, multi-slot or
+shared-handle publication, post-call write-ahead evidence, and automatic retry;
+receiver transactions and authenticated application acknowledgement are deferred
+to a future architecture.
+
+That decision assumes the documented one-process, one-vehicle, cooperative local
+boundary. Its outputs are exact local stages and typed unavailable/fatal outcomes;
+its failure rule is no unsafe continuation when the side effect may have occurred.
+Its tests do not establish delivery, application, power-loss durability,
+supervision, credential custody, availability, or physical effect. The detailed
+assumptions, consequences, and evidence ceiling remain in the ADR rather than being
+duplicated throughout this implementation ledger.
+
 ## Each producer signs only what it observed
 
 - **Gate** (`DecisionReceiptV1`) records the decision it made and stops at

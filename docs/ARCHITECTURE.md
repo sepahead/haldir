@@ -11,6 +11,25 @@ deployment, delivery, plant-application, physical-safety, or production claim.
 The exact evidence status remains in the [claim ledger](CLAIM-LEDGER.md), and
 release use remains `NO_GO`.
 
+## Decision-record map
+
+The [architecture decision records](adr/README.md) state why each load-bearing
+mechanism was selected, which alternatives were rejected or deferred, and what
+evidence ceiling remains. They do not broaden the claim ledger or close the draft
+threat model.
+
+| Architecture area | Decision record |
+| --- | --- |
+| Fail-closed monitor and Gate-originated output | [ADR-0001](adr/0001-fail-closed-gate-originated-authority.md) |
+| Deterministic signed encoding and domain separation | [ADR-0002](adr/0002-deterministic-cbor-and-cose.md) |
+| Authorization DENY versus internal ERROR | [ADR-0003](adr/0003-error-vs-deny-outcomes.md) |
+| Bounded lease-use accounting | [ADR-0004](adr/0004-fixed-point-token-bucket.md) |
+| Elapsed-time command slew | [ADR-0006](adr/0006-elapsed-time-slew.md) |
+| One-vehicle in-process reference scope and deferrals | [ADR-0007](adr/0007-p0-scope-and-deferrals.md) |
+| Exact half-open action history and conservative compression | [ADR-0008](adr/0008-exact-action-history-accounting.md), superseding [ADR-0005](adr/0005-interval-union-duty.md) |
+| Checked policy arithmetic, prospective projection, and a complete bounded reason vector | [ADR-0009](adr/0009-checked-policy-arithmetic-and-complete-reasons.md) |
+| Reserve-before-mutate, single-slot publication lifecycle | [ADR-0010](adr/0010-reserve-before-mutate-publication-coordinator.md) |
+
 ## Safety objective
 
 The controlling invariant of the composed actor/coordinator path is:
@@ -187,6 +206,12 @@ source publisher time are provenance, never authority clocks.
 ## Policy and motion envelope
 
 The native policy is pure fixed-point Rust with checked or widened arithmetic.
+[ADR-0009](adr/0009-checked-policy-arithmetic-and-complete-reasons.md)
+records the arithmetic, projection, and complete-reason decision, including the
+rejected alternatives, assumptions, failure semantics, and software-only claim
+ceiling. [ADR-0006](adr/0006-elapsed-time-slew.md) and
+[ADR-0008](adr/0008-exact-action-history-accounting.md) separately govern
+elapsed-time slew and exact action-history accounting.
 It intersects lease limits with the locally admitted executable envelope and
 checks, among other constraints:
 
@@ -224,6 +249,11 @@ behavior. It is therefore a configured authorization envelope, not a validated
 reachable-set, vehicle-dynamics, containment, or stopping-distance proof.
 
 ## Publication and evidence boundary
+
+[ADR-0010](adr/0010-reserve-before-mutate-publication-coordinator.md) records why
+the current one-vehicle composition reserves its complete local lifecycle before
+mutation, uses one move-only publication slot, syncs Called before exposure, and
+stops rather than retrying after ambiguity.
 
 Prepared output bytes are private. The coordinator reserves journal capacity
 before decision mutation. Before accepting the actor's prepared result, it
