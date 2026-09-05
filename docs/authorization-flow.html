@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Haldir command authorization and evidence</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a1117; color: #f4f2e9; font: 1rem/1.6 system-ui, sans-serif; }
+    main { max-width: 1248px; margin: auto; padding: 24px; }
+    h1 { margin: 8px 0; font-size: clamp(1.75rem, 4vw, 2.75rem); line-height: 1.2; }
+    p { max-width: 75ch; color: #c2cdd2; }
+    a { color: #ebc36f; text-underline-offset: 3px; overflow-wrap: anywhere; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 20px 0; }
+    nav a { padding: 8px 0; min-height: 44px; }
+    fieldset { min-width: 0; margin: 24px 0; padding: 16px; border: 1px solid #50656e; border-radius: 16px; }
+    legend { padding: 0 8px; }
+    input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+    label { display: inline-block; min-height: 44px; padding: 8px 14px; margin: 0 6px 12px 0; border: 1px solid #50656e; border-radius: 8px; cursor: pointer; }
+    input:checked + label { background: #43361e; border-color: #ebc36f; }
+    input:focus-visible + label, a:focus-visible, .canvas:focus-visible { outline: 3px solid #8bddbd; outline-offset: 4px; }
+    .canvas { width: 100%; overflow: auto; border-radius: 12px; }
+    picture { display: block; width: 100%; }
+    img { display: block; width: 100%; height: auto; }
+    #zoom150:checked ~ .canvas picture { width: 150%; }
+    #zoom300:checked ~ .canvas picture { width: 300%; }
+    li { margin: 8px 0; }
+    @media (max-width: 640px) { main { padding: 16px; } fieldset { padding: 8px; } }
+  </style>
+</head>
+<body>
+<main>
+  <p>HALDIR · AUTHORIZATION AND EVIDENCE</p>
+  <h1>Authorize a new command. Preserve each observed stage.</h1>
+  <p>The implemented P0 reference separates controller intent, independent authority, Gate-created commands, and later plant observations.</p>
+  <nav aria-label="Diagram reading options">
+    <a href="WORKFLOWS.md">Complete text and mathematics</a>
+    <a href="../assets/authorization-flow.svg">Open wide SVG</a>
+    <a href="../assets/authorization-flow-mobile.svg">Open mobile SVG</a>
+    <a href="https://raw.githubusercontent.com/sepahead/haldir/main/assets/authorization-flow.svg">Direct vector fallback</a>
+  </nav>
+  <fieldset>
+    <legend>Diagram size</legend>
+    <input type="radio" name="zoom" id="fit" checked><label for="fit">Fit width</label>
+    <input type="radio" name="zoom" id="zoom150"><label for="zoom150">150%</label>
+    <input type="radio" name="zoom" id="zoom300"><label for="zoom300">300%</label>
+    <div class="canvas" tabindex="0" aria-label="Scrollable authorization diagram">
+      <picture>
+        <source media="(max-width: 640px)" srcset="../assets/authorization-flow-mobile.svg">
+        <img src="../assets/authorization-flow.svg" width="1200" height="1200" alt="Read the complete text alternative below. Gate's local publication evidence does not prove plant application.">
+      </picture>
+    </div>
+  </fieldset>
+  <h2>Text alternative</h2>
+  <p>Gate validates a signed controller intent against independent authority, trusted state, replay, and deterministic policy.</p>
+  <p>ALLOW can authorize a fresh Gate-owned command after final checks. DENY and ERROR create no new command. HOLD requires its own ALLOW.</p>
+  <ol>
+    <li>Reserve bounded logical journal capacity before decision mutation.</li>
+    <li>Keep prepared output private and join its exact signed decision receipt.</li>
+    <li>Locally sync the decision and linked PublishCalled records.</li>
+    <li>Repeat authority, state, time, and horizon checks.</li>
+    <li>Expose that same frame for one publisher invocation.</li>
+    <li>Record only the local return that was observed.</li>
+  </ol>
+  <p>Local publisher Ok does not prove delivery or application. Every invoked declared-live publication is terminal.</p>
+  <p>A recovered dangling PublishCalled becomes UnknownAfterPublish. Recovered called-or-later history blocks decisions. No authenticated clearance API exists yet.</p>
+  <p>The dashed plant box identifies a separate evidence owner. P0 plant events are simulation model values. They do not qualify a physical plant.</p>
+  <p>Haldir gating is unsupported in the candidate native local NCP experiment. Release 0.9.0 remains NO_GO.</p>
+  <p><a href="../README.md">Return to Haldir</a></p>
+</main>
+</body>
+</html>

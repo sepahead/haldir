@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200" role="img" aria-labelledby="title description">
+<title id="title">Haldir: command authorization and publication evidence</title>
+<desc id="description">Gate checks a signed controller intent against independent authority and trusted state. ALLOW can authorize a new Gate-owned command. DENY and ERROR create no new command. The journal-bound composition reserves before mutation, syncs decision and PublishCalled, then rechecks and invokes once. Local success is not delivery or application. Recovery of a dangling called boundary records UnknownAfterPublish and blocks new decisions. P0 plant events are simulation model values.</desc>
+<defs><linearGradient id="header" x2="1" y2="1"><stop stop-color="#22352c"/><stop offset="1" stop-color="#0a1117"/></linearGradient><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1L8 5L1 9" fill="none" stroke="#ebc36f" stroke-width="2"/></marker></defs>
+<rect width="1200" height="1200" rx="24" fill="#0a1117"/><path d="M24 0H1176Q1200 0 1200 24V146H0V24Q0 0 24 0" fill="url(#header)"/>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" fill="#f4f2e9">
+<text x="48" y="45" font-size="16" fill="#8bddbd" font-weight="650">HALDIR  /  AUTHORIZATION REFERENCE</text>
+<text x="48" y="90" font-size="34" fill="#f4f2e9" font-weight="650">Authorize a new command. Preserve each observed stage.</text>
+<text x="48" y="125" font-size="18" fill="#c2cdd2" font-weight="400">P0 in-process reference · separately bounded live primitives · release NO_GO</text>
+<text x="48" y="186" font-size="18" fill="#8bddbd" font-weight="650">01  COMMAND CREATION</text>
+<rect x="48" y="210" width="320" height="220" rx="16" fill="#121d25" stroke="#ebc36f" stroke-width="1.5"/>
+<text x="70" y="246" font-size="22" fill="#ebc36f" font-weight="650">Separate inputs</text>
+<text x="70" y="282" font-size="19" fill="#c2cdd2" font-weight="400">Controller: signed intent</text>
+<text x="70" y="311" font-size="19" fill="#c2cdd2" font-weight="400">Independent authority</text>
+<text x="70" y="340" font-size="19" fill="#c2cdd2" font-weight="400">Trusted state snapshot</text>
+<text x="70" y="369" font-size="19" fill="#c2cdd2" font-weight="400">Explicit clocks and scope</text>
+<rect x="440" y="210" width="320" height="220" rx="16" fill="#121d25" stroke="#ebc36f" stroke-width="1.5"/>
+<text x="462" y="246" font-size="22" fill="#ebc36f" font-weight="650">Gate checks</text>
+<text x="462" y="282" font-size="19" fill="#c2cdd2" font-weight="400">Bytes, signer, lease, replay</text>
+<text x="462" y="311" font-size="19" fill="#c2cdd2" font-weight="400">Fresh state + pure policy</text>
+<text x="462" y="340" font-size="19" fill="#c2cdd2" font-weight="400">Final authority recheck</text>
+<text x="462" y="369" font-size="19" fill="#c2cdd2" font-weight="400">No forwarded command</text>
+<rect x="832" y="210" width="320" height="220" rx="16" fill="#121d25" stroke="#ebc36f" stroke-width="1.5"/>
+<text x="854" y="246" font-size="22" fill="#ebc36f" font-weight="650">Closed outcomes</text>
+<text x="854" y="282" font-size="19" fill="#c2cdd2" font-weight="400">ALLOW → fresh Gate frame</text>
+<text x="854" y="311" font-size="19" fill="#c2cdd2" font-weight="400">DENY or ERROR → no frame</text>
+<text x="854" y="340" font-size="19" fill="#c2cdd2" font-weight="400">HOLD needs its own ALLOW</text>
+<text x="854" y="369" font-size="19" fill="#c2cdd2" font-weight="400">No automatic stop action</text>
+<path d="M368 320H434" fill="none" stroke="#ebc36f" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M760 320H826" fill="none" stroke="#ebc36f" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="48" y="467" font-size="20" fill="#f4f2e9" font-weight="400">A command is not an application receipt. A denied new intent does not cancel an older command.</text>
+<text x="48" y="514" font-size="18" fill="#8bddbd" font-weight="650">02  JOURNAL-BOUND PUBLICATION ORDER</text>
+<rect x="48" y="542" width="320" height="205" rx="16" fill="#121d25" stroke="#ebc36f" stroke-width="1.5"/>
+<text x="70" y="578" font-size="22" fill="#ebc36f" font-weight="650">1  Reserve and prepare</text>
+<text x="70" y="614" font-size="19" fill="#c2cdd2" font-weight="400">Quota before decision</text>
+<text x="70" y="643" font-size="19" fill="#c2cdd2" font-weight="400">Exact output stays private</text>
+<text x="70" y="672" font-size="19" fill="#c2cdd2" font-weight="400">Receipt joins exact frame</text>
+<text x="70" y="701" font-size="19" fill="#c2cdd2" font-weight="400">Reservation is not I/O</text>
+<rect x="440" y="542" width="320" height="205" rx="16" fill="#121d25" stroke="#ebc36f" stroke-width="1.5"/>
+<text x="462" y="578" font-size="22" fill="#ebc36f" font-weight="650">2  Record before exposure</text>
+<text x="462" y="614" font-size="19" fill="#c2cdd2" font-weight="400">Sync signed decision</text>
+<text x="462" y="643" font-size="19" fill="#c2cdd2" font-weight="400">Sync linked PublishCalled</text>
+<text x="462" y="672" font-size="19" fill="#c2cdd2" font-weight="400">No frame access yet</text>
+<text x="462" y="701" font-size="19" fill="#c2cdd2" font-weight="400">Called ≠ invocation proof</text>
+<rect x="832" y="542" width="320" height="205" rx="16" fill="#121d25" stroke="#ebc36f" stroke-width="1.5"/>
+<text x="854" y="578" font-size="22" fill="#ebc36f" font-weight="650">3  Recheck and invoke</text>
+<text x="854" y="614" font-size="19" fill="#c2cdd2" font-weight="400">Authority, state, time</text>
+<text x="854" y="643" font-size="19" fill="#c2cdd2" font-weight="400">Remaining validity horizon</text>
+<text x="854" y="672" font-size="19" fill="#c2cdd2" font-weight="400">Expose exact frame once</text>
+<text x="854" y="701" font-size="19" fill="#c2cdd2" font-weight="400">One publisher invocation</text>
+<path d="M368 638H434" fill="none" stroke="#ebc36f" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M760 638H826" fill="none" stroke="#ebc36f" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="48" y="792" width="528" height="165" rx="16" fill="#121d25" stroke="#8bddbd" stroke-width="1.5"/>
+<text x="70" y="828" font-size="22" fill="#8bddbd" font-weight="650">Observed local return</text>
+<text x="70" y="864" font-size="19" fill="#c2cdd2" font-weight="400">PublishReturnedOk records local Ok only.</text>
+<text x="70" y="893" font-size="19" fill="#c2cdd2" font-weight="400">Every invoked live publication is terminal.</text>
+<text x="70" y="922" font-size="19" fill="#c2cdd2" font-weight="400">Delivery and application remain unobserved.</text>
+<rect x="624" y="792" width="528" height="165" rx="16" fill="#121d25" stroke="#ebc36f" stroke-width="1.5"/>
+<text x="646" y="828" font-size="22" fill="#ebc36f" font-weight="650">Missing supported terminal</text>
+<text x="646" y="864" font-size="19" fill="#c2cdd2" font-weight="400">Recovery of dangling PublishCalled:</text>
+<text x="646" y="893" font-size="19" fill="#c2cdd2" font-weight="400">UnknownAfterPublish</text>
+<text x="646" y="922" font-size="19" fill="#c2cdd2" font-weight="400">Do not infer success, failure, or non-delivery.</text>
+<text x="48" y="1002" font-size="20" fill="#f4f2e9" font-weight="400">Recovered called-or-later history blocks new decisions. Authenticated restart clearance is not implemented.</text>
+<rect x="48" y="1030" width="1104" height="125" rx="16" fill="#121d25" stroke="#50656e" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="70" y="1066" font-size="22" fill="#c2cdd2" font-weight="650">Plant evidence belongs to the plant</text>
+<text x="70" y="1102" font-size="19" fill="#c2cdd2" font-weight="400">Received → validated → accepted → selected → applied → observed.</text>
+<text x="70" y="1131" font-size="19" fill="#c2cdd2" font-weight="400">P0 records simulation model values. No qualified live plant application is claimed.</text>
+</g></svg>

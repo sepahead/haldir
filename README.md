@@ -7,199 +7,174 @@
 
 # Haldir Gate
 
-Haldir is an experimental, backend-aware authorization reference monitor for
-mission-level plant commands. A controller signs a typed semantic intent; Gate
-independently verifies authority and scope, correlates the intent with trusted
-state, evaluates deterministic bounded policy, and—only after a final
-recheck—constructs a new plant-facing NCP command under Gate's own output
-stream. Controller command frames are never forwarded.
+**Authorization for one new command, with evidence for each observed stage.**
 
-```text
-signed controller intent ──> Haldir Gate ──> Gate-owned NCP command
-                                  ▲
-                      authority + trusted state
-```
+Haldir is an experimental Rust reference monitor for mission-level plant commands.
+It checks a signed controller intent against independently held authority, trusted state, replay history, and deterministic policy.
+An allowed intent can produce a private frame under Gate's own output stream.
+The publication path rechecks authority before exposing those exact bytes.
+It never forwards the controller's command bytes.
 
-> [!WARNING]
-> Haldir is a research implementation. It is not production ready, certified,
-> airworthy, or safe for operational deployment. Release `0.9.0` remains
-> `NO_GO`. The repository does not yet contain the mandatory authenticated
-> deployment shell, protected credential custody, complete actuator-bypass
-> inventory, or physical-plant evidence required for a deployment claim.
+The implemented `assurance-reference-v1` profile is an in-process software reference.
+Its plant is a deterministic simulation model.
+Release `0.9.0` remains **NO_GO**.
+Haldir is not production ready, certified, airworthy, or qualified for physical deployment.
 
-Start with the [architecture](docs/ARCHITECTURE.md). The
-[claim ledger](docs/CLAIM-LEDGER.md) is the authority for what evidence proves;
-the [limitations](docs/LIMITATIONS.md) and
-[roadmap](docs/ROADMAP-STATUS.md) state what remains open.
+## Try the reference
 
-## Implemented scope
-
-| Composition | Implemented | Explicit boundary |
-| --- | --- | --- |
-| `assurance-reference-v1` | End-to-end in-process signed-intent, Gate actor, modeled NCP frame, and deterministic reference-plant path | No network, neural runtime, physical plant, or complete-mediation claim |
-| `DeclaredLiveZenoh` library path | Durable startup/journal binding, route-bound activation, bounded exact ingress, single-owner state/intent processing, strict final-route publication, and local shutdown | No production daemon, authenticated control/state producer, supervision, protected secret loader, or delivery/application proof |
-| Package-bound Gate startup | Strict signed-package verification, bounded exact artifact capture, signed-role NCP validation, strict Gate configuration, four separately verified, role-separated, public-key-distinct runtime-snapshot approvals rooted in the same retained bootstrap trust, cross-store rejection of incompatible `kid` or public-key reuse, exact live-object matching, an atomic deployment-revision/boot ratchet, and signed journal-ID enforcement when binding the format-v2 evidence chain | Role/key separation does not prove independent organizations or operators; seven artifact roles remain byte-only; no authenticated artifact-root, running-binary, protected-credential, mandatory-journal, or production-runner proof |
-
-The `haldir-gate` executable is intentionally an offline introspection tool. The
-live examples provision or open a disposable development fixture and can bind
-then immediately shut down while processing zero intents. They are evidence
-fixtures, not deployment runbooks.
-
-## Quickstart
-
-The local development lane requires Git, Python 3.11 or newer, and the exact
-Rust toolchain in `rust-toolchain.toml`:
+Use Python 3.11 or newer and the exact Rust toolchain in [rust-toolchain.toml](rust-toolchain.toml).
+Run from the repository root:
 
 ```bash
 python3 -I -B tools/doctor.py
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-cargo test --workspace --all-targets --all-features --locked
-cargo test --workspace --doc --all-features --locked
+cargo test --locked -p haldir-range
+cargo run --locked -p haldir-gate -- --build-info
 ```
 
-If [`just`](https://github.com/casey/just) is installed, the corresponding
-recipes are:
+The range exercises signed intents, Gate decisions, modeled commands, and the reference plant.
+It needs no running NEST, CREBAIN, or Zenoh peer.
+The `--build-info` command prints compiled metadata only.
+The `haldir-gate` executable is an offline inspection tool, not a live daemon.
+
+| Available surface | What it does | What it does not establish |
+| --- | --- | --- |
+| P0 `assurance-reference-v1` | In-process contract, authority, policy, command, and reference-plant checks | No neural execution, real transport, physical effects, or complete mediation |
+| Package-bound startup | Verifies signed package roles and exact runtime identities before its declared effects | Authenticated artifact-root acquisition, running-image identity, protected credentials, or a mandatory production loader |
+| `DeclaredLiveZenoh` library | Composes bounded ingress, one-owner processing, journal ordering, and a strict final-route publisher | An authenticated ongoing control plane, supervision, delivery, or plant application |
+| Retained development smoke | Opens a disposable fixture, binds the aggregate, and immediately shuts it down | Intent processing or command publication; the recorded run performs zero of each |
+
+[Assurance profiles](docs/ASSURANCE-PROFILES.md) define the exact scope.
+P1, P2, and P3 remain unimplemented as complete compositions.
+
+## How an intent becomes a command
+
+<picture>
+  <source media="(max-width: 640px)" srcset="assets/authorization-flow-mobile.svg">
+  <img src="assets/authorization-flow.svg" width="1200" alt="A signed controller intent and independent authority enter Gate. Policy and a final recheck permit a fresh Gate-owned command. Journal evidence precedes publication. Delivery and application remain separate observations.">
+</picture>
+
+**Text alternative.** Gate validates bounded intent bytes, signature, scope, replay, and trusted-state freshness.
+Its pure policy returns `ALLOW`, `DENY`, or `ERROR`.
+Only `ALLOW` can reach fresh command construction and the final publication checks.
+In the journal-bound composition, signed evidence is locally sync-confirmed before exact output bytes reach the publisher.
+The plant owns its later receipt, application, and response observations.
+
+[Wide SVG](assets/authorization-flow.svg) · [Mobile SVG](assets/authorization-flow-mobile.svg) ·
+[Direct vector](https://raw.githubusercontent.com/sepahead/haldir/main/assets/authorization-flow.svg) ·
+[Workflow and mathematics](docs/WORKFLOWS.md)
+
+Open the direct vector in a browser when the repository preview is too small.
+The [script-free HTML view](docs/authorization-flow.html) provides local Fit, 150%, and 300% reading controls.
+The hosting application controls its own image zoom behavior.
+
+### Decisions are different from actions
+
+| Item | Meaning |
+| --- | --- |
+| `ALLOW` | The intent passes the decision checks; publication still requires the exact final recheck |
+| `DENY` | No new Gate command is authorized |
+| `ERROR` | No new Gate command is authorized because the decision path failed |
+| `HOLD` | An explicitly allowed semantic action that produces a bounded zero-velocity command |
+| `VELOCITY_LOCAL_NED` | An explicitly allowed velocity action in the admitted local north-east-down frame |
+
+A denial does not cancel a previously published command.
+It does not silently produce `HOLD` or an emergency-stop command.
+Zero commanded velocity is not proof of physical stopping.
+The [authority contract](docs/release/0.9.0/AUTHORITY-CONTRACT.md) owns these distinctions.
+
+The native policy uses bounded state and checked fixed-point arithmetic.
+It checks lease intersections, speed, measured-state acceleration, command slew, duty history, plant mode, and a prospective geofence.
+Its geofence is a software authorization calculation, not a validated stopping-distance or vehicle-dynamics model.
+The [architecture](docs/ARCHITECTURE.md#policy-and-motion-envelope) describes the exact envelope.
+
+## Publication is not application
+
+Haldir preserves separate facts: constructed, publish called, publish returned, received, validated, accepted, selected, applied, and observed.
+A signed decision receipt proves neither delivery nor physical effect.
+Reference-plant application events are simulation model values.
+
+The journal-bound coordinator reserves logical evidence capacity before decision mutation.
+It retains prepared bytes privately, syncs the signed decision and `PublishCalled`, then repeats the authority, state, time, and horizon checks.
+Only then can the publisher receive that exact frame once.
+
+A local publisher `Ok` means only that the transport call returned `Ok`.
+Every invoked declared-live publication is terminal, including local success.
+The pinned wire starts command validity at plant-local arrival, which this Gate path does not observe or bound.
+It therefore cannot infer an application interval or safely authorize a following command.
+
+A recovered dangling `PublishCalled` becomes `UnknownAfterPublish`.
+That record does not prove whether the transport call began, delivered, or applied anything.
+Recovered called-or-later history blocks new decisions.
+Elapsed time does not clear it, and no authenticated restart-clearance API exists yet.
+
+These ordering properties belong to the journal-bound composition.
+The reusable actor alone does not supply its durable journal.
+Read [evidence semantics](docs/EVIDENCE-SEMANTICS.md) for exact cancellation, storage-failure, and recovery limits.
+
+## Optional ecosystem relationships
+
+Haldir can exercise its P0 reference without other ecosystem processes.
+The optional exact adapter retains NCP `v0.8.0` at
+`2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`, wire `0.8`, contract `d1b50a2d8a265276`.
+Its default adapter uses modeled bytes.
+The off-by-default `real-ncp` feature validates exact compact JSON against that pinned upstream crate.
+
+| Project or input | Intended role | Current Haldir boundary |
+| --- | --- | --- |
+| [NCP](https://github.com/sepahead/NCP) | Typed command and transport contract | Exact retained wire-0.8 adapter; no qualified native-local gate |
+| [Engram](https://github.com/sepahead/engram) / NEST | External signed-intent controller | No integrated neural producer or behavioral backend-conformance result |
+| [CREBAIN](https://github.com/sepahead/crebain) | External plant and application owner | No qualified Haldir plant-side integration or actuator-bypass closure |
+| [Galadriel](https://github.com/sepahead/galadriel) | Prospective advisory evidence producer | No runtime edge; a verdict cannot grant or widen authority |
+| PID evidence | Possible research input under a future admitted contract | No decision override or authority source |
+| [Prisoma](https://github.com/sepahead/prisoma) | Possible external experiment or evidence consumer | No qualified Haldir experiment or export adapter |
+
+The candidate local NCP experiment uses direct execution and excludes Haldir gating.
+A requested gated selection must fail before any endpoint is prepared.
+It must not fall back to direct execution.
+Local digest checks are not Haldir signatures or authenticated controller intents.
+
+The local experiment's acceleration actions cannot be copied into Haldir's velocity fields.
+A new profile needs explicit units, frames, action mapping, authority, and application evidence.
+The [local compatibility boundary](docs/NCP-COMPATIBILITY.md#candidate-local-ncp-boundary) owns that requirement.
+
+The August 10, 2026 inspection recorded a different, unreleased NCP `1.0.0-rc.1` candidate at
+`1ffd3bf9a6c52d0279eb31a56e0664e4eec24d68`.
+That release-blocked historical observation is not Haldir's runtime dependency.
+Native migration and independent qualification remain **NOT RUN**.
+
+## Development and evidence
 
 ```bash
-just doctor
 just fmt-check
 just lint
 just test-all
 just doc-test
+just ci
 ```
 
-The doctor uses shell-free probes with hard time, output, and process-group
-bounds. With `rustup`, it selects the already-installed declared toolchain using
-non-installing `rustup run`; it never requests toolchain acquisition. Only Cargo
-workspace resolution is promised locked and offline. Optional checks report
-`cargo-deny` and the GitHub CLI. The ordinary doctor and all normal Rust
-build/test commands do not invoke Java.
+`just ci` runs the complete local P0 gate.
+Its current-head audit verifies an exact committed subject; a green working-tree run does not sign or publish later changes.
+The separately pinned TLA+ campaign uses `just formal-offline` after its verified tool cache exists.
+Ordinary Rust commands and the doctor do not invoke Java.
+The [contributing guide](CONTRIBUTING.md) owns full verification and signed delivery requirements.
 
-`just ci` is the full local P0 candidate gate, not the fast edit loop.
-It includes the immutable current-head audit and deliberately rejects an
-unqualified source head until a reviewed audit cut is activated. Java is used
-only by the separate TLA+ model checker. `just doctor-formal` adds a preliminary
-Java-major probe; the formal runner itself verifies the exact vendor, runtime,
-architecture, jar, and model inputs. Use `just formal-offline` with the verified
-cache or the pinned hosted formal workflow. Cargo may acquire missing
-locked dependencies, and the ordinary local `cargo deny` lane may refresh its
-advisory database; only the explicitly named offline lanes claim network
-independence.
+The doctor uses bounded shell-free probes and never installs a Rust toolchain.
+Only its Cargo workspace-resolution probe promises locked offline behavior.
+Ordinary Cargo and dependency-policy commands can acquire missing inputs or refresh advisories.
+Use explicitly named offline lanes when network independence is required.
 
-For bounded hostile-byte parser properties and named malformed regressions, run
-`just parser-property-smoke`. This is not coverage-guided fuzzing; the historical
-`just fuzz-smoke` recipe is only a compatibility alias.
+Every load-bearing claim has a `CL-*` entry in the [claim ledger](docs/CLAIM-LEDGER.md).
+Synthetic router ACL tests, bounded formal models, reference-plant tests, and development smoke each have separate evidence limits.
+None supplies a complete authenticated deployment shell, protected credential custody, or physical-plant qualification.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for repository discipline and evidence
-rules.
-
-## Safety architecture
-
-The central invariant of the implemented Gate decision path is:
-
-```text
-no Gate-authored plant command unless
-    Gate is active and non-faulted
-  ∧ the exact intent bytes authenticate to the leased controller
-  ∧ route, boot, session, vehicle, mission, lease, admission, and policy agree
-  ∧ the intent and trusted-state positions are fresh and bounded
-  ∧ deterministic policy returns ALLOW
-  ∧ authority, state, time, and publication horizon still agree at exposure
-  ∧ the exact final route and fresh Gate output position are authorized
-```
-
-In the journal-bound coordinator, prepared output bytes remain private until the
-signed decision and `PublishCalled` boundary are locally sync-confirmed and the
-actor repeats every safety-relevant check. A failure before exposure makes no
-exact frame available to a publisher, although a private prepared frame may
-already exist. A failure after `PublishCalled` cannot prove non-delivery, so
-that composition's restart recovery classifies it as `UnknownAfterPublish` and
-blocks new decisions pending authenticated external clearance. The reusable
-public actor API has no durable-journal guarantee by itself.
-
-Haldir keeps these facts distinct: *constructed*, *published call returned*,
-*received*, *validated*, *accepted*, *selected*, *applied*, and *observed*. A
-local publisher `Ok` proves none of the downstream stages. The declared-live
-path therefore stops after any publication invocation—even local `Ok`—because
-NCP v0.8 begins TTL at plant-local arrival and Gate has no bounded-delivery or
-application-acknowledgement evidence from which to reconstruct that interval.
-
-The native policy uses fixed-point checked arithmetic and bounded state. It
-checks fresh trusted state, lease/policy intersections, scalar and vector speed,
-measured-state acceleration, published-command slew, exact half-open duty
-interval arithmetic with conservative retained-future-tail and bounded-history
-over-approximation, continuous-motion/Hold dwell, action-specific plant-mode
-rules, and a conservative prospective geofence.
-That software envelope is not a validated vehicle-dynamics or stopping-distance
-model.
-
-## NCP boundary
-
-The candidate local NCP experiment uses direct execution and excludes Haldir gating.
-Its supervisor must reject gated selection before endpoint preparation.
-The [local-profile boundary](docs/NCP-COMPATIBILITY.md#candidate-local-ncp-boundary) explains the unsupported action mapping and record-only advisory scope.
-
-Haldir remains pinned to the annotated NCP `v0.8.0` tag at commit
-`2f5bd586d4bb20c90362bb6f5698b7f64057ba4e` (wire `0.8`, contract hash
-`d1b50a2d8a265276`). The default adapter uses deterministic modeled bytes; the
-off-by-default `real-ncp` feature builds and validates exact compact JSON with
-the pinned upstream crate.
-
-As observed on 2026-08-10 at NCP `main`
-`1ffd3bf9a6c52d0279eb31a56e0664e4eec24d68`, upstream `main` is an unreleased,
-release-blocked `1.0.0-rc.1` candidate using wire `1.0`; it is not Haldir's
-runtime dependency. Haldir's native wire-1.0 migration and independent
-qualification are not run. See [NCP compatibility](docs/NCP-COMPATIBILITY.md)
-for exact pins and projection limits.
-
-## Workspace
-
-| Area | Responsibility |
+| Read next | Purpose |
 | --- | --- |
-| `haldir-contracts`, `haldir-crypto` | Canonical contracts, typed identity, COSE/Ed25519, trust, and revocation |
-| `haldir-state`, `haldir-core`, `haldir-admission` | Replay, authority, immutable decision snapshots, and controller/backend admission |
-| `haldir-policy-native` | Pure deterministic authorization policy and bounded publication history |
-| `haldir-ncp08`, `haldir-transport-zenoh` | Closed NCP construction, strict routes, bounded ingress, and typed publication |
-| `haldir-evidence`, `haldir-durable` | Signed publication journal, authenticated state, anchors, and atomic storage primitives |
-| `haldir-gate` | One-vehicle actor, startup, lifecycle, and live ownership composition |
-| `haldir-reference-plant`, `haldir-range` | Simulation-only receiver/application model and adversarial in-process scenarios |
-| `haldir-deployment` | Signed deployment-package, owned-artifact, NCP-pin, and strict Gate-configuration verification primitives |
-| `tools/haldir-ctl`, `tools/` | Offline inspection, compatibility, verification, and evidence tooling |
+| [Workflow guide](docs/WORKFLOWS.md) | Command decisions, numeric examples, and publication evidence |
+| [Architecture](docs/ARCHITECTURE.md) · [Authority graph](docs/AUTHORITY-GRAPH.md) | Owners, state, policy, and side-effect boundaries |
+| [Evidence semantics](docs/EVIDENCE-SEMANTICS.md) · [Evidence index](evidence/README.md) | Exact observed stages and retained campaigns |
+| [Limitations](docs/LIMITATIONS.md) · [Roadmap](docs/ROADMAP-STATUS.md) | Unimplemented deployment and research work |
+| [NCP compatibility](docs/NCP-COMPATIBILITY.md) | Pins, conversion, and unsupported profiles |
+| [Current-head qualification](release/0.9.0/current-head/README.md) | Current `NO_GO` program and historical lineage |
+| [Agent contract](AGENTS.md) · [Contributing](CONTRIBUTING.md) | Maintainer instructions and protected delivery rules |
 
-Dependencies point toward contracts and pure state. Transport and the reference
-plant never decide authority; Gate composes them at explicit side-effect
-boundaries. The detailed crate and lifecycle diagrams are in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Evidence and release truth
-
-Every load-bearing public claim has a `CL-*` entry and an evidence pointer in
-the [claim ledger](docs/CLAIM-LEDGER.md). Green unit tests establish only their
-declared local properties. The bounded TLA+ model, synthetic Zenoh ACL campaign,
-development bind/shutdown campaign, and reference plant each have deliberately
-narrow claim boundaries.
-
-The next architecture milestone is one private authenticated deployment shell
-that consumes the verified package, binds the running binary/configuration and
-durable identities, opens the sole protected final-route credential, authenticates
-control and state producers, runs the single-owner service under bounded
-supervision, and performs authenticated restart clearance. Production claims
-remain false until that shell and plant-side bypass closure are evidenced.
-
-## Key documents
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Claim ledger](docs/CLAIM-LEDGER.md)
-- [Assurance profiles](docs/ASSURANCE-PROFILES.md)
-- [Limitations](docs/LIMITATIONS.md)
-- [Threat model](docs/release/0.9.0/THREAT-MODEL.md)
-- [Evidence semantics](docs/EVIDENCE-SEMANTICS.md)
-- [NCP compatibility](docs/NCP-COMPATIBILITY.md)
-- [Release migration guide](docs/release/0.9.0/MIGRATION.md)
-- [Roadmap status](docs/ROADMAP-STATUS.md)
-
-## License
-
-Dual-licensed under [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your
-option.
+Dual-licensed under [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your choice.
