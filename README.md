@@ -136,6 +136,10 @@ model.
 
 ## NCP boundary
 
+The candidate local NCP experiment uses direct execution and excludes Haldir gating.
+Its supervisor must reject gated selection before endpoint preparation.
+The [local-profile boundary](docs/NCP-COMPATIBILITY.md#candidate-local-ncp-boundary) explains the unsupported action mapping and record-only advisory scope.
+
 Haldir remains pinned to the annotated NCP `v0.8.0` tag at commit
 `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e` (wire `0.8`, contract hash
 `d1b50a2d8a265276`). The default adapter uses deterministic modeled bytes; the

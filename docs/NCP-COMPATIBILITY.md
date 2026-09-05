@@ -19,6 +19,57 @@ and independent qualification are **NOT RUN** and are not dependency-ready in th
 NCP ecosystem task ledger. This provider-status note changes no dependency, runtime
 behavior, task status, phase status, or claim evidence.
 
+## Candidate local NCP boundary
+
+The candidate `ncp.local-lockstep.v1` experiment uses a direct command path.
+Haldir is absent from that path.
+Haldir has no qualified adapter for this candidate profile.
+This status does not change the immutable wire-0.8 baseline below.
+
+The experiment supervisor must reject a requested Haldir gate before preparing any endpoint.
+It must report the selected gated profile as unsupported.
+It must not substitute direct execution after that rejection.
+This requirement is a release acceptance condition, not evidence of a Haldir runtime implementation.
+
+### Native policy seam
+
+The pure prepared-policy API is `haldir_policy_native::try_decide_validated`.
+Its input is `ValidatedPolicyInput`, and its result is `Result<PolicyDecision, PolicyEvaluationError>`.
+The input joins these independently supplied values:
+
+- current monotonic time
+- active mission lease
+- trusted state snapshot
+- requested action
+- bounded action history
+- validated native policy
+
+A successful policy call alone does not execute the Gate actor or publish a command.
+`VehicleActor::decide_bounded_intent` consumes the actor's bounded intent input and applies its own state checks.
+Publication then requires the existing prepared-publication and publication-result transitions.
+The [architecture](ARCHITECTURE.md) defines those separate boundaries.
+
+The current action contract supports `Hold` and `VelocityLocalNed`.
+Velocity components use integer millimeters per second in the local north-east-down frame.
+The candidate CREBAIN experiment uses acceleration commands.
+Acceleration cannot be copied into a velocity field.
+A future adapter requires an explicit action mapping and independently tested policy and execution semantics.
+
+### Advisory evidence and identity
+
+Galadriel evidence remains record-only in this candidate experiment.
+No Galadriel verdict grants, restores, or widens Haldir authority.
+An unavailable, insufficient, or nominal assessment does not become a Haldir policy decision.
+A future policy effect requires an independently admitted contract and supporting evidence.
+
+Local NCP digests bind the supplied bytes and labels.
+They are not Haldir signatures or proof of an authenticated controller.
+The experiment must not label an unsigned local request as a signed Haldir intent.
+Existing Haldir signature, lease, policy, replay, and publication requirements remain separate.
+
+No candidate local gate execution, publication, or receiver application is claimed here.
+The [claim ledger](CLAIM-LEDGER.md) remains the authority for Haldir's tested scope.
+
 ## Pinned baseline (exact commit)
 
 | Field | Value |
