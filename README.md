@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <img alt="Haldir Gate logo" src="assets/logo-light.svg" width="200">
+    <img alt="Haldir: a closed command gate with a separate authorization input." src="assets/logo-light.svg" width="200">
   </picture>
 </p>
 
