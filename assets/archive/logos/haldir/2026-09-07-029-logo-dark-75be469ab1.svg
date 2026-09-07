@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-labelledby="haldir-mark-title haldir-mark-desc">
+  <title id="haldir-mark-title">Haldir command gate</title>
+  <desc id="haldir-mark-desc">Two teal pylons and a chamfered frame surround a command threshold. The repeating sequence consumes an intent, checks separate authority, and constructs a different command. The gate rests closed. Reduced motion keeps the closed mark still. This is experimental authorization policy, not certification.</desc>
+  <defs>
+    <radialGradient id="haldir-seat" cx="36%" cy="28%" r="82%">
+      <stop stop-color="#233442"/><stop offset=".45" stop-color="#101c30"/><stop offset="1" stop-color="#060916"/>
+    </radialGradient>
+    <linearGradient id="haldir-rim" x1="35" y1="26" x2="147" y2="158" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a455b"/><stop offset=".18" stop-color="#8aaebb"/><stop offset=".36" stop-color="#324462"/><stop offset=".54" stop-color="#101c2e"/><stop offset=".73" stop-color="#514d82"/><stop offset="1" stop-color="#182b40"/>
+    </linearGradient>
+    <linearGradient id="haldir-frame" x1="46" y1="45" x2="132" y2="137" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3e696a"/><stop offset=".23" stop-color="#234750"/><stop offset=".49" stop-color="#2a414c"/><stop offset=".51" stop-color="#132738"/><stop offset="1" stop-color="#0c192d"/>
+    </linearGradient>
+    <linearGradient id="haldir-facet" x1="57" y1="50" x2="127" y2="137" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1a3440"/><stop offset=".5" stop-color="#0d1e2b"/><stop offset="1" stop-color="#192239"/>
+    </linearGradient>
+    <linearGradient id="haldir-threshold" x1="68" y1="84" x2="113" y2="99" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffad9c"/><stop offset=".2" stop-color="#eb6b71"/><stop offset=".52" stop-color="#792d48"/><stop offset="1" stop-color="#d65467"/>
+    </linearGradient>
+    <radialGradient id="haldir-threshold-glow"><stop stop-color="#e35443" stop-opacity=".22"/><stop offset="1" stop-color="#d84235" stop-opacity="0"/></radialGradient>
+    <linearGradient id="haldir-plasma" x1="51" y1="50" x2="126" y2="131" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#bdfff0"/><stop offset=".3" stop-color="#66edcf"/><stop offset=".65" stop-color="#28bcae"/><stop offset="1" stop-color="#6f95ed"/>
+    </linearGradient>
+    <linearGradient id="haldir-corner" x1="32" y1="32" x2="145" y2="149" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#87f6d6"/><stop offset=".48" stop-color="#48bac7"/><stop offset="1" stop-color="#a594ff"/>
+    </linearGradient>
+    <filter id="haldir-emission" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="1.5"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <style>
+    .haldir-threshold-light { animation: haldir-threshold-light 10s ease-in-out infinite; }
+    @keyframes haldir-threshold-light { 0%, 100% { opacity: .45; } 50% { opacity: .85; } }
+    .haldir-intent, .haldir-command, .haldir-authority-check { opacity: 0; }
+    .haldir-intent { animation: haldir-intent 10s ease-in-out infinite; }
+    .haldir-command { animation: haldir-command 10s ease-in-out infinite; }
+    .haldir-authority-check { animation: haldir-authority-check 10s ease-in-out infinite; }
+    .haldir-gate-left { animation: haldir-gate-left 10s ease-in-out infinite; }
+    .haldir-gate-right { animation: haldir-gate-right 10s ease-in-out infinite; }
+    @keyframes haldir-intent { 0%, 8% { transform: translateY(0); opacity: 0; } 12% { opacity: 1; } 30% { transform: translateY(-22px); opacity: 1; } 36%, 100% { transform: translateY(-22px); opacity: 0; } }
+    @keyframes haldir-authority-check { 0%, 30%, 57%, 100% { opacity: 0; } 40%, 47% { opacity: .9; } }
+    @keyframes haldir-command { 0%, 59% { transform: translateY(0); opacity: 0; } 64% { opacity: 1; } 79% { transform: translateY(-12px); opacity: 1; } 85%, 100% { transform: translateY(-12px); opacity: 0; } }
+    @keyframes haldir-gate-left { 0%, 50%, 85%, 100% { transform: translateX(0); } 59%, 78% { transform: translateX(-6px); } }
+    @keyframes haldir-gate-right { 0%, 50%, 85%, 100% { transform: translateX(0); } 59%, 78% { transform: translateX(6px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .haldir-threshold-light, .haldir-intent, .haldir-command, .haldir-authority-check, .haldir-gate-left, .haldir-gate-right { animation: none; }
+    }
+  </style>
+  <g id="haldir-housing" fill="none">
+    <path d="M54 22H126L153 49V131L126 158H54L27 131V49Z" fill="url(#haldir-seat)" stroke="#070c12" stroke-width="6" stroke-linejoin="bevel"/>
+    <path d="M54 22H126L153 49V131L126 158H54L27 131V49Z" stroke="url(#haldir-rim)" stroke-width="3.8" stroke-linejoin="bevel"/>
+    <path d="M56 28H124L147 51V129L124 152H56L33 129V51Z" stroke="#7caaa4" stroke-opacity=".3" stroke-width=".8"/>
+    <path d="M39 66V53L59 33H80 M100 33H121L141 53V66 M141 114V127L121 147H100 M80 147H59L39 127V114" stroke="url(#haldir-corner)" stroke-width="1.5" filter="url(#haldir-emission)"/>
+    <path d="M52 26H70 M110 154H128 M31 110V123 M149 57V70" stroke="url(#haldir-corner)" stroke-width="2.2"/>
+    <path d="M41 47 44 50 M46 42 49 45 M131 135 134 138 M136 130 139 133" stroke="#e0eaff" stroke-opacity=".7" stroke-width="1"/>
+    <path d="M42 74V106 M138 74V106 M80 37H100 M80 143H100" stroke="#3f5374" stroke-width=".7"/>
+    <path d="M23 72H31V108H23Z M149 72H157V108H149Z" fill="#0b161e" stroke="#4c6c73" stroke-width=".7"/>
+    <path d="M26 80H28 M26 90H28 M26 100H28 M152 80H154 M152 90H154 M152 100H154" stroke="#6b918e" stroke-width="1.8"/>
+    <path d="M66 22H80 M100 22H114 M66 158H80 M100 158H114" stroke="#afc6bf" stroke-opacity=".3" stroke-width=".9"/>
+  </g>
+  <g id="haldir-gate" stroke-linejoin="bevel">
+    <path d="M49 63 62 50H76V130H60L49 119Z M131 63 118 50H104V130H120L131 119Z" fill="#070e16" stroke="#070e16" stroke-width="5" transform="translate(0 2)"/>
+    <path d="M49 63 62 50H76V130H60L49 119Z M131 63 118 50H104V130H120L131 119Z" fill="url(#haldir-frame)" stroke="url(#haldir-plasma)" stroke-width=".85"/>
+    <path d="M66 59H76V130H66Z M114 59H104V130H114Z" fill="url(#haldir-facet)"/>
+    <path d="M53 67 65 55H71V80 M127 67 115 55H109V80 M53 74V117L62 125H71V103 M127 74V117L118 125H109V103" fill="none" stroke="url(#haldir-plasma)" stroke-width="1.8" filter="url(#haldir-emission)"/>
+    <path d="M57 77V108 M123 77V108" fill="none" stroke="#152e30" stroke-width="1.4"/>
+    <path d="M57 78V91 M123 78V91" fill="none" stroke="#8af5d8" stroke-opacity=".65" stroke-width=".8"/>
+    <path d="M60 112H63 M60 116H63 M117 112H120 M117 116H120" fill="none" stroke="#97bad9" stroke-opacity=".65" stroke-width=".8"/>
+    <rect x="71" y="84" width="38" height="16" rx="1.5" fill="#071119" stroke="#223b42" stroke-width="1"/>
+    <ellipse cx="90" cy="92" rx="27" ry="16" fill="url(#haldir-threshold-glow)" class="haldir-threshold-light"/>
+    <g class="haldir-gate-left"><path d="M74 87H90V97H74Z" fill="url(#haldir-threshold)"/><path d="M76 87.8H88" fill="none" stroke="#f0ac90" stroke-opacity=".5" stroke-width=".6"/><path d="M89.1 87V97" stroke="#ef8063" stroke-width=".9"/></g>
+    <g class="haldir-gate-right"><path d="M90 87H106V97H90Z" fill="url(#haldir-threshold)"/><path d="M92 87.8H104" fill="none" stroke="#f0ac90" stroke-opacity=".5" stroke-width=".6"/><path d="M90.9 87V97" stroke="#ef8063" stroke-width=".9"/></g>
+    <path d="M60 134H120" fill="none" stroke="#7f9e97" stroke-opacity=".42" stroke-width="1"/>
+  </g>
+  <g id="haldir-authority-input">
+    <path d="M118 49V59L110 67V81" fill="none" stroke="#080f1d" stroke-width="4"/>
+    <path d="M118 49V59L110 67V81" fill="none" stroke="#bd9c61" stroke-width="1.4" stroke-dasharray="3 3"/>
+    <path d="M107 78 110 82 113 78" fill="none" stroke="#ebc88a" stroke-width="1.2"/>
+    <path d="M118 34 125 38V46L118 50 111 46V38Z" fill="#131e2f" stroke="#e2bd7d" stroke-width="1.5"/>
+    <path d="M115 40H121V44H115Z" fill="#e2bd7d"/>
+  </g>
+  <path d="M90 123 94 127 90 131 86 127Z" fill="#d6b579" stroke="#f1d8a8" stroke-width=".8" class="haldir-intent"/>
+  <path d="M90 67 94 69V74L90 76 86 74V69Z" fill="#b9ddd4" stroke="#e0eee5" stroke-width=".8" class="haldir-command"/>
+  <path d="M118 49V59L110 67V81" fill="none" stroke="#ffe1a1" stroke-width="2" stroke-dasharray="3 3" class="haldir-authority-check" filter="url(#haldir-emission)"/>
+</svg>

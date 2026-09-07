@@ -5,6 +5,8 @@
   </picture>
 </p>
 
+<p align="center"><a href="assets/archive/logos/README.md">Logo design archive</a></p>
+
 # Haldir Gate
 
 **Authorization for one new command, with evidence for each observed stage.**

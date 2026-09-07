@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-labelledby="haldir-mark-title haldir-mark-desc">
+  <title id="haldir-mark-title">Haldir command gate</title>
+  <desc id="haldir-mark-desc">Two teal metal pylons form an H around a closed red command threshold. A separate amber authority input enters from above. The emblem represents experimental authorization policy, not certification or a sensor verdict.</desc>
+  <defs>
+    <radialGradient id="haldir-seat" cx="36%" cy="28%" r="82%">
+      <stop stop-color="#20333b"/><stop offset=".52" stop-color="#101e27"/><stop offset="1" stop-color="#060c13"/>
+    </radialGradient>
+    <linearGradient id="haldir-rim" x1="35" y1="26" x2="147" y2="158" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#314550"/><stop offset=".17" stop-color="#adbac0"/><stop offset=".34" stop-color="#526d79"/><stop offset=".52" stop-color="#253743"/><stop offset=".7" stop-color="#819294"/><stop offset=".86" stop-color="#354a56"/><stop offset="1" stop-color="#81918e"/>
+    </linearGradient>
+    <linearGradient id="haldir-frame" x1="46" y1="45" x2="132" y2="137" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b0d4cd"/><stop offset=".23" stop-color="#6ca69c"/><stop offset=".5" stop-color="#305f5c"/><stop offset=".74" stop-color="#5d8a7f"/><stop offset="1" stop-color="#193b3b"/>
+    </linearGradient>
+    <linearGradient id="haldir-facet" x1="57" y1="50" x2="127" y2="137" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#365750"/><stop offset=".5" stop-color="#1d3837"/><stop offset="1" stop-color="#102727"/>
+    </linearGradient>
+    <linearGradient id="haldir-threshold" x1="68" y1="84" x2="113" y2="99" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e6a899"/><stop offset=".24" stop-color="#b55e52"/><stop offset=".62" stop-color="#762c2b"/><stop offset="1" stop-color="#bd6558"/>
+    </linearGradient>
+    <linearGradient id="haldir-authority" x1="83" y1="40" x2="98" y2="55" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ead3a4"/><stop offset=".5" stop-color="#af8b50"/><stop offset="1" stop-color="#715936"/>
+    </linearGradient>
+    <radialGradient id="haldir-threshold-glow"><stop stop-color="#e35443" stop-opacity=".22"/><stop offset="1" stop-color="#d84235" stop-opacity="0"/></radialGradient>
+  </defs>
+  <style>
+    .haldir-threshold-light { animation: haldir-threshold-light 6.4s ease-in-out infinite; }
+    @keyframes haldir-threshold-light { 0%, 100% { opacity: .45; } 50% { opacity: .85; } }
+    @media (prefers-reduced-motion: reduce) { .haldir-threshold-light { animation: none; } }
+  </style>
+  <g id="haldir-housing" fill="none">
+    <circle cx="90" cy="90" r="68" fill="url(#haldir-seat)" stroke="#070c12" stroke-width="5"/>
+    <circle cx="90" cy="90" r="68" stroke="url(#haldir-rim)" stroke-width="3.2"/>
+    <circle cx="90" cy="90" r="63.8" stroke="#8cabb7" stroke-opacity=".18" stroke-width=".65"/>
+    <path d="M22 76V104 M158 76V104" stroke="#080f16" stroke-width="5.4"/>
+    <path d="M22 82V98 M158 82V98" stroke="url(#haldir-rim)" stroke-width="1.2"/>
+    <path d="M54 35 56 38 M63 30 64 33 M117 30 116 33 M126 35 124 38 M54 145 56 142 M63 150 64 147 M117 150 116 147 M126 145 124 142" stroke="#6c8590" stroke-width="1.1" stroke-opacity=".6"/>
+  </g>
+  <g id="haldir-gate" stroke-linejoin="bevel">
+    <path d="M49 63 62 50H76V130H60L49 119Z M131 63 118 50H104V130H120L131 119Z" fill="#070e16" stroke="#070e16" stroke-width="5" transform="translate(0 2)"/>
+    <path d="M49 63 62 50H76V130H60L49 119Z M131 63 118 50H104V130H120L131 119Z" fill="url(#haldir-frame)" stroke="#678c83" stroke-width=".7"/>
+    <path d="M66 59H76V130H66Z M114 59H104V130H114Z" fill="url(#haldir-facet)"/>
+    <path d="M52 65 64 53H73 M128 65 116 53H107 M52 66V117 M128 66V117" fill="none" stroke="#c0dace" stroke-opacity=".48" stroke-width="1"/>
+    <path d="M57 77V108 M123 77V108" fill="none" stroke="#152e30" stroke-width="1.4"/>
+    <path d="M57 78V91 M123 78V91" fill="none" stroke="#8cb8a9" stroke-opacity=".55" stroke-width=".75"/>
+    <rect x="71" y="84" width="38" height="16" rx="1.5" fill="#071119" stroke="#223b42" stroke-width="1"/>
+    <ellipse cx="90" cy="92" rx="27" ry="16" fill="url(#haldir-threshold-glow)" class="haldir-threshold-light"/>
+    <path d="M74 87H89V97H74Z M91 87H106V97H91Z" fill="url(#haldir-threshold)"/>
+    <path d="M76 87.8H87 M93 87.8H104" fill="none" stroke="#f0ac90" stroke-opacity=".5" stroke-width=".6"/>
+    <path d="M89.3 87H90.7V97H89.3Z" fill="#ef8063" class="haldir-threshold-light"/>
+    <path d="M60 134H120" fill="none" stroke="#7f9e97" stroke-opacity=".42" stroke-width="1"/>
+  </g>
+  <g id="haldir-authority-input">
+    <path d="M90 54V76" fill="none" stroke="#aa8b55" stroke-width="1.4" stroke-dasharray="3 3"/>
+    <path d="M86 73 90 77 94 73" fill="none" stroke="#b89b6a" stroke-width="1.3"/>
+    <path d="M90 38 97 42V50L90 54 83 50V42Z" fill="#17242b" stroke="url(#haldir-authority)" stroke-width="1.6"/>
+    <path d="M87 44H93V48H87Z" fill="url(#haldir-authority)"/>
+  </g>
+</svg>

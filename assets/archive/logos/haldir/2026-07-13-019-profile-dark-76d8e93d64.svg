@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="308 192 124 124" width="124" height="124" role="img" aria-label="HALDIR historical profile mark"><title>HALDIR historical profile mark</title><desc>Archived design extracted from a historical portfolio SVG. This image makes no current product or release claim.</desc><defs><filter id="hdBloom" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.5" result="b" />
+      <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+    <radialGradient id="hdGrad" cx="50%" cy="40%" r="68%">
+      <stop offset="0%" stop-color="#042f2a" />
+      <stop offset="100%" stop-color="#10131a" />
+    </radialGradient>
+    <filter id="nodeShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.4" flood-color="#000000" flood-opacity="0.38" />
+    </filter>
+    </defs><style>:root{--hub-accent: #34d399; --cube-accent: #fb923c; --tri-accent: #a78bfa;}
+.seat-ring{fill: none; stroke-width: 2.2;}
+.seat-groove{fill: none; stroke: #05070b; stroke-opacity: 0.5; stroke-width: 1;}
+.seat-hairline{fill: none; stroke: #2b333d; stroke-opacity: 0.55; stroke-width: 1;}
+.seat-hd{fill: url(#hdGrad);}
+.hd-void{fill: #03211d;}
+.hd-frame{fill: url(#haldirArch); stroke: #0f766e; stroke-width: 0.5; stroke-opacity: 0.7;}
+.hd-speed{fill: none; stroke: #5eead4; stroke-width: 0.6; stroke-opacity: 0.4; stroke-linecap: round;}
+.hd-thresh{fill: none; stroke: #2dd4bf; stroke-width: 1.6; stroke-linecap: round; stroke-opacity: 0.85;}
+.hd-beam{fill: none; stroke: #ef4444; stroke-width: 1.4; stroke-linecap: round; stroke-opacity: 0.92;}
+.hd-diode{fill: #ff3b47;}
+.hd-diode-hot{fill: #ffe1dd;}
+.hd-core{fill: #ef4444;}
+.hd-core-facet{fill: #ff9d94; fill-opacity: 0.95;}
+.hd-core-hot{fill: #fff1f0;}
+.hd-coreglow{fill: url(#hdCoreGlow);}
+.hd-sun{fill: none; stroke: #ff6b5e; stroke-width: 0.8; stroke-opacity: 0.85; stroke-linecap: round;}
+.hd-scan{fill: #ffd9d4;}
+.hd-tok-in{fill: #ff6b5e;}
+.hd-tok-out{fill: #fff1f0;}
+.hd-flash{fill: #fff1f0;}</style><g class="nodes"><g>
+    <defs>
+      <linearGradient id="haldirArch" x1="0" y1="227" x2="0" y2="276" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#99f6e4" /><stop offset="50%" stop-color="#2dd4bf" /><stop offset="100%" stop-color="#0f766e" />
+      </linearGradient>
+      <radialGradient id="hdCoreGlow" gradientUnits="userSpaceOnUse" cx="370" cy="235.5" r="7">
+        <stop offset="0%" stop-color="#ff6b5e" stop-opacity="0.9" /><stop offset="55%" stop-color="#ef4444" stop-opacity="0.4" /><stop offset="100%" stop-color="#ef4444" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <defs>
+      <linearGradient id="hdBezel" x1="0" y1="220" x2="0" y2="288" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#99f6e4" /><stop offset="45%" stop-color="#2dd4bf" /><stop offset="100%" stop-color="#0f766e" />
+      </linearGradient>
+    </defs>
+    <g filter="url(#nodeShadow)"><circle cx="370" cy="254" r="34" class="seat-hd" /></g>
+    <circle cx="370" cy="254" r="34" stroke="url(#hdBezel)" class="seat-ring" />
+    <circle cx="370" cy="254" r="31.8" class="seat-groove" />
+    <circle cx="370" cy="254" r="35.4" class="seat-hairline" />
+    <path class="hd-void" d="M379.5 272 L379.5 260 L377 260 L377 249 L375 249 L375 240 L373 238.5 L370 238.5 L367 238.5 L365 240 L365 249 L363 249 L363 260 L360.5 260 L360.5 272 Z" />
+    <path class="hd-frame" d="M388 276 L388 261 L384.5 261 L384.5 250 L381 250 L381 240 L377 240 L377 235 L374.5 235 L374.5 230 L372.5 230 L372.5 227 L367.5 227 L367.5 230 L365.5 230 L365.5 235 L363 235 L363 240 L359 240 L359 250 L355.5 250 L355.5 261 L352 261 L352 276 Z M379.5 272 L379.5 260 L377 260 L377 249 L375 249 L375 240 L373 238.5 L370 238.5 L367 238.5 L365 240 L365 249 L363 249 L363 260 L360.5 260 L360.5 272 Z" fill-rule="evenodd" />
+    <path class="hd-frame" d="M352 272 L388 272 L388 276 L352 276 Z" />
+    <path class="hd-speed" d="M354 273 H386" /><path class="hd-speed" d="M354 274.2 H386" /><path class="hd-speed" d="M354 275.4 H386" />
+    <path class="hd-thresh" d="M352 272 H388" />
+    <circle class="hd-coreglow" cx="370" cy="235.5" r="7"><animate attributeName="r" values="7;7;7;11;7;7" keyTimes="0;0.06;0.52;0.56;0.6;1" dur="5s" repeatCount="indefinite" /></circle>
+    <g class="hd-lit" filter="url(#hdBloom)">
+      <animate attributeName="opacity" values="0.9;0.9;1;0.92;0.92" keyTimes="0;0.06;0.16;0.3;1" dur="5s" repeatCount="indefinite" /><path class="hd-beam" d="M379 267 L370 267" stroke-dasharray="9 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;9;9;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M361 267 L370 267" stroke-dasharray="9 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;9;9;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M378.5 260 L370 260" stroke-dasharray="8.5 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;8.5;8.5;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M361.5 260 L370 260" stroke-dasharray="8.5 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;8.5;8.5;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M376.5 252 L370 252" stroke-dasharray="6.5 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;6.5;6.5;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M363.5 252 L370 252" stroke-dasharray="6.5 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;6.5;6.5;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M374.5 245 L370 245" stroke-dasharray="4.5 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;4.5;4.5;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M365.5 245 L370 245" stroke-dasharray="4.5 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;4.5;4.5;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M373.5 241 L373.5 256" stroke-dasharray="15 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;15;15;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M373.5 271 L373.5 256" stroke-dasharray="15 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;15;15;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M366.5 241 L366.5 256" stroke-dasharray="15 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;15;15;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><path class="hd-beam" d="M366.5 271 L366.5 256" stroke-dasharray="15 40" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;0;15;15;-1.5;0;0" keyTimes="0;0.3;0.42;0.7;0.76;0.8;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.3 0 0.2 1;0.5 0 1 1;0.2 0 0 1;0.3 0 0.4 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></path><circle class="hd-diode" cx="379" cy="267" r="1.5" /><circle class="hd-diode-hot" cx="379" cy="267" r="0.7" /><circle class="hd-diode" cx="361" cy="267" r="1.5" /><circle class="hd-diode-hot" cx="361" cy="267" r="0.7" /><circle class="hd-diode" cx="378.5" cy="260" r="1.5" /><circle class="hd-diode-hot" cx="378.5" cy="260" r="0.7" /><circle class="hd-diode" cx="361.5" cy="260" r="1.5" /><circle class="hd-diode-hot" cx="361.5" cy="260" r="0.7" /><circle class="hd-diode" cx="376.5" cy="252" r="1.5" /><circle class="hd-diode-hot" cx="376.5" cy="252" r="0.7" /><circle class="hd-diode" cx="363.5" cy="252" r="1.5" /><circle class="hd-diode-hot" cx="363.5" cy="252" r="0.7" /><circle class="hd-diode" cx="374.5" cy="245" r="1.5" /><circle class="hd-diode-hot" cx="374.5" cy="245" r="0.7" /><circle class="hd-diode" cx="365.5" cy="245" r="1.5" /><circle class="hd-diode-hot" cx="365.5" cy="245" r="0.7" /><path class="hd-sun" d="M370 235 L370 230" /><path class="hd-sun" d="M370 235 L367.4 230.6" /><path class="hd-sun" d="M370 235 L372.6 230.6" /><path class="hd-sun" d="M370 235 L365.6 232" /><path class="hd-sun" d="M370 235 L374.4 232" /><polygon class="hd-core" points="370,233 372.6,234.3 372.6,236.7 370,238 367.4,236.7 367.4,234.3" /><polygon class="hd-core-facet" points="370,233 372.6,234.3 370,235.5 367.4,234.3" /><circle class="hd-core-hot" cx="370" cy="235.5" r="0.9"><animate attributeName="r" values="0.9;0.9;2.6;0.9;0.9" keyTimes="0;0.52;0.56;0.62;1" dur="5s" repeatCount="indefinite" /></circle>
+    </g>
+    <rect class="hd-scan" x="361" y="240" width="18" height="1.3" opacity="0"><animate attributeName="opacity" values="0;0;0.85;0;0" keyTimes="0;0.16;0.23;0.3;1" dur="5s" repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 30;0 30" keyTimes="0;0.16;0.3;1" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.6 1;0 0 1 1" dur="5s" repeatCount="indefinite" /></rect><polygon class="hd-tok-in" opacity="0" points="370,269 372.6,271.4 370,273.8 367.4,271.4"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.16;0.24;0.48;0.52;1" dur="5s" repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 -34;0 -34;0 -34" keyTimes="0;0.3;0.52;0.6;1" dur="5s" repeatCount="indefinite" /></polygon><polygon class="hd-tok-out" opacity="0" points="370,233.5 372,234.7 372,237 370,238.2 368,237 368,234.7"><animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.6;0.65;0.7;1" dur="5s" repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 -9;0 -9" keyTimes="0;0.6;0.7;1" dur="5s" repeatCount="indefinite" /></polygon><circle class="hd-flash" cx="370" cy="256" r="0" opacity="0"><animate attributeName="r" values="0;0;7;0;0" keyTimes="0;0.72;0.76;0.8;1" dur="5s" repeatCount="indefinite" /><animate attributeName="opacity" values="0;0;0.95;0;0" keyTimes="0;0.72;0.76;0.8;1" dur="5s" repeatCount="indefinite" /></circle>
+    </g>
+    </g></svg>

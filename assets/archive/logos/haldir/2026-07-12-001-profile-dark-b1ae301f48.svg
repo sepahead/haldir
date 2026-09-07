@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="262 78 124 124" width="124" height="124" role="img" aria-label="HALDIR historical profile mark"><title>HALDIR historical profile mark</title><desc>Archived design extracted from a historical portfolio SVG. This image makes no current product or release claim.</desc><defs><radialGradient id="hdGrad" cx="50%" cy="40%" r="68%">
+      <stop offset="0%" stop-color="#042f2a" />
+      <stop offset="100%" stop-color="#10131a" />
+    </radialGradient>
+    <filter id="nodeShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.4" flood-color="#000000" flood-opacity="0.38" />
+    </filter>
+    </defs><style>:root{--hub-accent: #34d399; --cube-accent: #fb923c; --tri-accent: #a78bfa;}
+.seat-ring{fill: none; stroke-width: 2.2;}
+.seat-groove{fill: none; stroke: #05070b; stroke-opacity: 0.5; stroke-width: 1;}
+.seat-hairline{fill: none; stroke: #2b333d; stroke-opacity: 0.55; stroke-width: 1;}
+.seat-hd{fill: url(#hdGrad);}
+.hd-crownglow{fill: url(#hdCrownGlow);}
+.hd-thresh{fill: none; stroke: #2dd4bf; stroke-width: 1.6; stroke-linecap: round; stroke-opacity: 0.85;}
+.hd-arch-band{fill: url(#haldirArch); stroke: #0f766e; stroke-width: 0.5; stroke-opacity: 0.6;}
+.hd-archivolt{fill: none; stroke: #0f766e; stroke-width: 1.2; stroke-opacity: 0.9; stroke-linecap: round; stroke-linejoin: round;}
+.hd-stud{fill: #ccfbf1; fill-opacity: 0.9;}
+.hd-grille-bar{fill: none; stroke: #2dd4bf; stroke-width: 1.5; stroke-opacity: 0.92; stroke-linecap: round;}
+.hd-spike{fill: #2dd4bf;}
+.hd-signet{fill: #2dd4bf; stroke: #0d9488; stroke-width: 0.6;}
+.hd-signet-facet{fill: #ecfeff; fill-opacity: 0.9;}
+.hd-keyhole{fill: #042f2a;}
+.hd-denied{fill: #0f766e; fill-opacity: 0.5; stroke: #0f766e; stroke-opacity: 0.55; stroke-width: 1;}
+.hd-intoken{fill: #2dd4bf;}
+.hd-spark{fill: #ecfeff;}
+.hd-sealtoken{fill: #5eead4;}</style><g class="nodes"><g>
+    <defs>
+      <linearGradient id="haldirArch" x1="0" y1="114" x2="0" y2="160" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#99f6e4" /><stop offset="50%" stop-color="#2dd4bf" /><stop offset="100%" stop-color="#0f766e" />
+      </linearGradient>
+      <radialGradient id="hdCrownGlow" gradientUnits="userSpaceOnUse" cx="324" cy="123" r="8">
+        <stop offset="0%" stop-color="#99f6e4" stop-opacity="0.85" /><stop offset="100%" stop-color="#99f6e4" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <defs>
+      <linearGradient id="hdBezel" x1="0" y1="106" x2="0" y2="174" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#99f6e4" /><stop offset="45%" stop-color="#2dd4bf" /><stop offset="100%" stop-color="#0f766e" />
+      </linearGradient>
+    </defs>
+    <g filter="url(#nodeShadow)"><circle cx="324" cy="140" r="34" class="seat-hd" /></g>
+    <circle cx="324" cy="140" r="34" stroke="url(#hdBezel)" class="seat-ring" />
+    <circle cx="324" cy="140" r="31.8" class="seat-groove" />
+    <circle cx="324" cy="140" r="35.4" class="seat-hairline" />
+    <path class="hd-thresh" d="M305 160 H343" />
+    <path class="hd-arch-band" d="M309 160 L309 141 C309 127 314 115 324 114 C334 115 339 127 339 141 L339 160 Z M317 158 L317 139 C317 131 319.5 127 324 126.5 C328.5 127 331 131 331 139 L331 158 Z" fill-rule="evenodd" />
+    <path class="hd-archivolt" d="M313 159 L313 140 C313 129 317 119.5 324 119 C331 119.5 335 129 335 140 L335 159" />
+    <circle class="hd-stud" cx="324" cy="116" r="0.9" /><circle class="hd-stud" cx="315" cy="131" r="0.9" /><circle class="hd-stud" cx="333" cy="131" r="0.9" />
+    <g class="hd-grille"><path class="hd-grille-bar" d="M319.8 136 L319.8 152" /><polygon class="hd-spike" points="318.4,152 319.8,154.6 321.2,152" /><path class="hd-grille-bar" d="M324 136 L324 152" /><polygon class="hd-spike" points="322.6,152 324,154.6 325.4,152" /><path class="hd-grille-bar" d="M328.2 136 L328.2 152" /><polygon class="hd-spike" points="326.8,152 328.2,154.6 329.6,152" /><path class="hd-grille-bar" d="M318.8 136 H329.2" /><path class="hd-grille-bar" d="M318.8 144 H329.2" /><path class="hd-grille-bar" d="M318.8 152 H329.2" /><animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 -14;0 -14;0 0;0 0" keyTimes="0;0.14;0.30;0.62;0.78;1" dur="4.4s" repeatCount="indefinite" /></g>
+    <circle class="hd-crownglow" cx="324" cy="123" r="8" opacity="0.42"><animate attributeName="opacity" values="0.42;0.42;0.95;0.42;0.42" keyTimes="0;0.4;0.47;0.58;1" dur="4.4s" repeatCount="indefinite" /></circle>
+    <polygon class="hd-signet" points="324,118.5 327.5,121.2 327.5,124.8 324,127.5 320.5,124.8 320.5,121.2" /><polygon class="hd-signet-facet" points="324,118.5 327.5,121.2 324,122.5 320.5,121.2" /><circle class="hd-keyhole" cx="324" cy="122" r="1" /><polygon class="hd-keyhole" points="323.2,123 324.8,123 324,125.7" />
+    <rect class="hd-denied" x="321" y="163" width="6" height="4" rx="1" />
+    <g class="hd-intoken" opacity="0"><polygon points="324,159.6 326.4,162 324,164.4 321.6,162" /><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.14;0.2;0.4;0.44;1" dur="4.4s" repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 -30;0 -30;0 -30;0 -30" keyTimes="0;0.14;0.42;0.6;0.8;1" dur="4.4s" repeatCount="indefinite" /></g><circle class="hd-spark" cx="324" cy="131" r="0" opacity="0"><animate attributeName="r" values="0;0;6;0" keyTimes="0;0.4;0.47;0.53" dur="4.4s" repeatCount="indefinite" /><animate attributeName="opacity" values="0;0;0.9;0" keyTimes="0;0.4;0.47;0.53" dur="4.4s" repeatCount="indefinite" /></circle><g class="hd-sealtoken" opacity="0"><polygon points="324,129.4 326.6,132 324,134.6 321.4,132" /><animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.42;0.5;0.62;1" dur="4.4s" repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 -24;0 -24" keyTimes="0;0.42;0.62;1" dur="4.4s" repeatCount="indefinite" /></g>
+    </g>
+  </g></svg>
