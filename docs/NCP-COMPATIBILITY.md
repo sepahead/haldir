@@ -51,9 +51,15 @@ The [architecture](ARCHITECTURE.md) defines those separate boundaries.
 
 The current action contract supports `Hold` and `VelocityLocalNed`.
 Velocity components use integer millimeters per second in the local north-east-down frame.
-The candidate CREBAIN experiment uses acceleration commands.
+The earlier fixed-role CREBAIN reference experiment uses acceleration commands.
 Acceleration cannot be copied into a velocity field.
 A future adapter requires an explicit action mapping and independently tested policy and execution semantics.
+
+The current modular [CREBAIN sensor application](https://github.com/sepahead/crebain/tree/main/integrations/ncp-force-ground-sensors) is a separate interface.
+Its body target uses roll, pitch, and heading in radians, plus altitude in meters.
+Those fields cannot be copied into Haldir's local-NED velocity command.
+Haldir has no qualified gate for that application.
+The [NCP modular guide](https://github.com/sepahead/NCP/blob/main/local/modular/STATUS.md) records its separate current scope.
 
 ### Advisory evidence and identity
 

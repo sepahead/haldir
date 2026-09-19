@@ -124,20 +124,21 @@ The off-by-default `real-ncp` feature validates exact compact JSON against that 
 | Project or input | Intended role | Current Haldir boundary |
 | --- | --- | --- |
 | [NCP](https://github.com/sepahead/NCP) | Typed command and transport contract | Exact retained wire-0.8 adapter; no qualified native-local gate |
-| [Engram](https://github.com/sepahead/engram) / NEST | External signed-intent controller | No integrated neural producer or behavioral backend-conformance result |
+| [Engram (private source)](https://github.com/sepahead/Paper2Brain) / NEST | External signed-intent controller | Private repository access is required. No integrated neural producer or behavioral backend-conformance result |
 | [CREBAIN](https://github.com/sepahead/crebain) | External plant and application owner | No qualified Haldir plant-side integration or actuator-bypass closure |
 | [Galadriel](https://github.com/sepahead/galadriel) | Prospective advisory evidence producer | No runtime edge; a verdict cannot grant or widen authority |
 | PID evidence | Possible research input under a future admitted contract | No decision override or authority source |
 | [Prisoma](https://github.com/sepahead/prisoma) | Possible external experiment or evidence consumer | No qualified Haldir experiment or export adapter |
 
-The candidate local NCP experiment uses direct execution and excludes Haldir gating.
+The earlier fixed-role NCP reference experiment uses direct execution and excludes Haldir gating.
 A requested gated selection must fail before any endpoint is prepared.
 It must not fall back to direct execution.
 Local digest checks are not Haldir signatures or authenticated controller intents.
 
-The local experiment's acceleration actions cannot be copied into Haldir's velocity fields.
+That reference experiment's acceleration actions cannot be copied into Haldir's velocity fields.
 A new profile needs explicit units, frames, action mapping, authority, and application evidence.
 The [local compatibility boundary](docs/NCP-COMPATIBILITY.md#candidate-local-ncp-boundary) owns that requirement.
+It also distinguishes the current modular CREBAIN body target from Haldir's velocity command.
 
 The August 10, 2026 inspection recorded a different, unreleased NCP `1.0.0-rc.1` candidate at
 `1ffd3bf9a6c52d0279eb31a56e0664e4eec24d68`.
