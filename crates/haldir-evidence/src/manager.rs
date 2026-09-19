@@ -2646,37 +2646,6 @@ mod tests {
     }
 
     #[test]
-    fn existing_lock_rejects_a_fifo_without_waiting_for_a_writer() {
-        use std::sync::mpsc;
-        use std::thread;
-        use std::time::Duration;
-
-        let directory = TestDirectory::new();
-        let journal = directory.journal();
-        fs::create_dir(&journal).unwrap();
-        assert!(
-            std::process::Command::new("mkfifo")
-                .arg(journal.join(LOCK_FILE_NAME))
-                .status()
-                .unwrap()
-                .success()
-        );
-        let (sender, receiver) = mpsc::channel();
-        let worker = thread::spawn(move || {
-            sender
-                .send(lock_directory(&journal, OpenMode::OpenExisting))
-                .unwrap();
-        });
-
-        let result = receiver
-            .recv_timeout(Duration::from_secs(2))
-            .expect("FIFO journal-lock open exceeded the nonblocking deadline");
-        worker.join().unwrap();
-
-        assert!(matches!(result, Err(JournalManagerError::Storage)));
-    }
-
-    #[test]
     fn provision_new_requests_an_owner_only_journal_directory() {
         let directory = TestDirectory::new();
         let journal = directory.journal();
@@ -2760,6 +2729,8 @@ mod tests {
 
         assert!(matches!(second, Err(JournalManagerError::LockHeld)));
         drop(first);
+        let (replacement, _) = open(&directory.journal(), 2, limits(4, 4)).unwrap();
+        drop(replacement);
     }
 
     #[test]

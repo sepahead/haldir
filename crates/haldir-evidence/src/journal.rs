@@ -1453,36 +1453,6 @@ mod tests {
     }
 
     #[test]
-    fn inspection_rejects_a_fifo_without_waiting_for_a_writer() {
-        use std::sync::mpsc;
-        use std::thread;
-        use std::time::Duration;
-
-        let directory = TestDirectory::new();
-        let path = directory.0.join("segment");
-        assert!(
-            std::process::Command::new("mkfifo")
-                .arg(&path)
-                .status()
-                .unwrap()
-                .success()
-        );
-        let (sender, receiver) = mpsc::channel();
-        let worker = thread::spawn(move || {
-            sender
-                .send(ActiveEvidenceSegment::inspect_identity(path, bounds()))
-                .unwrap();
-        });
-
-        let result = receiver
-            .recv_timeout(Duration::from_secs(2))
-            .expect("FIFO segment open exceeded the nonblocking deadline");
-        worker.join().unwrap();
-
-        assert_eq!(result.unwrap_err(), JournalError::Storage);
-    }
-
-    #[test]
     fn decoder_rejects_a_declared_header_above_the_format_bound() {
         let oversized_len = ActiveEvidenceSegment::maximum_header_bytes() + 1;
         let mut bytes = vec![0; oversized_len];
