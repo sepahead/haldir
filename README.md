@@ -180,4 +180,6 @@ None supplies a complete authenticated deployment shell, protected credential cu
 | [Current-head qualification](release/0.9.0/current-head/README.md) | Current `NO_GO` program and historical lineage |
 | [Agent contract](AGENTS.md) · [Contributing](CONTRIBUTING.md) | Maintainer instructions and protected delivery rules |
 
+Author and maintainer: **[Sepehr Mahmoudian](https://github.com/sepahead)**.
+
 Dual-licensed under [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your choice.
