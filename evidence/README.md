@@ -10,16 +10,20 @@ golden vectors (`contracts/vectors/`, checked by `tools/verify-generated.py`) an
 the source pins (`tools/pins.toml`, checked by `tools/verify-pins.py`).
 
 `11-secure-zenoh-live/` retains the narrow receiver-observed synthetic command/intent ACL
-campaign. `12-live-gate-dev-smoke/` retains the separately verified development-only Gate
-campaign generated from clean source commit `3a75c039c3e73b999a74741b5633ee43a0a69e97`:
+campaign. `13-live-gate-dev-smoke-ncp-1.0/` retains the separately verified development-only Gate
+campaign generated from clean source commit `d7276bc2a0b6ce3a5520bb0612eec9480dace417`, the exact NCP 1.0 build:
 offline `ProvisionNew`, live `OpenExisting`, strict-session-open and aggregate-bind local returns,
 an immediate aggregate-shutdown local return, zero intents processed, and zero commands published.
+`12-live-gate-dev-smoke/` keeps the same campaign for the earlier NCP v0.8 build (source commit
+`3a75c039c3e73b999a74741b5633ee43a0a69e97`) as history; the verifier checks the NCP 1.0 run.
 NEST, PX4-SITL, backend, and performance evidence directories remain absent (see
 `docs/LIMITATIONS.md`).
 
 - `source-review/` — source pins and baseline ledger.
 - `11-secure-zenoh-live/` — pinned-router, ephemeral-PKI ACL subset evidence.
-- `12-live-gate-dev-smoke/` — pinned-router development Gate bind/local-shutdown evidence.
+- `12-live-gate-dev-smoke/` — the same campaign for the earlier NCP v0.8 build (history).
+- `13-live-gate-dev-smoke-ncp-1.0/` — pinned-router development Gate bind/local-shutdown evidence
+  for the exact NCP 1.0 build.
 
 The retained Gate campaign has an explicit generate/check/promotion handoff. To create a fresh
 candidate from a clean committed tree, use one new disposable fixture/output name:

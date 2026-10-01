@@ -1,0 +1,50 @@
+{
+  "bind_result_sha256": "b215045a85b3d52bdd6530e6ccea8bae779e4f9e8762dae2fa8a418fe0de6372",
+  "builder_image": "docker.io/library/rust@sha256:5e2214abe154fe26e39f64488952e5c991eeed1d6d6da7cc8381ae83927f0cfc",
+  "cargo_lock_sha256": "b1fc7211b28924e8d60da295e71b2b31478a1e290778dba49fbc9822d1ad2c5f",
+  "cleanup": {
+    "gate_container_removed": true,
+    "inspector_container_removed": true,
+    "network_removed": true,
+    "private_material_removed": true,
+    "provision_container_removed": true,
+    "raw_fixture_removed": true,
+    "router_container_removed": true,
+    "smoke_image_removed": true
+  },
+  "dockerfile_sha256": "62a93dce704a02bc3d500f5f62d759dcde7f309bacbe84f3948c46c535308ccb",
+  "example_executable_sha256": {
+    "live_gate_dev_bind_shutdown": "6b557c05c0bef7554e4bd1efbb31671eaae822065c8d4beadfea5376c3463879",
+    "live_gate_dev_fixture_provision": "2402d3e9d5017df5b6a10781a15ebc98c46268f4c54456ac3d8eb76fa31d3867"
+  },
+  "examples": [
+    "live_gate_dev_fixture_provision",
+    "live_gate_dev_bind_shutdown"
+  ],
+  "finished_at_utc": "2026-10-01T18:20:49Z",
+  "fixture_transition": "ProvisionNew-offline-then-OpenExisting-live",
+  "gate_config_sha256": "03c1302547bd1eeb2c676690782b0bd52ea83a15fb206052a92640d2b9409a30",
+  "generator_actions": {
+    "independent_verification_performed": false,
+    "promotion_performed": false
+  },
+  "limitations": [
+    "the generator performs no independent verification or evidence promotion",
+    "the bind target processes zero intents and publishes zero commands",
+    "local bind and shutdown returns do not prove delivery or remote cleanup",
+    "the fixture uses local-rewritable development state and deterministic public test keys",
+    "ephemeral test PKI and disposable containers do not prove production credential custody",
+    "the cooperative lock and path checks assume a trusted host",
+    "abrupt process, host, or daemon loss can require manual cleanup; build cache is not campaign evidence"
+  ],
+  "profile_id": "haldir-secure-reference-v1",
+  "profile_sha256": "76a10873155ef5fe85f13117fdf6fcb6f3938399823cbb6af9bff523a3b54e06",
+  "provision_result_sha256": "1bf78fe97ea82b0f3cdad69703b7afdcf606742d4b19100d5527d961671a6b34",
+  "router_image": "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+  "schema_version": 2,
+  "smoke_image_id": "sha256:15c2fae20406ddcf5140724a562c18a2bd904c1b574267650e11922c48e70a72",
+  "source_commit": "d7276bc2a0b6ce3a5520bb0612eec9480dace417",
+  "source_dirty": false,
+  "source_snapshot_sha256": "d4b676657db6390aaa26447e97b3c93f0b334611c0e5e83db0efb8238bd7882d",
+  "started_at_utc": "2026-10-01T18:19:10Z"
+}

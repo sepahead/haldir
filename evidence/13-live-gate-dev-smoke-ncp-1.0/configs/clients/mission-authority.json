@@ -1,0 +1,56 @@
+{
+  "adminspace": {
+    "enabled": false
+  },
+  "connect": {
+    "endpoints": [
+      "tls/router.haldir.invalid:7447"
+    ],
+    "exit_on_failure": true,
+    "timeout_ms": 10000
+  },
+  "listen": {
+    "endpoints": []
+  },
+  "mode": "client",
+  "plugins": {},
+  "plugins_loading": {
+    "enabled": false
+  },
+  "scouting": {
+    "gossip": {
+      "enabled": false
+    },
+    "multicast": {
+      "enabled": false
+    }
+  },
+  "transport": {
+    "link": {
+      "rx": {
+        "buffer_size": 65535,
+        "max_message_size": 32768
+      },
+      "tls": {
+        "close_link_on_expiration": true,
+        "connect_certificate": "/run/secrets/haldir-secure-reference-v1/mission-authority.cert.pem",
+        "connect_private_key": "/run/secrets/haldir-secure-reference-v1/mission-authority.key.pem",
+        "enable_mtls": true,
+        "root_ca_certificate": "/run/secrets/haldir-secure-reference-v1/ca.pem",
+        "verify_name_on_connect": true
+      },
+      "tx": {
+        "queue": {
+          "congestion_control": {
+            "block": {
+              "wait_before_close": 50000
+            }
+          }
+        }
+      }
+    },
+    "shared_memory": {
+      "enabled": false
+    }
+  }
+}

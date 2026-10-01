@@ -240,10 +240,10 @@ REQUIRED_JOB_SHA256 = {
         "0eb0a0e75662827088aeb2f57a559e6ca56308a8d67b7ecdd598244b27e35291"
     ),
     "supply-chain": (
-        "ee089907f1eb9f45c262d54997181c87a8b0b345393b5031c6f44959f22f4c86"
+        "d1a587d9e232f58ef95b2a9c73e806fb3322702df8a1808d150f628c9f88b71f"
     ),
     "tlc-model-check": (
-        "f27dc5ded47c88cf35cee23b147572207e892ab1c540a95a9972f82d104934f8"
+        "039e728477b83aed2666860165902d596f0aa69a8d01b880919d33527ecd1e17"
     ),
 }
 SUPPLY_CHAIN_JOB_SHA256 = REQUIRED_JOB_SHA256["supply-chain"]
@@ -758,6 +758,8 @@ def _expected_lineage_step(*, name: str, gate_command: str) -> str:
         "        env:\n"
         "          EPOCH19_BREACH_SHA: "
         "97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8\n"
+        "          EPOCH20_TRANSITION_SHA: "
+        "d7276bc2a0b6ce3a5520bb0612eec9480dace417\n"
         "          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}\n"
         "          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}\n"
         "        run: |\n"
@@ -781,7 +783,15 @@ def _expected_lineage_step(*, name: str, gate_command: str) -> str:
         "          fi\n"
         '          [[ "$TRUSTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]\n'
         '          /usr/bin/git cat-file -e "${TRUSTED_BASE_SHA}^{commit}"\n'
-        "          if /usr/bin/git cat-file -e \\\n"
+        '          if [[ "$TRUSTED_BASE_SHA" == "$EPOCH20_TRANSITION_SHA" ]]\n'
+        "          then\n"
+        "            # Owner-signed epoch-20 transition: this base lies outside epoch 19's\n"
+        "            # successor scope by design, so no predecessor verifier can vouch for\n"
+        "            # it. Only a push or manual dispatch of its direct child proceeds; the\n"
+        "            # gate below then checks the whole chain with that child's reviewed\n"
+        "            # epoch-20 verifier.\n"
+        '            [[ "$GITHUB_EVENT_NAME" != pull_request ]]\n'
+        "          elif /usr/bin/git cat-file -e \\\n"
         '            "${TRUSTED_BASE_SHA}:tools/release/'
         'verify-current-lineage.py" \\\n'
         "            2>/dev/null\n"

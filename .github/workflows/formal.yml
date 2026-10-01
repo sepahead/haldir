@@ -50,6 +50,7 @@ jobs:
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         env:
           EPOCH19_BREACH_SHA: 97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8
+          EPOCH20_TRANSITION_SHA: d7276bc2a0b6ce3a5520bb0612eec9480dace417
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -72,7 +73,15 @@ jobs:
           fi
           [[ "$TRUSTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           /usr/bin/git cat-file -e "${TRUSTED_BASE_SHA}^{commit}"
-          if /usr/bin/git cat-file -e \
+          if [[ "$TRUSTED_BASE_SHA" == "$EPOCH20_TRANSITION_SHA" ]]
+          then
+            # Owner-signed epoch-20 transition: this base lies outside epoch 19's
+            # successor scope by design, so no predecessor verifier can vouch for
+            # it. Only a push or manual dispatch of its direct child proceeds; the
+            # gate below then checks the whole chain with that child's reviewed
+            # epoch-20 verifier.
+            [[ "$GITHUB_EVENT_NAME" != pull_request ]]
+          elif /usr/bin/git cat-file -e \
             "${TRUSTED_BASE_SHA}:tools/release/verify-current-lineage.py" \
             2>/dev/null
           then

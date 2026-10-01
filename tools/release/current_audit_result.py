@@ -37,6 +37,14 @@ RECOVERY_RECORD = (
 ACTIVATION_RECORD = (
     "release/0.9.0/current-head/closures/framework-recovery/FR-0019-activation.json"
 )
+# Epoch 20 begins at this owner-signed transition commit; see the lineage verifier.
+EPOCH20_TRANSITION_COMMIT = "d7276bc2a0b6ce3a5520bb0612eec9480dace417"
+EPOCH20_RECOVERY_RECORD = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0020-recovery.json"
+)
+EPOCH20_ACTIVATION_RECORD = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0020-activation.json"
+)
 COMMON_MATERIALS = (
     ".github/workflows/ci.yml",
     ".github/workflows/formal.yml",
@@ -353,6 +361,12 @@ def _path_exists(repo: Path, commit: str, path: str) -> bool:
 def _lineage_state(repo: Path, commit: str) -> str:
     """Derive stage from first-parent position, then cross-check its record."""
 
+    return _lineage_stage(repo, commit)[0]
+
+
+def _lineage_stage(repo: Path, commit: str) -> tuple[str, tuple[str, ...]]:
+    """Return the lineage state and the activation-dependent records binding it."""
+
     try:
         chain = (
             _git(
@@ -369,14 +383,30 @@ def _lineage_state(repo: Path, commit: str) -> str:
         _fail("CURRENT_RESULT_STAGE")
     if not chain or any(HEX40.fullmatch(item) is None for item in chain):
         _fail("CURRENT_RESULT_STAGE")
-    active = len(chain) >= 2
-    if _path_exists(repo, commit, ACTIVATION_RECORD) != active:
-        _fail("CURRENT_RESULT_STAGE")
-    return (
+    if EPOCH20_TRANSITION_COMMIT in chain:
+        # The transition itself has no state; its recovery child starts epoch 20.
+        position = len(chain) - 1 - chain.index(EPOCH20_TRANSITION_COMMIT)
+        active = position >= 2
+        if (
+            position == 0
+            or not _path_exists(repo, commit, EPOCH20_RECOVERY_RECORD)
+            or _path_exists(repo, commit, EPOCH20_ACTIVATION_RECORD) != active
+        ):
+            _fail("CURRENT_RESULT_STAGE")
+        records = (ACTIVATION_RECORD, EPOCH20_RECOVERY_RECORD) + (
+            (EPOCH20_ACTIVATION_RECORD,) if active else ()
+        )
+    else:
+        active = len(chain) >= 2
+        if _path_exists(repo, commit, ACTIVATION_RECORD) != active:
+            _fail("CURRENT_RESULT_STAGE")
+        records = (ACTIVATION_RECORD,) if active else ()
+    state = (
         "ACTIVE_NO_RELEASE_AUTHORITY"
         if active
         else "RECOVERED_PENDING_HOSTED_QUALIFICATION"
     )
+    return state, records
 
 
 def build_result(
@@ -415,10 +445,8 @@ def build_result(
     attempt = _positive_integer(environment, "GITHUB_RUN_ATTEMPT")
     if attempt > 8:
         _fail("CURRENT_RESULT_ATTEMPT")
-    lineage_state = _lineage_state(repo, commit)
-    active = lineage_state == "ACTIVE_NO_RELEASE_AUTHORITY"
-    optional_materials = (ACTIVATION_RECORD,) if active else ()
-    materials = sorted({*COMMON_MATERIALS, *contract["materials"], *optional_materials})
+    lineage_state, lineage_records = _lineage_stage(repo, commit)
+    materials = sorted({*COMMON_MATERIALS, *contract["materials"], *lineage_records})
     return {
         "authority": {
             "deployment": False,

@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "--config",
+    "/etc/haldir-secure-reference-v1/router.json5",
+    "--adminspace-permissions",
+    "none",
+    "--cfg=adminspace/enabled:false",
+    "--cfg=plugins_loading/enabled:false"
+  ],
+  "config_path": "/etc/haldir-secure-reference-v1/router.json5",
+  "image": "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f"
+}

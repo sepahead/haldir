@@ -1,0 +1,62 @@
+{
+  "authority": {
+    "deployment": false,
+    "publication": false,
+    "release": false,
+    "tag": false
+  },
+  "delivery_contract": {
+    "merge_buttons_authorized": false,
+    "required_author_email": "sepmhn@gmail.com",
+    "required_committer_email": "sepmhn@gmail.com",
+    "required_signer_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU"
+  },
+  "limitations": [
+    "RECOVERY_COMMIT_BOOTSTRAPS_THIS_REVIEWED_VERIFIER",
+    "TRANSITION_COMMIT_IS_OUTSIDE_EPOCH_19_SUCCESSOR_SCOPE_BY_DESIGN",
+    "TRANSITION_COMMIT_HAS_NO_HOSTED_RUN_OF_ITS_OWN",
+    "HOSTED_SETTINGS_REMAIN_MUTABLE_EXTERNAL_STATE",
+    "HOSTED_COMMIT_METADATA_RULE_UNAVAILABLE_ON_USER_REPOSITORY",
+    "WEB_REBASE_BUTTON_REMAINS_A_HOSTED_DELIVERY_RISK",
+    "NO_INDEPENDENT_REVIEWER_AT_RECOVERY",
+    "NO_RELEASE_OR_DEPLOYMENT_AUTHORITY"
+  ],
+  "owner_decision": {
+    "commit": "2819dae3b6338bb1df6d105ebb5b7433936a993d",
+    "path": "docs/governance/owner-decisions-2026-10-01.md",
+    "repository": "sepahead/NCP"
+  },
+  "prior_epoch": {
+    "activation_commit": "60da945d087d6ed65a5c43e950adde1292c3bd10",
+    "recovery_commit": "c949d47801af0fb9c9d459b84bf195906da75c8e",
+    "recovery_id": "FR-0019"
+  },
+  "prior_valid_commit": "0700c9b5dade23437d31d07fb5a1949cf4eb5444",
+  "protocol": "HALDIR_SIGNED_LINEAGE_RECOVERY_V1",
+  "recovery_id": "FR-0020",
+  "schema_version": "1.0.0",
+  "stage": "RECOVERY",
+  "state_after": "RECOVERED_PENDING_HOSTED_QUALIFICATION",
+  "transition": {
+    "classification": "OWNER_SIGNED_PROTECTED_BOUNDARY_CHANGE",
+    "commit": "d7276bc2a0b6ce3a5520bb0612eec9480dace417",
+    "parent": "0700c9b5dade23437d31d07fb5a1949cf4eb5444",
+    "protected_paths": [
+      {
+        "path": "justfile",
+        "status": "M"
+      },
+      {
+        "path": "tools/pins.toml",
+        "status": "M"
+      },
+      {
+        "path": "tools/verify-pins.py",
+        "status": "M"
+      }
+    ],
+    "reason": "ADOPT_EXACT_NCP_1_0_RC_1_PINS",
+    "subject": "feat(ncp): speak NCP 1.0 with a Gate-issued commander lease",
+    "tree": "d5db6ac25cc37e1e2a351b997f35ee608f752365"
+  }
+}

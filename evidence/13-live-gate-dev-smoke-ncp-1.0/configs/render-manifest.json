@@ -1,0 +1,19 @@
+{
+  "files": {
+    "clients/admission-authority.json": "2f48bfd49e68e4d5758b31ca0227201cf0e05cd8266e4a4e2e6dca2bc0d748c5",
+    "clients/controller-a.json": "d2a35a5d03d9d39d3018cf46dc1b3e5c62751deefc60c33b7184476898290224",
+    "clients/controller-b.json": "31ecab2aad58b2c070ddaaa47ebe90aea3c6e6a5ea93f39762945846ce1f96bf",
+    "clients/gate.json": "03c1302547bd1eeb2c676690782b0bd52ea83a15fb206052a92640d2b9409a30",
+    "clients/lifecycle.json": "c41538193291cadfa4491be83ee6f987e45bb74b95847d616dc8c3365e887d57",
+    "clients/mission-authority.json": "b88d5aaccbccc0fb3f4280ef915d23685cd78cfe7a32dc7d47eb0472744aa7bf",
+    "clients/observer.json": "0f724b36b1f9a939c74c4640be04dc049582b96f23c2660f093c2c9332520bea",
+    "clients/robot-crebain.json": "cb2dc1687abdf51746ecaa28ae45a653e030becb5f743b240c5ebfabfc59b525",
+    "router-launch.json": "daf3e1e72e159176f3d7d77054c485ea562df318f03753683b367204a1e75256",
+    "router.json5": "6286cc6af85c4d4986509b1de0ce7d415daba2425a4a8fab7004a02e43d021d3"
+  },
+  "profile_id": "haldir-secure-reference-v1",
+  "profile_sha256": "76a10873155ef5fe85f13117fdf6fcb6f3938399823cbb6af9bff523a3b54e06",
+  "renderer_schema_version": 1,
+  "router_image": "docker.io/eclipse/zenoh@sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f",
+  "zenoh_version": "1.9.0"
+}

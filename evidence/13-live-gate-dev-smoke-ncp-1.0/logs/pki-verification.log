@@ -1,0 +1,141 @@
+$ openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 2 -subj /CN=haldir-live-campaign-ephemeral-ca -addext basicConstraints=critical,CA:TRUE -addext keyUsage=critical,keyCertSign,cRLSign -keyout -out $WORK/pki-authority/ca.pem
+$ openssl x509 -in $WORK/pki-authority/ca.pem -noout -subject -fingerprint -sha256
+subject=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=E4:A6:06:5B:E5:CC:91:95:1F:D5:A7:70:05:72:C6:D4:F7:D0:D1:18:8C:66:49:CF:C2:F4:D5:48:31:2F:25:F9
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=router.haldir.invalid -keyout -out $WORK/pki-authority/router.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/router.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/router.ext -out $WORK/pki-authority/router.cert.pem -CAcreateserial
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslserver -verify_hostname router.haldir.invalid $WORK/pki-authority/router.cert.pem
+$WORK/pki-authority/router.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/router.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/router.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=router.haldir.invalid
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=59:4D:D1:F2:E1:E7:C5:EE:78:31:E2:A7:08:B7:42:11:C0:BC:4C:1E:69:01:EE:EF:8B:60:BA:6F:7F:3C:C2:C1
+notBefore=Oct  1 18:20:45 2026 GMT
+notAfter=Oct  2 18:20:45 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/router.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Server Authentication
+X509v3 Subject Alternative Name: 
+    DNS:router.haldir.invalid
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-admission-authority.secure-reference-v1 -keyout -out $WORK/pki-authority/admission-authority.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/admission-authority.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/admission-authority.ext -out $WORK/pki-authority/admission-authority.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/admission-authority.cert.pem
+$WORK/pki-authority/admission-authority.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/admission-authority.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/admission-authority.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-admission-authority.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=51:4B:4A:86:20:DA:AC:54:87:20:A0:0D:E0:3C:56:60:DE:97:0B:C2:8D:EA:A6:0D:A5:68:53:48:C9:46:C5:1A
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/admission-authority.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-controller-a.secure-reference-v1 -keyout -out $WORK/pki-authority/controller-a.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/controller-a.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/controller-a.ext -out $WORK/pki-authority/controller-a.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/controller-a.cert.pem
+$WORK/pki-authority/controller-a.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/controller-a.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/controller-a.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-controller-a.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=2E:6D:26:51:E8:56:81:3C:34:2C:8D:01:73:18:CE:F7:5C:5A:F6:52:9C:21:0D:AC:BD:62:43:C3:79:43:F4:73
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/controller-a.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-controller-b.secure-reference-v1 -keyout -out $WORK/pki-authority/controller-b.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/controller-b.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/controller-b.ext -out $WORK/pki-authority/controller-b.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/controller-b.cert.pem
+$WORK/pki-authority/controller-b.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/controller-b.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/controller-b.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-controller-b.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=EB:A5:76:6A:A8:A9:B1:CF:24:7E:B9:49:E4:4D:B3:C5:E9:40:FB:B8:65:CD:3F:A4:C5:DA:2A:A2:45:F0:E0:11
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/controller-b.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-gate.secure-reference-v1 -keyout -out $WORK/pki-authority/gate.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/gate.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/gate.ext -out $WORK/pki-authority/gate.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/gate.cert.pem
+$WORK/pki-authority/gate.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/gate.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/gate.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-gate.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=92:BA:B1:C2:E6:12:D2:EF:CA:CC:8A:CD:64:2B:6C:0E:E9:82:76:85:B6:13:86:14:3B:00:C5:4B:3F:51:80:92
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/gate.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-lifecycle.secure-reference-v1 -keyout -out $WORK/pki-authority/lifecycle.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/lifecycle.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/lifecycle.ext -out $WORK/pki-authority/lifecycle.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/lifecycle.cert.pem
+$WORK/pki-authority/lifecycle.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/lifecycle.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/lifecycle.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-lifecycle.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=7B:5A:58:E1:BD:6A:53:17:E6:FB:3A:53:DA:BE:28:D0:CC:2B:3F:55:F9:9F:15:5B:DE:1E:7B:CD:38:66:2B:A1
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/lifecycle.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-mission-authority.secure-reference-v1 -keyout -out $WORK/pki-authority/mission-authority.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/mission-authority.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/mission-authority.ext -out $WORK/pki-authority/mission-authority.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/mission-authority.cert.pem
+$WORK/pki-authority/mission-authority.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/mission-authority.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/mission-authority.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-mission-authority.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=8E:0D:A2:11:53:88:0F:23:A3:ED:41:1D:9D:43:13:31:C6:9D:7F:A3:32:52:80:CD:7C:D6:0E:93:DC:0E:C2:10
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/mission-authority.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-observer.secure-reference-v1 -keyout -out $WORK/pki-authority/observer.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/observer.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/observer.ext -out $WORK/pki-authority/observer.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/observer.cert.pem
+$WORK/pki-authority/observer.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/observer.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/observer.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-observer.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=3E:98:D8:EF:69:43:2F:86:02:B1:E6:3B:53:EB:52:7C:D9:DF:83:97:7F:A8:D9:D6:4F:31:26:4D:33:1D:B6:98
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/observer.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication
+$ openssl req -newkey rsa:2048 -nodes -sha256 -subj /CN=haldir-robot-crebain.secure-reference-v1 -keyout -out $WORK/pki-authority/robot-crebain.csr.pem
+$ openssl x509 -req -in $WORK/pki-authority/robot-crebain.csr.pem -CA $WORK/pki-authority/ca.pem -CAkey -sha256 -days 1 -extfile $WORK/pki-authority/robot-crebain.ext -out $WORK/pki-authority/robot-crebain.cert.pem -CAserial $WORK/pki-authority/ca.srl
+$ openssl verify -CAfile $WORK/pki-authority/ca.pem -purpose sslclient $WORK/pki-authority/robot-crebain.cert.pem
+$WORK/pki-authority/robot-crebain.cert.pem: OK
+$ openssl x509 -in $WORK/pki-authority/robot-crebain.cert.pem -checkend 3600 -noout
+Certificate will not expire
+$ openssl x509 -in $WORK/pki-authority/robot-crebain.cert.pem -noout -subject -issuer -fingerprint -sha256 -dates
+subject=CN=haldir-robot-crebain.secure-reference-v1
+issuer=CN=haldir-live-campaign-ephemeral-ca
+sha256 Fingerprint=8F:5A:B8:FC:2C:FE:18:21:0B:72:E6:FB:4E:6F:0C:34:3B:73:26:C6:00:80:99:8B:28:90:84:83:A1:95:46:F4
+notBefore=Oct  1 18:20:46 2026 GMT
+notAfter=Oct  2 18:20:46 2026 GMT
+$ openssl x509 -in $WORK/pki-authority/robot-crebain.cert.pem -noout -ext subjectAltName,extendedKeyUsage
+X509v3 Extended Key Usage: 
+    TLS Web Client Authentication

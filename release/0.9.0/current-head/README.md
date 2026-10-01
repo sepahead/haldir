@@ -7,7 +7,7 @@ deployment, archive, DOI, or physical-use authority.
 Historical task and recovery artifacts remain immutable evidence of their own
 stages. They must not be relabelled as proof for a later source head.
 
-## Active epoch-19 signed-lineage gate
+## Active epoch-20 signed-lineage gate
 
 The operator entry point is:
 
@@ -51,6 +51,23 @@ The recovery commit is the breach's direct child and deliberately bootstraps the
 new reviewed verifier. This is an owner-signed trust-root transition, not an
 independent review.
 
+### Why epoch 20 exists
+
+Epoch 20 is a planned change of the protected boundary, not a breach. On
+1 October 2026 the owner moved every NCP consumer to NCP 1.0 (recorded in
+`sepahead/NCP` at `2819dae`, `docs/governance/owner-decisions-2026-10-01.md`).
+Adopting the exact `1.0.0-rc.1` pins changes the pin data `tools/pins.toml`, its
+verifier `tools/verify-pins.py` and the `justfile` test recipe. All three are
+protected after epoch-19 activation, so the signed transition commit
+`d7276bc…` lies outside epoch 19's successor scope by design.
+
+Its direct signed child, the epoch-20 recovery, names the transition exactly:
+commit, parent `0700c9b…`, tree, subject and the three protected paths. It
+bootstraps the epoch-20 verifier, which still verifies the whole epoch-19
+history. The transition has no hosted run of its own: it reaches `main` in the
+same push as its recovery, whose runs qualify both. Like epoch 19, this is an
+owner-signed trust-root transition, not an independent review.
+
 ### State machine
 
 | Stage | Required commit | State | Authority |
@@ -59,6 +76,10 @@ independent review.
 | recovery | direct signed child, exact recovery subject and canonical `FR-0019-recovery.json` | `RECOVERED_PENDING_HOSTED_QUALIFICATION` | none |
 | activation | direct signed child adding only canonical `FR-0019-activation.json` | `ACTIVE_NO_RELEASE_AUTHORITY` | none |
 | ordinary successor | signed one-parent child; protected lineage/workflow paths unchanged | active signed lineage | none beyond source succession |
+| epoch-20 transition | signed child of `0700c9b…` with the exact tree, changing only `justfile`, `tools/pins.toml` and `tools/verify-pins.py` among protected paths | none until recovered (`LINEAGE_TRANSITION_UNRECOVERED`) | none |
+| epoch-20 recovery | direct signed child, exact recovery subject and canonical `FR-0020-recovery.json`; rewrites only the listed governance files | `RECOVERED_PENDING_HOSTED_QUALIFICATION` | none |
+| epoch-20 activation | direct signed child adding only canonical `FR-0020-activation.json` | `ACTIVE_NO_RELEASE_AUTHORITY` | none |
+| ordinary successor | signed one-parent child; protected paths, now including the FR-0020 records, unchanged | active signed lineage | none beyond source succession |
 
 Activation binds the exact recovery commit/tree, owner-observed successful main
 CI and formal runs, the seven GitHub-Actions-bound required contexts, force-push
@@ -95,8 +116,11 @@ PR base or, for push/manual dispatch, from the candidate's sole parent. That
 predecessor-trusted blob verifies both revisions. Only after it proves protected
 governance paths unchanged may tooling from the candidate checkout run; a
 self-modifying verifier cannot authorize its own change on any ordinary event.
-The one explicit exception is the epoch-19 recovery bootstrap: its exact breach
-parent predates this verifier, and the recovery record already declares that
+There are two explicit exceptions, each bound to one exact parent and never
+available to a pull request. The epoch-19 recovery bootstrap's breach parent
+predates this verifier. The epoch-20 recovery's parent is the transition commit,
+which no predecessor verifier can vouch for; the recovery's own epoch-20
+verifier then checks the whole chain. Both recovery records declare their
 owner-signed trust-root transition. Current hosted results use
 `HALDIR_CURRENT_HOSTED_RESULT_V1`, bind exact source/material objects, and grant
 no release or deployment authority.

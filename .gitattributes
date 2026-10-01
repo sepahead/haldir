@@ -1,0 +1,3 @@
+# Retained live-campaign logs are byte-exact tool output bound by their
+# evidence checksums, so whitespace checks must never demand edits to them.
+evidence/*/logs/*.log -whitespace

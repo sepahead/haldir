@@ -1,0 +1,746 @@
+{
+  "access_control": {
+    "default_permission": "deny",
+    "enabled": true,
+    "policies": [
+      {
+        "id": "policy-admission-authority",
+        "rules": [
+          "allow-admission-authority-publish-ingress",
+          "allow-admission-authority-publish-egress",
+          "allow-admission-authority-subscribe-ingress",
+          "allow-admission-authority-subscribe-egress"
+        ],
+        "subjects": [
+          "admission-authority"
+        ]
+      },
+      {
+        "id": "policy-controller-a",
+        "rules": [
+          "allow-controller-a-publish-ingress",
+          "allow-controller-a-publish-egress",
+          "allow-controller-a-subscribe-ingress",
+          "allow-controller-a-subscribe-egress"
+        ],
+        "subjects": [
+          "controller-a"
+        ]
+      },
+      {
+        "id": "policy-controller-b",
+        "rules": [
+          "allow-controller-b-publish-ingress",
+          "allow-controller-b-publish-egress",
+          "allow-controller-b-subscribe-ingress",
+          "allow-controller-b-subscribe-egress"
+        ],
+        "subjects": [
+          "controller-b"
+        ]
+      },
+      {
+        "id": "policy-gate",
+        "rules": [
+          "allow-gate-publish-ingress",
+          "allow-gate-publish-egress",
+          "allow-gate-subscribe-ingress",
+          "allow-gate-subscribe-egress"
+        ],
+        "subjects": [
+          "gate"
+        ]
+      },
+      {
+        "id": "policy-lifecycle",
+        "rules": [
+          "allow-lifecycle-publish-ingress",
+          "allow-lifecycle-publish-egress",
+          "allow-lifecycle-subscribe-ingress",
+          "allow-lifecycle-subscribe-egress",
+          "allow-lifecycle-serve-ingress",
+          "allow-lifecycle-serve-egress",
+          "allow-lifecycle-serve-queryable-ingress"
+        ],
+        "subjects": [
+          "lifecycle"
+        ]
+      },
+      {
+        "id": "policy-mission-authority",
+        "rules": [
+          "allow-mission-authority-publish-ingress",
+          "allow-mission-authority-publish-egress",
+          "allow-mission-authority-subscribe-ingress",
+          "allow-mission-authority-subscribe-egress"
+        ],
+        "subjects": [
+          "mission-authority"
+        ]
+      },
+      {
+        "id": "policy-observer",
+        "rules": [
+          "allow-observer-subscribe-ingress",
+          "allow-observer-subscribe-egress"
+        ],
+        "subjects": [
+          "observer"
+        ]
+      },
+      {
+        "id": "policy-robot-crebain",
+        "rules": [
+          "allow-robot-crebain-publish-ingress",
+          "allow-robot-crebain-publish-egress",
+          "allow-robot-crebain-subscribe-ingress",
+          "allow-robot-crebain-subscribe-egress",
+          "allow-robot-crebain-query-ingress",
+          "allow-robot-crebain-query-egress",
+          "allow-robot-crebain-query-queryable-egress"
+        ],
+        "subjects": [
+          "robot-crebain"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-admission-authority-publish-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/authority/admission/record",
+          "haldir-ncp/session/uav-1/haldir/authority/admission/revocation"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-admission-authority-publish-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/authority/admission/record",
+          "haldir-ncp/session/uav-1/haldir/authority/admission/revocation"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-admission-authority-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-admission-authority-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-controller-a-publish-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/intent/controller-a"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-controller-a-publish-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/intent/controller-a"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-controller-a-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-controller-a-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-controller-b-publish-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/intent/controller-b"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-controller-b-publish-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/intent/controller-b"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-controller-b-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-controller-b-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-gate-publish-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/command",
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/decision",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-gate-publish-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/command",
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/decision",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-gate-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/intent/controller-a",
+          "haldir-ncp/session/uav-1/haldir/intent/controller-b",
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+          "haldir-ncp/session/uav-1/haldir/authority/mission/lease",
+          "haldir-ncp/session/uav-1/haldir/authority/mission/revocation",
+          "haldir-ncp/session/uav-1/haldir/authority/admission/record",
+          "haldir-ncp/session/uav-1/haldir/authority/admission/revocation",
+          "haldir-ncp/session/uav-1/haldir/application"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-gate-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/intent/controller-a",
+          "haldir-ncp/session/uav-1/haldir/intent/controller-b",
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+          "haldir-ncp/session/uav-1/haldir/authority/mission/lease",
+          "haldir-ncp/session/uav-1/haldir/authority/mission/revocation",
+          "haldir-ncp/session/uav-1/haldir/authority/admission/record",
+          "haldir-ncp/session/uav-1/haldir/authority/admission/revocation",
+          "haldir-ncp/session/uav-1/haldir/application"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-lifecycle-publish-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-lifecycle-publish-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-lifecycle-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-lifecycle-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-lifecycle-serve-ingress",
+        "key_exprs": [
+          "haldir-ncp/rpc/open_session",
+          "haldir-ncp/rpc/step_request",
+          "haldir-ncp/rpc/run_request",
+          "haldir-ncp/rpc/close_session"
+        ],
+        "messages": [
+          "reply"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-lifecycle-serve-egress",
+        "key_exprs": [
+          "haldir-ncp/rpc/open_session",
+          "haldir-ncp/rpc/step_request",
+          "haldir-ncp/rpc/run_request",
+          "haldir-ncp/rpc/close_session"
+        ],
+        "messages": [
+          "query"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-lifecycle-serve-queryable-ingress",
+        "key_exprs": [
+          "haldir-ncp/rpc/*"
+        ],
+        "messages": [
+          "declare_queryable"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-mission-authority-publish-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/authority/mission/lease",
+          "haldir-ncp/session/uav-1/haldir/authority/mission/revocation"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-mission-authority-publish-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/authority/mission/lease",
+          "haldir-ncp/session/uav-1/haldir/authority/mission/revocation"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-mission-authority-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-mission-authority-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/haldir/challenge",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-observer-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/command",
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+          "haldir-ncp/session/uav-1/haldir/decision",
+          "haldir-ncp/session/uav-1/haldir/status",
+          "haldir-ncp/session/uav-1/haldir/application"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-observer-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/command",
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+          "haldir-ncp/session/uav-1/haldir/decision",
+          "haldir-ncp/session/uav-1/haldir/status",
+          "haldir-ncp/session/uav-1/haldir/application"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-robot-crebain-publish-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/application"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-robot-crebain-publish-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/sensor/pose",
+          "haldir-ncp/session/uav-1/haldir/application"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-robot-crebain-subscribe-ingress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/command",
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "declare_subscriber"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-robot-crebain-subscribe-egress",
+        "key_exprs": [
+          "haldir-ncp/session/uav-1/command",
+          "haldir-ncp/session/uav-1/haldir/lifecycle/status",
+          "haldir-ncp/session/uav-1/haldir/status"
+        ],
+        "messages": [
+          "put"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "ingress"
+        ],
+        "id": "allow-robot-crebain-query-ingress",
+        "key_exprs": [
+          "haldir-ncp/rpc/open_session",
+          "haldir-ncp/rpc/step_request",
+          "haldir-ncp/rpc/run_request",
+          "haldir-ncp/rpc/close_session"
+        ],
+        "messages": [
+          "query"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-robot-crebain-query-egress",
+        "key_exprs": [
+          "haldir-ncp/rpc/open_session",
+          "haldir-ncp/rpc/step_request",
+          "haldir-ncp/rpc/run_request",
+          "haldir-ncp/rpc/close_session"
+        ],
+        "messages": [
+          "reply"
+        ],
+        "permission": "allow"
+      },
+      {
+        "flows": [
+          "egress"
+        ],
+        "id": "allow-robot-crebain-query-queryable-egress",
+        "key_exprs": [
+          "haldir-ncp/rpc/*"
+        ],
+        "messages": [
+          "declare_queryable"
+        ],
+        "permission": "allow"
+      }
+    ],
+    "subjects": [
+      {
+        "cert_common_names": [
+          "haldir-admission-authority.secure-reference-v1"
+        ],
+        "id": "admission-authority"
+      },
+      {
+        "cert_common_names": [
+          "haldir-controller-a.secure-reference-v1"
+        ],
+        "id": "controller-a"
+      },
+      {
+        "cert_common_names": [
+          "haldir-controller-b.secure-reference-v1"
+        ],
+        "id": "controller-b"
+      },
+      {
+        "cert_common_names": [
+          "haldir-gate.secure-reference-v1"
+        ],
+        "id": "gate"
+      },
+      {
+        "cert_common_names": [
+          "haldir-lifecycle.secure-reference-v1"
+        ],
+        "id": "lifecycle"
+      },
+      {
+        "cert_common_names": [
+          "haldir-mission-authority.secure-reference-v1"
+        ],
+        "id": "mission-authority"
+      },
+      {
+        "cert_common_names": [
+          "haldir-observer.secure-reference-v1"
+        ],
+        "id": "observer"
+      },
+      {
+        "cert_common_names": [
+          "haldir-robot-crebain.secure-reference-v1"
+        ],
+        "id": "robot-crebain"
+      }
+    ]
+  },
+  "adminspace": {
+    "enabled": false
+  },
+  "connect": {
+    "endpoints": []
+  },
+  "listen": {
+    "endpoints": [
+      "tls/0.0.0.0:7447"
+    ],
+    "exit_on_failure": true
+  },
+  "mode": "router",
+  "plugins": {},
+  "plugins_loading": {
+    "enabled": false
+  },
+  "scouting": {
+    "gossip": {
+      "enabled": false
+    },
+    "multicast": {
+      "enabled": false
+    }
+  },
+  "transport": {
+    "link": {
+      "rx": {
+        "buffer_size": 65535,
+        "max_message_size": 32768
+      },
+      "tls": {
+        "close_link_on_expiration": true,
+        "enable_mtls": true,
+        "listen_certificate": "/run/secrets/haldir-secure-reference-v1/router.cert.pem",
+        "listen_private_key": "/run/secrets/haldir-secure-reference-v1/router.key.pem",
+        "root_ca_certificate": "/run/secrets/haldir-secure-reference-v1/ca.pem"
+      },
+      "tx": {
+        "queue": {
+          "congestion_control": {
+            "block": {
+              "wait_before_close": 50000
+            }
+          }
+        }
+      }
+    },
+    "shared_memory": {
+      "enabled": false
+    }
+  }
+}

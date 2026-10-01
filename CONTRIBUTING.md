@@ -14,8 +14,11 @@
   `main` base on a PR, or from the candidate's sole parent on push/manual
   dispatch, and use that predecessor-trusted blob to verify both revisions. A
   candidate therefore cannot authorize its own verifier or protected-workflow
-  changes. The sole exception is the explicitly named epoch-19 recovery
-  bootstrap whose breach parent predates this verifier. Direct feature-branch
+  changes. There are two named exceptions: the epoch-19 recovery bootstrap,
+  whose breach parent predates this verifier, and the epoch-20 recovery, whose
+  parent is the owner-signed transition commit that moved the NCP pin outside
+  epoch 19's successor scope. Neither exception applies to a pull request,
+  and each is bound to one exact parent commit. Direct feature-branch
   pushes intentionally do not start duplicate workflows. Before direct
   delivery, manually dispatch both workflows on the feature ref and require all
   seven contexts to pass on that exact head; pull-request checks attached to a

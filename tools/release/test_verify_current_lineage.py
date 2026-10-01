@@ -293,6 +293,250 @@ class CurrentLineageTests(unittest.TestCase):
                 recovery_tree=tree,
             )
 
+    def test_activation_record_is_bound_to_its_own_recovery(self) -> None:
+        recovery = "1" * 40
+        tree = "2" * 40
+        record = _activation_record(recovery, tree)
+        with self.assertRaisesRegex(VERIFIER.LineageError, "LINEAGE_ACTIVATION_VALUE"):
+            VERIFIER._validate_activation_record(
+                record,
+                recovery_commit=recovery,
+                recovery_tree=tree,
+                recovery_id=VERIFIER.EPOCH20_RECOVERY_ID,
+            )
+        record["recovery_id"] = VERIFIER.EPOCH20_RECOVERY_ID
+        VERIFIER._validate_activation_record(
+            record,
+            recovery_commit=recovery,
+            recovery_tree=tree,
+            recovery_id=VERIFIER.EPOCH20_RECOVERY_ID,
+        )
+
+
+class Epoch20LineageTests(unittest.TestCase):
+    TRANSITION = VERIFIER.EPOCH20_TRANSITION_COMMIT
+    RECOVERY = "3" * 40
+    ACTIVATION = "4" * 40
+    SIGNERS = b"signers"
+
+    def _bootstrap(self, **extra: str) -> dict[str, str]:
+        return {
+            VERIFIER.EPOCH20_RECOVERY_RECORD_PATH: "A",
+            VERIFIER.VERIFIER_PATH: "M",
+            VERIFIER.VERIFIER_TEST_PATH: "M",
+            **extra,
+        }
+
+    def test_recovery_record_is_canonical_and_matches_the_committed_declaration(
+        self,
+    ) -> None:
+        expected = VERIFIER.canonical_json_bytes(
+            VERIFIER.expected_epoch20_recovery_record()
+        )
+        observed = (ROOT / VERIFIER.EPOCH20_RECOVERY_RECORD_PATH).read_bytes()
+        self.assertEqual(observed, expected)
+
+    def test_transition_declares_exactly_the_protected_pin_changes(self) -> None:
+        for path in VERIFIER.EPOCH20_TRANSITION_PROTECTED_PATHS:
+            with self.subTest(path=path):
+                self.assertTrue(VERIFIER._successor_path_is_protected(path))
+        transition = VERIFIER.expected_epoch20_recovery_record()["transition"]
+        self.assertEqual(
+            {item["path"]: item["status"] for item in transition["protected_paths"]},
+            VERIFIER.EPOCH20_TRANSITION_PROTECTED_PATHS,
+        )
+
+    def test_epoch20_records_are_protected_after_activation(self) -> None:
+        for path in (
+            VERIFIER.EPOCH20_RECOVERY_RECORD_PATH,
+            VERIFIER.EPOCH20_ACTIVATION_RECORD_PATH,
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(VERIFIER._successor_path_is_protected(path))
+
+    def test_recovery_may_only_rewrite_listed_governance_files(self) -> None:
+        VERIFIER._validate_epoch20_recovery_paths(self._bootstrap())
+        VERIFIER._validate_epoch20_recovery_paths(
+            self._bootstrap(
+                **{
+                    ".github/workflows/ci.yml": "M",
+                    ".github/workflows/formal.yml": "M",
+                    "CONTRIBUTING.md": "M",
+                    VERIFIER.GATE_PATH: "M",
+                    VERIFIER.CURRENT_RESULT_PATH: "M",
+                    "release/0.9.0/current-head/README.md": "M",
+                    "docs/CLAIM-LEDGER.md": "M",
+                    "evidence/13-live-gate-dev-smoke-ncp-1.0/manifest.json": "A",
+                }
+            )
+        )
+        rejected = (
+            {VERIFIER.EPOCH20_RECOVERY_RECORD_PATH: "M"},
+            {VERIFIER.VERIFIER_PATH: "A"},
+            {VERIFIER.EPOCH20_ACTIVATION_RECORD_PATH: "A"},
+            {VERIFIER.RECOVERY_RECORD_PATH: "M"},
+            {VERIFIER.ACTIVATION_RECORD_PATH: "M"},
+            {VERIFIER.ALLOWED_SIGNERS_PATH: "M"},
+            {"tools/pins.toml": "M"},
+            {"tools/verify-pins.py": "M"},
+            {"justfile": "M"},
+            {".github/workflows/new-privileged-workflow.yml": "A"},
+            {"CONTRIBUTING.md": "D"},
+            {"tools/release/verify-framework-recovery-fr-0017.py": "M"},
+        )
+        for change in rejected:
+            with (
+                self.subTest(change=change),
+                self.assertRaisesRegex(VERIFIER.LineageError, "LINEAGE_RECOVERY_SCOPE"),
+            ):
+                VERIFIER._validate_epoch20_recovery_paths(self._bootstrap(**change))
+        with self.assertRaisesRegex(VERIFIER.LineageError, "LINEAGE_RECOVERY_SCOPE"):
+            VERIFIER._validate_epoch20_recovery_paths({})
+
+    def _patched(self, *, changes: dict[tuple[str, str], dict[str, str]], trees=None):
+        trees = trees or {}
+
+        def signed(repo, commit, *, parent, subject, allowed_signers):
+            return {"commit": commit, "parents": parent, "subject": subject or "",
+                    "tree": trees.get(commit, "5" * 40)}
+
+        def changed(repo, parent, commit):
+            return changes[(parent, commit)]
+
+        records = {
+            (self.RECOVERY, VERIFIER.EPOCH20_RECOVERY_RECORD_PATH): (
+                VERIFIER.expected_epoch20_recovery_record()
+            ),
+        }
+        return (
+            mock.patch.object(VERIFIER, "_verify_signed_commit", side_effect=signed),
+            mock.patch.object(VERIFIER, "_changed_paths", side_effect=changed),
+            mock.patch.object(
+                VERIFIER,
+                "_read_canonical_json",
+                side_effect=lambda repo, commit, path: records[(commit, path)],
+            ),
+        )
+
+    def _changes(self) -> dict[tuple[str, str], dict[str, str]]:
+        return {
+            (VERIFIER.EPOCH20_PRIOR_VALID_COMMIT, self.TRANSITION): {
+                **VERIFIER.EPOCH20_TRANSITION_PROTECTED_PATHS,
+                "Cargo.lock": "M",
+                "crates/haldir-ncp10/src/lease.rs": "A",
+            },
+            (self.TRANSITION, self.RECOVERY): self._bootstrap(),
+        }
+
+    def _verify(self, tail, *, changes, trees=None, previous=None):
+        signed, changed, records = self._patched(changes=changes, trees=trees)
+        with signed, changed, records:
+            return VERIFIER._verify_epoch20(
+                ROOT,
+                tail,
+                previous=previous or VERIFIER.EPOCH20_PRIOR_VALID_COMMIT,
+                allowed_signers=self.SIGNERS,
+            )
+
+    def test_recovery_child_starts_epoch20_pending_hosted_qualification(self) -> None:
+        trees = {self.TRANSITION: VERIFIER.EPOCH20_TRANSITION_TREE}
+        self.assertEqual(
+            self._verify(
+                [self.TRANSITION, self.RECOVERY], changes=self._changes(), trees=trees
+            ),
+            (self.RECOVERY, None, "RECOVERED_PENDING_HOSTED_QUALIFICATION"),
+        )
+
+    def test_transition_without_its_recovery_is_never_a_valid_head(self) -> None:
+        trees = {self.TRANSITION: VERIFIER.EPOCH20_TRANSITION_TREE}
+        with self.assertRaisesRegex(
+            VERIFIER.LineageError, "LINEAGE_TRANSITION_UNRECOVERED"
+        ):
+            self._verify([self.TRANSITION], changes=self._changes(), trees=trees)
+
+    def test_transition_is_bound_to_its_parent_tree_and_protected_scope(self) -> None:
+        trees = {self.TRANSITION: VERIFIER.EPOCH20_TRANSITION_TREE}
+        with self.assertRaisesRegex(VERIFIER.LineageError, "LINEAGE_TRANSITION_PARENT"):
+            self._verify(
+                [self.TRANSITION, self.RECOVERY],
+                changes=self._changes(),
+                trees=trees,
+                previous="6" * 40,
+            )
+        with self.assertRaisesRegex(VERIFIER.LineageError, "LINEAGE_TRANSITION_TREE"):
+            self._verify([self.TRANSITION, self.RECOVERY], changes=self._changes())
+        widened = self._changes()
+        widened[(VERIFIER.EPOCH20_PRIOR_VALID_COMMIT, self.TRANSITION)][
+            ".github/workflows/ci.yml"
+        ] = "M"
+        with self.assertRaisesRegex(VERIFIER.LineageError, "LINEAGE_TRANSITION_SCOPE"):
+            self._verify([self.TRANSITION, self.RECOVERY], changes=widened, trees=trees)
+
+    def test_activation_must_add_only_its_record(self) -> None:
+        trees = {self.TRANSITION: VERIFIER.EPOCH20_TRANSITION_TREE}
+        changes = self._changes()
+        changes[(self.RECOVERY, self.ACTIVATION)] = {
+            VERIFIER.EPOCH20_ACTIVATION_RECORD_PATH: "A",
+            "README.md": "M",
+        }
+        with self.assertRaisesRegex(VERIFIER.LineageError, "LINEAGE_ACTIVATION_SCOPE"):
+            self._verify(
+                [self.TRANSITION, self.RECOVERY, self.ACTIVATION],
+                changes=changes,
+                trees=trees,
+            )
+
+    def test_result_stage_follows_the_epoch20_position(self) -> None:
+        before = ["1" * 40, "2" * 40, VERIFIER.EPOCH20_PRIOR_VALID_COMMIT]
+        recovery, activation = self.RECOVERY, self.ACTIVATION
+        present = {
+            (recovery, RESULT.EPOCH20_RECOVERY_RECORD): True,
+            (recovery, RESULT.EPOCH20_ACTIVATION_RECORD): False,
+            (activation, RESULT.EPOCH20_RECOVERY_RECORD): True,
+            (activation, RESULT.EPOCH20_ACTIVATION_RECORD): True,
+        }
+        for head, expected, records in (
+            (
+                recovery,
+                "RECOVERED_PENDING_HOSTED_QUALIFICATION",
+                (RESULT.ACTIVATION_RECORD, RESULT.EPOCH20_RECOVERY_RECORD),
+            ),
+            (
+                activation,
+                "ACTIVE_NO_RELEASE_AUTHORITY",
+                (
+                    RESULT.ACTIVATION_RECORD,
+                    RESULT.EPOCH20_RECOVERY_RECORD,
+                    RESULT.EPOCH20_ACTIVATION_RECORD,
+                ),
+            ),
+        ):
+            chain = before + [self.TRANSITION, recovery] + (
+                [activation] if head == activation else []
+            )
+            with (
+                self.subTest(head=head),
+                mock.patch.object(
+                    RESULT, "_git", return_value=("\n".join(chain) + "\n").encode()
+                ),
+                mock.patch.object(
+                    RESULT,
+                    "_path_exists",
+                    side_effect=lambda repo, commit, path: present[(commit, path)],
+                ),
+            ):
+                self.assertEqual(RESULT._lineage_stage(ROOT, head), (expected, records))
+
+        chain = before + [self.TRANSITION]
+        with (
+            mock.patch.object(
+                RESULT, "_git", return_value=("\n".join(chain) + "\n").encode()
+            ),
+            mock.patch.object(RESULT, "_path_exists", return_value=True),
+            self.assertRaisesRegex(RESULT.ResultError, "CURRENT_RESULT_STAGE"),
+        ):
+            RESULT._lineage_state(ROOT, self.TRANSITION)
+
 
 if __name__ == "__main__":
     unittest.main()

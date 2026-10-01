@@ -1,5 +1,5 @@
 #!/bin/bash -p
-# Compact epoch-19 signed-lineage and immutable-pin gate.
+# Compact signed-lineage (epochs 19 and 20) and immutable-pin gate.
 set -euo pipefail
 IFS=$'\n\t'
 umask 077
@@ -132,5 +132,5 @@ parent_count="$(
 }
 "$GIT" -c core.hooksPath=/dev/null diff --check "${CANDIDATE}^" "$CANDIDATE"
 
-builtin printf 'current-audit-gate: OK (%s; signed linear epoch 19; release NO_GO)\n' \
+builtin printf 'current-audit-gate: OK (%s; signed linear epoch 20; release NO_GO)\n' \
   "$mode"

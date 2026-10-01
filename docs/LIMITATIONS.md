@@ -100,7 +100,8 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   existing fixture, performs caller-local activation, consumes a caller-supplied strict-client
   configuration, binds, and immediately invokes explicit shutdown under its own outer lock. It
   receives/processes no intent and invokes no command publication. The retained clean-source
-  campaign in `evidence/12-live-gate-dev-smoke` proves one fresh offline `ProvisionNew` followed by
+  campaign in `evidence/13-live-gate-dev-smoke-ncp-1.0` (the exact NCP 1.0 build; the NCP v0.8 build's
+  run stays in `evidence/12-live-gate-dev-smoke`) proves one fresh offline `ProvisionNew` followed by
   live `OpenExisting`, strict local session open, concrete aggregate bind, and immediate local
   shutdown return with zero processing/publication (`CL-LIVE-GATE-DEV-BIND-01`). Neither target
   authenticates or continually supplies control/state inputs, loads protected credentials, or
