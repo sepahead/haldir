@@ -15,10 +15,10 @@
 > A reciprocal current producer pin, cross-repository qualification, real-router
 > mTLS/ACL evidence, and recorded-stream calibration are **NOT CLAIMED**.
 > The UI and any automatic advisory down-weight remain unimplemented here.
-> The protocol notes below use Haldir's frozen NCP `v0.8.0` baseline (wire `0.8`,
-> commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`). Current NCP HEAD is the
-> unreleased and release-blocked `1.0.0-rc.1` candidate on a different wire;
-> Haldir's native-1.0 migration and role qualification are **NOT RUN**.
+> The protocol notes below analyze the frozen NCP `v0.8.0` wire (wire `0.8`,
+> commit `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`). Haldir has since moved to
+> the NCP `1.0.0-rc.1` candidate (wire `1.0`); these notes have not been
+> re-verified against it, and role qualification remains **NOT RUN**.
 > Crebain's `PidObservation` is an implemented project-owned sidecar record,
 > carried in its project-owned envelope over the two registered Perception
 > routes consumed by the reviewed Galadriel PR. It is not a normative NCP

@@ -18,6 +18,6 @@ haldir-crypto.workspace = true
 haldir-core.workspace = true
 haldir-policy-native.workspace = true
 haldir-admission.workspace = true
-haldir-ncp08.workspace = true
+haldir-ncp10.workspace = true
 haldir-reference-plant.workspace = true
 haldir-gate.workspace = true

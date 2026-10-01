@@ -32,10 +32,12 @@ haldir_contracts::tagged_enum! {
 }
 
 haldir_contracts::tagged_enum! {
-    /// Closed NCP command-wire selection bound by a deployment package.
+    /// Closed NCP command-wire selection bound by a deployment package. Tag 1,
+    /// exact NCP v0.8 JSON, is retired: a package that selects it no longer
+    /// decodes, so it can never be read as selecting another wire.
     pub enum DeploymentNcpWireProfileV1 {
         ModeledP0 = 0 => "MODELED_P0",
-        ExactNcpV0_8Json = 1 => "EXACT_NCP_V0_8_JSON",
+        ExactNcpV1_0Json = 2 => "EXACT_NCP_V1_0_JSON",
     }
 }
 
@@ -187,7 +189,7 @@ impl haldir_contracts::cbor::Validate for GateConfigurationArtifactV1 {
             });
         }
         if self.runtime_profile == DeploymentRuntimeProfileV1::DeclaredLiveZenoh
-            && self.ncp_wire_profile != DeploymentNcpWireProfileV1::ExactNcpV0_8Json
+            && self.ncp_wire_profile != DeploymentNcpWireProfileV1::ExactNcpV1_0Json
         {
             return Err(DecodeError::SemanticInvalid {
                 code: "GATE_CONFIGURATION_LIVE_NCP_PROFILE_INVALID",
@@ -233,7 +235,7 @@ impl haldir_contracts::cbor::Validate for DeploymentPackageV1 {
             });
         }
         if self.runtime_profile == DeploymentRuntimeProfileV1::DeclaredLiveZenoh
-            && self.ncp_wire_profile != DeploymentNcpWireProfileV1::ExactNcpV0_8Json
+            && self.ncp_wire_profile != DeploymentNcpWireProfileV1::ExactNcpV1_0Json
         {
             return Err(DecodeError::SemanticInvalid {
                 code: "DEPLOYMENT_LIVE_NCP_PROFILE_INVALID",

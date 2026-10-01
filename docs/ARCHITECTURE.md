@@ -26,6 +26,7 @@ no Gate-authored plant command unless
   ∧ deterministic bounded policy returns ALLOW
   ∧ authorization and causal state still match at the exposure boundary
   ∧ current publication authority permits the exact final route
+  ∧ a live Gate-issued NCP lease covers the command's whole validity
   ∧ a fresh Gate output position and self-consistent exact frame are allocated
 ```
 
@@ -87,9 +88,10 @@ caller-supplied trusted state ----------> VehicleActor
 Application-signing authority and transport authority are distinct. The Gate
 application key authenticates receipts and publication evidence. The Gate
 transport credential grants the router permission to publish on the final
-route. The present NCP v0.8 profile does not make the receiver verify a Gate
-application signature on each command, so compromise or reuse of the transport
-credential remains outside the enforcement claim.
+route. The NCP 1.0 profile does not make the receiver verify a Gate application
+signature on each command, and Gate issues its NCP lease to that transport
+principal, so compromise or reuse of the transport credential remains outside the
+enforcement claim.
 
 The public in-process actor accepts raw candidates only through
 `BoundedIntentCandidate`, whose private fields enforce the same 16 KiB envelope
@@ -139,7 +141,7 @@ RunningGate
   state-machine classify/commit disagreement, or a terminal publication failure
   destroys it fail-closed.
 - Every actual live publisher invocation is terminal, including a local `Ok`.
-  NCP v0.8 starts its TTL from plant-local arrival; Gate observes neither that
+  NCP 1.0 starts its TTL from plant-local arrival; Gate observes neither that
   arrival nor any authenticated application acknowledgement. The live path
   therefore records the local return, commits no guessed action interval, and
   returns no authority capable of publishing another command. The cooperative
@@ -169,7 +171,7 @@ message. Gate validates:
 - when a lease is active, a source key in that lease's allowlist;
 - source receive ≤ snapshot capture ≤ Gate-observed monotonic time;
 - nonnegative position and velocity uncertainty;
-- a source sequence representable by the implemented NCP v0.8 JSON profile;
+- a source sequence representable by the implemented NCP 1.0 JSON profile;
 - strictly advancing snapshot capture time; and
 - bounded boot-local source replay state.
 
@@ -236,7 +238,8 @@ publisher invocation. Immediately before exposure, the actor rechecks:
 - publication-slot ownership;
 - authorization revision;
 - trusted-state digest;
-- active lease and publication authority;
+- active mission lease, publication authority, and an NCP lease covering the
+  command;
 - monotonic call deadline and remaining validity; and
 - checked command horizon.
 
@@ -258,7 +261,7 @@ that is the exact local fact; it does not convert it into plant history.
 | `haldir-core` | Internal immutable decision snapshots and monotonic time |
 | `haldir-admission` | Controller/backend admission matching |
 | `haldir-policy-native` | Deterministic fixed-point authorization policy |
-| `haldir-ncp08` | Closed modeled/exact NCP v0.8 construction and validated exact-command capability |
+| `haldir-ncp10` | Closed modeled/exact NCP 1.0 construction, the commander lease, and validated exact-command capability |
 | `haldir-evidence` | Signed journal segments and publication reduction |
 | `haldir-transport-zenoh` | Strict routes, bounded ingress, and typed final publisher |
 | `haldir-gate` | Single-vehicle actor, startup, lifecycle, and live ownership composition |
@@ -268,7 +271,7 @@ that is the exact local fact; it does not convert it into plant history.
 Dependencies point toward contracts, pure state, and the NCP command boundary.
 The non-test Gate dependency graph does not depend on the simulation-only reference
 plant; both Gate and the plant use the exact-command capability owned by
-`haldir-ncp08`. Transport and the reference plant do not decide authority; Gate
+`haldir-ncp10`. Transport and the reference plant do not decide authority; Gate
 composes them at explicit side-effect boundaries.
 
 ## Release boundary

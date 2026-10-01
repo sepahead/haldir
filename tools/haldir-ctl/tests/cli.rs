@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use haldir_ncp08::{NCP_COMPATIBILITY_ARTIFACT_MAX_BYTES, pinned_ncp_compatibility_artifact_bytes};
+use haldir_ncp10::{NCP_COMPATIBILITY_ARTIFACT_MAX_BYTES, pinned_ncp_compatibility_artifact_bytes};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
@@ -83,9 +83,9 @@ fn build_info_reports_the_exact_compiled_identity() -> TestResult {
     assert_eq!(actual.exit_code, Some(0));
     assert!(actual.stderr.is_empty());
     let stdout = String::from_utf8(actual.stdout)?;
-    assert!(stdout.contains("v0.8.0"));
-    assert!(stdout.contains("2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"));
-    assert!(stdout.contains("17f040a0fc9d06d4b958adfa9267b16689b8aa3b91dab21560c1d655de1c17af"));
+    assert!(stdout.contains("1.0.0-rc.1"));
+    assert!(stdout.contains("2819dae3b6338bb1df6d105ebb5b7433936a993d"));
+    assert!(stdout.contains("7e1d1896ead42ecd70b196415fba3d0a85191226d4941d7a71232486bd353deb"));
     assert!(stdout.contains("EXPERIMENTAL — not for deployment"));
     Ok(())
 }

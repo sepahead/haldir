@@ -1,6 +1,6 @@
 [package]
-name = "haldir-ncp08"
-description = "Exact NCP v0.8 command adaptation and compatibility validation for Haldir"
+name = "haldir-ncp10"
+description = "Exact NCP 1.0 command adaptation and compatibility validation for Haldir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -41,16 +41,31 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   replacing them; the reserved `.invalid` router name is a mitigation, not exclusive
   certificate pinning. Production-grade exclusive router trust requires a patched/
   upgraded transport verifier.
-- **`PRE_AUTHORITY_ACL_ONLY` as a deployed runtime property.** It is a declared
-  compatibility label and now has the narrow synthetic ACL evidence above. It is still
-  not established for a packaged Gate/Crebain deployment, production credentials, or a
-  complete actuator/bypass inventory.
+- **`NCP_1_0_COMMANDER_LEASE` as a deployed runtime property.** It is a declared
+  compatibility label. Its exclusive-route half has the narrow synthetic ACL evidence
+  above, and its lease half has in-process acceptance by NCP's reference authority
+  machine (`CL-NCP-LEASE-01`). Neither is established for a packaged Gate/Crebain
+  deployment, a body that enforces the lease, production credentials, or a complete
+  actuator/bypass inventory.
+- **Stream epochs across Gate restarts.** Every Gate boot publishes on a fresh output
+  epoch. NCP 1.0's reference receiver binds a stream to its first epoch and rejects a
+  foreign epoch even after expiry (ADR-005 forbids inferred rollover), so a restarted Gate
+  needs a fresh session or stream declaration before a 1.0 body accepts its commands.
+  Haldir does not yet declare or retire streams, and its in-process reference plant and
+  formal model still use the NCP v0.8 rule that lets a new epoch re-anchor once the prior
+  stream has expired.
+- **Commander-issued authority.** Under NCP `1.0.0-rc.1` Gate issues its own lease.
+  Body-issued authority (ADR-006), command dispositions (ADR-007), and an authenticated
+  principal that `ncp-zenoh` exposes to the body are not yet delivered upstream. The body
+  therefore cannot tell Gate that it refused a lease, and an operator override with a
+  higher term keeps Gate's later terms refused until they exceed it, which can require a
+  Gate restart or a new session.
 - **Declared-live validation plus a development target is not an authenticated live service.** The off-by-default
-  `real-ncp` feature compiles the exact pinned `ncp-core` v0.8.0 revision and its
+  `real-ncp` feature compiles the exact pinned `ncp-core` `1.0.0-rc.1` revision and its
   frozen-corpus/differential tests pass (`CL-NCP-REAL-01`). `GateConfigTemplate` now carries
   both the closed adapter selection and an explicit `GateRuntimeProfile`.
   `InProcessReference` retains the dependency-light P0 paths. `DeclaredLiveZenoh` is rejected
-  unless `live-zenoh` was compiled and `ExactNcpV0_8Json` was selected; that rejection occurs
+  unless `live-zenoh` was compiled and `ExactNcpV1_0Json` was selected; that rejection occurs
   before startup-owned backend-trait calls, entropy, locks, or local-directory access. A
   successful `StartupReport` retains the declaration only as observable process-local data.
   Successful declared-live startup separately mints a private, non-cloneable capability. The
@@ -127,7 +142,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   realm/session, terminally rejects a mismatched publisher before frame access or invocation, and lends the
   frame only to one awaited call on a matched concrete strict publisher. Every invoked live
   publication consumes the runtime and publisher. A local `Ok` is durably recorded but is
-  terminally classified as application-unobserved: NCP v0.8 starts `ttl_ms` at plant-local
+  terminally classified as application-unobserved: NCP 1.0 starts `ttl_ms` at plant-local
   arrival, while this transport supplies neither that arrival time, an enforced in-transit
   lifetime, nor an authenticated application acknowledgement. Gate therefore commits no
   fabricated live action interval and cannot authorize a later command. Test-only future cases cover dropping the consuming
@@ -287,7 +302,7 @@ should be represented as *validated*, *secure*, *complete-mediation*, or *hardwa
   can cause rejection; and byte bounds do not impose a wall-clock bound on NFS, FUSE, or stalled
   storage. Other targets return unsupported. Bootstrap-policy provenance, bootstrap-revocation
   freshness, protected credential opening, semantic parsing/use of seven artifact roles, and
-  correspondence to the running executable remain outside that boundary. `haldir-ncp08` strictly
+  correspondence to the running executable remain outside that boundary. `haldir-ncp10` strictly
   decodes a supplied canonical compatibility artifact under a 512-byte cap and exact-matches the
   implemented frozen command-frame subset to the compiled tag/commit/wire/contract/proto/schema/
   vector/increment/profile/adapter-version pins before returning a private-field proof

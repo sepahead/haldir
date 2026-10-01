@@ -1,18 +1,22 @@
-//! Gate-owned NCP `v0.8.0` command construction (modeled P0 semantic layer).
+//! Gate-owned NCP `1.0.0-rc.1` command construction (modeled semantic layer).
 //!
 //! Every publisher-owned field of the emitted frame comes from Gate state, never
 //! from controller-authored bytes (spec mapping table / B4): the session, stream
-//! epoch/seq, `t`, and source stream position are taken from the
-//! [`GateCommandBuildInputV1`] the Gate assembled after ALLOW. The Haldir
+//! epoch/seq, `t`, the source stream position, and the authority lease are taken
+//! from the [`GateCommandBuildInputV1`] the Gate assembled after ALLOW. The Haldir
 //! `source_key` is carried by the immutable exact-frame correlation object; the
-//! exact NCP v0.8 JSON profile has no corresponding wire field. Plant authority
-//! (`authority.term`/`lease_id`) is ABSENT under `PRE_AUTHORITY_ACL_ONLY` (H8) —
-//! it is not a field here.
+//! exact NCP 1.0 JSON profile has no corresponding wire field.
+//!
+//! NCP 1.0 requires an authority lease on every Active command and validates one
+//! carried on HOLD; Haldir carries Gate's lease on both, so a HOLD is attributable
+//! to the authority holder. The lease comes from [`crate::lease`]. The adapter
+//! refuses a lease for another session or output epoch, an empty or over-long
+//! UTC interval, or a lease without a Gate-local deadline.
 //!
 //! This models the wire semantics without depending on the real `ncp-core`/Zenoh
-//! stack (P0 profile); the compatibility record pins the exact upstream release.
+//! stack; the compatibility record pins the exact upstream candidate.
 
-use crate::compatibility::{NCP_V0_8_0, NcpCompatibilityRecordV1};
+use crate::compatibility::{NCP_V1_0_0_RC1, NcpCompatibilityRecordV1};
 use crate::conversion::{mm_s_to_ncp_m_s, ncp_m_s_to_mm_s};
 use crate::error::NcpAdapterError;
 use haldir_contracts::action::RequestedActionV1;
@@ -20,9 +24,17 @@ use haldir_contracts::digest::{DigestDomain, DigestV1};
 use haldir_contracts::receipt::TransformationRelationV1;
 use haldir_contracts::scalar::BoundedAscii;
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
+use haldir_contracts::status::NcpLeaseEvidenceV1;
 
-/// Largest integer that NCP v0.8.0 can carry losslessly through its JSON wire.
+/// Largest integer that NCP 1.0 can carry losslessly through its JSON wire.
 pub const NCP_JSON_SAFE_INTEGER_MAX: u64 = 9_007_199_254_740_991;
+
+/// Longest UTC authority interval NCP 1.0 accepts (`MAX_AUTHORITY_LEASE_MS`).
+pub const NCP_MAX_AUTHORITY_LEASE_MS: u64 = 60_000;
+
+/// NCP 1.0's bound on commander–body clock disagreement
+/// (`MAX_CLOCK_UNCERTAINTY_MS`).
+pub const NCP_MAX_CLOCK_UNCERTAINTY_MS: u64 = 5_000;
 
 /// The fully-approved input the Gate hands the adapter after a decision ALLOW.
 #[derive(Debug, Clone)]
@@ -47,19 +59,21 @@ pub struct GateCommandBuildInputV1 {
     /// adapter checks that cross-field invariant before constructing any wire
     /// representation.
     pub effective_validity_ms: u32,
+    /// Gate's live NCP authority lease for this session and output epoch.
+    pub lease: NcpLeaseEvidenceV1,
 }
 
 /// Closed encoding used by one immutable exact command frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NcpCommandWireProfile {
-    /// Dependency-light deterministic semantic bytes used by the P0 model.
+    /// Dependency-light deterministic semantic bytes used by the model.
     ModeledP0,
-    /// Upstream-validated compact NCP v0.8.0 JSON.
-    ExactNcpV0_8Json,
+    /// Upstream-validated compact NCP 1.0 JSON.
+    ExactNcpV1_0Json,
 }
 
-/// A modeled NCP `v0.8.0` command frame (Gate-owned publisher fields).
+/// A modeled NCP 1.0 command frame (Gate-owned publisher fields).
 #[derive(Debug, Clone, PartialEq)]
 pub struct NcpCommandFrameV1 {
     /// Session pair.
@@ -72,7 +86,7 @@ pub struct NcpCommandFrameV1 {
     pub frame_id: BoundedAscii<128>,
     /// Gate creation time `t` in the internal nanosecond domain.
     ///
-    /// Modeled-P0 bytes carry this integer exactly. Exact NCP v0.8 JSON carries
+    /// Modeled-P0 bytes carry this integer exactly. Exact NCP 1.0 JSON carries
     /// its deterministic binary64-seconds projection, which is not injective
     /// over the full `u64` nanosecond domain.
     pub t_ns: u64,
@@ -85,6 +99,8 @@ pub struct NcpCommandFrameV1 {
     pub velocity_m_s: [f64; 3],
     /// Command validity (ms).
     pub validity_ms: u32,
+    /// The authority lease carried by the frame.
+    pub authority: NcpLeaseEvidenceV1,
 }
 
 fn put_str(b: &mut Vec<u8>, s: &str) {
@@ -96,7 +112,7 @@ fn put_str(b: &mut Vec<u8>, s: &str) {
 
 impl NcpCommandFrameV1 {
     /// A deterministic wire serialization (fixed field order, big-endian, floats
-    /// as IEEE-754 bit patterns). No `authority`/`publisher_id` fields exist.
+    /// as IEEE-754 bit patterns), ending with every authority-lease field.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn wire_bytes(&self) -> Vec<u8> {
@@ -116,6 +132,15 @@ impl NcpCommandFrameV1 {
             b.extend_from_slice(&v.to_bits().to_be_bytes());
         }
         b.extend_from_slice(&self.validity_ms.to_be_bytes());
+        let lease = &self.authority;
+        put_str(&mut b, lease.gate_transport_principal.as_str());
+        put_str(&mut b, lease.issuer_principal.as_str());
+        put_str(&mut b, lease.holder_entity.as_str());
+        b.extend_from_slice(lease.session.generation.as_bytes());
+        b.extend_from_slice(&lease.authority_term.get().to_be_bytes());
+        b.extend_from_slice(lease.lease_id.as_bytes());
+        b.extend_from_slice(&lease.issued_at_utc_ms.to_be_bytes());
+        b.extend_from_slice(&lease.expires_at_utc_ms.to_be_bytes());
         b
     }
 }
@@ -123,7 +148,7 @@ impl NcpCommandFrameV1 {
 /// An immutable prepared output: Gate-owned semantics, exact profile bytes,
 /// their digest, and the declared action transformation.
 ///
-/// “Exact” qualifies the serialized bytes. The exact NCP v0.8 JSON profile has
+/// “Exact” qualifies the serialized bytes. The exact NCP 1.0 JSON profile has
 /// no `source_key` field and projects integer nanosecond times to binary64
 /// seconds, so those semantic values are not all injectively committed by the
 /// byte digest. The profile observability methods and compatibility document
@@ -177,7 +202,7 @@ impl ExactNcpCommandFrame {
             frame,
             bytes,
             transformation,
-            NcpCommandWireProfile::ExactNcpV0_8Json,
+            NcpCommandWireProfile::ExactNcpV1_0Json,
         )
     }
 
@@ -195,7 +220,7 @@ impl ExactNcpCommandFrame {
 
     /// Whether the Haldir `source_key` itself is present in the serialized bytes.
     ///
-    /// Both profiles bind the source stream epoch and sequence. NCP v0.8 JSON has
+    /// Both profiles bind the source stream epoch and sequence. NCP 1.0 JSON has
     /// no `source_key` field, so the key remains exact-object/event correlation in
     /// that profile and is not committed by [`Self::digest`].
     #[must_use]
@@ -267,12 +292,18 @@ impl ExactNcpCommandFrame {
         self.frame.validity_ms
     }
 
+    /// The NCP authority lease carried by the exact frame.
+    #[must_use]
+    pub const fn authority(&self) -> &haldir_contracts::status::NcpLeaseEvidenceV1 {
+        &self.frame.authority
+    }
+
     /// Whether the semantic frame, exact bytes, digest, and transformation still
     /// form the single immutable output built by the adapter.
     ///
     /// This checks the selected profile's deterministic projection. It does not
     /// make a non-injective profile encoding injective: two distinct internal
-    /// nanosecond values can legitimately rebuild the same NCP v0.8 JSON bytes.
+    /// nanosecond values can legitimately rebuild the same NCP 1.0 JSON bytes.
     #[must_use]
     pub fn is_self_consistent(&self) -> bool {
         let expected_transformation = if self.frame.is_hold {
@@ -288,7 +319,7 @@ impl ExactNcpCommandFrame {
                 .all(|value| value.to_bits() == 0.0f64.to_bits());
         let bytes_match_semantics = match self.wire_profile {
             NcpCommandWireProfile::ModeledP0 => self.frame.wire_bytes() == self.bytes,
-            NcpCommandWireProfile::ExactNcpV0_8Json => {
+            NcpCommandWireProfile::ExactNcpV1_0Json => {
                 #[cfg(feature = "real-ncp")]
                 {
                     crate::real::exact_bytes_match_semantic(&self.frame, &self.bytes)
@@ -301,6 +332,7 @@ impl ExactNcpCommandFrame {
         };
 
         self.transformation == expected_transformation
+            && self.frame.authority.session == self.frame.session
             && hold_is_zero
             && self.frame.validity_ms != 0
             && self.decoded_velocity_mm_s().is_ok()
@@ -322,6 +354,7 @@ pub(crate) fn build_semantic_frame(
     {
         return Err(NcpAdapterError::ConversionOutOfRange);
     }
+    validate_lease(input)?;
 
     let (is_hold, vel_mm, transformation) = match input.action {
         RequestedActionV1::Hold { .. } => (true, [0i32; 3], TransformationRelationV1::Identity),
@@ -355,9 +388,36 @@ pub(crate) fn build_semantic_frame(
             is_hold,
             velocity_m_s,
             validity_ms: input.effective_validity_ms,
+            authority: input.lease.clone(),
         },
         transformation,
     ))
+}
+
+/// Check the lease against the NCP 1.0 authority rules that Gate can verify
+/// locally. The body remains the enforcer of term order and holder identity.
+fn validate_lease(input: &GateCommandBuildInputV1) -> Result<(), NcpAdapterError> {
+    let lease = &input.lease;
+    if lease.session != input.session
+        || lease.authorized_output_epoch != input.stream.epoch
+        || lease.expires_mono_ns.is_none()
+    {
+        return Err(NcpAdapterError::InvalidAuthority);
+    }
+    if lease.authority_term.get() > NCP_JSON_SAFE_INTEGER_MAX
+        || lease.issued_at_utc_ms > NCP_JSON_SAFE_INTEGER_MAX
+        || lease.expires_at_utc_ms > NCP_JSON_SAFE_INTEGER_MAX
+    {
+        return Err(NcpAdapterError::ConversionOutOfRange);
+    }
+    let interval = lease
+        .expires_at_utc_ms
+        .checked_sub(lease.issued_at_utc_ms)
+        .ok_or(NcpAdapterError::InvalidAuthority)?;
+    if interval == 0 || interval > NCP_MAX_AUTHORITY_LEASE_MS {
+        return Err(NcpAdapterError::InvalidAuthority);
+    }
+    Ok(())
 }
 
 /// The Gate-owned NCP command adapter.
@@ -386,27 +446,29 @@ pub trait NcpCommandAdapter {
     ) -> Result<(), NcpAdapterError>;
 }
 
-/// The `PRE_AUTHORITY_ACL_ONLY` adapter for NCP `v0.8.0` increment 1.
+/// The modeled `NCP_1_0_COMMANDER_LEASE` adapter for NCP `1.0.0-rc.1` increment 1.
 #[derive(Debug, Clone)]
-pub struct AclOnlyAdapter {
+pub struct ModeledNcp10Adapter {
     compat: NcpCompatibilityRecordV1,
 }
 
-impl AclOnlyAdapter {
-    /// A new adapter pinned to NCP `v0.8.0`.
+impl ModeledNcp10Adapter {
+    /// A new adapter pinned to NCP `1.0.0-rc.1`.
     #[must_use]
     pub fn new() -> Self {
-        Self { compat: NCP_V0_8_0 }
+        Self {
+            compat: NCP_V1_0_0_RC1,
+        }
     }
 }
 
-impl Default for AclOnlyAdapter {
+impl Default for ModeledNcp10Adapter {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl NcpCommandAdapter for AclOnlyAdapter {
+impl NcpCommandAdapter for ModeledNcp10Adapter {
     fn compatibility(&self) -> &NcpCompatibilityRecordV1 {
         &self.compat
     }
@@ -440,18 +502,22 @@ impl NcpCommandAdapter for AclOnlyAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::lease_for;
     use core::num::{NonZeroU32, NonZeroU64};
-    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{GateId, GateOutputEpoch, OutputSeq, SourceSeq};
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
 
     fn input(action: RequestedActionV1) -> GateCommandBuildInputV1 {
+        let session = NcpSessionIdentityV1 {
+            session_id: AsciiId::new("sess-1").unwrap(),
+            generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+        };
+        let epoch = GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([5; 16]));
         GateCommandBuildInputV1 {
-            session: NcpSessionIdentityV1 {
-                session_id: AsciiId::new("sess-1").unwrap(),
-                generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
-            },
+            lease: lease_for(&session, epoch),
+            session,
             stream: NcpStreamPositionV1 {
-                epoch: GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([5; 16])),
+                epoch,
                 seq: OutputSeq::new(NonZeroU64::new(1).unwrap()),
             },
             source: NcpSourceRefV1 {
@@ -474,8 +540,90 @@ mod tests {
     }
 
     #[test]
+    fn lease_for_another_session_is_refused() {
+        let adapter = ModeledNcp10Adapter::new();
+        let mut input = hold_input();
+        input.lease.session.generation = CanonicalUuidV4String::from_random_bytes([9; 16]);
+        assert_eq!(
+            adapter.build_command(&input),
+            Err(NcpAdapterError::InvalidAuthority)
+        );
+    }
+
+    #[test]
+    fn lease_without_a_gate_local_deadline_is_refused() {
+        let adapter = ModeledNcp10Adapter::new();
+        let mut input = hold_input();
+        input.lease.expires_mono_ns = None;
+        assert_eq!(
+            adapter.build_command(&input),
+            Err(NcpAdapterError::InvalidAuthority)
+        );
+    }
+
+    #[test]
+    fn empty_inverted_or_over_long_lease_intervals_are_refused() {
+        let adapter = ModeledNcp10Adapter::new();
+        for (issued, expires) in [
+            (1_700_000_000_000, 1_700_000_000_000),
+            (1_700_000_000_001, 1_700_000_000_000),
+            (
+                1_700_000_000_000,
+                1_700_000_000_000 + NCP_MAX_AUTHORITY_LEASE_MS + 1,
+            ),
+        ] {
+            let mut input = hold_input();
+            input.lease.issued_at_utc_ms = issued;
+            input.lease.expires_at_utc_ms = expires;
+            assert_eq!(
+                adapter.build_command(&input),
+                Err(NcpAdapterError::InvalidAuthority)
+            );
+        }
+        let mut longest = hold_input();
+        longest.lease.expires_at_utc_ms =
+            longest.lease.issued_at_utc_ms + NCP_MAX_AUTHORITY_LEASE_MS;
+        assert!(adapter.build_command(&longest).is_ok());
+    }
+
+    #[test]
+    fn lease_values_beyond_the_json_safe_range_are_refused() {
+        let adapter = ModeledNcp10Adapter::new();
+        let mut input = hold_input();
+        input.lease.authority_term = NonZeroU64::new(NCP_JSON_SAFE_INTEGER_MAX + 1).unwrap();
+        assert_eq!(
+            adapter.build_command(&input),
+            Err(NcpAdapterError::ConversionOutOfRange)
+        );
+    }
+
+    #[test]
+    fn every_lease_field_changes_the_modeled_bytes() {
+        let adapter = ModeledNcp10Adapter::new();
+        let base = adapter.build_command(&hold_input()).unwrap();
+        let mut variants = Vec::new();
+        let mut term = hold_input();
+        term.lease.authority_term = NonZeroU64::new(2).unwrap();
+        variants.push(term);
+        let mut id = hold_input();
+        id.lease.lease_id = CanonicalUuidV4String::from_random_bytes([7; 16]);
+        variants.push(id);
+        let mut entity = hold_input();
+        entity.lease.holder_entity = GateId::new("gate-b").unwrap();
+        variants.push(entity);
+        let mut expiry = hold_input();
+        expiry.lease.expires_at_utc_ms -= 1;
+        variants.push(expiry);
+        for variant in variants {
+            let frame = adapter.build_command(&variant).unwrap();
+            assert_ne!(frame.bytes(), base.bytes());
+            assert_ne!(frame.digest(), base.digest());
+        }
+    }
+
+    #[test]
     fn validator_rejects_internal_frame_tampering() {
-        let adapter = AclOnlyAdapter::new();
+        let adapter = ModeledNcp10Adapter::new();
         let input = hold_input();
         let mut exact = adapter.build_command(&input).unwrap();
         exact.frame.is_hold = false;
@@ -489,7 +637,7 @@ mod tests {
 
     #[test]
     fn validator_rejects_internal_bytes_tampering() {
-        let adapter = AclOnlyAdapter::new();
+        let adapter = ModeledNcp10Adapter::new();
         let input = hold_input();
         let mut exact = adapter.build_command(&input).unwrap();
         exact.bytes.push(0xff);
@@ -503,7 +651,7 @@ mod tests {
 
     #[test]
     fn validator_rejects_internal_digest_tampering() {
-        let adapter = AclOnlyAdapter::new();
+        let adapter = ModeledNcp10Adapter::new();
         let input = hold_input();
         let mut exact = adapter.build_command(&input).unwrap();
         exact.digest = DigestV1::compute(DigestDomain::OutputFrame, b"tampered");
@@ -517,7 +665,7 @@ mod tests {
 
     #[test]
     fn validator_rejects_internal_transformation_tampering() {
-        let adapter = AclOnlyAdapter::new();
+        let adapter = ModeledNcp10Adapter::new();
         let input = hold_input();
         let mut exact = adapter.build_command(&input).unwrap();
         exact.transformation = TransformationRelationV1::FixedPointToNcpFloatV1;
@@ -531,7 +679,7 @@ mod tests {
 
     #[test]
     fn effective_validity_cannot_exceed_the_signed_request() {
-        let adapter = AclOnlyAdapter::new();
+        let adapter = ModeledNcp10Adapter::new();
         let mut input = hold_input();
         input.effective_validity_ms = 301;
 
@@ -543,7 +691,7 @@ mod tests {
 
     #[test]
     fn effective_validity_must_be_nonzero() {
-        let adapter = AclOnlyAdapter::new();
+        let adapter = ModeledNcp10Adapter::new();
         let mut input = hold_input();
         input.effective_validity_ms = 0;
 
@@ -555,7 +703,7 @@ mod tests {
 
     #[test]
     fn self_consistency_rejects_zero_validity_even_if_all_bytes_are_rebuilt() {
-        let adapter = AclOnlyAdapter::new();
+        let adapter = ModeledNcp10Adapter::new();
         let input = hold_input();
         let mut exact = adapter.build_command(&input).unwrap();
         exact.frame.validity_ms = 0;

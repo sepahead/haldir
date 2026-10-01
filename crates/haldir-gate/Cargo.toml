@@ -14,7 +14,7 @@ workspace = true
 
 [features]
 default = []
-real-ncp = ["haldir-ncp08/real-ncp"]
+real-ncp = ["haldir-ncp10/real-ncp"]
 live-zenoh = [
     "real-ncp",
     "dep:haldir-transport-zenoh",
@@ -49,7 +49,7 @@ haldir-core.workspace = true
 haldir-state.workspace = true
 haldir-policy-native.workspace = true
 haldir-admission.workspace = true
-haldir-ncp08.workspace = true
+haldir-ncp10.workspace = true
 haldir-evidence.workspace = true
 haldir-durable.workspace = true
 haldir-deployment.workspace = true

@@ -7,14 +7,14 @@
   },
   "normative_document": {
     "path": "docs/release/0.9.0/PROTECTION-MODEL.md",
-    "sha256": "c37423bb5013573ac202329f1637c1b551b61d5d70e441d75efb2e1108ace036"
+    "sha256": "3a4a851709d071d92f15725fa4993bb019d38b1c879172b3875f5cf91f3b9aad"
   },
   "scope": {
     "profile_id": "haldir-secure-reference-v1",
-    "compatibility": "PRE_AUTHORITY_ACL_ONLY",
+    "compatibility": "NCP_1_0_COMMANDER_LEASE",
     "realm": "haldir-ncp",
     "session_id": "uav-1",
-    "ncp_protocol_pin": "v0.8.0",
+    "ncp_protocol_pin": "1.0.0-rc.1",
     "default_effect": "DENY",
     "unlisted_authority": "FORBIDDEN"
   },
@@ -1326,7 +1326,7 @@
         "semantic_owner": "gate_transport",
         "runtime_custodian": "gate_application",
         "integrity": "MANDATORY",
-        "freshness": "CURRENT_ROUTE_SESSION_REVISION_AND_SINGLE_SLOT",
+        "freshness": "CURRENT_ROUTE_SESSION_REVISION_NCP_LEASE_AND_SINGLE_SLOT",
         "confidentiality": "INTERNAL_CAPABILITY",
         "availability_failure": "NO_OUTPUT"
       },
@@ -1532,7 +1532,7 @@
     {
       "constraint_id": "ordering:ratchets",
       "category": "ORDERING_REPLAY",
-      "rule": "lease_terms_revocation_epochs_deployment_revisions_and_durable_generations_do_not_rewind"
+      "rule": "lease_terms_revocation_epochs_deployment_revisions_durable_generations_and_gate_boot_counters_do_not_rewind"
     },
     {
       "constraint_id": "bounds:decode_ingress_collections",
@@ -1568,6 +1568,11 @@
       "constraint_id": "state:publication_and_frame",
       "category": "STATE_TRANSITION",
       "rule": "current_publication_authority_fresh_output_allocation_and_exact_frame_validation_all_succeed"
+    },
+    {
+      "constraint_id": "state:ncp_commander_lease",
+      "category": "STATE_TRANSITION",
+      "rule": "live_gate_issued_ncp_lease_for_the_session_output_epoch_principal_and_route_covers_command_validity"
     },
     {
       "constraint_id": "state:single_opaque_publication",
@@ -1656,7 +1661,8 @@
       "fields": [
         "certificate_time",
         "release_time",
-        "audit_time"
+        "audit_time",
+        "ncp_lease_utc_bounds"
       ],
       "field_inventory": "NAMED_EXAMPLES_NEVER_COMMAND_AUTHORITY",
       "hot_path_authority": false,
@@ -1687,7 +1693,8 @@
         "lease_term",
         "revocation_epoch",
         "deployment_revision",
-        "durable_generation"
+        "durable_generation",
+        "gate_boot_counter"
       ],
       "field_inventory": "EXHAUSTIVE_CURRENT_DURABLE_RATCHETS",
       "hot_path_authority": false,
@@ -1859,6 +1866,7 @@
         "state:active_fresh_policy_allow",
         "state:authorization_revision",
         "state:publication_and_frame",
+        "state:ncp_commander_lease",
         "state:single_opaque_publication"
       ],
       "failure_constraint_id": "failure:no_new_command",

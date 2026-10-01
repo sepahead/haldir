@@ -19,11 +19,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use haldir_contracts::action::RequestedActionV1;
-use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
+use haldir_contracts::digest::{DigestDomain, DigestV1};
+use haldir_contracts::ids::{GateId, GateOutputEpoch, OutputSeq, PrincipalId, SourceSeq};
 use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
 use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
-use haldir_ncp08::{
-    ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter, RealNcp08Adapter,
+use haldir_contracts::status::NcpLeaseEvidenceV1;
+use haldir_ncp10::{
+    ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter, RealNcp10Adapter,
 };
 use haldir_transport_zenoh::{
     FinalCommandPublisher, HaldirKeys, IngressCountersSnapshot, IngressLimits, IntentIngress,
@@ -42,6 +44,7 @@ type CampaignResult<T> = Result<T, CampaignError>;
 
 const REALM: &str = "haldir-ncp";
 const SESSION_ID: &str = "uav-1";
+const GATE_PRINCIPAL: &str = "haldir-gate.secure-reference-v1";
 const CALLBACK_CAPACITY: usize = 64;
 const POSITIVE_TIMEOUT: Duration = Duration::from_secs(5);
 const DECLARATION_SETTLE: Duration = Duration::from_secs(1);
@@ -267,15 +270,18 @@ fn build_input(sequence: u64) -> CampaignResult<GateCommandBuildInputV1> {
         .ok_or_else(|| campaign_error("final command sequence must be nonzero"))?;
     let validity =
         NonZeroU32::new(200).ok_or_else(|| campaign_error("command validity must be nonzero"))?;
+    let session = NcpSessionIdentityV1 {
+        session_id: AsciiId::new(SESSION_ID)?,
+        generation: CanonicalUuidV4String::parse("293279f3-d459-4bfd-aeeb-604799e96925")?,
+    };
+    let epoch = GateOutputEpoch::new(CanonicalUuidV4String::parse(
+        "3ef6f0ad-8ee6-4c6a-9e3f-86dc9ce849a1",
+    )?);
     Ok(GateCommandBuildInputV1 {
-        session: NcpSessionIdentityV1 {
-            session_id: AsciiId::new(SESSION_ID)?,
-            generation: CanonicalUuidV4String::parse("293279f3-d459-4bfd-aeeb-604799e96925")?,
-        },
+        lease: campaign_lease(&session, epoch)?,
+        session,
         stream: NcpStreamPositionV1 {
-            epoch: GateOutputEpoch::new(CanonicalUuidV4String::parse(
-                "3ef6f0ad-8ee6-4c6a-9e3f-86dc9ce849a1",
-            )?),
+            epoch,
             seq: OutputSeq::new(output_sequence),
         },
         source: NcpSourceRefV1 {
@@ -296,8 +302,35 @@ fn build_input(sequence: u64) -> CampaignResult<GateCommandBuildInputV1> {
     })
 }
 
+/// A fixed, shape-valid NCP lease for the reference Gate principal on the final
+/// route. The campaign measures route ACLs, not authority, and fixed values keep
+/// its frames reproducible.
+fn campaign_lease(
+    session: &NcpSessionIdentityV1,
+    epoch: GateOutputEpoch,
+) -> CampaignResult<NcpLeaseEvidenceV1> {
+    let keys = HaldirKeys::try_new(REALM, SESSION_ID)?;
+    let principal = PrincipalId::new(GATE_PRINCIPAL)?;
+    Ok(NcpLeaseEvidenceV1 {
+        gate_transport_principal: principal.clone(),
+        final_route_digest: DigestV1::compute(
+            DigestDomain::TransportKey,
+            keys.final_command().as_bytes(),
+        ),
+        session: session.clone(),
+        authority_term: NonZeroU64::MIN,
+        lease_id: CanonicalUuidV4String::parse("20000000-0000-4000-8000-000000000001")?,
+        authorized_output_epoch: epoch,
+        expires_mono_ns: Some(u64::MAX),
+        issuer_principal: principal,
+        holder_entity: GateId::new("gate")?,
+        issued_at_utc_ms: 1_700_000_000_000,
+        expires_at_utc_ms: 1_700_000_030_000,
+    })
+}
+
 fn build_frames() -> CampaignResult<BTreeMap<&'static str, ExactNcpCommandFrame>> {
-    let adapter = RealNcp08Adapter::new();
+    let adapter = RealNcp10Adapter::new();
     FINAL_CASES
         .iter()
         .map(|(sequence, case_id)| {

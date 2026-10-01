@@ -5,20 +5,20 @@
 //! injection seam into the authorization runtime.
 
 use crate::{
-    AclOnlyAdapter, ExactNcpCommandFrame, GateCommandBuildInputV1, NcpAdapterError,
+    ExactNcpCommandFrame, GateCommandBuildInputV1, ModeledNcp10Adapter, NcpAdapterError,
     NcpCommandAdapter, NcpCompatibilityRecordV1,
 };
 
 pub use crate::adapter::NcpCommandWireProfile;
 
 #[cfg(feature = "real-ncp")]
-use crate::RealNcp08Adapter;
+use crate::RealNcp10Adapter;
 
 #[derive(Debug, Clone)]
 enum SelectedAdapterInner {
-    Modeled(AclOnlyAdapter),
+    Modeled(ModeledNcp10Adapter),
     #[cfg(feature = "real-ncp")]
-    Exact(RealNcp08Adapter),
+    Exact(RealNcp10Adapter),
 }
 
 /// One closed, pinned command-adapter selection.
@@ -32,20 +32,20 @@ pub struct SelectedNcpCommandAdapter {
 }
 
 impl SelectedNcpCommandAdapter {
-    /// Select deterministic modeled P0 bytes.
+    /// Select deterministic modeled bytes.
     #[must_use]
     pub fn modeled_p0() -> Self {
         Self {
-            inner: SelectedAdapterInner::Modeled(AclOnlyAdapter::new()),
+            inner: SelectedAdapterInner::Modeled(ModeledNcp10Adapter::new()),
         }
     }
 
-    /// Select upstream-validated exact NCP v0.8.0 JSON.
+    /// Select upstream-validated exact NCP 1.0 JSON.
     #[cfg(feature = "real-ncp")]
     #[must_use]
-    pub fn exact_ncp_v0_8_json() -> Self {
+    pub fn exact_ncp_v1_0_json() -> Self {
         Self {
-            inner: SelectedAdapterInner::Exact(RealNcp08Adapter::new()),
+            inner: SelectedAdapterInner::Exact(RealNcp10Adapter::new()),
         }
     }
 
@@ -55,7 +55,7 @@ impl SelectedNcpCommandAdapter {
         match self.inner {
             SelectedAdapterInner::Modeled(_) => NcpCommandWireProfile::ModeledP0,
             #[cfg(feature = "real-ncp")]
-            SelectedAdapterInner::Exact(_) => NcpCommandWireProfile::ExactNcpV0_8Json,
+            SelectedAdapterInner::Exact(_) => NcpCommandWireProfile::ExactNcpV1_0Json,
         }
     }
 }
@@ -98,6 +98,7 @@ impl NcpCommandAdapter for SelectedNcpCommandAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::lease_for;
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
     use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
@@ -105,13 +106,16 @@ mod tests {
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
 
     fn input() -> GateCommandBuildInputV1 {
+        let session = NcpSessionIdentityV1 {
+            session_id: AsciiId::new("sess-1").unwrap(),
+            generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+        };
+        let epoch = GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([2; 16]));
         GateCommandBuildInputV1 {
-            session: NcpSessionIdentityV1 {
-                session_id: AsciiId::new("sess-1").unwrap(),
-                generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
-            },
+            lease: lease_for(&session, epoch),
+            session,
             stream: NcpStreamPositionV1 {
-                epoch: GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([2; 16])),
+                epoch,
                 seq: OutputSeq::new(NonZeroU64::new(1).unwrap()),
             },
             source: NcpSourceRefV1 {
@@ -142,11 +146,11 @@ mod tests {
     #[cfg(feature = "real-ncp")]
     #[test]
     fn exact_constructor_selects_and_delegates_to_upstream_json() {
-        let adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let modeled = SelectedNcpCommandAdapter::modeled_p0();
         assert_eq!(
             adapter.wire_profile(),
-            NcpCommandWireProfile::ExactNcpV0_8Json
+            NcpCommandWireProfile::ExactNcpV1_0Json
         );
         assert_eq!(adapter.compatibility(), modeled.compatibility());
         let input = input();
@@ -162,7 +166,7 @@ mod tests {
     fn selected_profiles_reject_each_others_bytes() {
         let input = input();
         let modeled = SelectedNcpCommandAdapter::modeled_p0();
-        let exact = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        let exact = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let modeled_frame = modeled.build_command(&input).unwrap();
         let exact_frame = exact.build_command(&input).unwrap();
 

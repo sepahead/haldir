@@ -1,6 +1,6 @@
-//! Immutable NCP `v0.8.0` compatibility identity and artifact validation.
+//! Immutable NCP `1.0.0-rc.1` compatibility identity and artifact validation.
 //!
-//! A version string such as `0.8` is insufficient. The compiled compatibility
+//! A version string such as `1.0` is insufficient. The compiled compatibility
 //! record binds the reviewed command-path subset: release tag and exact commit,
 //! contract and proto identities, the frozen command schema/vector digests, the
 //! enabled increment, capability profile, and Haldir adapter version. A strict
@@ -32,7 +32,7 @@ const NCP_COMPATIBILITY_ARTIFACT_LIMITS: Limits = Limits {
     max_total_bytes: NCP_COMPATIBILITY_ARTIFACT_MAX_BYTES,
 };
 
-/// The pinned NCP `v0.8.0` compatibility record for this adapter.
+/// The pinned NCP `1.0.0-rc.1` compatibility record for this adapter.
 ///
 /// The schema/vector fields identify Haldir's frozen command-frame subset, not
 /// aggregate identities for every file in the upstream schema/conformance sets.
@@ -60,17 +60,22 @@ pub struct NcpCompatibilityRecordV1 {
     pub haldir_adapter_version: &'static str,
 }
 
-/// The pinned constants (specification NCP baseline; `docs/NCP-COMPATIBILITY.md`).
-pub const NCP_V0_8_0: NcpCompatibilityRecordV1 = NcpCompatibilityRecordV1 {
-    ncp_tag: "v0.8.0",
-    ncp_commit: "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e",
-    wire_version: "0.8",
-    contract_hash: "d1b50a2d8a265276",
-    proto_sha256: "6f13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227",
-    command_schema_sha256: "abd9743323e4f6eabdbc27888704462b1b1fd128777422b35146605709a01344",
-    command_vector_sha256: "3e3d73235fe2dd4288158c29f9cd2f3f17034f7a58d803682f45c145a9733f2e",
+/// The pinned NCP `1.0.0-rc.1` constants (`docs/NCP-COMPATIBILITY.md`).
+///
+/// The candidate is untagged upstream, so the exact commit is the identity and
+/// `ncp_tag` names the candidate version. `contract_hash` is the candidate's
+/// compact proto projection, a diagnostic that is never sufficient alone; the
+/// proto, command schema and command vector digests are measured at the commit.
+pub const NCP_V1_0_0_RC1: NcpCompatibilityRecordV1 = NcpCompatibilityRecordV1 {
+    ncp_tag: "1.0.0-rc.1",
+    ncp_commit: "2819dae3b6338bb1df6d105ebb5b7433936a993d",
+    wire_version: "1.0",
+    contract_hash: "163acc57d8a62b66",
+    proto_sha256: "9c127c8e795105da73dddfe47b671bf1f4ee895958ea5f35eda8b37cc503d510",
+    command_schema_sha256: "3203e44dc071433c333340201250b345afb0c78cf74e9a01b023d6624f6b6092",
+    command_vector_sha256: "7f6aad14820f52330fa9517ec322644a090225dfd3c0cd99e15961bb0d3efd33",
     enabled_increment: 1,
-    capability_profile: "PRE_AUTHORITY_ACL_ONLY",
+    capability_profile: "NCP_1_0_COMMANDER_LEASE",
     haldir_adapter_version: env!("CARGO_PKG_VERSION"),
 };
 
@@ -137,19 +142,19 @@ impl NcpCompatibilityArtifactV1 {
         Ok(Self {
             schema_major: 1,
             schema_minor: 0,
-            ncp_tag: pinned_ascii(NCP_V0_8_0.ncp_tag)?,
-            ncp_commit: pinned_ascii(NCP_V0_8_0.ncp_commit)?,
-            wire_version: pinned_ascii(NCP_V0_8_0.wire_version)?,
-            contract_hash: pinned_ascii(NCP_V0_8_0.contract_hash)?,
-            proto_sha256: decode_sha256(NCP_V0_8_0.proto_sha256)
+            ncp_tag: pinned_ascii(NCP_V1_0_0_RC1.ncp_tag)?,
+            ncp_commit: pinned_ascii(NCP_V1_0_0_RC1.ncp_commit)?,
+            wire_version: pinned_ascii(NCP_V1_0_0_RC1.wire_version)?,
+            contract_hash: pinned_ascii(NCP_V1_0_0_RC1.contract_hash)?,
+            proto_sha256: decode_sha256(NCP_V1_0_0_RC1.proto_sha256)
                 .ok_or(NcpCompatibilityError::CompiledPinInvalid)?,
-            command_schema_sha256: decode_sha256(NCP_V0_8_0.command_schema_sha256)
+            command_schema_sha256: decode_sha256(NCP_V1_0_0_RC1.command_schema_sha256)
                 .ok_or(NcpCompatibilityError::CompiledPinInvalid)?,
-            command_vector_sha256: decode_sha256(NCP_V0_8_0.command_vector_sha256)
+            command_vector_sha256: decode_sha256(NCP_V1_0_0_RC1.command_vector_sha256)
                 .ok_or(NcpCompatibilityError::CompiledPinInvalid)?,
-            enabled_increment: NCP_V0_8_0.enabled_increment,
-            capability_profile: pinned_ascii(NCP_V0_8_0.capability_profile)?,
-            haldir_adapter_version: pinned_ascii(NCP_V0_8_0.haldir_adapter_version)?,
+            enabled_increment: NCP_V1_0_0_RC1.enabled_increment,
+            capability_profile: pinned_ascii(NCP_V1_0_0_RC1.capability_profile)?,
+            haldir_adapter_version: pinned_ascii(NCP_V1_0_0_RC1.haldir_adapter_version)?,
         })
     }
 }
@@ -160,7 +165,7 @@ impl NcpCompatibilityArtifactV1 {
 /// agreement to this build's reviewed baseline.
 ///
 /// ```compile_fail
-/// use haldir_ncp08::ValidatedNcpCompatibilityArtifact;
+/// use haldir_ncp10::ValidatedNcpCompatibilityArtifact;
 ///
 /// let _forged = ValidatedNcpCompatibilityArtifact {
 ///     artifact: todo!(),
@@ -255,7 +260,7 @@ pub fn validate_ncp_compatibility_artifact(
     }
     Ok(ValidatedNcpCompatibilityArtifact {
         artifact,
-        compatibility_id: NCP_V0_8_0.compatibility_id(),
+        compatibility_id: NCP_V1_0_0_RC1.compatibility_id(),
     })
 }
 
@@ -307,7 +312,10 @@ mod tests {
 
         let validated = validate_ncp_compatibility_artifact(&bytes).unwrap();
         assert_eq!(validated.artifact(), &expected);
-        assert_eq!(validated.compatibility_id(), NCP_V0_8_0.compatibility_id());
+        assert_eq!(
+            validated.compatibility_id(),
+            NCP_V1_0_0_RC1.compatibility_id()
+        );
         assert_eq!(to_canonical_bytes(validated.artifact()), bytes);
     }
 
@@ -317,18 +325,18 @@ mod tests {
         assert_eq!(
             hex(&bytes),
             concat!(
-                "ad01781868616c6469722e6e63705f636f6d7061746962696c6974790201030004667630",
-                "2e382e30057828326635626435383664346262323063393033363262623666353639386237",
-                "663634303537626134650663302e380770643162353061326438613236353237360858206f",
-                "13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227095820abd9",
-                "743323e4f6eabdbc27888704462b1b1fd128777422b35146605709a013440a58203e3d73",
-                "235fe2dd4288158c29f9cd2f3f17034f7a58d803682f45c145a9733f2e0b010c765052",
-                "455f415554484f524954595f41434c5f4f4e4c590d65302e392e30"
+                "ad01781868616c6469722e6e63705f636f6d7061746962696c69747902010300046a312e",
+                "302e302d72632e3105782832383139646165336236333338626231646636643130356562",
+                "6235623734333339333661393933640663312e3007703136336163633537643861363262",
+                "36360858209c127c8e795105da73dddfe47b671bf1f4ee895958ea5f35eda8b37cc503d5",
+                "100958203203e44dc071433c333340201250b345afb0c78cf74e9a01b023d6624f6b6092",
+                "0a58207f6aad14820f52330fa9517ec322644a090225dfd3c0cd99e15961bb0d3efd330b",
+                "010c774e43505f315f305f434f4d4d414e4445525f4c454153450d65302e392e30"
             )
         );
         assert_eq!(
-            hex(&NCP_V0_8_0.compatibility_id().value),
-            "17f040a0fc9d06d4b958adfa9267b16689b8aa3b91dab21560c1d655de1c17af"
+            hex(&NCP_V1_0_0_RC1.compatibility_id().value),
+            "7e1d1896ead42ecd70b196415fba3d0a85191226d4941d7a71232486bd353deb"
         );
     }
 
@@ -338,7 +346,7 @@ mod tests {
         let mut substitutions = Vec::new();
 
         let mut artifact = expected.clone();
-        artifact.ncp_tag = AsciiId::new("v0.8.1").unwrap();
+        artifact.ncp_tag = AsciiId::new("1.0.0-rc.2").unwrap();
         substitutions.push(artifact);
 
         let mut artifact = expected.clone();
@@ -434,8 +442,8 @@ mod tests {
 
         let mut missing = canonical.clone();
         let adapter_version_offset = missing
-            .windows(NCP_V0_8_0.haldir_adapter_version.len())
-            .position(|window| window == NCP_V0_8_0.haldir_adapter_version.as_bytes())
+            .windows(NCP_V1_0_0_RC1.haldir_adapter_version.len())
+            .position(|window| window == NCP_V1_0_0_RC1.haldir_adapter_version.as_bytes())
             .unwrap();
         missing.truncate(adapter_version_offset - 2);
         missing[0] = 0xac;
@@ -590,10 +598,10 @@ mod tests {
 
     #[test]
     fn compatibility_id_binds_every_compiled_field() {
-        let baseline = NCP_V0_8_0;
+        let baseline = NCP_V1_0_0_RC1;
         let substitutions = [
             NcpCompatibilityRecordV1 {
-                ncp_tag: "v0.8.1",
+                ncp_tag: "1.0.0-rc.2",
                 ..baseline
             },
             NcpCompatibilityRecordV1 {

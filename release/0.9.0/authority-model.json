@@ -7,11 +7,11 @@
   },
   "normative_document": {
     "path": "docs/release/0.9.0/AUTHORITY-CONTRACT.md",
-    "sha256": "3059cda55c382a629be7698c52b618bf59048a7356748b1ded437fa0f9609759"
+    "sha256": "ab27fda59f2e34f7bf9a040bea32f2b594409031948eeb4e761569f78b01b97d"
   },
   "claimed_profile": {
     "profile_id": "haldir-secure-reference-v1",
-    "compatibility": "PRE_AUTHORITY_ACL_ONLY",
+    "compatibility": "NCP_1_0_COMMANDER_LEASE",
     "protected_route_name": "final_command",
     "protected_route": "haldir-ncp/session/uav-1/command",
     "plant_command_definition": "exact_frame_intended_for_plant_consumption_on_protected_final_route",
@@ -30,6 +30,7 @@
       "deterministic_policy_allow_with_useful_validity",
       "authorization_revision_unchanged",
       "acl_exclusive_publication_authority_current",
+      "ncp_commander_lease_live_for_command_validity",
       "new_gate_owned_output_position",
       "fresh_gate_owned_frame_built_and_exactly_validated",
       "opaque_publication_transition_binds_route_bytes_and_digest"

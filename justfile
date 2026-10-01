@@ -69,7 +69,7 @@ formal-runner-test:
 parser-property-smoke:
     # Bounded property-based parser checks plus named malformed regressions.
     cargo test -p haldir-contracts --locked -- decoder_never_panics_on_arbitrary_bytes
-    cargo test -p haldir-ncp08 --all-features --locked -- arbitrary_artifact_bytes_never_panic
+    cargo test -p haldir-ncp10 --all-features --locked -- arbitrary_artifact_bytes_never_panic
     cargo test --workspace --locked -- malformed
 
 # Compatibility alias only. This recipe is not coverage-guided fuzzing.

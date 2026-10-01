@@ -10,8 +10,8 @@ use std::process::ExitCode;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 use rustix::fs::{Mode, OFlags, open};
 
-use haldir_ncp08::{
-    NCP_COMPATIBILITY_ARTIFACT_MAX_BYTES, NCP_V0_8_0, NcpCompatibilityError,
+use haldir_ncp10::{
+    NCP_COMPATIBILITY_ARTIFACT_MAX_BYTES, NCP_V1_0_0_RC1, NcpCompatibilityError,
     ValidatedNcpCompatibilityArtifact, validate_ncp_compatibility_artifact,
 };
 
@@ -101,20 +101,28 @@ fn write_build_info(mut output: impl Write) -> io::Result<()> {
         "haldir-ctl {} — compiled build information",
         env!("CARGO_PKG_VERSION")
     )?;
-    writeln!(output, "  NCP release          : {}", NCP_V0_8_0.ncp_tag)?;
-    writeln!(output, "  NCP commit           : {}", NCP_V0_8_0.ncp_commit)?;
+    writeln!(
+        output,
+        "  NCP release          : {}",
+        NCP_V1_0_0_RC1.ncp_tag
+    )?;
+    writeln!(
+        output,
+        "  NCP commit           : {}",
+        NCP_V1_0_0_RC1.ncp_commit
+    )?;
     writeln!(
         output,
         "  wire / contract      : {} / {}",
-        NCP_V0_8_0.wire_version, NCP_V0_8_0.contract_hash
+        NCP_V1_0_0_RC1.wire_version, NCP_V1_0_0_RC1.contract_hash
     )?;
     writeln!(
         output,
         "  capability profile   : {}",
-        NCP_V0_8_0.capability_profile
+        NCP_V1_0_0_RC1.capability_profile
     )?;
     write!(output, "  compatibility id     : sha256:")?;
-    write_hex(&mut output, &NCP_V0_8_0.compatibility_id().value)?;
+    write_hex(&mut output, &NCP_V1_0_0_RC1.compatibility_id().value)?;
     writeln!(output)?;
     writeln!(
         output,

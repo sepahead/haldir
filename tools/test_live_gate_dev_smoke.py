@@ -542,7 +542,7 @@ class LiveGateDevSmokeTests(unittest.TestCase):
     ) -> None:
         common = {
             "development_only": True,
-            "ncp_wire_profile": "exact-ncp-v0.8-json",
+            "ncp_wire_profile": "exact-ncp-v1.0-json",
             "production_claim": False,
             "runtime_profile": "declared-live-zenoh",
             "schema_version": 1,

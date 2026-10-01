@@ -3,18 +3,21 @@
 //!
 //! `PlantPublicationAuthorityStateV1` keeps `AclExclusiveV1` and `NcpLeaseV1` as
 //! DISTINCT variants — never one ambiguous `has_authority` boolean (punch-list
-//! H8). Under `PRE_AUTHORITY_ACL_ONLY` the future wire `authority.term`/`lease_id`
-//! are simply absent.
+//! H8). Exclusive-route ACL evidence and an NCP authority lease answer different
+//! questions; NCP 1.0 publication needs both.
 
 use crate::cbor::{CanonicalValue, CborReader, CborWriter};
 use crate::digest::DigestV1;
 use crate::error::DecodeError;
 use crate::ids::{
-    AdmissionId, AuthorityLeaseId, DecisionId, GateBootId, GateId, GateOutputEpoch, MissionLeaseId,
-    PrincipalId, VehicleId,
+    AdmissionId, DecisionId, GateBootId, GateId, GateOutputEpoch, MissionLeaseId, PrincipalId,
+    VehicleId,
 };
+use crate::scalar::CanonicalUuidV4String;
 use crate::session::NcpSessionIdentityV1;
 use core::num::NonZeroU64;
+
+const NANOS_PER_MS: u64 = 1_000_000;
 
 tagged_enum! {
     /// Gate process lifecycle state.
@@ -59,8 +62,8 @@ tagged_enum! {
 
 canonical_struct! {
     /// The evidence that one authenticated Gate principal is the sole permitted
-    /// publisher of the final route in the current `PRE_AUTHORITY_ACL_ONLY` profile.
-    /// This is deployment evidence, NOT a plant-issued NCP lease.
+    /// publisher of the final route: deployment evidence, not an NCP authority lease.
+    /// Under NCP 1.0, Gate publishes only with both.
     /// `final_route_digest` uses `DigestDomain::TransportKey` over the exact
     /// final route's UTF-8 bytes.
     pub struct AclExclusiveEvidenceV1 {
@@ -73,18 +76,38 @@ canonical_struct! {
 }
 
 canonical_struct! {
-    /// A future NCP plant-authority lease held by Gate. Unavailable until a reviewed
-    /// upstream NCP release defines it; never serialized as an ACL evidence
-    /// record. `final_route_digest` uses `DigestDomain::TransportKey` over the
-    /// exact final route's UTF-8 bytes.
+    /// An NCP 1.0 authority lease that Gate holds for one plant session
+    /// incarnation. Under NCP `1.0.0-rc.1` Gate issues the lease to itself
+    /// (`issuer_principal == gate_transport_principal`) and the body's authority
+    /// machine enforces it; under NCP ADR-006 the body issues it. The UTC bounds
+    /// travel on the wire as audit metadata; the Gate-local `expires_mono_ns`
+    /// alone ends publication. `final_route_digest` uses
+    /// `DigestDomain::TransportKey` over the exact final route's UTF-8 bytes.
     pub struct NcpLeaseEvidenceV1 {
         req 1 gate_transport_principal: PrincipalId,
         req 2 final_route_digest: DigestV1,
         req 3 session: NcpSessionIdentityV1,
         req 4 authority_term: NonZeroU64,
-        req 5 lease_id: AuthorityLeaseId,
+        req 5 lease_id: CanonicalUuidV4String,
         req 6 authorized_output_epoch: GateOutputEpoch,
         opt 7 expires_mono_ns: u64,
+        req 8 issuer_principal: PrincipalId,
+        req 9 holder_entity: GateId,
+        req 10 issued_at_utc_ms: u64,
+        req 11 expires_at_utc_ms: u64,
+    }
+}
+
+impl NcpLeaseEvidenceV1 {
+    /// Whether the lease stays live for `duration_ms` from Gate-local monotonic
+    /// time `start_mono_ns`. A lease without a Gate-local deadline covers nothing.
+    #[must_use]
+    pub fn covers(&self, start_mono_ns: u64, duration_ms: u32) -> bool {
+        let end = start_mono_ns.checked_add(u64::from(duration_ms) * NANOS_PER_MS);
+        match (self.expires_mono_ns, end) {
+            (Some(deadline), Some(end)) => start_mono_ns < deadline && end <= deadline,
+            _ => false,
+        }
     }
 }
 
@@ -97,9 +120,10 @@ pub enum PlantPublicationAuthorityStateV1 {
         /// Why publication is unavailable.
         reason: PlantPublicationUnavailableReasonV1,
     },
-    /// Current profile: one authenticated Gate principal alone may publish the route.
+    /// Deployment evidence that one authenticated Gate principal alone may
+    /// publish the route.
     AclExclusiveV1(AclExclusiveEvidenceV1),
-    /// Future profile: a plant-issued NCP authority lease (not used under P0).
+    /// A live NCP 1.0 authority lease held by Gate.
     NcpLeaseV1(NcpLeaseEvidenceV1),
 }
 
@@ -110,19 +134,17 @@ impl PlantPublicationAuthorityStateV1 {
         match self {
             Self::Unavailable { .. } => "UNAVAILABLE",
             Self::AclExclusiveV1(_) => "PRE_AUTHORITY_ACL_ONLY",
-            Self::NcpLeaseV1(_) => "NCP_PLANT_AUTHORITY",
+            Self::NcpLeaseV1(_) => "NCP_1_0_COMMANDER_LEASE",
         }
     }
 
-    /// Whether this state authorizes publication under the current
-    /// `PRE_AUTHORITY_ACL_ONLY` compatibility profile.
+    /// Whether this state proves that Gate alone may publish on its final route.
     ///
-    /// The future [`Self::NcpLeaseV1`] variant intentionally returns `false`
-    /// until an NCP authority-aware adapter validates its session, epoch, term,
-    /// lease id, and expiry. Merely constructing that future evidence shape must
-    /// never grant authority to the ACL-only Gate.
+    /// Only exclusive-route ACL evidence does. Lease evidence alone never does:
+    /// under NCP 1.0 Gate needs a live authority lease in addition to this
+    /// evidence, never instead of it.
     #[must_use]
-    pub const fn authorizes_acl_only_publication(&self) -> bool {
+    pub const fn proves_exclusive_route(&self) -> bool {
         matches!(self, Self::AclExclusiveV1(_))
     }
 }
@@ -479,9 +501,13 @@ mod tests {
                     generation: CanonicalUuidV4String::from_random_bytes([7; 16]),
                 },
                 authority_term: NonZeroU64::new(1).unwrap(),
-                lease_id: AuthorityLeaseId::new([8; 16]),
+                lease_id: CanonicalUuidV4String::from_random_bytes([8; 16]),
                 authorized_output_epoch: output_epoch,
                 expires_mono_ns: Some(101),
+                issuer_principal: PrincipalId::new("gate.transport").unwrap(),
+                holder_entity: GateId::new("gate-a").unwrap(),
+                issued_at_utc_ms: 1_700_000_000_000,
+                expires_at_utc_ms: 1_700_000_030_000,
             });
 
         assert_eq!(
@@ -497,19 +523,53 @@ mod tests {
         assert_eq!(decode(&active_status()), Ok(active_status()));
     }
 
-    #[test]
-    fn future_ncp_authority_never_grants_acl_only_publication() {
-        let status = active_status();
-        let future = PlantPublicationAuthorityStateV1::NcpLeaseV1(NcpLeaseEvidenceV1 {
+    fn live_lease(status: &GateStatusV1) -> NcpLeaseEvidenceV1 {
+        NcpLeaseEvidenceV1 {
             gate_transport_principal: PrincipalId::new("gate.transport").unwrap(),
             final_route_digest: digest(b"route"),
-            session: status.ncp_session.unwrap(),
+            session: status.ncp_session.clone().unwrap(),
             authority_term: NonZeroU64::new(1).unwrap(),
-            lease_id: AuthorityLeaseId::new([8; 16]),
+            lease_id: CanonicalUuidV4String::from_random_bytes([8; 16]),
             authorized_output_epoch: status.output_epoch.unwrap(),
             expires_mono_ns: Some(101),
-        });
+            issuer_principal: PrincipalId::new("gate.transport").unwrap(),
+            holder_entity: GateId::new("gate-a").unwrap(),
+            issued_at_utc_ms: 1_700_000_000_000,
+            expires_at_utc_ms: 1_700_000_030_000,
+        }
+    }
 
-        assert!(!future.authorizes_acl_only_publication());
+    #[test]
+    fn ncp_lease_alone_never_proves_an_exclusive_route() {
+        let status = active_status();
+        let lease = PlantPublicationAuthorityStateV1::NcpLeaseV1(live_lease(&status));
+        assert!(!lease.proves_exclusive_route());
+    }
+
+    #[test]
+    fn ncp_lease_covers_only_windows_that_end_by_its_deadline() {
+        let lease = live_lease(&active_status()); // deadline 101 ns
+        assert!(lease.covers(0, 0));
+        assert!(lease.covers(100, 0));
+        assert!(!lease.covers(101, 0), "the deadline instant is not live");
+        let ms_lease = NcpLeaseEvidenceV1 {
+            expires_mono_ns: Some(3 * NANOS_PER_MS),
+            ..lease.clone()
+        };
+        assert!(ms_lease.covers(NANOS_PER_MS, 2));
+        assert!(!ms_lease.covers(NANOS_PER_MS + 1, 2));
+        let far = NcpLeaseEvidenceV1 {
+            expires_mono_ns: Some(u64::MAX),
+            ..lease.clone()
+        };
+        assert!(
+            !far.covers(u64::MAX - 1, 1),
+            "an unrepresentable end covers nothing"
+        );
+        let no_deadline = NcpLeaseEvidenceV1 {
+            expires_mono_ns: None,
+            ..lease
+        };
+        assert!(!no_deadline.covers(0, 0));
     }
 }

@@ -773,7 +773,7 @@ dependencies = [
 name = "haldir-ctl"
 version = "0.9.0"
 dependencies = [
- "haldir-ncp08",
+ "haldir-ncp10",
  "rustix",
 ]
 
@@ -783,7 +783,7 @@ version = "0.9.0"
 dependencies = [
  "haldir-contracts",
  "haldir-crypto",
- "haldir-ncp08",
+ "haldir-ncp10",
  "proptest",
  "rustix",
 ]
@@ -820,7 +820,7 @@ dependencies = [
  "haldir-deployment",
  "haldir-durable",
  "haldir-evidence",
- "haldir-ncp08",
+ "haldir-ncp10",
  "haldir-policy-native",
  "haldir-reference-plant",
  "haldir-state",
@@ -831,7 +831,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "haldir-ncp08"
+name = "haldir-ncp10"
 version = "0.9.0"
 dependencies = [
  "haldir-contracts",
@@ -858,7 +858,7 @@ dependencies = [
  "haldir-core",
  "haldir-crypto",
  "haldir-gate",
- "haldir-ncp08",
+ "haldir-ncp10",
  "haldir-policy-native",
  "haldir-reference-plant",
 ]
@@ -868,7 +868,7 @@ name = "haldir-reference-plant"
 version = "0.9.0"
 dependencies = [
  "haldir-contracts",
- "haldir-ncp08",
+ "haldir-ncp10",
 ]
 
 [[package]]
@@ -887,7 +887,7 @@ name = "haldir-transport-zenoh"
 version = "0.9.0"
 dependencies = [
  "haldir-contracts",
- "haldir-ncp08",
+ "haldir-ncp10",
  "ncp-core",
  "rustix",
  "serde_json",
@@ -1228,11 +1228,13 @@ dependencies = [
 
 [[package]]
 name = "ncp-core"
-version = "0.8.0"
-source = "git+https://github.com/sepahead/NCP?rev=2f5bd586d4bb20c90362bb6f5698b7f64057ba4e#2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
+version = "1.0.0-rc.1"
+source = "git+https://github.com/sepahead/NCP?rev=2819dae3b6338bb1df6d105ebb5b7433936a993d#2819dae3b6338bb1df6d105ebb5b7433936a993d"
 dependencies = [
+ "getrandom 0.3.4",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

@@ -122,9 +122,10 @@ Preserve the missing supervisor, real timeout, remote-retirement, crash, and pow
 ## Optional integrations
 
 Keep the default modeled adapter separate from the optional exact adapter.
-The immutable NCP baseline is `v0.8.0` at `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`.
-Its wire is `0.8` and contract hash is `d1b50a2d8a265276`.
-Only `haldir-ncp08` owns the stable Haldir-to-NCP conversion.
+The pinned NCP baseline is the `1.0.0-rc.1` candidate at
+`2819dae3b6338bb1df6d105ebb5b7433936a993d`.
+Its wire is `1.0` and contract hash is `163acc57d8a62b66`.
+Only `haldir-ncp10` owns the stable Haldir-to-NCP conversion and the commander lease.
 Do not update a pin as documentation work.
 
 The candidate local NCP direct profile excludes Haldir gating.

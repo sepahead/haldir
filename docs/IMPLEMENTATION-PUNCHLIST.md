@@ -119,7 +119,7 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
   startup-minted declared-live capability. It rejects a publisher outside the actor's exact
   realm/session route before invocation, consumes a matched strict publisher around one
   await, and journals the observed local result. Every invoked live call is terminal, including
-  local `Ok`, because NCP v0.8 starts TTL at unobserved plant-local arrival; no guessed live
+  local `Ok`, because NCP 1.0 starts TTL at unobserved plant-local arrival; no guessed live
   history interval or later publication authority is created. Test-only futures also cover cold drop,
   pending timeout-as-drop, and panic unwind without converting an unobserved result to
   ReturnedError. A public no-network kernel first issues one Gate-signed, locally expiring
@@ -163,7 +163,7 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 - `[x]` **H13** Wall-clock jumps don't move a live lease deadline; far-future `controller_t_ns`
   no effect; `controller_t_ns` never becomes final `t`.
 - `[x]` **H14** Handoff changes only mission authority; Gate keeps its own output epoch/seq.
-- `[x]` **H15** `haldir-contracts` does NOT depend on `haldir-ncp08`; `NcpSessionIdentityV1`/
+- `[x]` **H15** `haldir-contracts` does NOT depend on `haldir-ncp10`; `NcpSessionIdentityV1`/
   `NcpSourceRefV1` are Haldir's own stable types.
 - `[~]` **H16** Controller-influenced TTL is clamped by the full min-set. The P0
   single-thread actor denies allocation failure before frame construction. The internal
@@ -216,7 +216,7 @@ This file is a **living checklist**: each item is marked `[ ]` open, `[x]` done,
 
 ## 4. Overclaiming risks / honesty
 
-- `[x]` **O1** Do not claim `PRE_AUTHORITY_ACL_ONLY` from in-process tests. The retained
+- `[x]` **O1** Do not claim `NCP_1_0_COMMANDER_LEASE` from in-process tests. The retained
   external mTLS campaign proves only its fixed synthetic command/intent ACL subset; the
   packaged runtime, full matrix, certificate lifecycle, and bypass property remain limited
   exactly as stated in `CL-LIVE-TRANSPORT-01` and `LIMITATIONS.md`.

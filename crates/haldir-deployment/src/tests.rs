@@ -36,7 +36,7 @@ fn gate_configuration() -> GateConfigurationArtifactV1 {
         vehicle_id: VehicleId::new("uav-1").unwrap(),
         profile_class: DeploymentClassV1::AssuranceSimulation,
         runtime_profile: DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-        ncp_wire_profile: DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+        ncp_wire_profile: DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
         state_store_id: [1; 16],
         journal_id: JournalId::new([2; 16]).unwrap(),
         trust_snapshot_digest: DigestV1::compute(DigestDomain::TrustStoreSnapshot, b"trust"),
@@ -66,7 +66,7 @@ fn artifact_bytes(role: DeploymentArtifactIdV1) -> Vec<u8> {
     match role {
         DeploymentArtifactIdV1::GateConfiguration => to_canonical_bytes(&gate_configuration()),
         DeploymentArtifactIdV1::NcpCompatibility => {
-            haldir_ncp08::pinned_ncp_compatibility_artifact_bytes().unwrap()
+            haldir_ncp10::pinned_ncp_compatibility_artifact_bytes().unwrap()
         }
         DeploymentArtifactIdV1::TrustManifest
         | DeploymentArtifactIdV1::AdmissionSnapshot
@@ -197,7 +197,7 @@ fn package() -> DeploymentPackageV1 {
         realm: AsciiId::new("range-a").unwrap(),
         vehicle_id: VehicleId::new("uav-1").unwrap(),
         runtime_profile: DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-        ncp_wire_profile: DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+        ncp_wire_profile: DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
         state_store_id: [1; 16],
         journal_id: JournalId::new([2; 16]).unwrap(),
         artifacts: BoundedVec::from_vec(
@@ -221,7 +221,7 @@ fn policy() -> DeploymentAcceptancePolicy {
         DeploymentProfileRequirement::new(
             DeploymentClassV1::AssuranceSimulation,
             DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-            DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+            DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
         ),
         authority_policy(),
     )
@@ -409,14 +409,14 @@ fn signed_ncp_role_composes_into_a_compiled_compatibility_proof() {
 
     assert_eq!(
         validated.ncp_compatibility().compatibility_id(),
-        haldir_ncp08::NCP_V0_8_0.compatibility_id()
+        haldir_ncp10::NCP_V1_0_0_RC1.compatibility_id()
     );
     assert_eq!(
         validated
             .resolved()
             .artifact(DeploymentArtifactIdV1::NcpCompatibility),
         Some(
-            haldir_ncp08::pinned_ncp_compatibility_artifact_bytes()
+            haldir_ncp10::pinned_ncp_compatibility_artifact_bytes()
                 .unwrap()
                 .as_slice()
         )
@@ -530,7 +530,7 @@ fn separately_expected_snapshot_authorities_cannot_be_selected_by_the_package() 
         DeploymentProfileRequirement::new(
             DeploymentClassV1::AssuranceSimulation,
             DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-            DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+            DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
         ),
         different_policy,
     );
@@ -659,9 +659,30 @@ fn gate_configuration_artifact_digest_vector_is_stable() {
         )
         .value,
         [
-            186, 174, 62, 97, 240, 245, 36, 153, 73, 76, 94, 171, 6, 208, 114, 70, 96, 189, 173,
-            131, 16, 99, 57, 179, 82, 225, 207, 75, 117, 84, 6, 78,
+            44, 66, 71, 135, 189, 33, 137, 200, 96, 45, 120, 71, 253, 251, 165, 30, 23, 110, 140,
+            85, 114, 134, 223, 49, 202, 161, 100, 92, 51, 97, 77, 67,
         ]
+    );
+}
+
+#[test]
+fn a_package_selecting_the_retired_ncp_v0_8_wire_no_longer_decodes() {
+    let exact = to_canonical_bytes(&gate_configuration());
+    let mut modeled = gate_configuration();
+    modeled.ncp_wire_profile = DeploymentNcpWireProfileV1::ModeledP0;
+    let modeled = to_canonical_bytes(&modeled);
+    let differing: Vec<usize> = (0..exact.len())
+        .filter(|&index| exact[index] != modeled[index])
+        .collect();
+    let [tag_index] = differing.as_slice() else {
+        panic!("only the wire tag may differ: {differing:?}");
+    };
+
+    let mut retired = exact;
+    retired[*tag_index] = 1; // exact NCP v0.8 JSON
+    assert_eq!(
+        from_canonical_bytes::<GateConfigurationArtifactV1>(&retired, Limits::DEFAULT),
+        Err(haldir_contracts::DecodeError::BadEnumTag)
     );
 }
 
@@ -727,7 +748,7 @@ fn signed_gate_configuration_rejects_unsupported_schema_before_runtime_use() {
 
 #[test]
 fn signed_but_incompatible_ncp_role_fails_the_consuming_typestate() {
-    let mut incompatible = haldir_ncp08::NcpCompatibilityArtifactV1::pinned().unwrap();
+    let mut incompatible = haldir_ncp10::NcpCompatibilityArtifactV1::pinned().unwrap();
     incompatible.ncp_tag = AsciiId::new("v0.8.1").unwrap();
     let incompatible_bytes = to_canonical_bytes(&incompatible);
     let mut incompatible_package = package();
@@ -770,7 +791,7 @@ fn signed_but_incompatible_ncp_role_fails_the_consuming_typestate() {
     let error = resolved.validate_ncp_compatibility().unwrap_err();
     assert!(matches!(
         error,
-        DeploymentError::NcpCompatibility(haldir_ncp08::NcpCompatibilityError::PinMismatch)
+        DeploymentError::NcpCompatibility(haldir_ncp10::NcpCompatibilityError::PinMismatch)
     ));
     assert!(std::error::Error::source(&error).is_some());
 }
@@ -1149,7 +1170,7 @@ fn gate_realm_vehicle_runtime_and_wire_mismatches_are_distinct() {
                 identity("gate-2", "range-a", "uav-1"),
                 profile(
                     DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                    DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
                 ),
                 authority_policy(),
             ),
@@ -1160,7 +1181,7 @@ fn gate_realm_vehicle_runtime_and_wire_mismatches_are_distinct() {
                 identity("gate-1", "range-b", "uav-1"),
                 profile(
                     DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                    DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
                 ),
                 authority_policy(),
             ),
@@ -1171,7 +1192,7 @@ fn gate_realm_vehicle_runtime_and_wire_mismatches_are_distinct() {
                 identity("gate-1", "range-a", "uav-2"),
                 profile(
                     DeploymentRuntimeProfileV1::DeclaredLiveZenoh,
-                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                    DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
                 ),
                 authority_policy(),
             ),
@@ -1182,7 +1203,7 @@ fn gate_realm_vehicle_runtime_and_wire_mismatches_are_distinct() {
                 identity("gate-1", "range-a", "uav-1"),
                 profile(
                     DeploymentRuntimeProfileV1::InProcessReference,
-                    DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+                    DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
                 ),
                 authority_policy(),
             ),

@@ -14,4 +14,4 @@ workspace = true
 
 [dependencies]
 haldir-contracts.workspace = true
-haldir-ncp08.workspace = true
+haldir-ncp10.workspace = true

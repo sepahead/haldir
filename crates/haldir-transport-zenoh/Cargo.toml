@@ -16,8 +16,8 @@ workspace = true
 default = []
 live-zenoh = [
     "dep:haldir-contracts",
-    "dep:haldir-ncp08",
-    "haldir-ncp08/real-ncp",
+    "dep:haldir-ncp10",
+    "haldir-ncp10/real-ncp",
     "dep:serde_json",
     "dep:rustix",
     "dep:tokio",
@@ -26,7 +26,7 @@ live-zenoh = [
 
 [dependencies]
 haldir-contracts = { workspace = true, optional = true }
-haldir-ncp08 = { workspace = true, optional = true }
+haldir-ncp10 = { workspace = true, optional = true }
 ncp-core.workspace = true
 serde_json = { workspace = true, optional = true }
 rustix = { workspace = true, optional = true }

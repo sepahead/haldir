@@ -14,6 +14,8 @@ pub enum NcpAdapterError {
     SerializationFailed,
     /// The exact bytes did not match the validator's rebuild.
     ValidatorMismatch,
+    /// The authority lease does not fit this session or NCP 1.0 authority bounds.
+    InvalidAuthority,
 }
 
 impl NcpAdapterError {
@@ -26,6 +28,7 @@ impl NcpAdapterError {
             Self::UpstreamValidationFailed => "NCP_UPSTREAM_VALIDATION_FAILED",
             Self::SerializationFailed => "NCP_SERIALIZATION_FAILED",
             Self::ValidatorMismatch => "NCP_VALIDATOR_MISMATCH",
+            Self::InvalidAuthority => "NCP_INVALID_AUTHORITY",
         }
     }
 }

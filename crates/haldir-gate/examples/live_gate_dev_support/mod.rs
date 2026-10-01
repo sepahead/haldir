@@ -49,7 +49,7 @@ use haldir_gate::{
     LiveIntentActivationInput, LiveZenohShutdownError, LocalStartupConfig, OsEntropy,
     PublicationJournalStartupConfig, StartupProfile, StartupReport, StateOpenMode, start_local,
 };
-use haldir_ncp08::SelectedNcpCommandAdapter;
+use haldir_ncp10::SelectedNcpCommandAdapter;
 use haldir_policy_native::{
     GeofenceBoxV1, LocallyAdmittedMotionEnvelopeV2, NativePolicySnapshot, PhaseRuleV1,
     PlantModeRuleV2,
@@ -646,7 +646,7 @@ fn fixture_template() -> SmokeResult<GateConfigTemplate> {
         policy_snapshot_digest,
         session: fixture_session()?,
         runtime_profile: GateRuntimeProfile::DeclaredLiveZenoh,
-        ncp_adapter: SelectedNcpCommandAdapter::exact_ncp_v0_8_json(),
+        ncp_adapter: SelectedNcpCommandAdapter::exact_ncp_v1_0_json(),
         publication: PlantPublicationAuthorityStateV1::AclExclusiveV1(AclExclusiveEvidenceV1 {
             gate_transport_principal: PrincipalId::new("haldir-gate.secure-reference-v1")
                 .map_err(|_| SmokeError::before_durable("fixture-invariant"))?,
@@ -1003,7 +1003,7 @@ pub fn provision_fixture(args: ProvisionArgs) -> SmokeResult<()> {
         "development_only": true,
         "journal": journal_json(journal, unknown_events),
         "mode": "development-live-fixture-provision-v1",
-        "ncp_wire_profile": "exact-ncp-v0.8-json",
+        "ncp_wire_profile": "exact-ncp-v1.0-json",
         "production_claim": false,
         "provisioned": true,
         "runtime_profile": "declared-live-zenoh",
@@ -1152,7 +1152,7 @@ pub async fn bind_and_shutdown(args: BindArgs) -> SmokeResult<()> {
             "session_open": true
         },
         "mode": "development-live-bind-smoke-v1",
-        "ncp_wire_profile": "exact-ncp-v0.8-json",
+        "ncp_wire_profile": "exact-ncp-v1.0-json",
         "negative_evidence": {
             "acl_exclusivity_evidence": false,
             "authenticated_control_ingress": false,

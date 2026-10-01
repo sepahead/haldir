@@ -808,6 +808,41 @@ authority. The repository remains `EXPERIMENTAL` and the release remains
 `NO_GO` until its separately documented evidence and deployment boundaries are
 closed.
 
+### Speak NCP 1.0 with a Gate-issued commander lease
+
+Haldir now targets the NCP `1.0.0-rc.1` candidate at commit
+`2819dae3b6338bb1df6d105ebb5b7433936a993d` (wire `1.0`) and retires the NCP
+`v0.8.0` baseline: it neither builds nor accepts wire-0.8 frames.
+
+- `haldir-ncp08` is replaced by `haldir-ncp10`, with `ModeledNcp10Adapter`,
+  `RealNcp10Adapter`, `NCP_V1_0_0_RC1`, and `NcpCommandWireProfile::ExactNcpV1_0Json`.
+  The compatibility record's capability profile is `NCP_1_0_COMMANDER_LEASE`, so
+  every `NCP_COMPATIBILITY` deployment artifact must be regenerated and revalidated.
+- `DeploymentNcpWireProfileV1::ExactNcpV1_0Json` (`EXACT_NCP_V1_0_JSON`) uses
+  canonical tag `2`. Tag `1`, exact NCP v0.8 JSON, is retired, so a signed package
+  that selects it no longer decodes. Re-sign deployment packages and Gate
+  configuration artifacts.
+- `GateConfig` gains `ncp_lease_interval: NcpLeaseInterval` (15–60 s, default
+  30 s) and `utc_clock: Box<dyn UtcClock>`; `SystemUtcClock` reads the operating
+  system clock. Validation rejects a policy `ncp_validity_cap_ms` above the
+  interval's rotation margin with `GateConfigError::NcpValidityCapExceedsLease`,
+  and startup reports `GateStartupError::NcpTermSpaceExhausted` for a boot counter
+  beyond the NCP term space.
+- `GateCommandBuildInputV1` gains `lease`. `NcpLeaseEvidenceV1` now carries a
+  canonical UUIDv4 `lease_id`, `issuer_principal`, a `GateId` `holder_entity`, and
+  UTC bounds, and gains `covers`. `PlantPublicationAuthorityStateV1::
+  authorizes_acl_only_publication` is renamed `proves_exclusive_route`, and the
+  enum-level lease predicate is removed: Gate holds its lease as runtime state.
+- Decisions deny with `DenyNoPublicationAuthority` when no lease term can be
+  acquired, for lack of UTC time or entropy, and the publication recheck requires
+  the frame's lease to cover the command's validity.
+
+Every command frame now carries an `authority` lease, HOLD included. The
+normative authority model gains a conjunct, which reopens T001, and the
+protection model gains the lease constraint and its time-domain fields.
+Canonical bytes change for `NcpLeaseEvidenceV1` and for deployment artifacts that
+select the exact wire; persisted-state formats are unchanged.
+
 The release remains NO-GO. These entries do not promise compatibility for later
 implementation tasks; each later requirement must add its own row before it can
 close.

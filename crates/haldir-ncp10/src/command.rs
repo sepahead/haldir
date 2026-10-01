@@ -4,7 +4,7 @@
 //! Gate uses it in every publication profile, while the plant is only one
 //! simulation consumer. Construction derives every authoritative field from one
 //! self-consistent [`ExactNcpCommandFrame`]. The decision id remains explicitly
-//! correlation-only because NCP v0.8 does not carry it on the wire.
+//! correlation-only because NCP 1.0 does not carry it on the wire.
 
 use core::num::NonZeroU32;
 
@@ -165,22 +165,26 @@ impl std::error::Error for PlantCommandError {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::lease_for;
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
     use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::NcpStreamPositionV1;
 
-    use crate::{AclOnlyAdapter, GateCommandBuildInputV1, NcpCommandAdapter};
+    use crate::{GateCommandBuildInputV1, ModeledNcp10Adapter, NcpCommandAdapter};
 
     fn input(action: RequestedActionV1) -> GateCommandBuildInputV1 {
+        let session = NcpSessionIdentityV1 {
+            session_id: AsciiId::new("sess-1").unwrap(),
+            generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+        };
+        let epoch = GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([2; 16]));
         GateCommandBuildInputV1 {
-            session: NcpSessionIdentityV1 {
-                session_id: AsciiId::new("sess-1").unwrap(),
-                generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
-            },
+            lease: lease_for(&session, epoch),
+            session,
             stream: NcpStreamPositionV1 {
-                epoch: GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([2; 16])),
+                epoch,
                 seq: OutputSeq::new(NonZeroU64::new(3).unwrap()),
             },
             source: NcpSourceRefV1 {
@@ -204,7 +208,9 @@ mod tests {
             down_mm_s: 300,
             requested_validity_ms: NonZeroU32::new(200).unwrap(),
         };
-        let frame = AclOnlyAdapter::new().build_command(&input(action)).unwrap();
+        let frame = ModeledNcp10Adapter::new()
+            .build_command(&input(action))
+            .unwrap();
         let command = PlantCommand::from_exact_frame(DecisionId::new([8; 16]), frame).unwrap();
 
         assert_eq!(command.decision_id(), DecisionId::new([8; 16]));
@@ -224,7 +230,9 @@ mod tests {
         let action = RequestedActionV1::Hold {
             requested_validity_ms: NonZeroU32::new(200).unwrap(),
         };
-        let mut frame = AclOnlyAdapter::new().build_command(&input(action)).unwrap();
+        let mut frame = ModeledNcp10Adapter::new()
+            .build_command(&input(action))
+            .unwrap();
         frame.bytes[0] ^= 1;
 
         assert_eq!(

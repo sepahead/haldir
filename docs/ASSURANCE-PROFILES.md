@@ -10,7 +10,7 @@ P1/P2/P3 assurance profile and must not be cited as one.
 | Profile | Controller | Plant | NCP capability | Claim | Status here |
 | --- | --- | --- | --- | --- | --- |
 | **P0** | deterministic reference | deterministic reference plant | local semantic adapter model | contract/state/policy correctness in-process | **IMPLEMENTED + TESTED** |
-| P1 | isolated NEST controller | deterministic plant | NCP v0.8.0, live mTLS/ACL exclusive Gate publisher | experimental complete-mediation slice; `PRE_AUTHORITY_ACL_ONLY` | **NOT IMPLEMENTED**; partial transport/startup/evidence primitives only |
+| P1 | isolated NEST controller | deterministic plant | NCP 1.0, live mTLS/ACL exclusive Gate publisher with a Gate-issued lease | experimental complete-mediation slice; `NCP_1_0_COMMANDER_LEASE` | **NOT IMPLEMENTED**; partial transport/startup/evidence primitives only |
 | P2 | isolated NEST controller | Crebain + PX4-SITL | same | measured end-to-end simulated plant authorization | **NOT IMPLEMENTED** |
 | P3 | NEST + independent admitted backend | deterministic plant + SITL | same Gate contract | backend-aware admission research result | **NOT IMPLEMENTED** |
 
@@ -22,7 +22,7 @@ Vehicle/plant:      deterministic integer point-mass plant (simulation only)
 Controller route:   controller -> HaldirIntentV1 (one signed intent key)
 Final command route: Gate -> one modeled NCP command frame -> reference plant
 Direct DDS/MAVROS routes: absent by construction (in-process; no transport)
-NCP compatibility:  immutable v0.8.0 (modeled adapter, digest-pinned)
+NCP compatibility:  1.0.0-rc.1 at an exact commit (modeled adapter, digest-pinned)
 Gate writers:       one authenticated principal (modeled; live ACL UNPROVEN)
 Controller writers: one application-signing key per intent key
 Command family:     local-NED velocity + hold
@@ -30,7 +30,7 @@ State source:       one modeled trusted-state snapshot
 Safe action:        plant-owned reference-kinematic-hold-v1 (simulation only)
 Timing claim:       none (no performance campaign); not hard real-time
 Backend claim:      none (no neural runtime; admission is digest-equality only)
-Command-authority:  PRE_AUTHORITY_ACL_ONLY (declared label; live property UNPROVEN)
+Command-authority:  NCP_1_0_COMMANDER_LEASE (declared label; live property UNPROVEN)
 ```
 
 Do not write "Haldir mediates the vehicle." The proven statement is: within P0,
@@ -41,7 +41,7 @@ in-process command route. Everything beyond that is out of scope (see
 ## Why the live library path is not P1
 
 The off-by-default live code supplies strict route construction, bounded intent
-ingress, exact NCP-v0.8 JSON validation, a move-only Gate lifecycle, signed
+ingress, exact NCP 1.0 JSON validation, a move-only Gate lifecycle, signed
 publication evidence, and a development-only bind/shutdown campaign. Those are
 useful prerequisites, not an assurance profile. P1 still requires one private
 authenticated runner that selects the signed package, authenticates ongoing

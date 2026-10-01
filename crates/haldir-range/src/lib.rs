@@ -54,7 +54,7 @@ mod range {
         sign_message,
     };
     use haldir_gate::{BoundedIntentCandidate, DecisionRecord, GateConfig, VehicleActor};
-    use haldir_ncp08::SelectedNcpCommandAdapter;
+    use haldir_ncp10::SelectedNcpCommandAdapter;
     use haldir_policy_native::{
         GeofenceBoxV1, LocallyAdmittedMotionEnvelopeV2, NativePolicySnapshot, PhaseRuleV1,
         PlantModeRuleV2,
@@ -230,6 +230,8 @@ mod range {
                 local_cap_ms: NonZeroU32::new(30_000).unwrap(),
                 gate_signer: gate_sk,
                 gate_signer_kid: kid(4),
+                ncp_lease_interval: haldir_ncp10::NcpLeaseInterval::DEFAULT,
+                utc_clock: Box::new(haldir_gate::SystemUtcClock),
             };
             let mut actor =
                 VehicleActor::new_ephemeral(cfg).expect("range fixture has valid Gate config");

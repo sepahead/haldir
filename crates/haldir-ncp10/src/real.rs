@@ -1,4 +1,4 @@
-//! Exact NCP v0.8.0 JSON adapter, compiled only for the `real-ncp` profile.
+//! Exact NCP `1.0.0-rc.1` JSON adapter, compiled only for the `real-ncp` profile.
 //!
 //! The dependency is pinned by immutable commit. Construction is followed by the
 //! upstream typed validator, compact JSON serialization, and upstream validated
@@ -8,25 +8,58 @@ use crate::adapter::{
     ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter, NcpCommandFrameV1,
     build_semantic_frame,
 };
-use crate::compatibility::{NCP_V0_8_0, NcpCompatibilityRecordV1};
+use crate::compatibility::{NCP_V1_0_0_RC1, NcpCompatibilityRecordV1};
 use crate::error::NcpAdapterError;
-use ncp_core::{ChannelValue, CommandFrame, Map, Mode, SessionRef, StreamPosition, WireFrame};
+use haldir_contracts::status::NcpLeaseEvidenceV1;
+use ncp_core::{
+    AuthorityLease, ChannelValue, CommandFrame, Map, Mode, SessionRef, StreamPosition, WireFrame,
+};
 use std::time::Duration;
 
 const VELOCITY_SETPOINT_CHANNEL: &str = "velocity_setpoint";
 const VELOCITY_SETPOINT_UNIT: &str = "m/s";
 
-/// Exact adapter backed by `ncp-core` v0.8.0 at the pinned release commit.
+// The default build mirrors these NCP limits without the upstream crate; this
+// profile proves the mirror exact.
+const _: () = {
+    assert!(crate::NCP_JSON_SAFE_INTEGER_MAX as i64 == ncp_core::JSON_SAFE_INTEGER_MAX);
+    assert!(
+        crate::NCP_MAX_AUTHORITY_LEASE_MS as i64 == ncp_core::authority::MAX_AUTHORITY_LEASE_MS
+    );
+    assert!(
+        crate::NCP_MAX_CLOCK_UNCERTAINTY_MS as i64 == ncp_core::authority::MAX_CLOCK_UNCERTAINTY_MS
+    );
+};
+
+/// The NCP wire form of a Gate lease. Gate's transport principal is the holder.
+pub(crate) fn ncp_lease(lease: &NcpLeaseEvidenceV1) -> Result<AuthorityLease, NcpAdapterError> {
+    Ok(AuthorityLease {
+        session_epoch: lease.session.generation.render(),
+        term: lease.authority_term.get(),
+        lease_id: lease.lease_id.render(),
+        issuer_principal_id: lease.issuer_principal.as_str().to_owned(),
+        holder_principal_id: lease.gate_transport_principal.as_str().to_owned(),
+        holder_entity_id: lease.holder_entity.as_str().to_owned(),
+        issued_at_utc_ms: i64::try_from(lease.issued_at_utc_ms)
+            .map_err(|_| NcpAdapterError::ConversionOutOfRange)?,
+        expires_at_utc_ms: i64::try_from(lease.expires_at_utc_ms)
+            .map_err(|_| NcpAdapterError::ConversionOutOfRange)?,
+    })
+}
+
+/// Exact adapter backed by `ncp-core` `1.0.0-rc.1` at the pinned candidate commit.
 #[derive(Debug, Clone)]
-pub struct RealNcp08Adapter {
+pub struct RealNcp10Adapter {
     compat: NcpCompatibilityRecordV1,
 }
 
-impl RealNcp08Adapter {
+impl RealNcp10Adapter {
     /// Create the exact pinned adapter.
     #[must_use]
     pub fn new() -> Self {
-        Self { compat: NCP_V0_8_0 }
+        Self {
+            compat: NCP_V1_0_0_RC1,
+        }
     }
 
     fn to_ncp_frame(semantic: &NcpCommandFrameV1) -> Result<CommandFrame, NcpAdapterError> {
@@ -69,6 +102,7 @@ impl RealNcp08Adapter {
                 generation: semantic.session.generation.render(),
             },
             session_id: semantic.session.session_id.as_str().to_owned(),
+            authority: Some(ncp_lease(&semantic.authority)?),
             ..CommandFrame::default()
         };
         WireFrame::validate_wire(&frame).map_err(|_| NcpAdapterError::UpstreamValidationFailed)?;
@@ -77,6 +111,11 @@ impl RealNcp08Adapter {
     }
 
     fn validate_profile_shape(frame: &CommandFrame) -> Result<(), NcpAdapterError> {
+        // Haldir carries the session's lease on Active and HOLD alike.
+        match &frame.authority {
+            Some(lease) if lease.session_epoch == frame.session.generation => {}
+            _ => return Err(NcpAdapterError::UpstreamValidationFailed),
+        }
         if frame.channels.len() != 1 {
             return Err(NcpAdapterError::UpstreamValidationFailed);
         }
@@ -109,18 +148,18 @@ impl RealNcp08Adapter {
 }
 
 pub(crate) fn exact_bytes_match_semantic(semantic: &NcpCommandFrameV1, exact_bytes: &[u8]) -> bool {
-    RealNcp08Adapter::to_ncp_frame(semantic)
-        .and_then(|frame| RealNcp08Adapter::validated_bytes(&frame))
+    RealNcp10Adapter::to_ncp_frame(semantic)
+        .and_then(|frame| RealNcp10Adapter::validated_bytes(&frame))
         .is_ok_and(|rebuilt| rebuilt.as_slice() == exact_bytes)
 }
 
-impl Default for RealNcp08Adapter {
+impl Default for RealNcp10Adapter {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl NcpCommandAdapter for RealNcp08Adapter {
+impl NcpCommandAdapter for RealNcp10Adapter {
     fn compatibility(&self) -> &NcpCompatibilityRecordV1 {
         &self.compat
     }
@@ -157,26 +196,38 @@ impl NcpCommandAdapter for RealNcp08Adapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::lease_for;
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
     use haldir_contracts::digest::{DigestDomain, DigestV1};
-    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{GateId, GateOutputEpoch, OutputSeq, PrincipalId, SourceSeq};
     use haldir_contracts::receipt::TransformationRelationV1;
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
+
+    const GENERATION: &str = "293279f3-d459-4bfd-aeeb-604799e96925";
+    const OUTPUT_EPOCH: &str = "3ef6f0ad-8ee6-4c6a-9e3f-86dc9ce849a1";
 
     fn uuid(text: &str) -> CanonicalUuidV4String {
         CanonicalUuidV4String::parse(text).unwrap()
     }
 
+    fn session() -> NcpSessionIdentityV1 {
+        NcpSessionIdentityV1 {
+            session_id: AsciiId::new("sess-1").unwrap(),
+            generation: uuid(GENERATION),
+        }
+    }
+
+    fn output_epoch() -> GateOutputEpoch {
+        GateOutputEpoch::new(uuid(OUTPUT_EPOCH))
+    }
+
     fn input(seq: u64, action: RequestedActionV1) -> GateCommandBuildInputV1 {
         GateCommandBuildInputV1 {
-            session: NcpSessionIdentityV1 {
-                session_id: AsciiId::new("sess-1").unwrap(),
-                generation: uuid("293279f3-d459-4bfd-aeeb-604799e96925"),
-            },
+            session: session(),
             stream: NcpStreamPositionV1 {
-                epoch: GateOutputEpoch::new(uuid("3ef6f0ad-8ee6-4c6a-9e3f-86dc9ce849a1")),
+                epoch: output_epoch(),
                 seq: OutputSeq::new(NonZeroU64::new(seq).unwrap()),
             },
             source: NcpSourceRefV1 {
@@ -189,6 +240,19 @@ mod tests {
             gate_t_ns: 2_000_000_000,
             action,
             effective_validity_ms: 200,
+            lease: vector_lease(),
+        }
+    }
+
+    /// The authority block of NCP's frozen 1.0 `command_frame` conformance vector.
+    fn vector_lease() -> NcpLeaseEvidenceV1 {
+        let principal = PrincipalId::new("controller-principal-1").unwrap();
+        NcpLeaseEvidenceV1 {
+            gate_transport_principal: principal.clone(),
+            issuer_principal: principal,
+            holder_entity: GateId::new("pid-controller-1").unwrap(),
+            lease_id: uuid("20000000-0000-4000-8000-000000000001"),
+            ..lease_for(&session(), output_epoch())
         }
     }
 
@@ -203,9 +267,9 @@ mod tests {
 
     #[test]
     fn frozen_upstream_command_vector_decodes_with_the_pinned_crate() {
-        let bytes = include_bytes!("../tests/data/ncp-v0.8.0/command_frame.json");
+        let bytes = include_bytes!("../tests/data/ncp-v1.0.0-rc.1/command_frame.json");
         let decoded = ncp_core::decode_validated::<CommandFrame>(bytes).unwrap();
-        assert_eq!(decoded.ncp_version, "0.8");
+        assert_eq!(decoded.ncp_version, "1.0");
         assert_eq!(decoded.kind, "command_frame");
         assert_eq!(decoded.mode, Mode::Active);
         assert_eq!(decoded.stream.seq, 7);
@@ -221,15 +285,40 @@ mod tests {
     }
 
     #[test]
+    fn reproduces_the_frozen_ncp_1_0_conformance_vector() {
+        let frozen: CommandFrame = ncp_core::decode_validated(include_bytes!(
+            "../tests/data/ncp-v1.0.0-rc.1/command_frame.json"
+        ))
+        .unwrap();
+        let mut input = input(
+            7,
+            RequestedActionV1::VelocityLocalNed {
+                north_mm_s: 100,
+                east_mm_s: 0,
+                down_mm_s: 0,
+                requested_validity_ms: core::num::NonZeroU32::new(200).unwrap(),
+            },
+        );
+        input.session.session_id = AsciiId::new("vec-open-1").unwrap();
+        input.lease.session.session_id = AsciiId::new("vec-open-1").unwrap();
+        input.frame_id = BoundedAscii::new("world").unwrap();
+        input.gate_t_ns = 1_000_000_000;
+        input.source_t_ns = 1_000_000_000;
+        let exact = RealNcp10Adapter::new().build_command(&input).unwrap();
+        let rebuilt: CommandFrame = ncp_core::decode_validated(exact.bytes()).unwrap();
+        assert_eq!(rebuilt, frozen);
+    }
+
+    #[test]
     fn active_output_is_valid_exact_ncp_and_matches_an_independent_reference() {
-        let adapter = RealNcp08Adapter::new();
+        let adapter = RealNcp10Adapter::new();
         let input = input(7, velocity());
         let exact = adapter.build_command(&input).unwrap();
         adapter.validate_exact_command(&exact, &input).unwrap();
         assert!(exact.is_self_consistent());
         assert_eq!(
             exact.wire_profile(),
-            crate::NcpCommandWireProfile::ExactNcpV0_8Json
+            crate::NcpCommandWireProfile::ExactNcpV1_0Json
         );
         assert!(!exact.source_key_is_wire_bound());
         let decoded = ncp_core::decode_validated::<CommandFrame>(exact.bytes()).unwrap();
@@ -260,6 +349,16 @@ mod tests {
                 generation: "293279f3-d459-4bfd-aeeb-604799e96925".to_owned(),
             },
             session_id: "sess-1".to_owned(),
+            authority: Some(AuthorityLease {
+                session_epoch: "293279f3-d459-4bfd-aeeb-604799e96925".to_owned(),
+                term: 1,
+                lease_id: "20000000-0000-4000-8000-000000000001".to_owned(),
+                issuer_principal_id: "controller-principal-1".to_owned(),
+                holder_principal_id: "controller-principal-1".to_owned(),
+                holder_entity_id: "pid-controller-1".to_owned(),
+                issued_at_utc_ms: 1_700_000_000_000,
+                expires_at_utc_ms: 1_700_000_030_000,
+            }),
             ..CommandFrame::default()
         };
         assert_eq!(decoded, expected);
@@ -272,7 +371,7 @@ mod tests {
 
     #[test]
     fn hold_is_a_valid_zero_velocity_command_that_supersedes_active() {
-        let adapter = RealNcp08Adapter::new();
+        let adapter = RealNcp10Adapter::new();
         let input = input(
             8,
             RequestedActionV1::Hold {
@@ -290,7 +389,7 @@ mod tests {
 
     #[test]
     fn json_safe_bound_and_active_ttl_are_enforced_by_the_real_path() {
-        let adapter = RealNcp08Adapter::new();
+        let adapter = RealNcp10Adapter::new();
         let mut at_limit = input(crate::NCP_JSON_SAFE_INTEGER_MAX, velocity());
         assert!(adapter.build_command(&at_limit).is_ok());
         at_limit.stream.seq =
@@ -325,7 +424,7 @@ mod tests {
 
     #[test]
     fn byte_digest_and_transformation_tampering_are_rejected() {
-        let adapter = RealNcp08Adapter::new();
+        let adapter = RealNcp10Adapter::new();
         let input = input(7, velocity());
 
         let mut bytes = adapter.build_command(&input).unwrap();
@@ -362,8 +461,8 @@ mod tests {
     }
 
     #[test]
-    fn source_key_is_explicitly_correlation_only_in_exact_ncp_v0_8_json() {
-        let adapter = RealNcp08Adapter::new();
+    fn source_key_is_explicitly_correlation_only_in_exact_ncp_v1_0_json() {
+        let adapter = RealNcp10Adapter::new();
         let first_input = input(7, velocity());
         let mut second_input = first_input.clone();
         second_input.source.source_key = BoundedAscii::new("veh/uav-1/state/alternate").unwrap();
@@ -389,7 +488,7 @@ mod tests {
             assert!(reconstructed.abs_diff(u128::from(ns)) <= 2_048);
         }
 
-        let adapter = RealNcp08Adapter::new();
+        let adapter = RealNcp10Adapter::new();
         let mut earlier_input = input(7, velocity());
         earlier_input.gate_t_ns = u64::MAX - 1;
         earlier_input.source_t_ns = u64::MAX - 1;
@@ -405,5 +504,75 @@ mod tests {
         assert_eq!(earlier.digest(), later.digest());
         assert!(earlier.is_self_consistent());
         assert!(later.is_self_consistent());
+    }
+
+    /// NCP's own authority machine, acting as the body, accepts every lease Gate
+    /// carries: the first term, a rotation while the old term is live, a fresh
+    /// term after a lapse, and the first term of a later boot. A restart that
+    /// reused its boot counter is refused.
+    #[test]
+    fn ncp_authority_machine_accepts_every_commander_lease() {
+        use crate::lease::{NcpCommanderLease, NcpLeaseInterval};
+        use haldir_contracts::status::AclExclusiveEvidenceV1;
+        use ncp_core::security::AuthenticatedActor;
+        use ncp_core::{AuthorityMachine, PrincipalRole};
+
+        const UTC0: u64 = 1_700_000_000_000;
+        let route = AclExclusiveEvidenceV1 {
+            gate_transport_principal: PrincipalId::new("gate.transport").unwrap(),
+            final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
+            certificate_fingerprint: DigestV1::compute(DigestDomain::Payload, b"certificate"),
+            acl_policy_digest: DigestV1::compute(DigestDomain::Payload, b"acl"),
+            verified_at_mono_ns: 0,
+        };
+        let gate = GateId::new("gate-a").unwrap();
+        let boot = |boot_counter| {
+            NcpCommanderLease::new(
+                &route,
+                &gate,
+                session(),
+                output_epoch(),
+                NcpLeaseInterval::DEFAULT,
+                boot_counter,
+            )
+            .unwrap()
+        };
+        let actor = AuthenticatedActor {
+            principal_id: "gate.transport".to_owned(),
+            certificate_identity: "urn:ncp:gate.transport".to_owned(),
+            entity_id: "gate-a".to_owned(),
+            role: PrincipalRole::Commander,
+            may_reset_estop: false,
+            may_override: false,
+        };
+        let mut body = AuthorityMachine::new(GENERATION).unwrap();
+        body.begin_open().unwrap();
+        body.initialize().unwrap();
+
+        // On receipt the body admits the lease it holds or acquires a newer term.
+        let mut deliver = |commander: &mut NcpCommanderLease, at_ms: u64| {
+            let seed = u8::try_from(at_ms / 1_000).unwrap();
+            let lease = commander
+                .for_command(at_ms * 1_000_000, Some(UTC0 + at_ms), || Some([seed; 16]))
+                .cloned()
+                .unwrap();
+            let wire = ncp_lease(&lease).unwrap();
+            body.tick(at_ms);
+            if body.active_lease(at_ms) != Some(&wire) {
+                let utc_ms = i64::try_from(UTC0 + at_ms).unwrap();
+                body.acquire(wire.clone(), &actor, &actor, utc_ms, at_ms)?;
+            }
+            assert_eq!(body.active_lease(at_ms), Some(&wire));
+            Ok::<u64, ncp_core::authority::AuthorityError>(lease.authority_term.get())
+        };
+
+        let mut first_boot = boot(1);
+        let first = deliver(&mut first_boot, 0).unwrap();
+        assert_eq!(deliver(&mut first_boot, 10_000).unwrap(), first);
+        assert_eq!(deliver(&mut first_boot, 20_000).unwrap(), first + 1);
+        assert_eq!(deliver(&mut first_boot, 90_000).unwrap(), first + 2);
+        assert!(deliver(&mut boot(2), 91_000).unwrap() > first + 2);
+        let reused = deliver(&mut boot(2), 92_000).unwrap_err();
+        assert_eq!(reused.code, "NCP-LEASE-001");
     }
 }

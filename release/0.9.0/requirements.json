@@ -115,7 +115,7 @@
       "dependencies": [
         "T000"
       ],
-      "status": "verified",
+      "status": "implemented",
       "evidence": [
         {
           "kind": "normative_requirement",
@@ -190,7 +190,7 @@
           "fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU"
         },
         {
-          "kind": "generated_exact_commit_verification",
+          "kind": "historical_generated_exact_commit_verification",
           "path": "release/0.9.0/evidence/t001-generated-verification.json",
           "implementation_commit": "395f78beb9aa3e987a00b8c8583cc97320626f42",
           "evidence_tool_commit": "b528678d19bb7a5f8f5ef40da88203a5f8fc86d0"

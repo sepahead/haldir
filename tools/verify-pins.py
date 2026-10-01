@@ -309,6 +309,9 @@ def main() -> None:
     commit = pins.get("ncp", {}).get("commit", "")
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         fail(f"ncp.commit is not a full 40-hex SHA: {commit!r}")
+    ncp_version = str(pins.get("ncp", {}).get("tag", "")).removeprefix("v")
+    if not re.fullmatch(r"\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?", ncp_version):
+        fail(f"ncp.tag is not an exact NCP version: {ncp_version!r}")
 
     channel = pins.get("toolchain", {}).get("rust_channel", "")
     if channel in {"stable", "nightly", "", "beta"}:
@@ -359,9 +362,9 @@ def main() -> None:
     if (
         ncp_dep.get("git") != "https://github.com/sepahead/NCP"
         or ncp_dep.get("rev") != commit
-        or ncp_dep.get("version") != "=0.8.0"
+        or ncp_dep.get("version") != f"={ncp_version}"
     ):
-        fail("workspace ncp-core dependency is not exact v0.8.0 at ncp.commit")
+        fail(f"workspace ncp-core dependency is not exactly {ncp_version} at ncp.commit")
 
     zenoh_pin = pins.get("zenoh", {})
     zenoh_version = zenoh_pin.get("version", "")
@@ -523,8 +526,8 @@ def main() -> None:
         fail("haldir-transport-zenoh default features must remain empty")
     if transport_features.get("live-zenoh") != [
         "dep:haldir-contracts",
-        "dep:haldir-ncp08",
-        "haldir-ncp08/real-ncp",
+        "dep:haldir-ncp10",
+        "haldir-ncp10/real-ncp",
         "dep:serde_json",
         "dep:rustix",
         "dep:tokio",
@@ -538,7 +541,7 @@ def main() -> None:
         fail("haldir-transport-zenoh ncp-core key builder must not be optional")
     for dependency in (
         "haldir-contracts",
-        "haldir-ncp08",
+        "haldir-ncp10",
         "rustix",
         "serde_json",
         "tokio",
@@ -633,7 +636,7 @@ def main() -> None:
         maximum=MAX_SMALL_FILE_BYTES,
         label=".ncp-consumer",
     )
-    expected_descriptor_suffix = f"v0.8.0 {commit}"
+    expected_descriptor_suffix = f"v{ncp_version} {commit}"
     if descriptor.count(expected_descriptor_suffix) != 2:
         fail(".ncp-consumer does not contain exact manifest and lock revision rows")
 
@@ -641,7 +644,7 @@ def main() -> None:
     if not re.fullmatch(r"[0-9a-f]{64}", proto_sha):
         fail(f"ncp.proto_sha256 is not a 64-hex digest: {proto_sha!r}")
 
-    corpus_root = ROOT / "crates" / "haldir-ncp08" / "tests" / "data" / "ncp-v0.8.0"
+    corpus_root = ROOT / "crates" / "haldir-ncp10" / "tests" / "data" / f"ncp-v{ncp_version}"
     corpus = {
         "command_frame.json": "command_vector_sha256",
         "command_frame.schema.json": "command_schema_sha256",
@@ -661,20 +664,20 @@ def main() -> None:
         if actual != expected:
             fail(f"frozen NCP corpus digest mismatch for {filename}: {actual}")
 
-    compatibility_path = ROOT / "crates" / "haldir-ncp08" / "src" / "compatibility.rs"
+    compatibility_path = ROOT / "crates" / "haldir-ncp10" / "src" / "compatibility.rs"
     compatibility = _read_regular_text(
         compatibility_path,
         maximum=MAX_SOURCE_BYTES,
-        label="crates/haldir-ncp08/src/compatibility.rs",
+        label="crates/haldir-ncp10/src/compatibility.rs",
     )
     baseline_match = re.search(
-        r"pub const NCP_V0_8_0: NcpCompatibilityRecordV1 = "
+        r"pub const NCP_V1_0_0_RC1: NcpCompatibilityRecordV1 = "
         r"NcpCompatibilityRecordV1 \{\n(?P<body>.*?)\n\};",
         compatibility,
         flags=re.DOTALL,
     )
     if baseline_match is None:
-        fail("haldir-ncp08 NCP_V0_8_0 baseline record is missing or malformed")
+        fail("haldir-ncp10 NCP_V1_0_0_RC1 baseline record is missing or malformed")
     baseline = baseline_match.group("body")
     fields = {
         "ncp_tag": "tag",
@@ -693,7 +696,7 @@ def main() -> None:
         )
         if re.search(field_pattern, baseline) is None:
             fail(
-                f"haldir-ncp08 {rust_field} disagrees with "
+                f"haldir-ncp10 {rust_field} disagrees with "
                 f"tools/pins.toml ncp.{pin_field}"
             )
 
@@ -703,14 +706,14 @@ def main() -> None:
     increment_pattern = rf"(?m)^\s*enabled_increment:\s*{enabled_increment},\s*$"
     if re.search(increment_pattern, baseline) is None:
         fail(
-            "haldir-ncp08 enabled_increment disagrees with "
+            "haldir-ncp10 enabled_increment disagrees with "
             "tools/pins.toml ncp.enabled_increment"
         )
     adapter_version_pattern = (
         r'(?m)^\s*haldir_adapter_version:\s*env!\("CARGO_PKG_VERSION"\),\s*$'
     )
     if re.search(adapter_version_pattern, baseline) is None:
-        fail("haldir-ncp08 adapter version must come from the compiled package version")
+        fail("haldir-ncp10 adapter version must come from the compiled package version")
 
     print(
         "verify-pins: OK "

@@ -11,7 +11,7 @@ use haldir_crypto::{
     ExpectedContext, KeyRole, KeySubject, TrustStore, TrustStoreDisjointnessError,
     verify_and_decode,
 };
-use haldir_ncp08::{ValidatedNcpCompatibilityArtifact, validate_ncp_compatibility_artifact};
+use haldir_ncp10::{ValidatedNcpCompatibilityArtifact, validate_ncp_compatibility_artifact};
 
 use crate::contract::{
     AuthoritySnapshotApprovalV1, AuthoritySnapshotKindV1, DeploymentArtifactIdV1,

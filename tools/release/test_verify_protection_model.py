@@ -327,16 +327,28 @@ class ProtectionModelVerificationTests(unittest.TestCase):
                 VERIFY.verify(path, self.repo)
 
     def test_regression_unverified_predecessor_is_rejected(self) -> None:
+        for t001_status, t002_status in (("open", "implemented"), ("implemented", "verified")):
+            with self.subTest(t001=t001_status, t002=t002_status):
+                requirements = copy.deepcopy(self.requirements)
+                tasks = {task["id"]: task for task in requirements["tasks"]}
+                tasks["T001"]["status"] = t001_status
+                tasks["T002"]["status"] = t002_status
+                with tempfile.TemporaryDirectory() as directory:
+                    path = self.write_json(requirements, directory, "requirements.json")
+                    with self.assertRaisesRegex(
+                        VERIFY.ProtectionModelError,
+                        "PREDECESSOR_NOT_VERIFIED",
+                    ):
+                        VERIFY._verify_requirements(path, self.repo)
+
+    def test_reopened_refinement_may_rest_on_a_reopened_predecessor(self) -> None:
         requirements = copy.deepcopy(self.requirements)
-        t001 = next(task for task in requirements["tasks"] if task["id"] == "T001")
-        t001["status"] = "implemented"
+        tasks = {task["id"]: task for task in requirements["tasks"]}
+        tasks["T001"]["status"] = "implemented"
+        tasks["T002"]["status"] = "implemented"
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_json(requirements, directory, "requirements.json")
-            with self.assertRaisesRegex(
-                VERIFY.ProtectionModelError,
-                "PREDECESSOR_NOT_VERIFIED",
-            ):
-                VERIFY.verify(self.model_path, self.repo, requirements_path=path)
+            VERIFY._verify_requirements(path, self.repo)
 
     def test_negative_normative_document_digest_substitution_is_rejected(self) -> None:
         model = copy.deepcopy(self.model)

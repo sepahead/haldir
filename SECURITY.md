@@ -34,8 +34,8 @@ route, an unauthorized, misscoped, replayed, or malformed intent does not
 produce an accepted reference-plant command.** This is not complete mediation
 of a deployed vehicle. Haldir does **not** establish that a neural controller is
 safe, authenticate untrusted sensors merely by hashing them, replace PX4/plant
-failsafes, or provide plant authority, wire `publisher_id` binding, or the
-applied/stop acknowledgements deferred by NCP `v0.8.0`.
+failsafes, or provide body-issued plant authority, wire `publisher_id` binding, or
+the applied/stop acknowledgements that NCP 1.0 has not yet delivered.
 
 ## Handling of secrets
 

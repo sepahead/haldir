@@ -1,30 +1,27 @@
 # NCP compatibility
 
 Haldir's stable contracts contain semantic Haldir fields, not NCP-generated
-structs. Only `haldir-ncp08` is aware of NCP wire semantics.
+structs. Only `haldir-ncp10` is aware of NCP wire semantics.
 
-## Current provider boundary (checked 2026-08-10)
+## Current provider boundary (checked 2026-10-01)
 
-NCP repository `main` at
-`1ffd3bf9a6c52d0279eb31a56e0664e4eec24d68` is the unreleased and
-release-blocked `1.0.0-rc.1` candidate. Its wire is `1.0`, and its compact
-`CONTRACT_HASH` is `163acc57d8a62b66`. Haldir's supported immutable baseline
-remains the annotated `v0.8.0` tag, which uses a different wire. This document
-calls it a tag/baseline rather than GitHub's “latest release”: the Releases API
-currently identifies `v0.5.1`, while the newer protocol baselines are immutable
-annotated tags.
+Haldir speaks NCP 1.0 natively. It pins the `1.0.0-rc.1` candidate at commit
+`2819dae3b6338bb1df6d105ebb5b7433936a993d`: wire `1.0`, compact `CONTRACT_HASH`
+`163acc57d8a62b66`. The candidate is untagged upstream, so the commit is its
+identity. NCP cuts the `v1.0.0` tag after its technical release gates pass, and
+Haldir moves to that tag when it exists.
 
-Haldir remains on the exact immutable v0.8 baseline below. Native Haldir 1.0 migration
-and independent qualification are **NOT RUN** and are not dependency-ready in the
-NCP ecosystem task ledger. This provider-status note changes no dependency, runtime
-behavior, task status, phase status, or claim evidence.
+The previous immutable baseline, NCP `v0.8.0`, is retired. Haldir neither builds
+nor accepts wire-0.8 frames, and a deployment package that selects the exact
+v0.8 wire no longer decodes. Independent qualification of the 1.0 adapter
+remains **NOT RUN**.
 
 ## Candidate local NCP boundary
 
 The candidate `ncp.local-lockstep.v1` experiment uses a direct command path.
 Haldir is absent from that path.
 Haldir has no qualified adapter for this candidate profile.
-This status does not change the immutable wire-0.8 baseline below.
+This status does not change the pinned wire-1.0 baseline below.
 
 The experiment supervisor must reject a requested Haldir gate before preparing any endpoint.
 It must report the selected gated profile as unsupported.
@@ -80,21 +77,22 @@ The [claim ledger](CLAIM-LEDGER.md) remains the authority for Haldir's tested sc
 
 | Field | Value |
 | --- | --- |
-| `ncp_tag` | `v0.8.0` |
-| `ncp_commit` | `2f5bd586d4bb20c90362bb6f5698b7f64057ba4e` |
-| `wire_version` | `0.8` |
-| `contract_hash` | `d1b50a2d8a265276` |
-| `proto_sha256` | `6f13b12cff76e12fef384f691d11e2944db1f676568c3e780d3f975689131227` (measured locally 2026-07-12) |
-| `command_schema_sha256` | `abd9743323e4f6eabdbc27888704462b1b1fd128777422b35146605709a01344` |
-| `command_vector_sha256` | `3e3d73235fe2dd4288158c29f9cd2f3f17034f7a58d803682f45c145a9733f2e` |
+| `ncp_tag` | `1.0.0-rc.1` (untagged candidate; the commit is its identity) |
+| `ncp_commit` | `2819dae3b6338bb1df6d105ebb5b7433936a993d` |
+| `wire_version` | `1.0` |
+| `contract_hash` | `163acc57d8a62b66` |
+| `proto_sha256` | `9c127c8e795105da73dddfe47b671bf1f4ee895958ea5f35eda8b37cc503d510` (measured locally 2026-10-01) |
+| `command_schema_sha256` | `3203e44dc071433c333340201250b345afb0c78cf74e9a01b023d6624f6b6092` |
+| `command_vector_sha256` | `7f6aad14820f52330fa9517ec322644a090225dfd3c0cd99e15961bb0d3efd33` |
 | `enabled_increment` | `1` |
-| `capability_profile` | `PRE_AUTHORITY_ACL_ONLY` |
-| `haldir_adapter_version` | compiled `haldir-ncp08` package version |
+| `capability_profile` | `NCP_1_0_COMMANDER_LEASE` |
+| `haldir_adapter_version` | compiled `haldir-ncp10` package version |
 
 The pinned values through `capability_profile` are duplicated in
-`crates/haldir-ncp08/src/compatibility.rs` (`NCP_V0_8_0`) and `tools/pins.toml`.
+`crates/haldir-ncp10/src/compatibility.rs` (`NCP_V1_0_0_RC1`) and `tools/pins.toml`.
 `haldir_adapter_version` instead derives from the compiled Cargo package version.
 `tools/verify-pins.py` enforces both the duplicated values and that derivation.
+NCP's own consumer guard reads the same revision from `.ncp-consumer`.
 
 The two command digests deliberately name Haldir's frozen command-frame schema/vector subset. They
 are not aggregate identities for every file in NCP's schema and conformance sets. The normative
@@ -125,19 +123,58 @@ exact-matches its top-level and live authorization identities and commits the pa
 with the boot. That still does not make the other seven artifact roles, the running executable, or
 external acquisition trustworthy.
 
+## Commander lease
+
+NCP 1.0 rejects an Active command without an authority lease. Under
+`1.0.0-rc.1` the commander issues its own lease and the body's authority machine
+enforces it; NCP ADR-006 later moves issuance to the body. Haldir's Gate issues
+its lease to the transport principal and final route named by its
+deployment-bound exclusive-route ACL evidence, so NCP authority never reaches
+beyond that grant. Gate carries the lease on every command, HOLD included: NCP
+requires it on Active and validates it on HOLD, and it makes a HOLD attributable
+to the authority holder.
+
+The body returns no authority feedback under rc.1, so the lease needs none. A
+lease never changes. Once two thirds of its interval has elapsed, the next
+command carries a newer term with a fresh lease id and interval. NCP accepts a
+newer term as a transfer from the holder while the old lease is live, and as a
+fresh acquisition once it has lapsed. Gate never renews in place: NCP refuses to
+renew a lapsed lease, and a lost renewal could leave Gate holding a lease that
+the body had let lapse. Lost commands therefore never cost authority.
+
+A term must exceed every term the body has seen in the session, including the
+terms of earlier Gate boots. Terms come from Gate's durable boot counter,
+`term = boot_counter · 2^24 + n`, where `n ≥ 1` counts acquisitions in this
+boot. No term repeats and none needs a durable write; a boot counter beyond the
+JSON-safe term space fails startup. The interval is 15–60 s (default 30 s).
+Its final third, in which Gate rotates, spans NCP's 5 s bound on commander–body
+clock disagreement. Configuration rejects a policy NCP validity cap above that
+margin, and both the decision and the publication recheck require the lease to
+cover the command's whole validity.
+
+Gate acquires a term only with UTC, for the lease's audit bounds, and entropy,
+for its id. Without them a held lease stays in use until its monotonic deadline
+and decisions then deny publication. UTC never decides expiry inside Gate. NCP's
+own `AuthorityMachine`, run in process as the body, accepts the first term, a
+rotation while the old term is live, re-acquisition after a lapse, and a later
+boot's first term, and it refuses a restart that reused its boot counter
+(`CL-NCP-LEASE-01`).
+
 ## Default P0 model, exact conformance adapter, and route boundary
 
-The default `AclOnlyAdapter` models the NCP v0.8.0 command semantics without an
-upstream or Zenoh dependency, keeping the pure P0 core dependency-light. The
-off-by-default `real-ncp` feature adds `RealNcp08Adapter`, compiled from
-`ncp-core` v0.8.0 at the exact commit above. It constructs the upstream
+The default `ModeledNcp10Adapter` models the NCP 1.0 command semantics, lease
+included, without an upstream or Zenoh dependency, keeping the pure P0 core
+dependency-light. The off-by-default `real-ncp` feature adds `RealNcp10Adapter`,
+compiled from `ncp-core` `1.0.0-rc.1` at the exact commit above. It constructs the upstream
 `CommandFrame`, runs `WireFrame::validate_wire`, serializes the exact compact
 JSON bytes, and validates those bytes again with
 `decode_validated::<CommandFrame>` before exposing them.
 
 The frozen upstream command vector and schema live under
-`crates/haldir-ncp08/tests/data/ncp-v0.8.0`; their SHA-256 values are recorded in
-`tools/pins.toml` and checked by `tools/verify-pins.py`. Differential tests cover
+`crates/haldir-ncp10/tests/data/ncp-v1.0.0-rc.1`; their SHA-256 values are
+recorded in `tools/pins.toml` and checked by `tools/verify-pins.py`. The exact
+adapter rebuilds that conformance vector, compared after upstream validated
+decoding. Differential tests cover
 Active/HOLD mapping, exact session/stream/source identity, JSON-safe sequence
 boundaries, Crebain's `velocity_setpoint` vec3/`m/s` profile, and byte/digest/
 transformation tampering. The stable `HaldirIntentV1` contracts do not depend on
@@ -180,7 +217,7 @@ publisher's complete `(session_id, session.generation)` binding.
 Template startup separately requires an explicit `GateRuntimeProfile`; it is not inferred
 from the selected adapter or compiled Cargo features. `InProcessReference` preserves the P0
 model and exact-conformance paths. `DeclaredLiveZenoh` requires both
-`ExactNcpV0_8Json` and the compiled `live-zenoh` feature. In particular, compiling only
+`ExactNcpV1_0Json` and the compiled `live-zenoh` feature. In particular, compiling only
 `real-ncp` makes the exact constructor available but cannot satisfy the declared-live feature
 requirement by itself. A mismatch is rejected before startup-owned backend-trait calls,
 entropy, locks, or local-directory access, and a successful `StartupReport` retains the
@@ -202,7 +239,7 @@ Coordinator construction derives the exact pinned command route
 from its actor realm/session; a publisher for any other route is terminally rejected before
 frame access or invocation. Every invoked matched publisher consumes both itself and the
 runtime. A local publisher `Ok` is linked to terminal journal success but stops as
-application-unobserved: NCP v0.8 starts `ttl_ms` at plant-local arrival, and this path has no
+application-unobserved: NCP 1.0 starts `ttl_ms` at plant-local arrival, and this path has no
 enforced in-transit age bound or authenticated application acknowledgement. Gate therefore
 commits no guessed live action interval and returns no capability that could publish again.
 A publisher error is journaled conservatively when terminal append and sync succeed and also
@@ -252,14 +289,14 @@ selected event and supplies no in-flight timeout or signal supervision. The requ
 legacy `process_next` ignores it, successful latching is not a cleanup acknowledgment, and a runner
 must restrict clones and exclusively use the shutdown-aware method. Offline fake tests prove the composition and ownership ordering, not concrete
 Zenoh invocation. The feature-gated development examples now hard-select `DeclaredLiveZenoh` and
-exact v0.8 for a separately provisioned disposable fixture; the networked target opens an external
-strict-client configuration, constructs the aggregate, and immediately shuts it down without
-processing. The retained development campaign proves those concrete local calls and returns for
+exact NCP 1.0 for a separately provisioned disposable fixture; the networked target opens an
+external strict-client configuration, constructs the aggregate, and immediately shuts it down
+without processing. The retained development campaign proves those concrete local calls and returns for
 one fresh disposable fixture with zero intents processed and zero commands published
 (`CL-LIVE-GATE-DEV-BIND-01`). No authenticated production package protects the
 session/credentials, authenticates ongoing controls, or makes the selection mandatory.
 The separate deployment verifier authenticates a closed runtime/NCP-wire selection plus exact
-compatibility-artifact bytes. `haldir-ncp08` separately exact-validates the implemented frozen
+compatibility-artifact bytes. `haldir-ncp10` separately exact-validates the implemented frozen
 command-subset record when explicitly passed bytes (`CL-NCP-COMPATIBILITY-01`). The state primitive
 separately ratchets caller-supplied neutral values, but no type-enforced path connects the signed
 artifact role, semantic proof, ratchet, or Gate startup (`CL-DEPLOYMENT-PRIMITIVE-01`). The actual template runtime-profile
@@ -272,25 +309,31 @@ binding, fake-publisher service binding, and fake session/ingress aggregate orch
 Called/result fault tests still use test-only publisher seams. Neither test path opens a Zenoh
 session or invokes the concrete publisher, or establishes credential/handle exclusivity.
 The retained synthetic campaign proves the exact final-command/controller-intent ACL subset
-using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`), but not the service
-binding or application. The separately retained local Zenoh success does not prove delivery or
-application (`CL-LIVE-GATE-DEV-BIND-01`).
+using valid pinned-NCP JSON and remote callbacks (`CL-LIVE-TRANSPORT-01`). It was recorded
+with NCP v0.8 frames; router ACLs do not depend on the frame version. It does not prove the
+service binding or application. The separately retained local Zenoh success does not prove
+delivery or application (`CL-LIVE-GATE-DEV-BIND-01`).
 
-## Deferred upstream capabilities (increment 1)
+## Upstream authority capabilities
 
-Per the release, NCP v0.8.0 defers: plant-issued command authority, transport-bound
-`publisher_id`, and applied-command/stop acknowledgements. Haldir does **not**
-fabricate these as private extension fields. The wire `authority.term`/`lease_id`
-are ABSENT in `NcpCommandFrameV1`; `PlantPublicationAuthorityStateV1` keeps
-`AclExclusiveV1` and the future `NcpLeaseV1` as distinct variants. The current
-Gate configuration rejects `NcpLeaseV1` at construction: retaining the contract
-shape for a future wire profile must not admit an unimplemented authority mode
-into an ACL-only actor and defer failure until command time.
+NCP `1.0.0-rc.1` provides commander-issued authority leases, which Haldir
+carries as described above. Explicit stream declaration and retirement
+(ADR-005), which a restarted Gate needs before a 1.0 body accepts its fresh
+output epoch, is not yet implemented by Haldir (see `LIMITATIONS.md`).
+Body-issued authority (ADR-006), journaled command dispositions (ADR-007), a
+transport-bound publisher identity that `ncp-zenoh` exposes to receivers, and
+applied-command or stop acknowledgements are not yet delivered upstream. Haldir
+does **not** fabricate them as private extension fields.
+`PlantPublicationAuthorityStateV1` keeps `AclExclusiveV1` and `NcpLeaseV1` as
+distinct variants. Configuration supplies only the exclusive-route ACL evidence;
+Gate issues its lease at runtime, so a configured `NcpLeaseV1` is rejected at
+construction.
 
 ## Documentation-drift ledger (to record upstream, not to copy)
 
-The specification records that at review time some NCP prose lagged the tag
-(README quick-start built the deleted top-level `seq`; a `proto/ncp.proto` comment
+These notes record the NCP v0.8 review. The specification records that at review
+time some NCP prose lagged the tag (README quick-start built the deleted
+top-level `seq`; a `proto/ncp.proto` comment
 still said `"0.7"`; the wire-0.8 design record called the line untagged;
 `NEURO_CYBERNETIC_PROTOCOL.md` retained wire-0.7 sequence prose). Two stale time
 comments are especially hazardous: the protocol overview and the pre-0.8

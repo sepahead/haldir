@@ -174,6 +174,7 @@ EXPECTED_CONSTRAINTS = {
     "state:active_fresh_policy_allow": "STATE_TRANSITION",
     "state:authorization_revision": "STATE_TRANSITION",
     "state:publication_and_frame": "STATE_TRANSITION",
+    "state:ncp_commander_lease": "STATE_TRANSITION",
     "state:single_opaque_publication": "STATE_TRANSITION",
     "failure:no_new_command": "FAILURE_SEMANTICS",
     "failure:no_retroactive_erasure": "FAILURE_SEMANTICS",
@@ -235,22 +236,22 @@ EXPECTED_APPLICATION_ROLE_BINDINGS_SHA256 = (
     "fb7d799639587744603221f4856fa0f38430c1723a44e7c264bb87ff91b79c66"
 )
 EXPECTED_STATE_RESOURCES_SHA256 = (
-    "2b91da3cf0620be9249335e0921c702ef3bf89e0b9e893892dfbdc918b5d830c"
+    "c229b9009eec9acee87d07cee9d69739b5b27dd381d54ad2406f0da64ac84ca6"
 )
 EXPECTED_ROUTE_RESOURCES_SHA256 = (
     "e17df08f4877270c6c11be0e7dcefef48b1330eecb87cb36cacde68bd50ce425"
 )
 EXPECTED_CONSTRAINTS_SHA256 = (
-    "cf7c9b0a238dc02d6942223799bec04811c1ff6d69b608f932d1e33bafe94159"
+    "b893261e927a073e247bc7e72881721205353e832197dff6e3b0000cd3d88100"
 )
 EXPECTED_TIME_DOMAINS_SHA256 = (
-    "288e94e09fa6c70fefddc6cd7a11fd0ff128e45c1fef02dc73ae00d2e4e881f4"
+    "907c6e8d8faacf855b52243a8c036db48fb3a37f5640c35438bd9e360ab6102b"
 )
 EXPECTED_TRUST_ROOTS_SHA256 = (
     "8476c42874307f1e3d50e446e0e026c52fcb8b630ad980b9dd42d664dc27d3a7"
 )
 EXPECTED_ACCESS_POLICY_SHA256 = (
-    "a853714f090c679fb17d00fa8a5e4bf9987b120a8237e251fcdf251952c4c0cb"
+    "00ea80ba8c76889fc2c4d54429dff1093880a618f7b49b21c6de535599268a3e"
 )
 EXPECTED_ACCESS_TUPLES_SHA256 = (
     "9f6d8d2cce03cb1d02966a6bfe703c7d93bc8dc37b85860574167cb43c1d0250"
@@ -373,7 +374,7 @@ def _verify_document(model: dict[str, Any], repo: Path) -> None:
         "All 17 exact profile routes are protected resources",
         "Owner and custodian identifiers **SHALL** resolve",
         "No controller-declared scope",
-        "contains the exact 26",
+        "contains the exact 27",
         "Gate boot-local monotonic time is the sole hot-path authorization clock",
         "`controller_t_ns` is controller-local provenance",
         "comparable across restart only within",
@@ -638,10 +639,10 @@ def _verify_profile_and_routes(model: dict[str, Any], profile_path: Path) -> Non
     scope = model.get("scope")
     if scope != {
         "profile_id": "haldir-secure-reference-v1",
-        "compatibility": "PRE_AUTHORITY_ACL_ONLY",
+        "compatibility": "NCP_1_0_COMMANDER_LEASE",
         "realm": "haldir-ncp",
         "session_id": "uav-1",
-        "ncp_protocol_pin": "v0.8.0",
+        "ncp_protocol_pin": "1.0.0-rc.1",
         "default_effect": "DENY",
         "unlisted_authority": "FORBIDDEN",
     }:
@@ -1203,7 +1204,7 @@ def _verify_source_contracts(model: dict[str, Any], repo: Path) -> None:
             'kind "haldir.admission_record"',
         ),
         "publication_authority_contract": (
-            "deployment evidence, NOT a plant-issued NCP lease",
+            "deployment evidence, not an NCP authority lease",
             "matches!(self, Self::AclExclusiveV1(_))",
         ),
         "decision_contract": (
@@ -1371,8 +1372,6 @@ def _verify_requirements(requirements_path: Path, repo: Path) -> None:
     }
     t001 = by_id.get("T001")
     t002 = by_id.get("T002")
-    if not isinstance(t001, dict) or t001.get("status") != "verified":
-        raise ProtectionModelError("PROTECTION_PREDECESSOR_NOT_VERIFIED")
     if (
         not isinstance(t002, dict)
         or t002.get("requirement_id") != "HALDIR-0.9-T002"
@@ -1380,6 +1379,14 @@ def _verify_requirements(requirements_path: Path, repo: Path) -> None:
         or t002.get("status") not in {"implemented", "verified"}
     ):
         raise ProtectionModelError("PROTECTION_REQUIREMENT_ENTRY_INVALID")
+    # T002 refines T001: it may be verified only on a verified T001, while a
+    # reopened T002 may rest on a reopened T001.
+    allowed_predecessor = {"verified"} if t002["status"] == "verified" else {
+        "implemented",
+        "verified",
+    }
+    if not isinstance(t001, dict) or t001.get("status") not in allowed_predecessor:
+        raise ProtectionModelError("PROTECTION_PREDECESSOR_NOT_VERIFIED")
     evidence = t002.get("evidence")
     required_paths = {
         "docs/release/0.9.0/PROTECTION-MODEL.md",

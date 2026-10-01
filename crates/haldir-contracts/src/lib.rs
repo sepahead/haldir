@@ -4,7 +4,7 @@
 //! This crate defines the semantic authority/intent/evidence types Haldir signs
 //! and validates. It deliberately does **not** depend on any NCP-generated type
 //! (punch-list H15): `NcpSessionIdentityV1` and `NcpSourceRefV1` are Haldir's own
-//! stable types; the `haldir-ncp08` adapter converts them to the wire.
+//! stable types; the `haldir-ncp10` adapter converts them to the wire.
 //!
 //! Every accepted contract has exactly one canonical byte encoding. See
 //! [`cbor`] for the deterministic profile and [`canonical_struct`] for the

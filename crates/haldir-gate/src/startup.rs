@@ -45,7 +45,7 @@ use haldir_evidence::journal::SegmentIdentity;
 use haldir_evidence::manager::{
     JournalLimits, JournalOpenOptions, JournalRecoveryReport, JournalSigner, RecoveryCaptureLimits,
 };
-use haldir_ncp08::{NcpCommandWireProfile, SelectedNcpCommandAdapter};
+use haldir_ncp10::{NcpCommandWireProfile, NcpLeaseInterval, SelectedNcpCommandAdapter};
 use haldir_policy_native::NativePolicySnapshot;
 use haldir_state::{DurableAntiRollbackError, DurableAntiRollbackStore};
 #[cfg(feature = "live-zenoh")]
@@ -55,6 +55,7 @@ use crate::actor::{
     GateConfig, GateConfigError, GateSignerValidation, GateStartupError, PolicyBindingValidation,
     VehicleActor, validate_static_config,
 };
+use crate::utc::SystemUtcClock;
 
 #[path = "publication_coordinator.rs"]
 #[allow(
@@ -153,7 +154,7 @@ impl GateConfigTemplate {
     /// # Errors
     /// Returns when signer/cap/policy validation fails, the configured policy
     /// digest does not identify its executable parameters, publication authority
-    /// is not the current `PRE_AUTHORITY_ACL_ONLY` profile, the declared runtime
+    /// is not exclusive-route ACL evidence, the declared runtime
     /// profile requires a different NCP wire profile, or required live support
     /// was not compiled.
     pub fn validate(&self) -> Result<(), DurableGateStartupError> {
@@ -185,7 +186,7 @@ impl GateConfigTemplate {
         match self.runtime_profile {
             GateRuntimeProfile::InProcessReference => Ok(()),
             GateRuntimeProfile::DeclaredLiveZenoh => {
-                let required = NcpCommandWireProfile::ExactNcpV0_8Json;
+                let required = NcpCommandWireProfile::ExactNcpV1_0Json;
                 let actual = self.ncp_adapter.wire_profile();
                 if actual != required {
                     return Err(DurableGateStartupError::NcpWireProfileMismatch {
@@ -239,6 +240,8 @@ impl GateConfigTemplate {
             local_cap_ms: self.local_cap_ms,
             gate_signer: self.gate_signer,
             gate_signer_kid: self.gate_signer_kid,
+            ncp_lease_interval: NcpLeaseInterval::DEFAULT,
+            utc_clock: Box::new(SystemUtcClock),
         }
     }
 }
@@ -562,7 +565,7 @@ impl RunningGate {
         let declared_live_zenoh = match runtime_profile {
             GateRuntimeProfile::InProcessReference => None,
             GateRuntimeProfile::DeclaredLiveZenoh
-                if actor.ncp_command_wire_profile() == NcpCommandWireProfile::ExactNcpV0_8Json =>
+                if actor.ncp_command_wire_profile() == NcpCommandWireProfile::ExactNcpV1_0Json =>
             {
                 Some(ValidatedDeclaredLiveZenohStartup {
                     activation_challenge_nonce: ChallengeNonce::new([7; 32]),
@@ -1232,8 +1235,8 @@ fn validate_deployment_binding(
             DeploymentNcpWireProfileV1::ModeledP0,
             NcpCommandWireProfile::ModeledP0
         ) | (
-            DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
-            NcpCommandWireProfile::ExactNcpV0_8Json
+            DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
+            NcpCommandWireProfile::ExactNcpV1_0Json
         )
     );
     if !wire_matches {
@@ -2012,7 +2015,7 @@ mod tests {
         match role {
             DeploymentArtifactIdV1::GateConfiguration => gate_configuration_bytes.to_vec(),
             DeploymentArtifactIdV1::NcpCompatibility => {
-                haldir_ncp08::pinned_ncp_compatibility_artifact_bytes().unwrap()
+                haldir_ncp10::pinned_ncp_compatibility_artifact_bytes().unwrap()
             }
             DeploymentArtifactIdV1::TrustManifest
             | DeploymentArtifactIdV1::AdmissionSnapshot
@@ -2076,7 +2079,7 @@ mod tests {
         };
         let ncp_wire_profile = match configured.ncp_adapter.wire_profile() {
             NcpCommandWireProfile::ModeledP0 => DeploymentNcpWireProfileV1::ModeledP0,
-            NcpCommandWireProfile::ExactNcpV0_8Json => DeploymentNcpWireProfileV1::ExactNcpV0_8Json,
+            NcpCommandWireProfile::ExactNcpV1_0Json => DeploymentNcpWireProfileV1::ExactNcpV1_0Json,
             _ => panic!("test helper does not support an unknown NCP wire profile"),
         };
         let journal_id = JournalId::new([2; 16]).unwrap();
@@ -2432,7 +2435,7 @@ mod tests {
             result,
             Err(DurableGateStartupError::NcpWireProfileMismatch {
                 runtime_profile: GateRuntimeProfile::DeclaredLiveZenoh,
-                required: NcpCommandWireProfile::ExactNcpV0_8Json,
+                required: NcpCommandWireProfile::ExactNcpV1_0Json,
                 actual: NcpCommandWireProfile::ModeledP0,
             })
         ));
@@ -2450,7 +2453,7 @@ mod tests {
         let anchor = CountingAnchor(Arc::clone(&backend_calls));
         let mut configured = template();
         configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
-        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let mut entropy = DeterministicEntropy::new(1);
 
         let result = start_with_backends(
@@ -2480,7 +2483,7 @@ mod tests {
         let anchor = CountingAnchor(Arc::clone(&backend_calls));
         let mut configured = template();
         configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
-        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let PlantPublicationAuthorityStateV1::AclExclusiveV1(evidence) =
             &mut configured.publication
         else {
@@ -2514,7 +2517,7 @@ mod tests {
         let directory = TestDirectory::new();
         let mut configured = template();
         configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
-        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let mut entropy = DeterministicEntropy::new(1);
 
         let running = start_with_backends(
@@ -2529,7 +2532,7 @@ mod tests {
 
         assert_eq!(
             running.actor().ncp_command_wire_profile(),
-            NcpCommandWireProfile::ExactNcpV0_8Json
+            NcpCommandWireProfile::ExactNcpV1_0Json
         );
         assert_eq!(
             running.report().runtime_profile,
@@ -2559,7 +2562,7 @@ mod tests {
         }));
         assert_eq!(
             coordinator.actor().ncp_command_wire_profile(),
-            NcpCommandWireProfile::ExactNcpV0_8Json
+            NcpCommandWireProfile::ExactNcpV1_0Json
         );
         assert_eq!(issued.challenge().challenge_nonce, expected_challenge_nonce);
         assert_eq!(entropy.calls, 1);
@@ -2570,7 +2573,7 @@ mod tests {
     fn exact_reference_startup_cannot_construct_the_live_coordinator() {
         let directory = TestDirectory::new();
         let mut configured = template();
-        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let running = start_with_backends(
             configured,
             state(&directory, StateOpenMode::ProvisionNew),
@@ -2611,7 +2614,7 @@ mod tests {
     fn copied_report_value_cannot_manufacture_the_live_startup_capability() {
         let directory = TestDirectory::new();
         let mut configured = template();
-        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let mut running = start_with_backends(
             configured,
             state(&directory, StateOpenMode::ProvisionNew),
@@ -2679,7 +2682,7 @@ mod tests {
         assert_eq!(
             error,
             publication_coordinator::CoordinatorFatal::NcpWireProfileMismatch {
-                required: NcpCommandWireProfile::ExactNcpV0_8Json,
+                required: NcpCommandWireProfile::ExactNcpV1_0Json,
                 actual: NcpCommandWireProfile::ModeledP0,
             }
         );
@@ -2690,7 +2693,7 @@ mod tests {
     fn explicit_exact_adapter_selection_survives_durable_startup() {
         let directory = TestDirectory::new();
         let mut configured = template();
-        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let mut entropy = DeterministicEntropy::new(1);
 
         let running = start_with_backends(
@@ -2705,7 +2708,7 @@ mod tests {
 
         assert_eq!(
             running.actor().ncp_command_wire_profile(),
-            NcpCommandWireProfile::ExactNcpV0_8Json
+            NcpCommandWireProfile::ExactNcpV1_0Json
         );
         assert_eq!(
             running.report().runtime_profile,
@@ -4018,7 +4021,7 @@ mod tests {
             result,
             Err(DurableGateStartupError::NcpWireProfileMismatch {
                 runtime_profile: GateRuntimeProfile::DeclaredLiveZenoh,
-                required: NcpCommandWireProfile::ExactNcpV0_8Json,
+                required: NcpCommandWireProfile::ExactNcpV1_0Json,
                 actual: NcpCommandWireProfile::ModeledP0,
             })
         ));
@@ -4033,7 +4036,7 @@ mod tests {
         let state_directory = parent.absent_child("not-created-without-live-support");
         let mut configured = template();
         configured.runtime_profile = GateRuntimeProfile::DeclaredLiveZenoh;
-        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        configured.ncp_adapter = SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let mut entropy = DeterministicEntropy::new(1);
 
         let result = start_local(

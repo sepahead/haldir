@@ -79,7 +79,7 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   only the strict-session-open, aggregate-bind, and immediate aggregate-shutdown local returns
   with zero processing/publication (`CL-LIVE-GATE-DEV-BIND-01`).
 - **PARTIAL** — Exact prepared frames are immutable and every new logical command gets
-  a new sequence (`output_stream`, `haldir-ncp08` tests). An internal consuming
+  a new sequence (`output_stream`, `haldir-ncp10` tests). An internal consuming
   coordinator orders local receipt/Called/terminal evidence and blocks replacement after
   ambiguity. Its off-by-default live typestate is reachable only through the startup-minted
   capability and is the only Called type exposing the concrete method. It rejects a concrete
@@ -87,7 +87,7 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
   invocation, then consumes a matched publisher around one awaited call. Every invoked live
   call consumes the runtime and publisher. Even a local `Ok` is a terminal
   application-unobserved result: it records truthful local evidence, commits no guessed plant
-  interval, and permits no later command because NCP v0.8 begins TTL at unobserved plant
+  interval, and permits no later command because NCP 1.0 begins TTL at unobserved plant
   arrival. A public non-cloneable service kernel adds an internal capacity-one pool and
   returns itself only before publication or after an ordinary no-publication outcome. An initially inactive marked actor is tested through signed Gate-challenge issuance and local state/lease
   activation, canonical intent-route binding, and fake-publisher service binding. A separate

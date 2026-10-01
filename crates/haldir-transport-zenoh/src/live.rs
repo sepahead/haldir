@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use haldir_contracts::session::NcpSessionIdentityV1;
-use haldir_ncp08::ExactNcpCommandFrame;
+use haldir_ncp10::ExactNcpCommandFrame;
 use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
 use zenoh::bytes::Encoding;
@@ -71,7 +71,7 @@ pub enum SecureZenohError {
     Subscribe,
     /// The local Zenoh publication call returned an error.
     Publish,
-    /// The prepared bytes are not an upstream-validated NCP v0.8 JSON command.
+    /// The prepared bytes are not an upstream-validated NCP 1.0 JSON command.
     InvalidCommandFrame,
     /// The frame's embedded session differs from the publisher's bound route.
     CommandSessionMismatch,
@@ -104,9 +104,7 @@ impl fmt::Display for SecureZenohError {
             Self::SessionClose => "failed to close the Zenoh session",
             Self::Subscribe => "failed to declare the exact intent subscriber",
             Self::Publish => "the local Zenoh final-command publication returned an error",
-            Self::InvalidCommandFrame => {
-                "the final command is not validated upstream NCP v0.8 JSON"
-            }
+            Self::InvalidCommandFrame => "the final command is not validated upstream NCP 1.0 JSON",
             Self::CommandSessionMismatch => {
                 "the final command session pair differs from the bound publisher"
             }
@@ -608,7 +606,7 @@ impl FinalCommandPublisher {
     /// local return; callers must classify the result explicitly.
     ///
     /// ```compile_fail
-    /// use haldir_ncp08::ExactNcpCommandFrame;
+    /// use haldir_ncp10::ExactNcpCommandFrame;
     /// use haldir_transport_zenoh::{FinalCommandPublisher, SecureZenohError};
     ///
     /// async fn publish_twice(
@@ -863,11 +861,13 @@ mod tests {
     use std::task::{Context, Poll, Waker};
 
     use haldir_contracts::action::RequestedActionV1;
-    use haldir_contracts::ids::{GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::digest::{DigestDomain, DigestV1};
+    use haldir_contracts::ids::{GateId, GateOutputEpoch, OutputSeq, PrincipalId, SourceSeq};
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
-    use haldir_ncp08::{
-        AclOnlyAdapter, GateCommandBuildInputV1, NcpCommandAdapter, RealNcp08Adapter,
+    use haldir_contracts::status::NcpLeaseEvidenceV1;
+    use haldir_ncp10::{
+        GateCommandBuildInputV1, ModeledNcp10Adapter, NcpCommandAdapter, RealNcp10Adapter,
     };
 
     use super::*;
@@ -935,13 +935,29 @@ mod tests {
     }
 
     fn command_input() -> GateCommandBuildInputV1 {
+        let session = NcpSessionIdentityV1 {
+            session_id: AsciiId::new("sess-1").unwrap(),
+            generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+        };
+        let epoch = GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([5; 16]));
+        let principal = PrincipalId::new("gate.transport").unwrap();
         GateCommandBuildInputV1 {
-            session: NcpSessionIdentityV1 {
-                session_id: AsciiId::new("sess-1").unwrap(),
-                generation: CanonicalUuidV4String::from_random_bytes([1; 16]),
+            lease: NcpLeaseEvidenceV1 {
+                gate_transport_principal: principal.clone(),
+                final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
+                session: session.clone(),
+                authority_term: NonZeroU64::MIN,
+                lease_id: CanonicalUuidV4String::from_random_bytes([6; 16]),
+                authorized_output_epoch: epoch,
+                expires_mono_ns: Some(u64::MAX),
+                issuer_principal: principal,
+                holder_entity: GateId::new("gate-a").unwrap(),
+                issued_at_utc_ms: 1_700_000_000_000,
+                expires_at_utc_ms: 1_700_000_030_000,
             },
+            session,
             stream: NcpStreamPositionV1 {
-                epoch: GateOutputEpoch::new(CanonicalUuidV4String::from_random_bytes([5; 16])),
+                epoch,
                 seq: OutputSeq::new(NonZeroU64::new(1).unwrap()),
             },
             source: NcpSourceRefV1 {
@@ -1147,13 +1163,13 @@ mod tests {
     #[test]
     fn publisher_precheck_rejects_modeled_wire_and_accepts_upstream_json() {
         let input = command_input();
-        let modeled = AclOnlyAdapter::new().build_command(&input).unwrap();
+        let modeled = ModeledNcp10Adapter::new().build_command(&input).unwrap();
         assert_eq!(
             validated_upstream_json_bytes(&modeled, &input.session).unwrap_err(),
             SecureZenohError::InvalidCommandFrame
         );
 
-        let exact = RealNcp08Adapter::new().build_command(&input).unwrap();
+        let exact = RealNcp10Adapter::new().build_command(&input).unwrap();
         let mut wrong_session = input.session.clone();
         wrong_session.session_id = AsciiId::new("sess-2").unwrap();
         assert_eq!(

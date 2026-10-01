@@ -59,7 +59,7 @@ fn parse_args(mut args: impl Iterator<Item = OsString>) -> Result<Command, CliEr
 }
 
 fn write_build_info(mut output: impl Write) -> io::Result<()> {
-    let compatibility = haldir_ncp08::NCP_V0_8_0;
+    let compatibility = haldir_ncp10::NCP_V1_0_0_RC1;
     writeln!(
         output,
         "haldir-gate {} — compiled build information",

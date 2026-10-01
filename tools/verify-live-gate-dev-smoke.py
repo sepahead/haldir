@@ -24,7 +24,7 @@ from secure_zenoh import (  # noqa: E402
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_EVIDENCE = ROOT / "evidence" / "12-live-gate-dev-smoke"
+DEFAULT_EVIDENCE = ROOT / "evidence" / "13-live-gate-dev-smoke-ncp-1.0"
 PINS_PATH = ROOT / "tools" / "pins.toml"
 DOCKERFILE_PATH = ROOT / "tools" / "live-gate-dev-smoke" / "Dockerfile"
 DOCKERIGNORE_PATH = ROOT / "tools" / "live-gate-dev-smoke" / "Dockerfile.dockerignore"
@@ -37,7 +37,7 @@ ROUTER_IMAGE = (
     "docker.io/eclipse/zenoh@"
     "sha256:157965d71e0bfd0a044d76a985ff0e5c306ad3968929168fb9678cd2a7fec23f"
 )
-NCP_COMMIT = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e"
+NCP_COMMIT = "2819dae3b6338bb1df6d105ebb5b7433936a993d"
 NCP_SOURCE = f"git+https://github.com/sepahead/NCP?rev={NCP_COMMIT}#{NCP_COMMIT}"
 
 PROVISION_BINARY = "/usr/local/bin/live_gate_dev_fixture_provision"
@@ -333,7 +333,7 @@ def verify_provision_result(evidence: Path) -> dict[str, Any]:
         "anchor_protection": "local-rewritable",
         "development_only": True,
         "mode": "development-live-fixture-provision-v1",
-        "ncp_wire_profile": "exact-ncp-v0.8-json",
+        "ncp_wire_profile": "exact-ncp-v1.0-json",
         "production_claim": False,
         "provisioned": True,
         "runtime_profile": "declared-live-zenoh",
@@ -427,7 +427,7 @@ def verify_bind_result(
             "session_open": True,
         },
         "mode": "development-live-bind-smoke-v1",
-        "ncp_wire_profile": "exact-ncp-v0.8-json",
+        "ncp_wire_profile": "exact-ncp-v1.0-json",
         "negative_evidence": NEGATIVE_EVIDENCE,
         "production_claim": False,
         "provisioned": False,
@@ -506,10 +506,10 @@ def load_and_verify_pins() -> dict[str, Any]:
     live = require_object(pins.get("live_transport"), "pins.live_transport")
     if (
         toolchain.get("rust_channel") != "1.96.0"
-        or ncp.get("tag") != "v0.8.0"
+        or ncp.get("tag") != "1.0.0-rc.1"
         or ncp.get("commit") != NCP_COMMIT
-        or ncp.get("wire_version") != "0.8"
-        or ncp.get("capability_profile") != "PRE_AUTHORITY_ACL_ONLY"
+        or ncp.get("wire_version") != "1.0"
+        or ncp.get("capability_profile") != "NCP_1_0_COMMANDER_LEASE"
         or zenoh.get("version") != "1.9.0"
         or zenoh.get("default_features") is not False
         or zenoh.get("features") != ["transport_tls"]
@@ -561,9 +561,9 @@ def verify_cargo_lock(raw: bytes) -> None:
     ncp = one_package("ncp-core")
     zenoh = one_package("zenoh")
     gate = one_package("haldir-gate")
-    if ncp.get("version") != "0.8.0" or ncp.get("source") != NCP_SOURCE:
+    if ncp.get("version") != "1.0.0-rc.1" or ncp.get("source") != NCP_SOURCE:
         raise VerificationError(
-            "source Cargo.lock does not select exact NCP v0.8 revision"
+            "source Cargo.lock does not select exact NCP 1.0.0-rc.1 revision"
         )
     if zenoh.get("version") != "1.9.0":
         raise VerificationError("source Cargo.lock does not select exact Zenoh 1.9.0")

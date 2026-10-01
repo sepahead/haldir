@@ -33,9 +33,9 @@ use haldir_evidence::journal::JournalError;
 use haldir_evidence::manager::{EvidenceRecordDigest, JournalManagerError};
 use haldir_evidence::publication::PublicationTraceState;
 #[cfg(any(test, feature = "live-zenoh"))]
-use haldir_ncp08::ExactNcpCommandFrame;
+use haldir_ncp10::ExactNcpCommandFrame;
 #[cfg(feature = "live-zenoh")]
-use haldir_ncp08::NcpCommandWireProfile;
+use haldir_ncp10::NcpCommandWireProfile;
 #[cfg(feature = "live-zenoh")]
 use haldir_transport_zenoh::{FinalCommandPublisher, HaldirKeyError, HaldirKeys, SecureZenohError};
 use std::sync::Arc;
@@ -371,7 +371,7 @@ pub(crate) struct JournaledReturnedOk<C, P = InProcessReferencePublication> {
 /// A locally sync-confirmed successful transport return whose receiver arrival
 /// and application interval remain unobserved.
 ///
-/// No ready coordinator or publisher is returned: NCP v0.8 starts its TTL at
+/// No ready coordinator or publisher is returned: NCP 1.0 starts its TTL at
 /// plant-local arrival, and the current transport provides no bounded delivery
 /// delay or authenticated application acknowledgement.
 pub(crate) struct JournaledUnobservedReturnedOk {
@@ -567,7 +567,7 @@ impl<C: MonotonicClock> PublicationCoordinator<C, DeclaredLiveZenohPublication> 
             });
         }
 
-        let required_wire = NcpCommandWireProfile::ExactNcpV0_8Json;
+        let required_wire = NcpCommandWireProfile::ExactNcpV1_0Json;
         let actual_wire = bound.actor().ncp_command_wire_profile();
         if actual_wire != required_wire {
             return Err(CoordinatorFatal::NcpWireProfileMismatch {
@@ -1271,7 +1271,7 @@ impl<C: MonotonicClock> DurableCalledPublication<C, DeclaredLiveZenohPublication
     /// A publisher bound to another exact realm/session route is rejected and
     /// terminally recorded before frame access or invocation. Every invoked live
     /// publisher consumes the runtime and publisher. Even local `Ok` is terminal:
-    /// NCP v0.8 begins TTL at unobserved receiver arrival, so no sound action
+    /// NCP 1.0 begins TTL at unobserved receiver arrival, so no sound action
     /// interval or later publication authority can be reconstructed here.
     /// Cancellation while awaiting drops this Called state without inventing a
     /// returned-error record; restart recovery must classify the synced Called tail.

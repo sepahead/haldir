@@ -8,7 +8,7 @@ members = [
     "crates/haldir-state",
     "crates/haldir-policy-native",
     "crates/haldir-admission",
-    "crates/haldir-ncp08",
+    "crates/haldir-ncp10",
     "crates/haldir-reference-plant",
     "crates/haldir-evidence",
     "crates/haldir-durable",
@@ -40,7 +40,7 @@ haldir-core = { path = "crates/haldir-core" }
 haldir-state = { path = "crates/haldir-state" }
 haldir-policy-native = { path = "crates/haldir-policy-native" }
 haldir-admission = { path = "crates/haldir-admission" }
-haldir-ncp08 = { path = "crates/haldir-ncp08" }
+haldir-ncp10 = { path = "crates/haldir-ncp10" }
 haldir-reference-plant = { path = "crates/haldir-reference-plant" }
 haldir-evidence = { path = "crates/haldir-evidence" }
 haldir-durable = { path = "crates/haldir-durable" }
@@ -56,7 +56,7 @@ proptest = { version = "1" }
 rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }
 # Exact upstream NCP release implementation. Its key builder is always used by
 # the transport crate; full frame conformance remains off by default elsewhere.
-ncp-core = { version = "=0.8.0", git = "https://github.com/sepahead/NCP", rev = "2f5bd586d4bb20c90362bb6f5698b7f64057ba4e", default-features = false }
+ncp-core = { version = "=1.0.0-rc.1", git = "https://github.com/sepahead/NCP", rev = "2819dae3b6338bb1df6d105ebb5b7433936a993d", default-features = false }
 serde_json = { version = "1.0" }
 hmac = { version = "0.12.1", default-features = false }
 tokio = { version = "1", default-features = false, features = ["sync"] }

@@ -12,9 +12,9 @@
 > mTLS/ACL evidence, and recorded-stream calibration are **NOT CLAIMED**. The
 > scheduler, stream-shedding policy, UI, and automatic down-weight remain proposals.
 > The NCP
-> analysis is pinned to immutable release `v0.8.0`. Repository HEAD for NCP is the
-> unreleased and release-blocked `1.0.0-rc.1` candidate on a different wire; a native
-> 1.0 Haldir integration and role qualification are **NOT RUN**. The `BulkBlock` codec
+> analysis is pinned to immutable release `v0.8.0`. Haldir has since moved to the NCP
+> `1.0.0-rc.1` candidate (wire `1.0`); this analysis has not been re-verified against
+> it, and role qualification remains **NOT RUN**. The `BulkBlock` codec
 > is usable for local or offline data, but the wire-0.8 `BulkObservation` transport
 > envelope is reserved and must not be published. The earlier pid-core 0.9.0 review
 > commit `2557f929ed1ba8c1307d62e2763fe79cc953f449` is historical analysis, not the

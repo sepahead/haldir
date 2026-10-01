@@ -17,5 +17,5 @@ name = "haldir-ctl"
 path = "src/main.rs"
 
 [dependencies]
-haldir-ncp08.workspace = true
+haldir-ncp10.workspace = true
 rustix.workspace = true

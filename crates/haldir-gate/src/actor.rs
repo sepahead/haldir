@@ -5,6 +5,7 @@
 //! immediately before output-sequence allocation (spec B1). Every DENY produces
 //! no output and (from the replay-commit point on) consumes the intent sequence.
 
+use crate::utc::UtcClock;
 use haldir_admission::{AdmissionClaim, AdmissionSnapshot};
 use haldir_contracts::cbor::Limits;
 use haldir_contracts::challenge::GateChallengeV1;
@@ -35,11 +36,13 @@ use haldir_crypto::{
 };
 use haldir_durable::{GenerationAnchor, SnapshotStorage};
 use haldir_evidence::{EvidenceSpool, gate_journal::GateJournalVerifier, manager::JournalSigner};
-use haldir_ncp08::{
+use haldir_ncp10::{
     ExactNcpCommandFrame, GateCommandBuildInputV1, NcpCommandAdapter, NcpCommandWireProfile,
     PlantAction, PlantCommand, SelectedNcpCommandAdapter,
 };
-use haldir_ncp08::{NCP_JSON_SAFE_INTEGER_MAX, NCP_V0_8_0};
+use haldir_ncp10::{
+    NCP_JSON_SAFE_INTEGER_MAX, NCP_V1_0_0_RC1, NcpCommanderLease, NcpLeaseInterval,
+};
 use haldir_policy_native::{
     ActionHistoryError, BoundedActionHistory, MAX_RETAINED_ACTIVE_INTERVALS, NativePolicyError,
     NativePolicySnapshot, PolicyInput, ValidatedNativePolicy, try_decide_validated,
@@ -210,6 +213,12 @@ mod bounded_intent_candidate_tests {
     }
 }
 
+/// Sixteen bytes of operating-system entropy for an NCP lease id.
+fn os_lease_id() -> Option<[u8; 16]> {
+    let mut bytes = [0; 16];
+    getrandom::getrandom(&mut bytes).ok().map(|()| bytes)
+}
+
 fn checked_publication_horizon(
     called_at: MonoInstant,
     effective_validity_ms: u32,
@@ -285,6 +294,9 @@ pub enum GateConfigError {
     GateSignerPublicKeyMismatch,
     /// The configured publication-authority profile is not executable by this Gate.
     UnsupportedPublicationAuthorityProfile,
+    /// The policy's NCP validity cap exceeds the rotation margin of the NCP lease,
+    /// so a command could outlive the authority it carries.
+    NcpValidityCapExceedsLease,
 }
 
 impl GateConfigError {
@@ -305,6 +317,7 @@ impl GateConfigError {
             Self::UnsupportedPublicationAuthorityProfile => {
                 "GATE_CONFIG_UNSUPPORTED_PUBLICATION_AUTHORITY_PROFILE"
             }
+            Self::NcpValidityCapExceedsLease => "GATE_CONFIG_NCP_VALIDITY_CAP_EXCEEDS_LEASE",
         }
     }
 }
@@ -344,6 +357,8 @@ pub enum GateStartupError {
         /// Requested startup state.
         to: GateProcessStateV1,
     },
+    /// The durable boot counter has outgrown the NCP authority-term space.
+    NcpTermSpaceExhausted,
 }
 
 impl From<GateConfigError> for GateStartupError {
@@ -362,6 +377,7 @@ impl GateStartupError {
             Self::StoreGateMismatch => "GATE_STARTUP_STORE_GATE_MISMATCH",
             Self::BootContextMismatch => "GATE_STARTUP_BOOT_CONTEXT_MISMATCH",
             Self::ProcessTransition { .. } => "GATE_STARTUP_PROCESS_TRANSITION",
+            Self::NcpTermSpaceExhausted => "GATE_STARTUP_NCP_TERM_SPACE_EXHAUSTED",
         }
     }
 }
@@ -673,6 +689,10 @@ pub struct GateConfig {
     pub gate_signer: SigningKey,
     /// The Gate application signing key id.
     pub gate_signer_kid: KeyId,
+    /// Interval of the NCP commander lease that Gate issues to itself.
+    pub ncp_lease_interval: NcpLeaseInterval,
+    /// Wall clock for the UTC bounds of the NCP commander lease.
+    pub utc_clock: Box<dyn UtcClock>,
 }
 
 impl GateConfig {
@@ -681,8 +701,9 @@ impl GateConfig {
     /// # Errors
     /// Returns [`GateConfigError`] when the local lease cap or native policy is
     /// unusable, the policy digest does not identify the executable parameters,
-    /// the Gate receipt signer is not bound to its trusted identity and key, or
-    /// the publication-authority profile is not implemented by this Gate.
+    /// the Gate receipt signer is not bound to its trusted identity and key, the
+    /// publication-authority profile is not implemented by this Gate, or a
+    /// command could outlive its NCP lease.
     pub fn validate(&self) -> Result<(), GateConfigError> {
         validate_static_config(
             PolicyBindingValidation {
@@ -699,11 +720,18 @@ impl GateConfig {
             },
         )?;
 
+        // Gate issues its NCP lease at runtime; configuration never supplies one.
         if matches!(
             self.publication,
             PlantPublicationAuthorityStateV1::NcpLeaseV1(_)
         ) {
             return Err(GateConfigError::UnsupportedPublicationAuthorityProfile);
+        }
+        // Effective validity never exceeds the NCP cap, and every lease Gate
+        // carries outlives its rotation margin.
+        if u64::from(self.policy.ncp_validity_cap_ms) > self.ncp_lease_interval.rotation_margin_ms()
+        {
+            return Err(GateConfigError::NcpValidityCapExceedsLease);
         }
 
         Ok(())
@@ -784,6 +812,8 @@ pub struct VehicleActor {
     policy: ValidatedNativePolicy,
     session: NcpSessionIdentityV1,
     publication: PlantPublicationAuthorityStateV1,
+    ncp_lease: Option<NcpCommanderLease>,
+    utc_clock: Box<dyn UtcClock>,
     output_epoch: GateOutputEpoch,
     output_stream: GateOutputStreamState,
     challenges: ChallengeTable,
@@ -1093,10 +1123,10 @@ impl VehicleActor {
         cfg.validate()?;
 
         let mut anti_rollback = AntiRollbackStore::new_empty();
-        anti_rollback
+        let boot_counter = anti_rollback
             .advance_boot()
             .map_err(GateStartupError::AntiRollback)?;
-        Self::from_validated_config(cfg, Box::new(anti_rollback))
+        Self::from_validated_config(cfg, Box::new(anti_rollback), boot_counter)
     }
 
     /// Construct an actor from a store whose new boot incarnation was already
@@ -1122,11 +1152,12 @@ impl VehicleActor {
             return Err(GateStartupError::StoreGateMismatch);
         }
         cfg.validate()?;
-        if cfg.gate_boot_id != term_store.boot_context().gate_boot_id {
+        let boot = term_store.boot_context();
+        if cfg.gate_boot_id != boot.gate_boot_id {
             return Err(GateStartupError::BootContextMismatch);
         }
 
-        Self::from_validated_config(cfg, Box::new(term_store))
+        Self::from_validated_config(cfg, Box::new(term_store), boot.boot_counter)
     }
 
     /// Construct an actor from a store whose deployment package and fresh boot
@@ -1155,22 +1186,39 @@ impl VehicleActor {
             return Err(GateStartupError::StoreGateMismatch);
         }
         cfg.validate()?;
-        if cfg.gate_boot_id != term_store.boot_context().gate_boot_id {
+        let boot = term_store.boot_context();
+        if cfg.gate_boot_id != boot.gate_boot_id {
             return Err(GateStartupError::BootContextMismatch);
         }
 
-        Self::from_validated_config(cfg, Box::new(term_store))
+        Self::from_validated_config(cfg, Box::new(term_store), boot.boot_counter)
     }
 
     fn from_validated_config(
         cfg: GateConfig,
         anti_rollback: Box<dyn LeaseTermStore>,
+        boot_counter: u64,
     ) -> Result<Self, GateStartupError> {
         let policy =
             ValidatedNativePolicy::new(cfg.policy).map_err(GateConfigError::InvalidPolicy)?;
         if policy.canonical_digest() != cfg.policy_snapshot_digest {
             return Err(GateConfigError::PolicyDigestMismatch.into());
         }
+        let ncp_lease = match &cfg.publication {
+            PlantPublicationAuthorityStateV1::AclExclusiveV1(route) => Some(
+                NcpCommanderLease::new(
+                    route,
+                    &cfg.gate_id,
+                    cfg.session.clone(),
+                    cfg.output_epoch,
+                    cfg.ncp_lease_interval,
+                    boot_counter,
+                )
+                .ok_or(GateStartupError::NcpTermSpaceExhausted)?,
+            ),
+            PlantPublicationAuthorityStateV1::Unavailable { .. }
+            | PlantPublicationAuthorityStateV1::NcpLeaseV1(_) => None,
+        };
         let duty_window =
             MonoDuration::checked_from_millis(u64::from(policy.snapshot().duty_window_ms)).ok_or(
                 GateConfigError::ActionHistory(ActionHistoryError::ArithmeticOverflow),
@@ -1207,6 +1255,8 @@ impl VehicleActor {
             policy,
             session: cfg.session,
             publication: cfg.publication,
+            ncp_lease,
+            utc_clock: cfg.utc_clock,
             output_epoch: cfg.output_epoch,
             output_stream: GateOutputStreamState::new(cfg.output_epoch, MAX_RETIRED),
             challenges,
@@ -1454,7 +1504,15 @@ impl VehicleActor {
         if !self.process.is_active() {
             return Err(PublicationError::AuthorizationChanged);
         }
-        if !self.publication.authorizes_acl_only_publication() {
+        if !self.publication.proves_exclusive_route() {
+            return Err(PublicationError::PublicationAuthorityLost);
+        }
+        if !prepared
+            .plant_command
+            .exact_frame()
+            .authority()
+            .covers(observed_at.as_nanos(), prepared.effective_validity_ms)
+        {
             return Err(PublicationError::PublicationAuthorityLost);
         }
         let Some(state) = &self.trusted_state else {
@@ -1539,7 +1597,7 @@ impl VehicleActor {
     /// Record a live publisher's local `Ok` without pretending the plant arrival
     /// time or application interval is known.
     ///
-    /// NCP v0.8 starts `ttl_ms` from the receiver's local arrival time. A local
+    /// NCP 1.0 starts `ttl_ms` from the receiver's local arrival time. A local
     /// Zenoh return supplies neither that time nor a bounded in-transit lifetime,
     /// so charging `[called_at, called_at + ttl)` would end the possible plant
     /// interval too early. This transition therefore commits no action history,
@@ -1880,7 +1938,7 @@ impl VehicleActor {
             gate_key_id: self.gate_signer.kid.clone(),
             policy_snapshot_digest: self.policy.canonical_digest(),
             accepted_contract_versions,
-            ncp_compatibility_id: NCP_V0_8_0.compatibility_id(),
+            ncp_compatibility_id: NCP_V1_0_0_RC1.compatibility_id(),
         };
         let signed_envelope = self.gate_signer.sign_challenge(&challenge);
         if !self.register_challenge(nonce, expires_at, now) {
@@ -2549,9 +2607,19 @@ impl VehicleActor {
             self.latch_fault("AUTHORIZATION_REVISION_CHANGED_DURING_DECISION");
             return self.respond(&draft, R::ErrorInternalFault, now);
         }
-        if !self.publication.authorizes_acl_only_publication() {
+        if !self.publication.proves_exclusive_route() {
             return self.respond(&draft, R::DenyNoPublicationAuthority, now);
         }
+        let utc_ms = self.utc_clock.now_utc_ms();
+        let Some(ncp_lease) = self
+            .ncp_lease
+            .as_mut()
+            .and_then(|lease| lease.for_command(now.as_nanos(), utc_ms, os_lease_id))
+            .filter(|lease| lease.covers(now.as_nanos(), effective_validity_ms))
+            .cloned()
+        else {
+            return self.respond(&draft, R::DenyNoPublicationAuthority, now);
+        };
         if self.publication_state != PublicationState::Idle {
             return self.respond(&draft, R::DenyOverload, now);
         }
@@ -2584,6 +2652,7 @@ impl VehicleActor {
             gate_t_ns: now.as_nanos(),
             action: intent.action,
             effective_validity_ms,
+            lease: ncp_lease,
         };
         let frame = match self.adapter.build_command(&build_input) {
             Ok(f) => f,
@@ -2670,7 +2739,7 @@ mod output_sequence_wire_bound_tests {
     use super::output_sequence_is_wire_representable;
     use core::num::NonZeroU64;
     use haldir_contracts::ids::OutputSeq;
-    use haldir_ncp08::NCP_JSON_SAFE_INTEGER_MAX;
+    use haldir_ncp10::NCP_JSON_SAFE_INTEGER_MAX;
 
     #[test]
     fn implemented_wire_namespace_ends_at_the_json_safe_integer_limit() {

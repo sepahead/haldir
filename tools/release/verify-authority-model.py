@@ -31,10 +31,10 @@ GATE_PIPELINE_FUNCTION_MARKER = "fn decide_intent_inner"
 # review event; region extraction alone cannot distinguish an impl item from
 # identical tokens embedded inside an inert macro invocation.
 EXPECTED_GATE_ACTOR_SOURCE_SHA256 = (
-    "8c2aac1d1b2e560705b13dd8a7ffa1d0d9f9b0c6e1cd86d7bdbc56bb822b31e1"
+    "d5b600b073d486ecda51209435b054e3b1139c3dd53a75bfa59534f90f3734ca"
 )
 EXPECTED_GATE_PIPELINE_ITEM_SHA256 = (
-    "7a48d566c4e70aac17899dd0e3cd33c9d2214fe40426e595efb59bddff16c5af"
+    "561a9e835175d6f930c8a7ce08042c8f9fca56023af57c234855dc88c6aa546a"
 )
 
 EXPECTED_TOP_LEVEL = {
@@ -67,6 +67,7 @@ EXPECTED_CONJUNCTION = [
     "deterministic_policy_allow_with_useful_validity",
     "authorization_revision_unchanged",
     "acl_exclusive_publication_authority_current",
+    "ncp_commander_lease_live_for_command_validity",
     "new_gate_owned_output_position",
     "fresh_gate_owned_frame_built_and_exactly_validated",
     "opaque_publication_transition_binds_route_bytes_and_digest",
@@ -99,13 +100,15 @@ GATE_PIPELINE_ORDERED_MARKERS = (
     "return self.respond(&draft, R::ErrorInternalFault, now)",
     "let effective_validity_ms = match decision.effective_validity_ms()",
     "if self.revision.get() != captured_rev",
-    "if !self.publication.authorizes_acl_only_publication()",
+    "if !self.publication.proves_exclusive_route()",
+    ".filter(|lease| lease.covers(now.as_nanos(), effective_validity_ms))",
     "let allocation = self.allocate_output_sequence()",
     "let out_seq = match allocation",
     "self.latch_fault(",
     "return self.respond(&draft, R::ErrorNamespaceExhausted, now)",
     "let build_input = GateCommandBuildInputV1",
     "action: intent.action",
+    "lease: ncp_lease",
     "let frame = match self.adapter.build_command(&build_input)",
     ".validate_exact_command(&frame, &build_input)",
     "let plant_command = match PlantCommand::from_exact_frame(decision_id, frame)",
@@ -384,6 +387,7 @@ def _verify_document(model: dict[str, Any], repo: Path) -> None:
         "**SHALL NOT** create,",
         "`ALLOW(HOLD)` **SHALL** create",
         "`DENY` and `ERROR` **SHALL NOT** create",
+        "holds a live NCP commander lease",
         "enforcement hardening remains partial",
         "complete mediation",
         "**NOT_CLAIMED**",
@@ -434,7 +438,7 @@ def _verify_model_contract(model: dict[str, Any]) -> None:
         raise AuthorityModelError("AUTHORITY_CLAIMED_PROFILE_FIELDS_INVALID")
     if (
         profile.get("profile_id") != "haldir-secure-reference-v1"
-        or profile.get("compatibility") != "PRE_AUTHORITY_ACL_ONLY"
+        or profile.get("compatibility") != "NCP_1_0_COMMANDER_LEASE"
         or profile.get("protected_route_name") != "final_command"
         or profile.get("protected_route") != "haldir-ncp/session/uav-1/command"
         or profile.get("plant_command_definition")
@@ -651,7 +655,7 @@ def _verify_rust_contracts(model: dict[str, Any], repo: Path) -> None:
         MAX_PROFILE_BYTES,
         "publication_authority_contract",
     ).decode("utf-8")
-    authorization_block = _rust_block(status_source, "authorizes_acl_only_publication")
+    authorization_block = _rust_block(status_source, "fn proves_exclusive_route")
     if "matches!(self, Self::AclExclusiveV1(_))" not in authorization_block:
         raise AuthorityModelError("AUTHORITY_RUST_PUBLICATION_STATE_DRIFT")
 

@@ -15,7 +15,7 @@ pub struct PlantCommandCorrelation {
     pub output_epoch: GateOutputEpoch,
     /// Gate output sequence carried by the exact output frame.
     pub output_seq: OutputSeq,
-    /// Exact-object causal-source correlation. The exact NCP v0.8 JSON bytes
+    /// Exact-object causal-source correlation. The exact NCP 1.0 JSON bytes
     /// carry epoch/sequence but have no field for `source_key`.
     pub source: NcpSourceRefV1,
     /// Digest of the exact output-frame bytes.
@@ -40,7 +40,7 @@ pub enum RejectReason {
     /// The current output position was replayed with different exact-object
     /// provenance or bytes. The caller-supplied decision id is correlation-only
     /// and does not turn otherwise identical exact bytes into a conflict. In the
-    /// real NCP v0.8 profile, `source_key` is object correlation rather than a
+    /// real NCP 1.0 profile, `source_key` is object correlation rather than a
     /// field carried by the serialized JSON frame.
     ConflictingReplay,
 }

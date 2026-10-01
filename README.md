@@ -116,14 +116,15 @@ Read [evidence semantics](docs/EVIDENCE-SEMANTICS.md) for exact cancellation, st
 ## Optional ecosystem relationships
 
 Haldir can exercise its P0 reference without other ecosystem processes.
-The optional exact adapter retains NCP `v0.8.0` at
-`2f5bd586d4bb20c90362bb6f5698b7f64057ba4e`, wire `0.8`, contract `d1b50a2d8a265276`.
+Haldir speaks NCP 1.0 at the `1.0.0-rc.1` candidate
+`2819dae3b6338bb1df6d105ebb5b7433936a993d`, wire `1.0`, contract `163acc57d8a62b66`.
+Every command carries a Gate-issued NCP authority lease.
 Its default adapter uses modeled bytes.
 The off-by-default `real-ncp` feature validates exact compact JSON against that pinned upstream crate.
 
 | Project or input | Intended role | Current Haldir boundary |
 | --- | --- | --- |
-| [NCP](https://github.com/sepahead/NCP) | Typed command and transport contract | Exact retained wire-0.8 adapter; no qualified native-local gate |
+| [NCP](https://github.com/sepahead/NCP) | Typed command and transport contract | Native wire-1.0 adapter with a Gate-issued authority lease; no qualified native-local gate |
 | [Engram (private source)](https://github.com/sepahead/Paper2Brain) / NEST | External signed-intent controller | Private repository access is required. No integrated neural producer or behavioral backend-conformance result |
 | [CREBAIN](https://github.com/sepahead/crebain) | External plant and application owner | No qualified Haldir plant-side integration or actuator-bypass closure |
 | [Galadriel](https://github.com/sepahead/galadriel) | Prospective advisory evidence producer | No runtime edge; a verdict cannot grant or widen authority |

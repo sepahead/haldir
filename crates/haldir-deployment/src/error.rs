@@ -4,7 +4,7 @@ use core::fmt;
 
 use haldir_contracts::error::DecodeError;
 use haldir_crypto::CryptoError;
-use haldir_ncp08::NcpCompatibilityError;
+use haldir_ncp10::NcpCompatibilityError;
 
 use crate::contract::{AuthoritySnapshotKindV1, DeploymentArtifactIdV1};
 

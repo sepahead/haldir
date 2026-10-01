@@ -12,7 +12,7 @@ Author: **Sepehr Mahmoudian**
 The key words **SHALL**, **SHALL NOT**, **MUST**, and **MUST NOT** are
 normative. This requirement refines `HALDIR-0.9-T001` and
 `HALDIR-0.9-T002`; it does not broaden either claim. It applies to the
-declared `haldir-secure-reference-v1` / `PRE_AUTHORITY_ACL_ONLY`
+declared `haldir-secure-reference-v1` / `NCP_1_0_COMMANDER_LEASE`
 qualification scope and the separately identified in-process, configuration,
 retained synthetic, and bounded-formal evidence layers.
 
@@ -148,7 +148,7 @@ the same private key. A wrong secret under a valid `kid` is a forgery and
 | controller transport credential only | The tested ACL path does not grant final-route publication and a wrong application signature is rejected, but the credential can inject traffic/DoS on its allowed route and peer identity is not propagated into the actor. `PARTIAL`. |
 | controller signing plus transport credentials | The attacker can impersonate the controller inside its active authority envelope. Direct final-route publication remains denied to that profile identity in the bounded router experiment. `PARTIAL`. |
 | Gate application key | The attacker can forge Gate-signed receipts or evidence if it also reaches the relevant APIs/storage; external witnessing and protected loading are absent. It does not by itself prove possession of the final-route transport credential. `PARTIAL`. |
-| Gate transport credential | The router ACL accepts final-route bytes from that principal without validating the Gate application signature or authorization conjunction. Arbitrary unauthorized final-route publication is therefore not prevented by the current profile. `NOT_CLAIMED`. |
+| Gate transport credential | The router ACL accepts final-route bytes from that principal without validating the Gate application signature or authorization conjunction. Arbitrary unauthorized final-route publication is therefore not prevented by the current profile. Under NCP `1.0.0-rc.1` the credential holder can also issue itself authority leases, including terms that lock the genuine Gate out of the session, so the commander lease adds no containment. `NOT_CLAIMED`. |
 | mission/admission/revocation/deployment signing key | Role and object-domain separation limit cross-role use, while the remaining conjunction may limit effects. Valid in-role forgery, custody, detection, propagation, rotation, and recovery remain unproven. `PARTIAL`. |
 | router CA/router credential or Gate host/root | The attacker can subvert transport identity, routing, process memory, or loaded secrets. Containment is `NOT_CLAIMED`. |
 | storage MAC key or generation-anchor administrator | Authentication or non-rewind protection can be forged/subverted within that root's scope. The local file anchor is explicitly rewritable. `NOT_CLAIMED` for hostile external compromise. |
@@ -215,7 +215,10 @@ Clock regression or arithmetic failure denies or fault-latches.
 
 Controller and source timestamps are provenance only and **SHALL NOT** create
 freshness, validity, lease lifetime, or output time. Opaque identifiers are not
-clocks.
+clocks. UTC stamps only the audit bounds of Gate's NCP commander lease: it never
+decides expiry inside Gate, a missing UTC time withholds a new term, and the body
+bounds its own deadline by the declared interval, so a wrong Gate clock can
+shorten or void a lease at the body but never extend it.
 
 The current local update seam does not authenticate a live state producer or
 reject every impossible relation between producer time, source contents,
@@ -245,7 +248,9 @@ are not mandatory even though a bound format-v2 chain exact-matches the signed
 journal ID. The evidence journal lacks an external high-water witness, and power-loss/hostile
 filesystem evidence is absent. Rolling back a deployment **SHALL NOT** silently
 reuse an old boot, session, lease, key, output epoch/position, schema identity,
-or evidence namespace. Role/key separation does not prove separate operators
+or evidence namespace. NCP authority terms derive from the durable boot counter;
+a rewound counter would make a later boot repeat terms, which the body refuses as
+not strictly newer, so that rewind costs availability rather than authority. Role/key separation does not prove separate operators
 or administrative control.
 
 End-to-end deployment rollback resistance and rehearsed recovery are

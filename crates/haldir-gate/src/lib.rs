@@ -8,7 +8,7 @@
 //! reference plant; it has no live transport, neural runtime, or physical hardware
 //! (see `docs/LIMITATIONS.md`). The off-by-default `live-zenoh` feature additionally
 //! exposes single-owner local kernels and an optional caller-session-backed ingress
-//! aggregate with exact NCP-v0.8 JSON publication. The stricter
+//! aggregate with exact NCP 1.0 JSON publication. The stricter
 //! `live-gate-dev-smoke` feature adds separate disposable-fixture provisioning and
 //! OpenExisting-only bind/immediate-shutdown examples; no authenticated or
 //! supervised production runner selects the aggregate here. Package-bound
@@ -32,6 +32,7 @@
 
 pub mod actor;
 pub mod startup;
+pub mod utc;
 
 /// Crate version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -60,6 +61,7 @@ pub use startup::{
     RunningGate, StartupProfile, StartupReport, StartupStateConfig, StateOpenMode,
     start_deployment_with_backends, start_local, start_with_backends,
 };
+pub use utc::{SystemUtcClock, UtcClock};
 
 #[cfg(test)]
 mod e2e {
@@ -506,7 +508,7 @@ mod e2e {
     }
 
     #[cfg(feature = "real-ncp")]
-    fn setup_with_adapter(ncp_adapter: haldir_ncp08::SelectedNcpCommandAdapter) -> Fixture {
+    fn setup_with_adapter(ncp_adapter: haldir_ncp10::SelectedNcpCommandAdapter) -> Fixture {
         let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
         let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
         let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
@@ -572,12 +574,14 @@ mod e2e {
             policy,
             policy_snapshot_digest,
             session: sess(),
-            ncp_adapter: haldir_ncp08::SelectedNcpCommandAdapter::modeled_p0(),
+            ncp_adapter: haldir_ncp10::SelectedNcpCommandAdapter::modeled_p0(),
             publication,
             output_epoch: GateOutputEpoch::new(uuid(5)),
             local_cap_ms: NonZeroU32::new(30_000).unwrap(),
             gate_signer: gate_sk,
             gate_signer_kid: kid(3),
+            ncp_lease_interval: haldir_ncp10::NcpLeaseInterval::DEFAULT,
+            utc_clock: Box::new(SystemUtcClock),
         };
         (cfg, rec, admission_digest)
     }
@@ -680,9 +684,13 @@ mod e2e {
             final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
             session,
             authority_term: NonZeroU64::new(1).unwrap(),
-            lease_id: AuthorityLeaseId::new([8; 16]),
+            lease_id: CanonicalUuidV4String::from_random_bytes([8; 16]),
             authorized_output_epoch: output_epoch,
             expires_mono_ns: Some(u64::MAX),
+            issuer_principal: PrincipalId::new("gate.range-a").unwrap(),
+            holder_entity: GateId::new("gate-a").unwrap(),
+            issued_at_utc_ms: 1_700_000_000_000,
+            expires_at_utc_ms: 1_700_000_030_000,
         })
     }
 
@@ -1544,7 +1552,7 @@ mod e2e {
         let parts = journal_bound_fixture(
             max_recovery_records,
             None,
-            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
+            setup_with_adapter(haldir_ncp10::SelectedNcpCommandAdapter::exact_ncp_v1_0_json()),
             GateRuntimeProfile::DeclaredLiveZenoh,
         );
         let coordinator =
@@ -1586,7 +1594,7 @@ mod e2e {
         let now = MonoInstant::from_nanos(1_000_000_000);
         let (mut cfg, admission_record, admission_digest) =
             gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
-        cfg.ncp_adapter = haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json();
+        cfg.ncp_adapter = haldir_ncp10::SelectedNcpCommandAdapter::exact_ncp_v1_0_json();
         let actor = VehicleActor::new_ephemeral(cfg).expect("valid inactive Gate configuration");
         let parts = journal_bound_fixture(
             max_recovery_records,
@@ -3027,7 +3035,7 @@ mod e2e {
         assert_eq!(challenge.accepted_contract_versions.as_slice()[0].minor, 0);
         assert_eq!(
             challenge.ncp_compatibility_id,
-            haldir_ncp08::NCP_V0_8_0.compatibility_id()
+            haldir_ncp10::NCP_V1_0_0_RC1.compatibility_id()
         );
     }
 
@@ -3411,7 +3419,7 @@ mod e2e {
         let fixture = journal_bound_fixture(
             64,
             None,
-            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json()),
+            setup_with_adapter(haldir_ncp10::SelectedNcpCommandAdapter::exact_ncp_v1_0_json()),
             GateRuntimeProfile::InProcessReference,
         );
         let clock = fixture.clock.clone();
@@ -4769,10 +4777,10 @@ mod e2e {
     #[test]
     fn explicitly_selected_exact_adapter_reaches_the_called_boundary_as_ncp_json() {
         let mut fixture =
-            setup_with_adapter(haldir_ncp08::SelectedNcpCommandAdapter::exact_ncp_v0_8_json());
+            setup_with_adapter(haldir_ncp10::SelectedNcpCommandAdapter::exact_ncp_v1_0_json());
         assert_eq!(
             fixture.actor.ncp_command_wire_profile(),
-            haldir_ncp08::NcpCommandWireProfile::ExactNcpV0_8Json
+            haldir_ncp10::NcpCommandWireProfile::ExactNcpV1_0Json
         );
 
         let record = admission_record();
@@ -4903,6 +4911,91 @@ mod e2e {
                 .iter()
                 .any(|e| e.kind == PlantEventKind::ResponseObserved)
         );
+    }
+
+    /// A wall clock that never yields UTC.
+    struct NoUtc;
+
+    impl UtcClock for NoUtc {
+        fn now_utc_ms(&self) -> Option<u64> {
+            None
+        }
+    }
+
+    fn hold_intent(fixture: &Fixture) -> Vec<u8> {
+        let hold = RequestedActionV1::Hold {
+            requested_validity_ms: NonZeroU32::new(300).unwrap(),
+        };
+        let intent = build_intent(fixture.admission_digest, &admission_record(), 1, hold);
+        sign_intent(&fixture.ctrl_sk, &intent)
+    }
+
+    #[test]
+    fn published_commands_carry_the_gates_ncp_lease() {
+        let mut fixture = setup();
+        let allowed = fixture
+            .actor
+            .decide_intent(&hold_intent(&fixture), INTENT_KEY, fixture.now);
+        assert_eq!(allowed.outcome, DecisionOutcomeV1::Allow);
+        let validity_ms = allowed.receipt.effective_validity_ms.unwrap();
+        let called = fixture
+            .actor
+            .mark_publish_called(allowed.into_prepared_publication().unwrap(), fixture.now)
+            .unwrap();
+        let lease = called.reference_plant_command().exact_frame().authority();
+
+        // An ephemeral Gate runs boot 1, whose first term is 2^24 + 1.
+        assert_eq!(lease.authority_term.get(), (1 << 24) + 1);
+        assert_eq!(lease.gate_transport_principal.as_str(), "gate.range-a");
+        assert_eq!(lease.issuer_principal.as_str(), "gate.range-a");
+        assert_eq!(
+            lease.final_route_digest,
+            DigestV1::compute(DigestDomain::TransportKey, b"route")
+        );
+        assert_eq!(lease.holder_entity.as_str(), "gate-1");
+        assert_eq!(lease.session, sess());
+        assert_eq!(lease.authorized_output_epoch, GateOutputEpoch::new(uuid(5)));
+        assert_eq!(lease.expires_at_utc_ms - lease.issued_at_utc_ms, 30_000);
+        assert!(lease.covers(fixture.now.as_nanos(), validity_ms));
+    }
+
+    #[test]
+    fn decisions_are_denied_while_no_ncp_term_can_be_acquired() {
+        let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
+        let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
+        let gate_sk = SigningKey::from_seed([3; 32]).expect("nonzero test seed");
+        let (mut cfg, rec, admission_digest) =
+            gate_config(acl_publication(), &ctrl_sk, &mission_sk, gate_sk);
+        cfg.utc_clock = Box::new(NoUtc);
+        let now = MonoInstant::from_nanos(1_000_000_000);
+        let mut fixture = activate_fixture(cfg, rec, admission_digest, ctrl_sk, mission_sk, now);
+
+        let denied = fixture
+            .actor
+            .decide_intent(&hold_intent(&fixture), INTENT_KEY, fixture.now);
+
+        assert_eq!(denied.outcome, DecisionOutcomeV1::Deny);
+        assert_eq!(
+            denied.receipt.reason_codes.as_slice(),
+            &[DecisionReasonCodeV1::DenyNoPublicationAuthority]
+        );
+        assert!(!denied.has_prepared_publication());
+    }
+
+    #[test]
+    fn gate_config_rejects_an_ncp_validity_cap_beyond_the_lease_margin() {
+        let mut cfg = valid_config(acl_publication());
+        let margin_ms = cfg.ncp_lease_interval.rotation_margin_ms();
+        cfg.policy.ncp_validity_cap_ms = u32::try_from(margin_ms + 1).unwrap();
+        cfg.policy_snapshot_digest = cfg.policy.canonical_digest().unwrap();
+        assert_eq!(
+            cfg.validate(),
+            Err(GateConfigError::NcpValidityCapExceedsLease)
+        );
+
+        cfg.policy.ncp_validity_cap_ms = u32::try_from(margin_ms).unwrap();
+        cfg.policy_snapshot_digest = cfg.policy.canonical_digest().unwrap();
+        assert_eq!(cfg.validate(), Ok(()));
     }
 
     #[test]
@@ -6344,9 +6437,13 @@ mod e2e {
             final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"route"),
             session: sess(),
             authority_term: NonZeroU64::new(1).unwrap(),
-            lease_id: AuthorityLeaseId::new([8; 16]),
+            lease_id: CanonicalUuidV4String::from_random_bytes([8; 16]),
             authorized_output_epoch: GateOutputEpoch::new(uuid(5)),
             expires_mono_ns: Some(u64::MAX),
+            issuer_principal: PrincipalId::new("gate.range-a").unwrap(),
+            holder_entity: GateId::new("gate-a").unwrap(),
+            issued_at_utc_ms: 1_700_000_000_000,
+            expires_at_utc_ms: 1_700_000_030_000,
         });
         let ctrl_sk = SigningKey::from_seed([1; 32]).expect("nonzero test seed");
         let mission_sk = SigningKey::from_seed([2; 32]).expect("nonzero test seed");
@@ -6400,7 +6497,7 @@ mod e2e {
 
         let mut unrepresentable_source = trusted_state(f.now);
         unrepresentable_source.primary_source.source.stream_seq =
-            SourceSeq::new(NonZeroU64::new(haldir_ncp08::NCP_JSON_SAFE_INTEGER_MAX + 1).unwrap());
+            SourceSeq::new(NonZeroU64::new(haldir_ncp10::NCP_JSON_SAFE_INTEGER_MAX + 1).unwrap());
         assert_eq!(
             f.actor.set_trusted_state(unrepresentable_source, f.now),
             Err(DecisionReasonCodeV1::DenySourceUnrepresentable)

@@ -2,7 +2,7 @@
 //!
 //! These are Haldir's **own** stable semantic types (punch-list H15): the NCP
 //! adapter converts them to/from wire structs, but `haldir-contracts` never
-//! depends on `haldir-ncp08`.
+//! depends on `haldir-ncp10`.
 
 use crate::ids::{GateOutputEpoch, IntentEpoch, IntentSeq, OutputSeq, SourceSeq};
 use crate::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};

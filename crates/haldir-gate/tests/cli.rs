@@ -129,8 +129,8 @@ fn build_info_should_explicitly_disclaim_configuration_validation() -> TestResul
         stdout: format!(
             "\
 haldir-gate {} — compiled build information
-  NCP compatibility    : v0.8.0 @ 2f5bd586d4bb20c90362bb6f5698b7f64057ba4e
-  capability profile   : PRE_AUTHORITY_ACL_ONLY
+  NCP compatibility    : 1.0.0-rc.1 @ 2819dae3b6338bb1df6d105ebb5b7433936a993d
+  capability profile   : NCP_1_0_COMMANDER_LEASE
   reference profile    : assurance-reference-v1 (P0, in-process)
   runtime wiring       : none (offline introspection only)
   configuration check  : NOT PERFORMED

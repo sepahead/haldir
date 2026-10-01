@@ -34,7 +34,7 @@ pub use types::{
 };
 // Compatibility re-exports: the validated command capability is owned by the
 // NCP boundary; this simulation crate only consumes it.
-pub use haldir_ncp08::{PlantAction, PlantCommand, PlantCommandError};
+pub use haldir_ncp10::{PlantAction, PlantCommand, PlantCommandError};
 
 use core::borrow::Borrow;
 use haldir_contracts::ids::GateOutputEpoch;
@@ -492,10 +492,12 @@ impl ReferencePlant {
             .last_accepted
             .as_ref()
             .is_none_or(|last| last.output_epoch != cmd.output_epoch());
-        // NCP v0.8 constrained single-publisher transition rule: a foreign
-        // epoch cannot replace a live stream. The expiry horizon is half-open;
+        // The reference rotation rule, inherited from NCP v0.8: a foreign epoch
+        // cannot replace a live stream. The expiry horizon is half-open;
         // equality is the first instant at which the prior stream is no longer
         // live and a validated new epoch may re-anchor sequence accounting.
+        // NCP 1.0's receiver is stricter and binds a stream to its first epoch
+        // (see docs/LIMITATIONS.md).
         if is_new_epoch
             && self.last_accepted.is_some()
             && self
@@ -869,10 +871,13 @@ mod tests {
     use core::num::{NonZeroU32, NonZeroU64};
     use haldir_contracts::action::RequestedActionV1;
     use haldir_contracts::digest::{DigestDomain, DigestV1};
-    use haldir_contracts::ids::{DecisionId, GateOutputEpoch, OutputSeq, SourceSeq};
+    use haldir_contracts::ids::{
+        DecisionId, GateId, GateOutputEpoch, OutputSeq, PrincipalId, SourceSeq,
+    };
     use haldir_contracts::scalar::{AsciiId, BoundedAscii, CanonicalUuidV4String};
     use haldir_contracts::session::{NcpSessionIdentityV1, NcpSourceRefV1, NcpStreamPositionV1};
-    use haldir_ncp08::{AclOnlyAdapter, GateCommandBuildInputV1, NcpCommandAdapter};
+    use haldir_contracts::status::NcpLeaseEvidenceV1;
+    use haldir_ncp10::{GateCommandBuildInputV1, ModeledNcp10Adapter, NcpCommandAdapter};
 
     fn sess(g: u8) -> NcpSessionIdentityV1 {
         NcpSessionIdentityV1 {
@@ -970,10 +975,32 @@ mod tests {
             gate_t_ns,
             action,
             effective_validity_ms: validity_ms,
+            lease: reference_lease(&sess(g), epoch(ep)),
         };
-        let frame = AclOnlyAdapter::new().build_command(&input).unwrap();
+        let frame = ModeledNcp10Adapter::new().build_command(&input).unwrap();
         PlantCommand::from_exact_frame(decision_id, frame).unwrap()
     }
+    /// A live Gate lease on `session` for output epoch `output_epoch`.
+    fn reference_lease(
+        session: &NcpSessionIdentityV1,
+        output_epoch: GateOutputEpoch,
+    ) -> NcpLeaseEvidenceV1 {
+        let principal = PrincipalId::new("gate.reference").unwrap();
+        NcpLeaseEvidenceV1 {
+            gate_transport_principal: principal.clone(),
+            final_route_digest: DigestV1::compute(DigestDomain::TransportKey, b"reference/final"),
+            session: session.clone(),
+            authority_term: NonZeroU64::MIN,
+            lease_id: CanonicalUuidV4String::from_random_bytes([6; 16]),
+            authorized_output_epoch: output_epoch,
+            expires_mono_ns: Some(u64::MAX),
+            issuer_principal: principal,
+            holder_entity: GateId::new("gate-reference").unwrap(),
+            issued_at_utc_ms: 1_700_000_000_000,
+            expires_at_utc_ms: 1_700_000_030_000,
+        }
+    }
+
     fn correlation(command: &PlantCommand) -> PlantCommandCorrelation {
         PlantCommandCorrelation {
             decision_id: command.decision_id(),

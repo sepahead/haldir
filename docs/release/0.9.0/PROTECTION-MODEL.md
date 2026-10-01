@@ -11,7 +11,7 @@
 The key words **SHALL**, **SHALL NOT**, **MUST**, and **MUST NOT** are
 normative. This requirement refines the authority rule in
 `HALDIR-0.9-T001`; it does not broaden that rule. It applies to the declared
-`haldir-secure-reference-v1` / `PRE_AUTHORITY_ACL_ONLY` qualification scope.
+`haldir-secure-reference-v1` / `NCP_1_0_COMMANDER_LEASE` qualification scope.
 The model is default-deny: an identity, resource, action, constraint, clock, or
 root that is not explicitly listed **SHALL NOT** gain authority by analogy,
 fallback, wildcard, naming similarity, or possession of command-shaped data.
@@ -171,18 +171,19 @@ with no permissive fallback:
 - exact Gate/boot, realm, vehicle, mission/phase, session pair, controller,
   lease/admission, bundle/backend, policy, source-key/frame, and output bindings;
 - separate replay/order namespaces for controller intent, NCP source, Gate
-  output, boot, session generation, lease term, revocation epoch, deployment
-  revision, and authorization revision;
+  output, boot, session generation, lease term, NCP authority term, revocation
+  epoch, deployment revision, and authorization revision;
 - bounded canonical decoding, ingress, queues, sets, histories, journals,
   rates, totals, validity, numeric actions, slew, duty, geofence, uncertainty,
   and checked arithmetic;
 - active and non-faulted Gate state, present and strictly advancing trusted
   state, deterministic policy `ALLOW`, useful effective validity, unchanged
-  authorization revision, current publication authority, fresh output
-  allocation, exact frame validation, and one opaque publication transition.
+  authorization revision, current publication authority, a live NCP commander
+  lease that covers the command's validity, fresh output allocation, exact
+  frame validation, and one opaque publication transition.
 
 “Applicable” is not open-ended: the machine model's
-`final_command_transition.required_constraint_ids` contains the exact 26
+`final_command_transition.required_constraint_ids` contains the exact 27
 identity, scope, ordering, bound, and state-transition constraints that must
 hold before construction/publication. `failure:no_new_command` is the exact
 failed-precondition rule, and `failure:no_retroactive_erasure` is the exact
@@ -222,13 +223,20 @@ freshness because they are samples of the current Gate boot-local clock.
 Publication/evidence `observed_mono_ns` is producer-boot-local ordering
 evidence only after signer, boot, and retained journal/startup provenance are
 authenticated. Wall-clock/UTC may describe certificates, releases, or audit
-records but **SHALL NOT** authorize the command hot path. Session generations,
-stream epochs, and boot IDs are opaque typed identities: equality is meaningful
-only inside the exact namespace, and numeric ordering is forbidden. Lease
-terms, revocation epochs, deployment revisions, and durable generations are a
-separate logical-ratchet domain. They are comparable across restart only within
-the exact typed subject/scope and against authenticated persisted high water;
-they are not wall or monotonic clocks and **SHALL NOT** compare across scopes.
+records but **SHALL NOT** authorize the command hot path. Gate also stamps the
+UTC bounds of its NCP commander lease as audit metadata: a missing UTC time only
+withholds a new term, and the body bounds its own deadline by the declared
+interval, so a wrong Gate clock can shorten or void a lease but never extend
+it. Session generations, stream epochs, and boot IDs are opaque typed
+identities: equality is meaningful only inside the exact namespace, and numeric
+ordering is forbidden. Lease terms, revocation epochs, deployment revisions,
+durable generations, and the Gate boot counter are a separate logical-ratchet
+domain. They are comparable across restart only within the exact typed
+subject/scope and against authenticated persisted high water; they are not wall
+or monotonic clocks and **SHALL NOT** compare across scopes. An NCP authority
+term takes its high bits from the Gate boot counter and its low bits from a
+boot-local acquisition count, so it exceeds every term of an earlier boot
+without a durable write.
 `authorization_revision` and the typed intent, output, source, and challenge
 sequence counters form a third, boot-or-epoch-scoped logical-counter domain.
 They may order events only inside the current Gate boot or matching typed stream
@@ -267,9 +275,11 @@ state/control provenance, global credential/handle exclusivity, or
 plant/firmware trust proof exists. Distinct roles and public keys do not prove
 separate organizations, operators, or administrative control.
 
-The pinned NCP v0.8.0 commit, dependency lock, toolchain, router image, and
-artifact digests are supply-chain integrity anchors, not runtime principals and
-not native NCP 1.0 authority. Trust **SHALL NOT** be derived from controller
+The pinned NCP `1.0.0-rc.1` commit, dependency lock, toolchain, router image,
+and artifact digests are supply-chain integrity anchors, not runtime principals.
+Gate's NCP commander lease is runtime authority evidence issued to the Gate
+transport principal for the final route; it never extends authority to another
+principal. Trust **SHALL NOT** be derived from controller
 claims, process names, command shape, advisory evidence, a caller-constructible
 `AclExclusiveEvidenceV1`, or successful serialization.
 

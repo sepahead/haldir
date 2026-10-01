@@ -23,7 +23,7 @@ use haldir_contracts::receipt::DecisionReasonCodeV1;
 use haldir_core::snapshot::TrustedStateSnapshotV1;
 use haldir_core::time::{MonoInstant, MonotonicClock};
 use haldir_evidence::gate_journal::GateJournalMutationError;
-use haldir_ncp08::NcpCommandWireProfile;
+use haldir_ncp10::NcpCommandWireProfile;
 use haldir_transport_zenoh::{
     FinalCommandPublisher, HARD_MAX_INTENT_BYTES, HaldirKeyError, HaldirKeys, IngressCounters,
     IngressCountersSnapshot, IngressLimits, IntentIngress, IntentIngressEvent,
@@ -1993,7 +1993,7 @@ impl<C: MonotonicClock, P> TestDeclaredLiveGateService<C, P> {
         invoke: F,
     ) -> TestLiveServiceTransition<C, P, E>
     where
-        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        F: FnOnce(&haldir_ncp10::ExactNcpCommandFrame) -> Fut,
         Fut: core::future::Future<Output = Result<(), E>>,
     {
         self.process_one_with_test_fault(event, None, invoke).await
@@ -2008,7 +2008,7 @@ impl<C: MonotonicClock, P> TestDeclaredLiveGateService<C, P> {
         invoke: F,
     ) -> TestLiveServiceTransition<C, P, E>
     where
-        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        F: FnOnce(&haldir_ncp10::ExactNcpCommandFrame) -> Fut,
         Fut: core::future::Future<Output = Result<(), E>>,
     {
         match prepare_one(self.core, event) {
@@ -2196,7 +2196,7 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
     ) -> TestLiveZenohServiceTransition<C, P, S, I, E>
     where
         I: Iterator<Item = IntentIngressEvent>,
-        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        F: FnOnce(&haldir_ncp10::ExactNcpCommandFrame) -> Fut,
         Fut: core::future::Future<Output = Result<(), E>>,
     {
         let event = match self.pending_event.take() {
@@ -2216,7 +2216,7 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
     ) -> TestLiveZenohServiceTransition<C, P, S, I, E>
     where
         I: Iterator<Item = IntentIngressEvent>,
-        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        F: FnOnce(&haldir_ncp10::ExactNcpCommandFrame) -> Fut,
         Fut: core::future::Future<Output = Result<(), E>>,
     {
         if *self.shutdown_receiver.borrow() {
@@ -2249,7 +2249,7 @@ impl<C: MonotonicClock, P, S, I> TestDeclaredLiveGateZenohService<C, P, S, I> {
         invoke: F,
     ) -> TestLiveZenohServiceTransition<C, P, S, I, E>
     where
-        F: FnOnce(&haldir_ncp08::ExactNcpCommandFrame) -> Fut,
+        F: FnOnce(&haldir_ncp10::ExactNcpCommandFrame) -> Fut,
         Fut: core::future::Future<Output = Result<(), E>>,
     {
         let Self {
