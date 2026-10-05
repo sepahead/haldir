@@ -4,6 +4,31 @@ Haldir develops an experimental authorization reference monitor for mission-leve
 This file routes maintainers and coding agents to the owning contracts.
 Every result must identify its exact tested scope and remaining limitations.
 
+## Authority and workflow
+
+The owner authorizes agents to commit, push branches, and deliver reviewed commits to `main`.
+Follow the signed delivery protocol in [CONTRIBUTING.md](CONTRIBUTING.md):
+
+1. Create one signed, one-parent commit with the exact pinned author and committer identity.
+2. Keep the author and committer timestamps equal.
+3. Push the branch and open a pull request.
+4. Dispatch `ci.yml` and `formal.yml` on the branch.
+5. Require all seven required contexts to pass on that exact head.
+6. Fast-forward `main` to that exact commit with `git push origin <commit>:refs/heads/main`.
+7. Close the pull request without merging, then verify the remote object and its checks.
+
+Do not use any GitHub merge button.
+Do not amend, recreate, squash, cherry-pick, or rebase the commit after its checks pass.
+A rejected protected-main push remains a rejection; do not change settings or use a bypass.
+Do not force-push, rewrite shared history, move tags, or reset an owner's worktree.
+Releases, tags, and repository settings remain owner actions.
+A change to a protected lineage path needs an explicit owner-approved lineage transition.
+Do not add AI attribution or co-author trailers.
+
+Respect externally assigned ownership.
+Do not alter an active peer repository, its source, pins, index, branches, or worktrees.
+Separate agents own pid-rs development and Engram knowledge-graph and ingestion work.
+
 ## Read before changing
 
 Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
@@ -28,16 +53,17 @@ Current requirements, historical observations, and proposed capabilities are dif
 
 ## Working method
 
-1. Compare five to ten credible approaches before each material design decision.
-2. State each approach's assumptions, benefits, failure modes, and decisive experiment.
-3. Apply all twenty review lenses in [CONTRIBUTING.md](CONTRIBUTING.md).
-4. Use independent council review for separable authority, arithmetic, lifecycle, and release decisions.
-5. Record disagreements and resolve every failed requirement.
-6. Implement generic behavior with explicit typed boundaries.
-7. Add a negative control for every new accepted path.
-8. Add a positive control for every new rejection path.
-9. Freeze source identities, inputs, seeds, bounds, and criteria before inspecting outcomes.
-10. Run the complete applicable gate before presenting a publication candidate.
+1. Question each assumption in the task and verify each fact against its primary source.
+2. Compare five to ten credible approaches before each material design decision.
+3. State each approach's assumptions, benefits, failure modes, and decisive experiment.
+4. Apply all twenty review lenses in [CONTRIBUTING.md](CONTRIBUTING.md).
+5. Use independent council review for separable authority, arithmetic, lifecycle, and release decisions.
+6. Record disagreements and resolve every failed requirement.
+7. Implement generic behavior with explicit typed boundaries.
+8. Add a negative control for every new accepted path.
+9. Add a positive control for every new rejection path.
+10. Freeze source identities, inputs, seeds, bounds, and criteria before inspecting outcomes.
+11. Run the complete applicable gate before delivering a commit to `main`.
 
 A majority vote cannot override a failed scientific, authority, or provenance requirement.
 Do not branch on a fixture name, paper, expected answer, or selected failure case.
@@ -122,11 +148,11 @@ Preserve the missing supervisor, real timeout, remote-retirement, crash, and pow
 ## Optional integrations
 
 Keep the default modeled adapter separate from the optional exact adapter.
-The pinned NCP baseline is the `1.0.0-rc.1` candidate at
-`2819dae3b6338bb1df6d105ebb5b7433936a993d`.
-Its wire is `1.0` and contract hash is `163acc57d8a62b66`.
+`tools/pins.toml` owns the exact NCP pin, and `just verify-pins` checks it.
+[NCP compatibility](docs/NCP-COMPATIBILITY.md) records the selected candidate, wire, and contract hash.
 Only `haldir-ncp10` owns the stable Haldir-to-NCP conversion and the commander lease.
 Do not update a pin as documentation work.
+The pin files are protected lineage paths, so a pin change needs a lineage transition.
 
 The candidate local NCP direct profile excludes Haldir gating.
 Reject a requested gated profile before any endpoint preparation.
@@ -139,9 +165,24 @@ No Haldir runtime integration with those evidence sources is qualified here.
 Keep Engram/NEST, CREBAIN, Prisoma, and transport relationships at their exact documented scope.
 Do not infer a runtime edge from a shared dependency or a portfolio diagram.
 
-Respect externally assigned ownership.
-Do not alter an active peer repository, its source, pins, index, branches, or worktrees.
-In particular, separate PID development and Engram KG/ingestion work remain outside this task.
+## Artifact classes
+
+Classify every artifact before you change it.
+
+- **Protected lineage paths.** `tools/release/verify-current-lineage.py` lists them in
+  `PROTECTED_AFTER_ACTIVATION` and `PROTECTED_AFTER_ACTIVATION_PREFIXES`.
+  They include `CONTRIBUTING.md`, `justfile`, `.github/workflows/`, `tools/pins.toml`,
+  the pin verifiers, the allowed signers, the audit gate, and the lineage records.
+  An ordinary successor that changes one fails with `LINEAGE_SUCCESSOR_SCOPE`.
+- **Frozen historical records.** The framework-recovery records in `FROZEN_HISTORICAL_PREFIXES`,
+  the `T000..T119` records, signatures, and historical receipts stay unchanged.
+- **Generated artifacts.** The `haldir-contracts` golden tests write `contracts/vectors/`,
+  `contracts/malformed/`, and `CHECKSUMS.sha256`; `just verify-generated` checks them.
+  `cargo run -p haldir-crypto --example emit_interop_vectors` writes `tools/interop/vectors.json`;
+  `just interop` checks it.
+  `tools/release/generate-task-evidence.py` writes the task evidence that `just verify-release-protection` checks.
+- **Retained evidence.** Each campaign under `evidence/` has an owner guide and a verifier.
+  Add a new campaign for new evidence. Do not rewrite a retained campaign.
 
 ## Source, release, and verification
 
@@ -165,13 +206,6 @@ Run Markdown lint, local link checks, `git diff --check`, and actual SVG render 
 Verify source and index parity before handoff.
 Record exact commands, tools, inputs, exit codes, preserved failures, and residual limits.
 Keep custody output outside the checkout.
-
-Signed one-parent source lineage, exact author/committer identity, timestamps, signer, and protected delivery rules remain applicable.
-Follow explicit owner instructions for the assigned publication workflow.
-A rejected protected-main push remains a rejection; do not change settings or use a bypass.
-Do not force-push, rewrite shared history, move tags, or reset an owner's worktree.
-Delegated work must reach the release owner as an exact reviewable diff before publication.
-Do not add AI co-author trailers.
 
 ## Technical writing
 
