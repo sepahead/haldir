@@ -88,6 +88,35 @@ output; from the replay-commit point on, the intent sequence is consumed.
 | Gate | the modeled final NCP command frame, decision receipts | leases/admissions/policy; another vehicle's command |
 | plant (Crebain, future) | accepted/applied evidence | controller intents, Gate decision claims |
 
+## Galadriel research evidence is not authority
+
+Galadriel's mutual-information and PID outputs are not present in the conjunction
+above. Haldir has no PID route, principal, policy field, or runtime dependency.
+For fixed admitted authority input `x`, varying any advisory object `e` therefore
+cannot change authorization, trusted-state construction, or the plant-command
+projection:
+
+```text
+Authorize(x, e) = Authorize(x, e′) = Authorize(x)
+TrustedStateSnapshot(x, e) = TrustedStateSnapshot(x, e′) = TrustedStateSnapshot(x)
+PlantCommand(x, e) = PlantCommand(x, e′) = PlantCommand(x)
+AuditRecord(x, e) may differ from AuditRecord(x, e′)
+```
+
+A possible future record-only reference would require a new closed schema and
+separately authorized, role-separated audit principal, but would still expose no
+trusted-state, policy, decision, or plant-publication capability. PID evidence
+cannot grant, widen, revoke, restrict, deny, or exercise authority. Its audit
+record may vary with `e`; that record is not an authorization input or plant
+command. The equation is software-path noninterference, not sociotechnical
+noninterference: displaying research evidence may influence a human who later
+submits a different authenticated `x`.
+Do not reuse `CREBAIN_EVIDENCE` to authenticate a Galadriel analysis: the
+physical-row producer and the analysis producer make different claims. See the
+[Galadriel PID advisory contract](GALADRIEL-PID-ADVISORY-CONTRACT.md) for the
+method boundary, exact drone fixture, hostile controls, evidence ladder, and
+twenty-lens review.
+
 ## Actuator-path disposition
 
 The modeled P0 reference plant has **exactly one** command ingress

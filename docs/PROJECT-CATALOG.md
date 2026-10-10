@@ -56,7 +56,7 @@ The list is ordered so the earliest projects are the highest-leverage, lowest-ri
 - **7–9 (detection + deception)** add the harder analytic and active-defense layers.
 - **10** ties everything into a self-sharpening range with court-usable accountability.
 
-**Build #1 (Palantír-Seal) first.** Its Ed25519 + BLAKE3 signed-manifest and per-stream hash-chain are the crypto substrate that the Ledger (#10), the honeypot (#9), the SIEM lane, and the zero-trust MAC (#4) all reuse — so it pays down shared cost across the whole roadmap, and its verifier is a read-only observation-plane subscriber (zero control-path risk). **Galadriel's Mirror (#7)** has its own dedicated deep-research design document at [`galadriels-mirror.md`](./galadriels-mirror.md), with the broader PID programme in [`pid-security-and-communication.md`](./pid-security-and-communication.md).
+**Build #1 (Palantír-Seal) first.** Its Ed25519 + BLAKE3 signed-manifest and per-stream hash-chain are the crypto substrate that the Ledger (#10), the honeypot (#9), the SIEM lane, and the zero-trust MAC (#4) all reuse — so it pays down shared cost across the whole roadmap, and its verifier is a read-only observation-plane subscriber (zero control-path risk). **Galadriel's Mirror (#7)** is preserved in the historical design documents [`galadriels-mirror.md`](./galadriels-mirror.md) and [`pid-security-and-communication.md`](./pid-security-and-communication.md); the current fixed-target categorical-MGW and no-authority boundary is [`GALADRIEL-PID-ADVISORY-CONTRACT.md`](./GALADRIEL-PID-ADVISORY-CONTRACT.md).
 
 ---
 

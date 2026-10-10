@@ -131,6 +131,21 @@ The off-by-default `real-ncp` feature validates exact compact JSON against that 
 | PID evidence | Possible research input under a future admitted contract | No decision override or authority source |
 | [Prisoma](https://github.com/sepahead/prisoma) | Possible external experiment or evidence consumer | No qualified Haldir experiment or export adapter |
 
+Galadriel's PID and mutual-information research remains outside every Haldir
+authority input. The current design has no PID route, principal, policy field, or
+runtime dependency, and PID cannot enter `TrustedStateSnapshot`, grant, revoke,
+restrict, or deny. A future evidence-only reference would require a new,
+separately reviewed schema and separately authorized audit writer; only its audit
+record may vary, and it would still have no policy or command capability
+(`CL-PID-RECORD-BOUNDARY-01`).
+
+[![Galadriel research evidence is separated from Haldir's independent command-authorization conjunction by a testable noninterference boundary](docs/assets/galadriel-pid-advisory-boundary.svg)](docs/assets/galadriel-pid-advisory-boundary.svg)
+
+[The Galadriel PID advisory contract](docs/GALADRIEL-PID-ADVISORY-CONTRACT.md)
+defines the fixed-target categorical MGW study, method-eligibility matrix,
+authority noninterference equation, reality-facing evidence ladder, twenty-lens
+review, and complete future-work boundary.
+
 The earlier fixed-role NCP reference experiment uses direct execution and excludes Haldir gating.
 A requested gated selection must fail before any endpoint is prepared.
 It must not fall back to direct execution.

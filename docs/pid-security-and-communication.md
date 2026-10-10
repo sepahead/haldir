@@ -1,5 +1,15 @@
 # Partial Information Decomposition across the ecosystem — security & communication
 
+> [!IMPORTANT]
+> **Superseded design survey.** The current boundary is
+> [`GALADRIEL-PID-ADVISORY-CONTRACT.md`](GALADRIEL-PID-ADVISORY-CONTRACT.md).
+> This file preserves historical hypotheses and inspected revisions; it is not a
+> runtime contract or implementation plan. In particular, do not implement its
+> rotating/leave-one-out PID targets, continuous-atom recommendations, scheduler,
+> stream-shedding, trust UI, or automatic down-weight from this text. Current
+> Galadriel separates target-free pairwise MI from offline fixed-target categorical
+> MGW PID, and Haldir has no PID authority path.
+
 > **Status — design survey with a current component boundary (2026-08-04).**
 > Crebain main commit `d7f3006bfac17a8157d22c6a54a23d00c733851c`
 > implements a component-tested, exact-opt-in `PidObservation` producer with two

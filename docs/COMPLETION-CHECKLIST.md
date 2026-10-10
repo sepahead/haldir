@@ -20,6 +20,14 @@ Every non-YES is a narrower experimental result, per the spec's down-label rule.
 - **YES** — Mission lease, admission, policy, session, Gate output stream,
   controller intent stream, boot id, and ACL-exclusive publication are separate
   identities/types (`ids.rs` B5 newtypes; state machines).
+- **YES (current absence boundary)** — Galadriel mutual-information and PID
+  research evidence is not a Gate authority input: there is no PID route,
+  principal, schema, policy field, or runtime dependency. This establishes no
+  advisory ingestion capability; PID cannot enter `TrustedStateSnapshot`, grant,
+  revoke, restrict, or deny. Any later record-only adapter requires a separately
+  authorized audit writer; any automatic restriction would be a different new
+  profile and claim
+  (`docs/GALADRIEL-PID-ADVISORY-CONTRACT.md`).
 - **PARTIAL** — A strict signed deployment-package contract, separately passed exact-policy verifier,
   exact owned-artifact resolver, bounded Linux/macOS source from a caller-supplied open directory,
   signed-role NCP validator, strict signed Gate-configuration validator, and atomic store-global

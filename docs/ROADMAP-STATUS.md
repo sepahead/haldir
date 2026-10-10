@@ -69,7 +69,7 @@ phase, publication, or release authority.
 | 13 — Engram/NEST intent producer | Not started in Haldir evidence | No signed `HaldirIntentV1` producer or leased live controller is integrated. |
 | 14 — deterministic acceptance campaign | Partial | The in-process adversarial range and narrow synthetic transport ACL campaign are green (`CL-GATE-MEDIATION-01`, `CL-LIVE-TRANSPORT-01`); backend, service, and plant scenarios remain absent. |
 | 15 — PX4-SITL/Gazebo | Not started | No qualifying Haldir integration evidence. |
-| 16 — Galadriel advisory evidence | Not started | No advisory-only contract/runtime integration evidence. |
+| 16 — Galadriel advisory evidence | Design boundary documented; runtime not started | `GALADRIEL-PID-ADVISORY-CONTRACT.md` fixes the categorical MGW estimand, method separations, and authority noninterference rule. Haldir still has no PID route, schema, principal, policy field, dependency, or runtime evidence. |
 | 17 — trace exports | Not started | No verified export adapters or consumer replay evidence. |
 | 18 — backend-aware admission research | Not started | No NEST reconstruction, independent backend, NIR, or XyloSim campaign (`CL-BACKEND-01`). |
 | 19 — adversarial range | Partial | P0 contract/state/policy attacks and the synthetic command/intent ACL subset exist; live service bypass, certificate-lifecycle, backend, and plant campaigns do not. |
