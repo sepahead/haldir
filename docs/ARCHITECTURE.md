@@ -101,6 +101,15 @@ not a Gate decision, and therefore creates no signed decision receipt. This
 length boundary does not authenticate the caller or close the lower actor as a
 mediation bypass.
 
+<p align="center">
+  <img alt="A signed intent, a lease and trusted state pass validation, policy, framing, synchronized evidence and a recheck before one publisher call; later facts belong to other owners" src="assets/authorization-stages.svg" width="860">
+</p>
+
+The figure shows the same flow by stage. A DENY or ERROR result creates no new
+command and does not cancel an older one. After the publisher call, Haldir observes
+only its own call. Receipt, validation, acceptance, selection, application and
+observation are separate facts that other owners record.
+
 ## Runtime ownership and lifecycle
 
 The live path uses linear ownership rather than a shared actor handle:
@@ -224,6 +233,16 @@ margin. It does not bound physical acceleration, braking, overshoot,
 disturbances, localization error outside the supplied uncertainty, or actuator
 behavior. It is therefore a configured authorization envelope, not a validated
 reachable-set, vehicle-dynamics, containment, or stopping-distance proof.
+
+<p align="center">
+  <img alt="Speed, rate, slew and duty limits evaluated with integers only" src="assets/integer-limits.svg" width="860">
+</p>
+
+Every limit uses integers. Speed compares squared components and the squared
+vector norm, so no square root is computed. The rate bucket counts millionths of an
+intent and refills only from positive elapsed monotonic time. The slew bound grows
+with elapsed time and stops at the nominal period. Duty counts overlapping command
+horizons once, as a union of half-open intervals.
 
 ## Publication and evidence boundary
 
