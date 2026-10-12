@@ -193,6 +193,8 @@ Do not change claim statuses, acceptance thresholds, protected source, signature
 
 Read the canonical [justfile](justfile).
 Run `just ci` for the complete local P0 gate.
+[`agent-index.json`](agent-index.json) restates the gates, artifacts, and ecosystem relations of this file for tools.
+Update it when a gate or a named path changes, then run `python3 -I -B -W error tools/check_agent_index.py`; `just ci` runs it.
 Run focused checks while iterating, and label them as focused.
 The exact current-head gate verifies a committed subject, not uncommitted successor bytes.
 Keep bootstrap source evidence separate from later exact-commit and hosted qualification.

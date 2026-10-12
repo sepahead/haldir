@@ -1,0 +1,157 @@
+{
+  "schema": "sepahead.agent-index.v1",
+  "repository": "sepahead/haldir",
+  "summary": "Haldir Gate: an experimental Rust reference monitor that authorizes one mission-level plant command at a time and keeps evidence for each observed stage; release 0.9.0 is NO_GO. AGENTS.md is the operating contract; this index restates its operational facts for tools.",
+  "entry_documents": [
+    {
+      "path": "AGENTS.md",
+      "role": "operating contract for agents"
+    },
+    {
+      "path": "README.md",
+      "role": "overview"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "role": "signed delivery protocol"
+    },
+    {
+      "path": "justfile",
+      "role": "canonical command registry"
+    },
+    {
+      "path": "docs/CLAIM-LEDGER.md",
+      "role": "claims and their evidence status"
+    },
+    {
+      "path": "docs/ASSURANCE-PROFILES.md",
+      "role": "exact scope of each assurance profile"
+    },
+    {
+      "path": "docs/GALADRIEL-PID-ADVISORY-CONTRACT.md",
+      "role": "record-only boundary for Galadriel PID evidence"
+    },
+    {
+      "path": "SECURITY.md",
+      "role": "security policy"
+    }
+  ],
+  "delivery": {
+    "default_branch": "main",
+    "merge": "Create one signed one-parent commit with the pinned identity and equal author and committer times, push the branch, open a pull request, dispatch ci.yml and formal.yml on it, require all seven contexts on that head, fast-forward main with git push origin <commit>:refs/heads/main, then close the pull request without merging.",
+    "signing": "SSH-signed with the pinned identity; never amend, squash, cherry-pick or rebase a checked commit",
+    "attribution": "no AI attribution or co-author trailers",
+    "owner_only": [
+      "release",
+      "tag",
+      "repository setting change",
+      "lineage transition of a protected path"
+    ]
+  },
+  "gates": [
+    {
+      "id": "complete-local-gate",
+      "when": "before delivery",
+      "command": "just ci",
+      "cost": "full"
+    },
+    {
+      "id": "claims",
+      "when": "a document, claim or runtime source changes",
+      "command": "python3 -I -B tools/verify-claims.py",
+      "cost": "fast"
+    },
+    {
+      "id": "agent-index",
+      "when": "agent-index.json or a path it names changes",
+      "command": "python3 -I -B -W error tools/check_agent_index.py",
+      "cost": "fast"
+    },
+    {
+      "id": "generated-vectors",
+      "when": "a contract encoding changes",
+      "command": "just verify-generated",
+      "cost": "fast"
+    },
+    {
+      "id": "interop",
+      "when": "the COSE or CBOR encoding changes",
+      "command": "just interop",
+      "cost": "fast"
+    },
+    {
+      "id": "diff-hygiene",
+      "when": "any change",
+      "command": "just diff-check",
+      "cost": "fast"
+    },
+    {
+      "id": "formal",
+      "when": "the TLA+ model or its runner changes; needs the verified pinned inputs",
+      "command": "just formal-offline",
+      "cost": "medium"
+    }
+  ],
+  "generated": [
+    {
+      "path": "contracts/vectors/",
+      "regenerate": "cargo test -p haldir-contracts (golden tests); just verify-generated checks the output"
+    },
+    {
+      "path": "contracts/vectors/CHECKSUMS.sha256",
+      "regenerate": "cargo test -p haldir-contracts (golden tests)"
+    },
+    {
+      "path": "tools/interop/vectors.json",
+      "regenerate": "cargo run -p haldir-crypto --example emit_interop_vectors"
+    }
+  ],
+  "frozen": [
+    {
+      "path": "justfile",
+      "reason": "protected lineage path; a change needs an owner-approved lineage transition"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "reason": "protected lineage path"
+    },
+    {
+      "path": ".github/workflows/",
+      "reason": "protected lineage paths, including ci.yml and formal.yml"
+    },
+    {
+      "path": "tools/pins.toml",
+      "reason": "protected lineage path, with the pin verifiers"
+    },
+    {
+      "path": "release/0.9.0/current-head/closures/framework-recovery/",
+      "reason": "frozen framework-recovery records"
+    },
+    {
+      "path": "evidence/",
+      "reason": "retained evidence campaigns; add a new campaign instead of rewriting one"
+    }
+  ],
+  "ecosystem": [
+    {
+      "repository": "sepahead/NCP",
+      "relation": "commander adapter pinned to the 1.0.0-rc.1 candidate 2819dae"
+    },
+    {
+      "repository": "sepahead/galadriel",
+      "relation": "advisory evidence only; no runtime PID input, route or policy field"
+    },
+    {
+      "repository": "sepahead/crebain",
+      "relation": "possible plant owner; no runtime edge exists"
+    },
+    {
+      "repository": "sepahead/Paper2Brain",
+      "relation": "possible source of signed intents; no runtime edge exists"
+    },
+    {
+      "repository": "sepahead/prisoma",
+      "relation": "possible record consumer; no runtime edge exists"
+    }
+  ]
+}

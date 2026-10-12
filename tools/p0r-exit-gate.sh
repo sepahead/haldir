@@ -86,6 +86,7 @@ run "offline Zenoh profile" python3 -I -B -c 'import runpy,sys;sys.path.append("
 run "retained live Zenoh evidence" python3 -I -B tools/verify-live-secure-zenoh.py
 run "retained live Gate dev smoke" python3 -I -B tools/verify-live-gate-dev-smoke.py
 run "forbidden claims"    python3 -I -B tools/verify-claims.py
+run "agent index"          python3 -I -B -W error tools/check_agent_index.py
 run "generated vectors"   python3 -I -B tools/verify-generated.py
 run "interop (COSE/CBOR)" interop_gate
 run "diff hygiene"        git diff --check
