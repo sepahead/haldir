@@ -28,6 +28,10 @@
       "role": "exact scope of each assurance profile"
     },
     {
+      "path": "docs/SHORTCOMINGS-AND-TODO.md",
+      "role": "open gaps and the ordered to-do list"
+    },
+    {
       "path": "docs/GALADRIEL-PID-ADVISORY-CONTRACT.md",
       "role": "record-only boundary for Galadriel PID evidence"
     },

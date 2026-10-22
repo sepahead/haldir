@@ -43,7 +43,7 @@ Then read the document that owns the changed surface:
 | Policy, state, and command creation | [Architecture](docs/ARCHITECTURE.md), [Authority contract](docs/release/0.9.0/AUTHORITY-CONTRACT.md), owning crate types and tests |
 | Journal, publication, cancellation, or restart | [Evidence semantics](docs/EVIDENCE-SEMANTICS.md), [Limitations](docs/LIMITATIONS.md) |
 | NCP or transport | [NCP compatibility](docs/NCP-COMPATIBILITY.md), [Secure reference](deploy/secure-reference-v1/README.md), [Dependency rationale](docs/DEPENDENCY-RATIONALE.md) |
-| Deployment or external integration | [Threat model](docs/release/0.9.0/THREAT-MODEL.md), [Roadmap](docs/ROADMAP-STATUS.md), [Assurance profiles](docs/ASSURANCE-PROFILES.md) |
+| Deployment or external integration | [Threat model](docs/release/0.9.0/THREAT-MODEL.md), [Roadmap](docs/ROADMAP-STATUS.md), [Shortcomings and to-do](docs/SHORTCOMINGS-AND-TODO.md), [Assurance profiles](docs/ASSURANCE-PROFILES.md) |
 | Formal model or tool runner | [Formal guide](formal/README.md), exact pinned runner inputs and tests |
 | Retained evidence | [Evidence index](evidence/README.md), the exact campaign's owner guide and verifier |
 | Release, source lineage, or delivery | [Current-head qualification](release/0.9.0/current-head/README.md), [Contributing](CONTRIBUTING.md), predecessor-trusted verification code |

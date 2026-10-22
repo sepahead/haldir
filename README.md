@@ -191,6 +191,7 @@ None supplies a complete authenticated deployment shell, protected credential cu
 | [Workflow guide](docs/WORKFLOWS.md) | Command decisions, numeric examples, and publication evidence |
 | [Architecture](docs/ARCHITECTURE.md) · [Authority graph](docs/AUTHORITY-GRAPH.md) | Owners, state, policy, and side-effect boundaries |
 | [Evidence semantics](docs/EVIDENCE-SEMANTICS.md) · [Evidence index](evidence/README.md) | Exact observed stages and retained campaigns |
+| [Shortcomings and to-do](docs/SHORTCOMINGS-AND-TODO.md) | The open gaps, why each matters, and the order of the work |
 | [Limitations](docs/LIMITATIONS.md) · [Roadmap](docs/ROADMAP-STATUS.md) | Unimplemented deployment and research work |
 | [NCP compatibility](docs/NCP-COMPATIBILITY.md) | Pins, conversion, and unsupported profiles |
 | [Current-head qualification](release/0.9.0/current-head/README.md) | Current `NO_GO` program and historical lineage |

@@ -10,6 +10,8 @@ Status vocabulary: **done** means the declared phase gate is backed by current c
 automated evidence; **partial** means useful mechanisms exist but the phase gate is not
 fully proven; **not started** means no qualifying implementation/evidence is present.
 
+[Shortcomings and to-do](SHORTCOMINGS-AND-TODO.md) summarizes the open gaps and the order of the work.
+
 ## Tracked completion gates
 
 - [#2 — machine-readable ecosystem source inventory](https://github.com/sepahead/haldir/issues/2)
