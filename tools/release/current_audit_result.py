@@ -45,6 +45,19 @@ EPOCH20_RECOVERY_RECORD = (
 EPOCH20_ACTIVATION_RECORD = (
     "release/0.9.0/current-head/closures/framework-recovery/FR-0020-activation.json"
 )
+# Epoch 21 begins at this owner-signed transition commit.
+EPOCH21_TRANSITION_COMMIT = "20298ee4e7d98f91225e530af83fd491db507aa9"
+EPOCH21_RECOVERY_RECORD = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0021-recovery.json"
+)
+EPOCH21_ACTIVATION_RECORD = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0021-activation.json"
+)
+# Each later epoch: (transition commit, recovery record, activation record), in order.
+EPOCH_TRANSITIONS = (
+    (EPOCH20_TRANSITION_COMMIT, EPOCH20_RECOVERY_RECORD, EPOCH20_ACTIVATION_RECORD),
+    (EPOCH21_TRANSITION_COMMIT, EPOCH21_RECOVERY_RECORD, EPOCH21_ACTIVATION_RECORD),
+)
 COMMON_MATERIALS = (
     ".github/workflows/ci.yml",
     ".github/workflows/formal.yml",
@@ -383,18 +396,21 @@ def _lineage_stage(repo: Path, commit: str) -> tuple[str, tuple[str, ...]]:
         _fail("CURRENT_RESULT_STAGE")
     if not chain or any(HEX40.fullmatch(item) is None for item in chain):
         _fail("CURRENT_RESULT_STAGE")
-    if EPOCH20_TRANSITION_COMMIT in chain:
-        # The transition itself has no state; its recovery child starts epoch 20.
-        position = len(chain) - 1 - chain.index(EPOCH20_TRANSITION_COMMIT)
+    present = [item for item in EPOCH_TRANSITIONS if item[0] in chain]
+    if present:
+        # A transition itself has no state; its recovery child starts the epoch.
+        transition, recovery_record, activation_record = present[-1]
+        position = len(chain) - 1 - chain.index(transition)
         active = position >= 2
         if (
             position == 0
-            or not _path_exists(repo, commit, EPOCH20_RECOVERY_RECORD)
-            or _path_exists(repo, commit, EPOCH20_ACTIVATION_RECORD) != active
+            or not _path_exists(repo, commit, recovery_record)
+            or _path_exists(repo, commit, activation_record) != active
         ):
             _fail("CURRENT_RESULT_STAGE")
-        records = (ACTIVATION_RECORD, EPOCH20_RECOVERY_RECORD) + (
-            (EPOCH20_ACTIVATION_RECORD,) if active else ()
+        earlier = tuple(record for item in present[:-1] for record in item[1:])
+        records = (ACTIVATION_RECORD, *earlier, recovery_record) + (
+            (activation_record,) if active else ()
         )
     else:
         active = len(chain) >= 2

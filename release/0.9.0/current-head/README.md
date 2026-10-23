@@ -7,7 +7,7 @@ deployment, archive, DOI, or physical-use authority.
 Historical task and recovery artifacts remain immutable evidence of their own
 stages. They must not be relabelled as proof for a later source head.
 
-## Active epoch-20 signed-lineage gate
+## Active signed-lineage gate (epoch 21)
 
 The operator entry point is:
 
@@ -68,6 +68,22 @@ history. The transition has no hosted run of its own: it reaches `main` in the
 same push as its recovery, whose runs qualify both. Like epoch 19, this is an
 owner-signed trust-root transition, not an independent review.
 
+### Why epoch 21 exists
+
+The supply-chain gate accepts a RustSec advisory snapshot only while it is
+less than 90 days old. The pinned snapshot `7c7ccac5`, committed on 29 July
+2026, expired on 27 October 2026. The epoch-21 transition `20298ee…` pins
+snapshot `640bf5a9` and changes only four protected paths: `tools/pins.toml`,
+the supply-chain job of `.github/workflows/ci.yml`, its reviewed digest and
+fragments in `tools/verify-ci-pins.py`, and the recorded measurement in
+`tools/test_pinned_cargo_deny.py`. The owner's decision is in
+`docs/governance/owner-decision-2026-10-23.md` of the transition commit.
+
+The epoch-21 recovery names the transition exactly, with parent `6185f88…`,
+and bootstraps a verifier in which each later epoch is one declared
+specification. The same code checks epochs 20 and 21, and it still verifies the
+whole history from the epoch-19 breach.
+
 ### State machine
 
 | Stage | Required commit | State | Authority |
@@ -80,6 +96,10 @@ owner-signed trust-root transition, not an independent review.
 | epoch-20 recovery | direct signed child, exact recovery subject and canonical `FR-0020-recovery.json`; rewrites only the listed governance files | `RECOVERED_PENDING_HOSTED_QUALIFICATION` | none |
 | epoch-20 activation | direct signed child adding only canonical `FR-0020-activation.json` | `ACTIVE_NO_RELEASE_AUTHORITY` | none |
 | ordinary successor | signed one-parent child; protected paths, now including the FR-0020 records, unchanged | active signed lineage | none beyond source succession |
+| epoch-21 transition | signed child of `6185f88…` with the exact tree, changing only `.github/workflows/ci.yml`, `tools/pins.toml`, `tools/test_pinned_cargo_deny.py` and `tools/verify-ci-pins.py` among protected paths | none until recovered (`LINEAGE_TRANSITION_UNRECOVERED`) | none |
+| epoch-21 recovery | direct signed child, exact recovery subject and canonical `FR-0021-recovery.json`; rewrites only the listed governance files | `RECOVERED_PENDING_HOSTED_QUALIFICATION` | none |
+| epoch-21 activation | direct signed child adding only canonical `FR-0021-activation.json` | `ACTIVE_NO_RELEASE_AUTHORITY` | none |
+| ordinary successor | signed one-parent child; protected paths, now including the FR-0021 records, unchanged | active signed lineage | none beyond source succession |
 
 Activation binds the exact recovery commit/tree, owner-observed successful main
 CI and formal runs, the seven GitHub-Actions-bound required contexts, force-push
@@ -116,12 +136,12 @@ PR base or, for push/manual dispatch, from the candidate's sole parent. That
 predecessor-trusted blob verifies both revisions. Only after it proves protected
 governance paths unchanged may tooling from the candidate checkout run; a
 self-modifying verifier cannot authorize its own change on any ordinary event.
-There are two explicit exceptions, each bound to one exact parent and never
+There are three explicit exceptions, each bound to one exact parent and never
 available to a pull request. The epoch-19 recovery bootstrap's breach parent
-predates this verifier. The epoch-20 recovery's parent is the transition commit,
-which no predecessor verifier can vouch for; the recovery's own epoch-20
-verifier then checks the whole chain. Both recovery records declare their
-owner-signed trust-root transition. Current hosted results use
+predates this verifier. The epoch-20 and epoch-21 recoveries each have a
+transition commit as parent, which no predecessor verifier can vouch for; the
+recovery's own verifier then checks the whole chain. Every recovery record
+declares its owner-signed trust-root transition. Current hosted results use
 `HALDIR_CURRENT_HOSTED_RESULT_V1`, bind exact source/material objects, and grant
 no release or deployment authority.
 

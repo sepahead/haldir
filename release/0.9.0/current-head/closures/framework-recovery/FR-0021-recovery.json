@@ -1,0 +1,66 @@
+{
+  "authority": {
+    "deployment": false,
+    "publication": false,
+    "release": false,
+    "tag": false
+  },
+  "delivery_contract": {
+    "merge_buttons_authorized": false,
+    "required_author_email": "sepmhn@gmail.com",
+    "required_committer_email": "sepmhn@gmail.com",
+    "required_signer_fingerprint": "SHA256:3gaatfl4IVnuBX4D60Jxw9oVIrvEE1ZphK8IuEyrfPU"
+  },
+  "limitations": [
+    "RECOVERY_COMMIT_BOOTSTRAPS_THIS_REVIEWED_VERIFIER",
+    "TRANSITION_COMMIT_IS_OUTSIDE_EPOCH_20_SUCCESSOR_SCOPE_BY_DESIGN",
+    "TRANSITION_COMMIT_HAS_NO_HOSTED_RUN_OF_ITS_OWN",
+    "HOSTED_SETTINGS_REMAIN_MUTABLE_EXTERNAL_STATE",
+    "HOSTED_COMMIT_METADATA_RULE_UNAVAILABLE_ON_USER_REPOSITORY",
+    "WEB_REBASE_BUTTON_REMAINS_A_HOSTED_DELIVERY_RISK",
+    "NO_INDEPENDENT_REVIEWER_AT_RECOVERY",
+    "NO_RELEASE_OR_DEPLOYMENT_AUTHORITY"
+  ],
+  "owner_decision": {
+    "commit": "20298ee4e7d98f91225e530af83fd491db507aa9",
+    "path": "docs/governance/owner-decision-2026-10-23.md",
+    "repository": "sepahead/haldir"
+  },
+  "prior_epoch": {
+    "activation_commit": "049e65bffdbd95564827ad1b350f56b4ce559b28",
+    "recovery_commit": "887acb4cf1f7056b423b8a6d4455418c5925bd0b",
+    "recovery_id": "FR-0020"
+  },
+  "prior_valid_commit": "6185f887288945acef36fd0e0084575476535cd1",
+  "protocol": "HALDIR_SIGNED_LINEAGE_RECOVERY_V1",
+  "recovery_id": "FR-0021",
+  "schema_version": "1.0.0",
+  "stage": "RECOVERY",
+  "state_after": "RECOVERED_PENDING_HOSTED_QUALIFICATION",
+  "transition": {
+    "classification": "OWNER_SIGNED_PROTECTED_BOUNDARY_CHANGE",
+    "commit": "20298ee4e7d98f91225e530af83fd491db507aa9",
+    "parent": "6185f887288945acef36fd0e0084575476535cd1",
+    "protected_paths": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "status": "M"
+      },
+      {
+        "path": "tools/pins.toml",
+        "status": "M"
+      },
+      {
+        "path": "tools/test_pinned_cargo_deny.py",
+        "status": "M"
+      },
+      {
+        "path": "tools/verify-ci-pins.py",
+        "status": "M"
+      }
+    ],
+    "reason": "REFRESH_PINNED_RUSTSEC_SNAPSHOT_BEFORE_FRESHNESS_EXPIRY",
+    "subject": "security: refresh the pinned RustSec snapshot (epoch-21 transition)",
+    "tree": "9be36beeac7c66fd17dcbd98272b78826c6f433e"
+  }
+}

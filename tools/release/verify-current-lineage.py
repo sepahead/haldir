@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify Haldir's compact signed-main lineage: epoch 19, epoch 20 and successors."""
+"""Verify Haldir's compact signed-main lineage: epochs 19, 20, 21 and successors."""
 
 from __future__ import annotations
 
@@ -93,6 +93,41 @@ OWNER_DECISION = {
     "path": "docs/governance/owner-decisions-2026-10-01.md",
     "repository": "sepahead/NCP",
 }
+EPOCH20_RECOVERY_COMMIT = "887acb4cf1f7056b423b8a6d4455418c5925bd0b"
+EPOCH20_ACTIVATION_COMMIT = "049e65bffdbd95564827ad1b350f56b4ce559b28"
+
+# Epoch 21 refreshes the pinned RustSec snapshot before the 90-day freshness rule
+# rejects the old one. Its transition changes only the snapshot pins, the reviewed
+# supply-chain job that names them, and the test that records their measurement.
+EPOCH21_RECOVERY_ID = "FR-0021"
+EPOCH21_PRIOR_VALID_COMMIT = "6185f887288945acef36fd0e0084575476535cd1"
+EPOCH21_TRANSITION_COMMIT = "20298ee4e7d98f91225e530af83fd491db507aa9"
+EPOCH21_TRANSITION_TREE = "9be36beeac7c66fd17dcbd98272b78826c6f433e"
+EPOCH21_TRANSITION_SUBJECT = (
+    "security: refresh the pinned RustSec snapshot (epoch-21 transition)"
+)
+EPOCH21_TRANSITION_PROTECTED_PATHS = {
+    ".github/workflows/ci.yml": "M",
+    "tools/pins.toml": "M",
+    "tools/test_pinned_cargo_deny.py": "M",
+    "tools/verify-ci-pins.py": "M",
+}
+EPOCH21_RECOVERY_SUBJECT = "release: recover signed main lineage (epoch 21)"
+EPOCH21_ACTIVATION_SUBJECT = "release: activate signed main lineage (epoch 21)"
+EPOCH21_RECOVERY_RECORD_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0021-recovery.json"
+)
+EPOCH21_ACTIVATION_RECORD_PATH = (
+    "release/0.9.0/current-head/closures/framework-recovery/FR-0021-activation.json"
+)
+# The same governance files as epoch 20: the recovery adds the epoch-21 transition
+# exception to both workflows and refreshes the digests of the jobs it changes.
+EPOCH21_RECOVERY_GOVERNANCE_PATHS = EPOCH20_RECOVERY_GOVERNANCE_PATHS
+EPOCH21_OWNER_DECISION = {
+    "commit": EPOCH21_TRANSITION_COMMIT,
+    "path": "docs/governance/owner-decision-2026-10-23.md",
+    "repository": REPOSITORY,
+}
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 UTC_TIMESTAMP = re.compile(
     r"^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
@@ -150,6 +185,8 @@ PROTECTED_AFTER_ACTIVATION = frozenset(
         ACTIVATION_RECORD_PATH,
         EPOCH20_RECOVERY_RECORD_PATH,
         EPOCH20_ACTIVATION_RECORD_PATH,
+        EPOCH21_RECOVERY_RECORD_PATH,
+        EPOCH21_ACTIVATION_RECORD_PATH,
     }
 )
 FROZEN_HISTORICAL_PREFIXES = (
@@ -248,8 +285,74 @@ def expected_recovery_record() -> dict[str, Any]:
     }
 
 
-def expected_epoch20_recovery_record() -> dict[str, Any]:
-    """Return the epoch-20 recovery commit's exact declarative record."""
+class EpochSpec(NamedTuple):
+    """One owner-signed transition of the protected boundary and its recovery."""
+
+    number: int
+    recovery_id: str
+    prior_valid_commit: str
+    transition_commit: str
+    transition_tree: str
+    transition_subject: str
+    transition_protected_paths: dict[str, str]
+    transition_reason: str
+    recovery_subject: str
+    activation_subject: str
+    recovery_record_path: str
+    activation_record_path: str
+    governance_paths: frozenset[str]
+    owner_decision: dict[str, str]
+    prior_epoch: dict[str, str]
+
+
+EPOCH20 = EpochSpec(
+    number=20,
+    recovery_id=EPOCH20_RECOVERY_ID,
+    prior_valid_commit=EPOCH20_PRIOR_VALID_COMMIT,
+    transition_commit=EPOCH20_TRANSITION_COMMIT,
+    transition_tree=EPOCH20_TRANSITION_TREE,
+    transition_subject=EPOCH20_TRANSITION_SUBJECT,
+    transition_protected_paths=EPOCH20_TRANSITION_PROTECTED_PATHS,
+    transition_reason="ADOPT_EXACT_NCP_1_0_RC_1_PINS",
+    recovery_subject=EPOCH20_RECOVERY_SUBJECT,
+    activation_subject=EPOCH20_ACTIVATION_SUBJECT,
+    recovery_record_path=EPOCH20_RECOVERY_RECORD_PATH,
+    activation_record_path=EPOCH20_ACTIVATION_RECORD_PATH,
+    governance_paths=EPOCH20_RECOVERY_GOVERNANCE_PATHS,
+    owner_decision=OWNER_DECISION,
+    prior_epoch={
+        "activation_commit": EPOCH19_ACTIVATION_COMMIT,
+        "recovery_commit": EPOCH19_RECOVERY_COMMIT,
+        "recovery_id": RECOVERY_ID,
+    },
+)
+EPOCH21 = EpochSpec(
+    number=21,
+    recovery_id=EPOCH21_RECOVERY_ID,
+    prior_valid_commit=EPOCH21_PRIOR_VALID_COMMIT,
+    transition_commit=EPOCH21_TRANSITION_COMMIT,
+    transition_tree=EPOCH21_TRANSITION_TREE,
+    transition_subject=EPOCH21_TRANSITION_SUBJECT,
+    transition_protected_paths=EPOCH21_TRANSITION_PROTECTED_PATHS,
+    transition_reason="REFRESH_PINNED_RUSTSEC_SNAPSHOT_BEFORE_FRESHNESS_EXPIRY",
+    recovery_subject=EPOCH21_RECOVERY_SUBJECT,
+    activation_subject=EPOCH21_ACTIVATION_SUBJECT,
+    recovery_record_path=EPOCH21_RECOVERY_RECORD_PATH,
+    activation_record_path=EPOCH21_ACTIVATION_RECORD_PATH,
+    governance_paths=EPOCH21_RECOVERY_GOVERNANCE_PATHS,
+    owner_decision=EPOCH21_OWNER_DECISION,
+    prior_epoch={
+        "activation_commit": EPOCH20_ACTIVATION_COMMIT,
+        "recovery_commit": EPOCH20_RECOVERY_COMMIT,
+        "recovery_id": EPOCH20_RECOVERY_ID,
+    },
+)
+# Later epochs follow in order; each starts at its own transition commit.
+EPOCHS = (EPOCH20, EPOCH21)
+
+
+def expected_epoch_recovery_record(spec: EpochSpec) -> dict[str, Any]:
+    """Return one epoch recovery commit's exact declarative record."""
 
     return {
         "authority": {
@@ -266,7 +369,7 @@ def expected_epoch20_recovery_record() -> dict[str, Any]:
         },
         "limitations": [
             "RECOVERY_COMMIT_BOOTSTRAPS_THIS_REVIEWED_VERIFIER",
-            "TRANSITION_COMMIT_IS_OUTSIDE_EPOCH_19_SUCCESSOR_SCOPE_BY_DESIGN",
+            f"TRANSITION_COMMIT_IS_OUTSIDE_EPOCH_{spec.number - 1}_SUCCESSOR_SCOPE_BY_DESIGN",
             "TRANSITION_COMMIT_HAS_NO_HOSTED_RUN_OF_ITS_OWN",
             "HOSTED_SETTINGS_REMAIN_MUTABLE_EXTERNAL_STATE",
             "HOSTED_COMMIT_METADATA_RULE_UNAVAILABLE_ON_USER_REPOSITORY",
@@ -274,31 +377,39 @@ def expected_epoch20_recovery_record() -> dict[str, Any]:
             "NO_INDEPENDENT_REVIEWER_AT_RECOVERY",
             "NO_RELEASE_OR_DEPLOYMENT_AUTHORITY",
         ],
-        "owner_decision": dict(OWNER_DECISION),
-        "prior_epoch": {
-            "activation_commit": EPOCH19_ACTIVATION_COMMIT,
-            "recovery_commit": EPOCH19_RECOVERY_COMMIT,
-            "recovery_id": RECOVERY_ID,
-        },
-        "prior_valid_commit": EPOCH20_PRIOR_VALID_COMMIT,
+        "owner_decision": dict(spec.owner_decision),
+        "prior_epoch": dict(spec.prior_epoch),
+        "prior_valid_commit": spec.prior_valid_commit,
         "protocol": PROTOCOL,
-        "recovery_id": EPOCH20_RECOVERY_ID,
+        "recovery_id": spec.recovery_id,
         "schema_version": "1.0.0",
         "stage": "RECOVERY",
         "state_after": "RECOVERED_PENDING_HOSTED_QUALIFICATION",
         "transition": {
             "classification": "OWNER_SIGNED_PROTECTED_BOUNDARY_CHANGE",
-            "commit": EPOCH20_TRANSITION_COMMIT,
-            "parent": EPOCH20_PRIOR_VALID_COMMIT,
+            "commit": spec.transition_commit,
+            "parent": spec.prior_valid_commit,
             "protected_paths": [
                 {"path": path, "status": status}
-                for path, status in sorted(EPOCH20_TRANSITION_PROTECTED_PATHS.items())
+                for path, status in sorted(spec.transition_protected_paths.items())
             ],
-            "reason": "ADOPT_EXACT_NCP_1_0_RC_1_PINS",
-            "subject": EPOCH20_TRANSITION_SUBJECT,
-            "tree": EPOCH20_TRANSITION_TREE,
+            "reason": spec.transition_reason,
+            "subject": spec.transition_subject,
+            "tree": spec.transition_tree,
         },
     }
+
+
+def expected_epoch20_recovery_record() -> dict[str, Any]:
+    """Return the epoch-20 recovery commit's exact declarative record."""
+
+    return expected_epoch_recovery_record(EPOCH20)
+
+
+def expected_epoch21_recovery_record() -> dict[str, Any]:
+    """Return the epoch-21 recovery commit's exact declarative record."""
+
+    return expected_epoch_recovery_record(EPOCH21)
 
 
 def _git_environment() -> dict[str, str]:
@@ -641,17 +752,17 @@ def _validate_recovery_paths(paths: dict[str, str]) -> None:
         _fail("LINEAGE_RECOVERY_SCOPE")
 
 
-def _validate_epoch20_recovery_paths(paths: dict[str, str]) -> None:
-    """Require the epoch-20 bootstrap and confine its protected rewrites."""
+def _validate_epoch_recovery_paths(spec: EpochSpec, paths: dict[str, str]) -> None:
+    """Require an epoch's bootstrap and confine its protected rewrites."""
 
     bootstrap = {
-        EPOCH20_RECOVERY_RECORD_PATH: "A",
+        spec.recovery_record_path: "A",
         VERIFIER_PATH: "M",
         VERIFIER_TEST_PATH: "M",
     }
     if (
         any(paths.get(path) != status for path, status in bootstrap.items())
-        or EPOCH20_ACTIVATION_RECORD_PATH in paths
+        or spec.activation_record_path in paths
         or any(_historical_path_is_frozen(path) for path in paths)
     ):
         _fail("LINEAGE_RECOVERY_SCOPE")
@@ -659,9 +770,21 @@ def _validate_epoch20_recovery_paths(paths: dict[str, str]) -> None:
         if (
             path not in bootstrap
             and _successor_path_is_protected(path)
-            and (path not in EPOCH20_RECOVERY_GOVERNANCE_PATHS or status != "M")
+            and (path not in spec.governance_paths or status != "M")
         ):
             _fail("LINEAGE_RECOVERY_SCOPE")
+
+
+def _validate_epoch20_recovery_paths(paths: dict[str, str]) -> None:
+    """Require the epoch-20 bootstrap and confine its protected rewrites."""
+
+    _validate_epoch_recovery_paths(EPOCH20, paths)
+
+
+def _validate_epoch21_recovery_paths(paths: dict[str, str]) -> None:
+    """Require the epoch-21 bootstrap and confine its protected rewrites."""
+
+    _validate_epoch_recovery_paths(EPOCH21, paths)
 
 
 def _read_canonical_json(repo: Path, commit: str, path: str) -> dict[str, Any]:
@@ -849,7 +972,7 @@ def _validate_activation_record(
 
 
 def verify(repo: Path, commit: str) -> dict[str, Any]:
-    """Verify `commit` against the exact epoch-19 and epoch-20 state machines."""
+    """Verify `commit` against the exact epoch-19 state machine and every later epoch."""
 
     head = _git(repo, "rev-parse", "--verify", f"{commit}^{{commit}}").decode().strip()
     if HEX40.fullmatch(head) is None:
@@ -932,24 +1055,36 @@ def verify(repo: Path, commit: str) -> dict[str, Any]:
     transition_commit: str | None = None
     previous = activation_commit
     if previous is not None:
-        successors = chain[2:]
-        cut = (
-            successors.index(EPOCH20_TRANSITION_COMMIT)
-            if EPOCH20_TRANSITION_COMMIT in successors
-            else len(successors)
-        )
-        for successor in successors[:cut]:
-            _verify_ordinary_successor(repo, previous, successor, allowed_signers)
-            previous = successor
-        if cut < len(successors):
-            epoch = 20
-            transition_commit = EPOCH20_TRANSITION_COMMIT
-            recovery_commit, activation_commit, state = _verify_epoch20(
+        remaining = chain[2:]
+        for index, spec in enumerate(EPOCHS):
+            if spec.transition_commit not in remaining:
+                break
+            if activation_commit is None:
+                # A new transition may only follow an active epoch.
+                _fail("LINEAGE_STAGE")
+            cut = remaining.index(spec.transition_commit)
+            for successor in remaining[:cut]:
+                _verify_ordinary_successor(repo, previous, successor, allowed_signers)
+                previous = successor
+            tail = remaining[cut:]
+            end = len(tail)
+            for later in EPOCHS[index + 1 :]:
+                if later.transition_commit in tail:
+                    end = tail.index(later.transition_commit)
+                    break
+            recovery_commit, activation_commit, state, previous = _verify_epoch(
+                spec,
                 repo,
-                successors[cut:],
+                tail[:end],
                 previous=previous,
                 allowed_signers=allowed_signers,
             )
+            epoch = spec.number
+            transition_commit = spec.transition_commit
+            remaining = tail[end:]
+        for successor in remaining:
+            _verify_ordinary_successor(repo, previous, successor, allowed_signers)
+            previous = successor
     elif len(chain) > 1:
         _fail("LINEAGE_STAGE")
 
@@ -986,37 +1121,39 @@ def _verify_ordinary_successor(
         _fail("LINEAGE_SUCCESSOR_SCOPE")
 
 
-def _verify_epoch20(
+def _verify_epoch(
+    spec: EpochSpec,
     repo: Path,
     tail: Sequence[str],
     *,
     previous: str,
     allowed_signers: bytes,
-) -> tuple[str, str | None, str]:
-    """Verify the epoch-20 transition, recovery, activation and successors.
+) -> tuple[str, str | None, str, str]:
+    """Verify one epoch's transition, recovery, activation and successors.
 
-    `tail` starts at the transition commit and `previous` is its sole parent.
-    Returns the recovery commit, the activation commit if present, and the state.
+    `tail` starts at the transition commit and ends before the next epoch's
+    transition; `previous` is the transition's sole parent. Returns the recovery
+    commit, the activation commit if present, the state, and the last commit.
     """
 
     transition = tail[0]
-    if previous != EPOCH20_PRIOR_VALID_COMMIT:
+    if previous != spec.prior_valid_commit:
         _fail("LINEAGE_TRANSITION_PARENT")
     metadata = _verify_signed_commit(
         repo,
         transition,
         parent=previous,
-        subject=EPOCH20_TRANSITION_SUBJECT,
+        subject=spec.transition_subject,
         allowed_signers=allowed_signers,
     )
-    if metadata["tree"] != EPOCH20_TRANSITION_TREE:
+    if metadata["tree"] != spec.transition_tree:
         _fail("LINEAGE_TRANSITION_TREE")
     protected = {
         path: status
         for path, status in _changed_paths(repo, previous, transition).items()
         if _successor_path_is_protected(path)
     }
-    if protected != EPOCH20_TRANSITION_PROTECTED_PATHS:
+    if protected != spec.transition_protected_paths:
         _fail("LINEAGE_TRANSITION_SCOPE")
     # The transition is legitimate only once its signed recovery names it.
     if len(tail) < 2:
@@ -1027,39 +1164,69 @@ def _verify_epoch20(
         repo,
         recovery,
         parent=transition,
-        subject=EPOCH20_RECOVERY_SUBJECT,
+        subject=spec.recovery_subject,
         allowed_signers=allowed_signers,
     )
-    _validate_epoch20_recovery_paths(_changed_paths(repo, transition, recovery))
-    record = _read_canonical_json(repo, recovery, EPOCH20_RECOVERY_RECORD_PATH)
-    if record != expected_epoch20_recovery_record():
+    _validate_epoch_recovery_paths(spec, _changed_paths(repo, transition, recovery))
+    record = _read_canonical_json(repo, recovery, spec.recovery_record_path)
+    if record != expected_epoch_recovery_record(spec):
         _fail("LINEAGE_RECOVERY_RECORD")
     if len(tail) < 3:
-        return recovery, None, "RECOVERED_PENDING_HOSTED_QUALIFICATION"
+        return recovery, None, "RECOVERED_PENDING_HOSTED_QUALIFICATION", recovery
 
     activation = tail[2]
     _verify_signed_commit(
         repo,
         activation,
         parent=recovery,
-        subject=EPOCH20_ACTIVATION_SUBJECT,
+        subject=spec.activation_subject,
         allowed_signers=allowed_signers,
     )
     if _changed_paths(repo, recovery, activation) != {
-        EPOCH20_ACTIVATION_RECORD_PATH: "A"
+        spec.activation_record_path: "A"
     }:
         _fail("LINEAGE_ACTIVATION_SCOPE")
     _validate_activation_record(
-        _read_canonical_json(repo, activation, EPOCH20_ACTIVATION_RECORD_PATH),
+        _read_canonical_json(repo, activation, spec.activation_record_path),
         recovery_commit=recovery,
         recovery_tree=recovery_metadata["tree"],
-        recovery_id=EPOCH20_RECOVERY_ID,
+        recovery_id=spec.recovery_id,
     )
     previous = activation
     for successor in tail[3:]:
         _verify_ordinary_successor(repo, previous, successor, allowed_signers)
         previous = successor
-    return recovery, activation, "ACTIVE_NO_RELEASE_AUTHORITY"
+    return recovery, activation, "ACTIVE_NO_RELEASE_AUTHORITY", previous
+
+
+def _verify_epoch20(
+    repo: Path,
+    tail: Sequence[str],
+    *,
+    previous: str,
+    allowed_signers: bytes,
+) -> tuple[str, str | None, str]:
+    """Verify the epoch-20 transition, recovery, activation and successors."""
+
+    recovery, activation, state, _last = _verify_epoch(
+        EPOCH20, repo, tail, previous=previous, allowed_signers=allowed_signers
+    )
+    return recovery, activation, state
+
+
+def _verify_epoch21(
+    repo: Path,
+    tail: Sequence[str],
+    *,
+    previous: str,
+    allowed_signers: bytes,
+) -> tuple[str, str | None, str]:
+    """Verify the epoch-21 transition, recovery, activation and successors."""
+
+    recovery, activation, state, _last = _verify_epoch(
+        EPOCH21, repo, tail, previous=previous, allowed_signers=allowed_signers
+    )
+    return recovery, activation, state
 
 
 def _repo() -> Path:

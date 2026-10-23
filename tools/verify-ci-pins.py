@@ -240,10 +240,10 @@ REQUIRED_JOB_SHA256 = {
         "0eb0a0e75662827088aeb2f57a559e6ca56308a8d67b7ecdd598244b27e35291"
     ),
     "supply-chain": (
-        "e8b5e0690c7409c2dc1d4637e7c9e2c5ad381d4384097e2bf9256b4f08f82cd2"
+        "a9e85a530b996cac91b2ba83e808c762db8f75b4df9ffe0a7c04558d1cfb923d"
     ),
     "tlc-model-check": (
-        "039e728477b83aed2666860165902d596f0aa69a8d01b880919d33527ecd1e17"
+        "2aa673fc4349b284a0db6ad5c6dc476ae8201e2fdc035f5183bd63f90869238a"
     ),
 }
 SUPPLY_CHAIN_JOB_SHA256 = REQUIRED_JOB_SHA256["supply-chain"]
@@ -760,6 +760,8 @@ def _expected_lineage_step(*, name: str, gate_command: str) -> str:
         "97e0c5dc4baa41e471f8c357b3fe7f0264cf7be8\n"
         "          EPOCH20_TRANSITION_SHA: "
         "d7276bc2a0b6ce3a5520bb0612eec9480dace417\n"
+        "          EPOCH21_TRANSITION_SHA: "
+        "20298ee4e7d98f91225e530af83fd491db507aa9\n"
         "          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}\n"
         "          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}\n"
         "        run: |\n"
@@ -783,13 +785,14 @@ def _expected_lineage_step(*, name: str, gate_command: str) -> str:
         "          fi\n"
         '          [[ "$TRUSTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]\n'
         '          /usr/bin/git cat-file -e "${TRUSTED_BASE_SHA}^{commit}"\n'
-        '          if [[ "$TRUSTED_BASE_SHA" == "$EPOCH20_TRANSITION_SHA" ]]\n'
+        '          if [[ "$TRUSTED_BASE_SHA" == "$EPOCH20_TRANSITION_SHA" \\\n'
+        '            || "$TRUSTED_BASE_SHA" == "$EPOCH21_TRANSITION_SHA" ]]\n'
         "          then\n"
-        "            # Owner-signed epoch-20 transition: this base lies outside epoch 19's\n"
-        "            # successor scope by design, so no predecessor verifier can vouch for\n"
-        "            # it. Only a push or manual dispatch of its direct child proceeds; the\n"
-        "            # gate below then checks the whole chain with that child's reviewed\n"
-        "            # epoch-20 verifier.\n"
+        "            # Owner-signed epoch transition: this base lies outside the previous\n"
+        "            # epoch's successor scope by design, so no predecessor verifier can\n"
+        "            # vouch for it. Only a push or manual dispatch of its direct child\n"
+        "            # proceeds; the gate below then checks the whole chain with that\n"
+        "            # child's reviewed verifier.\n"
         '            [[ "$GITHUB_EVENT_NAME" != pull_request ]]\n'
         "          elif /usr/bin/git cat-file -e \\\n"
         '            "${TRUSTED_BASE_SHA}:tools/release/'
