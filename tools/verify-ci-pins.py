@@ -240,7 +240,7 @@ REQUIRED_JOB_SHA256 = {
         "0eb0a0e75662827088aeb2f57a559e6ca56308a8d67b7ecdd598244b27e35291"
     ),
     "supply-chain": (
-        "d1a587d9e232f58ef95b2a9c73e806fb3322702df8a1808d150f628c9f88b71f"
+        "e8b5e0690c7409c2dc1d4637e7c9e2c5ad381d4384097e2bf9256b4f08f82cd2"
     ),
     "tlc-model-check": (
         "039e728477b83aed2666860165902d596f0aa69a8d01b880919d33527ecd1e17"
@@ -1395,7 +1395,7 @@ def main() -> None:
         ): 1,
         (
             "RUSTSEC_URL: https://codeload.github.com/RustSec/advisory-db/"
-            "tar.gz/7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2"
+            "tar.gz/640bf5a9f06e66d8721e8772766531fe77c8630d"
         ): 1,
         "python3 -I -B tools/pinned_cargo_deny.py install": 1,
         "python3 -I -B tools/pinned_cargo_deny.py seed-advisory-db": 1,
@@ -1411,14 +1411,14 @@ def main() -> None:
         "--no-new-privs": 1,
         '--max-filesize "$MAX_BYTES"': 1,
         "${CARGO_DENY_URL}|${DENY_ARCHIVE}|4936832": 1,
-        "${RUSTSEC_URL}|${RUSTSEC_ARCHIVE}|441027": 1,
+        "${RUSTSEC_URL}|${RUSTSEC_ARCHIVE}|516533": 1,
         'PATH="$TOOLCHAIN_BIN:/usr/bin:/bin"': 1,
         "GIT_CONFIG_GLOBAL=/dev/null": 3,
         "GIT_CONFIG_NOSYSTEM=1": 3,
         "GIT_NO_REPLACE_OBJECTS=1": 3,
         "b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a": 1,
-        "1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce": 1,
-        "2d3ab21e05f8b06ad2e232f92894b5e247d817ce": 1,
+        "ea04833412258031945eff663c81f93553120406": 1,
+        "47f7d22dbceeeb61ec1115bc394d1383bf4f28ea": 1,
         'CARGO_NET_OFFLINE: "true"': 1,
         "RUSTUP_TOOLCHAIN=1.96.0": 1,
         "      - name: Install pinned Rust toolchain\n"

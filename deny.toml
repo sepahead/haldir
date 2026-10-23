@@ -15,6 +15,9 @@ ignore = [
   # Unmaintained PEM wrapper pulled through zenoh-link-tls; this is not a
   # reported vulnerability and Zenoh 1.9.0 offers no fixed transitive selection.
   "RUSTSEC-2025-0134",
+  # Unmaintained YAML parser pulled through serde_yaml in zenoh-config; this is
+  # not a reported vulnerability and Zenoh 1.9.0 offers no fixed transitive selection.
+  "RUSTSEC-2024-0449",
 ]
 
 [licenses]

@@ -233,7 +233,7 @@ class CargoDenyPinTests(unittest.TestCase):
         self.assertEqual(policy.version, VERSION)
         self.assertEqual(
             policy.advisory_db.commit,
-            "7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+            "640bf5a9f06e66d8721e8772766531fe77c8630d",
         )
         self.assertEqual(
             {asset.target for asset in policy.assets},
@@ -344,26 +344,26 @@ class CargoDenyPinTests(unittest.TestCase):
         self.assertEqual(
             snapshot.archive_url,
             "https://codeload.github.com/RustSec/advisory-db/tar.gz/"
-            "7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2",
+            "640bf5a9f06e66d8721e8772766531fe77c8630d",
         )
-        self.assertEqual(snapshot.committed_at, "2026-07-29T08:17:10-07:00")
+        self.assertEqual(snapshot.committed_at, "2026-10-22T12:49:47+02:00")
         self.assertEqual(
             snapshot.tree,
-            "2d3ab21e05f8b06ad2e232f92894b5e247d817ce",
+            "47f7d22dbceeeb61ec1115bc394d1383bf4f28ea",
         )
         self.assertEqual(
             snapshot.seed_commit,
-            "1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce",
+            "ea04833412258031945eff663c81f93553120406",
         )
-        self.assertEqual(snapshot.archive_bytes, 441_027)
+        self.assertEqual(snapshot.archive_bytes, 516_533)
         self.assertEqual(
             snapshot.archive_sha256,
-            "ab968b67150079bc386d098311cdab98e23745d555b3018837c91f3ae847967a",
+            "9ae56c8895aa880de9d0820868b5c621077b6cb5d07ef8c024188de183fb372e",
         )
-        self.assertEqual(snapshot.tar_bytes, 2_652_160)
+        self.assertEqual(snapshot.tar_bytes, 3_051_520)
         self.assertEqual(
             snapshot.tar_sha256,
-            "69306513f06cac8750f3e8dd17ce1a5eebce958b3ed9511ab7a3939b15555471",
+            "ec6cd0f48013f3f88d57c6cf73693d218b906e14946ab8602fab359cd4b436c5",
         )
         self.assertEqual(
             (
@@ -372,7 +372,7 @@ class CargoDenyPinTests(unittest.TestCase):
                 snapshot.directory_count,
                 snapshot.worktree_bytes,
             ),
-            (2_083, 1_192, 891, 1_283_107),
+            (2_344, 1_368, 976, 1_503_660),
         )
 
     def test_unknown_schema_keys_are_rejected_at_every_level(self) -> None:

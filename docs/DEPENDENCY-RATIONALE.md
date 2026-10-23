@@ -74,7 +74,8 @@ but configuration is not source-level remediation. A future trust-root
 replacement must explicitly render and verify both flags as false instead of
 relying on Zenoh 1.9 defaults.
 
-`RUSTSEC-2024-0436` (`paste`) and `RUSTSEC-2025-0134` (`rustls-pemfile`) are
+`RUSTSEC-2024-0436` (`paste`), `RUSTSEC-2025-0134` (`rustls-pemfile`), and
+`RUSTSEC-2024-0449` (`unsafe-libyaml`, through `serde_yaml` in `zenoh-config`) are
 maintenance notices rather than reported vulnerabilities. The exceptions must
 be removed when the pinned Zenoh baseline permits fixed transitives.
 `cargo deny --all-features check` rejects advisory matches present in the pinned
@@ -88,9 +89,9 @@ and RUSTSEC-2026-0381 and -0383 (`webpki-roots`) in the all-feature graph.
 `Cargo.lock` now resolves `rustls` 0.23.46, `rustls-webpki` 0.103.16, and
 `webpki-roots` 1.0.10, all semver-compatible. The same audit reports the
 unmaintained `unsafe-libyaml` 0.2.11 (RUSTSEC-2024-0449), reached only through
-`serde_yaml` in `zenoh-config` 1.9.0, with no fixed release. The pinned snapshot
-does not contain that notice. Moving the snapshot therefore needs a reviewed
-exception for it in `deny.toml`, like the two above.
+`serde_yaml` in `zenoh-config` 1.9.0, with no fixed release. The epoch-21
+transition moved the pinned snapshot to `640bf5a9` and added the reviewed
+exception for that notice to `deny.toml`.
 
 ## Supply-chain tooling boundary
 

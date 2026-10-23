@@ -236,16 +236,16 @@ jobs:
         shell: /bin/bash --noprofile --norc -euo pipefail {0}
         env:
           CARGO_DENY_URL: https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz
-          RUSTSEC_URL: https://codeload.github.com/RustSec/advisory-db/tar.gz/7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2
+          RUSTSEC_URL: https://codeload.github.com/RustSec/advisory-db/tar.gz/640bf5a9f06e66d8721e8772766531fe77c8630d
         run: |
           DENY_ARCHIVE="${RUNNER_TEMP}/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"
           DENY_ROOT="${RUNNER_TEMP}/haldir-cargo-deny"
-          RUSTSEC_ARCHIVE="${RUNNER_TEMP}/rustsec-advisory-db-7c7ccac53056b87f69ac677f15ea2d9a98a6f8e2.tar.gz"
+          RUSTSEC_ARCHIVE="${RUNNER_TEMP}/rustsec-advisory-db-640bf5a9f06e66d8721e8772766531fe77c8630d.tar.gz"
           HALDIR_CARGO_HOME="${RUNNER_TEMP}/haldir-cargo-home"
           /usr/bin/mkdir -m 0700 "$HALDIR_CARGO_HOME"
           for record in \
             "${CARGO_DENY_URL}|${DENY_ARCHIVE}|4936832" \
-            "${RUSTSEC_URL}|${RUSTSEC_ARCHIVE}|441027"
+            "${RUSTSEC_URL}|${RUSTSEC_ARCHIVE}|516533"
           do
             IFS='|' read -r URL OUTPUT MAX_BYTES <<< "$record"
             /usr/bin/curl \
@@ -318,9 +318,9 @@ jobs:
           export GIT_CONFIG_NOSYSTEM=1
           export GIT_NO_REPLACE_OBJECTS=1
           [[ "$(/usr/bin/git -C "$FINAL_RUSTSEC_DB" rev-parse HEAD)" == \
-            1ec5ce48144b04d9bf3e740b4dd3c2d61d8cc4ce ]]
+            ea04833412258031945eff663c81f93553120406 ]]
           [[ "$(/usr/bin/git -C "$FINAL_RUSTSEC_DB" rev-parse 'HEAD^{tree}')" == \
-            2d3ab21e05f8b06ad2e232f92894b5e247d817ce ]]
+            47f7d22dbceeeb61ec1115bc394d1383bf4f28ea ]]
           [[ -z "$(/usr/bin/git -C "$FINAL_RUSTSEC_DB" status \
             --porcelain=v1 --untracked-files=all)" ]]
           RUNNER_GID="$(/usr/bin/id -g)"
