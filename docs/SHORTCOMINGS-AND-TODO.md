@@ -1,6 +1,6 @@
 # Shortcomings and to-do
 
-Status: 22 October 2026, head `4e807db`.
+Status: 23 October 2026, head `d441469`.
 
 This page lists what Haldir cannot yet do, and the work that closes each gap.
 It is a short summary.
@@ -34,6 +34,29 @@ A synthetic campaign checked the transport access rules for commands and intents
 Shortcomings 1, 2, and 3 decide how far the design can be trusted.
 Shortcoming 4 is a limit of any upstream gate.
 The plant must still enforce its own physical limits, for example with the flight controller's geofence.
+
+## Urgent maintenance
+
+The pinned RustSec snapshot `7c7ccac5` was committed on 29 July 2026.
+`tools/pinned_cargo_deny.py` rejects a snapshot that is 90 days old, so `just verify-pins` and the
+protected cargo-deny step fail from 27 October 2026, 15:17 UTC.
+The pin is a protected lineage path, so the move needs a lineage transition.
+The transition should:
+
+- set `[supply_chain.cargo_deny.advisory_db]` in `tools/pins.toml` to commit
+  `640bf5a9f06e66d8721e8772766531fe77c8630d` (committed `2026-10-22T12:49:47+02:00`, tree
+  `47f7d22dbceeeb61ec1115bc394d1383bf4f28ea`, seed commit `ea04833412258031945eff663c81f93553120406`,
+  archive 516,533 bytes with SHA-256 `9ae56c8895aa880de9d0820868b5c621077b6cb5d07ef8c024188de183fb372e`,
+  tar 3,051,520 bytes with SHA-256 `ec6cd0f48013f3f88d57c6cf73693d218b906e14946ab8602fab359cd4b436c5`,
+  2,344 members: 1,368 regular files and 976 directories, 1,503,660 worktree bytes);
+- change the RustSec URL, the archive byte bound, and the expected seed commit and tree in
+  `.github/workflows/ci.yml` to match;
+- add `RUSTSEC-2024-0449` (`unsafe-libyaml`) to `deny.toml` with its reason, as the
+  [dependency rationale](DEPENDENCY-RATIONALE.md) explains.
+
+`seed_advisory_database` in `tools/pinned_cargo_deny.py` accepted these values on 23 October 2026.
+With them and the exception, `cargo deny --frozen --all-features check` passes on the current lockfile.
+Without the exception, it reports only `unsafe-libyaml`.
 
 ## To-do
 

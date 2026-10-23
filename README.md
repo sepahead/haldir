@@ -116,6 +116,8 @@ Read [evidence semantics](docs/EVIDENCE-SEMANTICS.md) for exact cancellation, st
 ## Optional ecosystem relationships
 
 Haldir can exercise its P0 reference without other ecosystem processes.
+NCP does not depend on Haldir either. Sessions of the NCP local profile run without Haldir and do no Haldir work.
+Haldir gating is an opt-in role for command paths that need authorization.
 Haldir speaks NCP 1.0 at the `1.0.0-rc.1` candidate
 `2819dae3b6338bb1df6d105ebb5b7433936a993d`, wire `1.0`, contract `163acc57d8a62b66`.
 Every command carries a Gate-issued NCP authority lease.
