@@ -223,6 +223,13 @@ Define every mathematical symbol, assumption, operating bound, and measured unit
 Keep equations, prose, SVGs, and rendered documents consistent.
 Provide native scalable diagrams, mobile reading layouts, and a complete prose alternative.
 
+Do not cite social-media posts.
+A post can be deleted or edited, and it can state an opinion as a fact.
+That biases readers and agents and weakens scientific rigor.
+State the substance in your own words with its date.
+Cite the primary source.
+Do not link the post or name its author.
+
 Never place private keys, bearer tokens, production credentials, or proprietary peer data in source or evidence.
 Preserve existing public test certificates and historical non-secret metadata at their declared scope.
 Use the owning private reporting procedure for sensitive findings.
